@@ -1,0 +1,31 @@
+﻿id,name_ko,zone,type,indoor,styles
+chotdae,추암해변·촛대바위,chuam,관광지,N,바다 보기
+chuam_bridge,추암출렁다리,chuam,관광지,N,바다 보기|체험
+haeamjeong,해암정,chuam,관광지,N,역사·문화
+chuam_sculpture,추암조각공원,chuam,관광지,N,자연·산책|역사·문화
+chuam_camp,추암오토캠핑장,chuam,숙박,N,
+mureung,무릉별유천지,mureung,관광지,N,자연·산책|체험
+forest,무릉건강숲,mureung,숙박,Y,자연·산책|체험
+valley,무릉계곡·무릉반석,mureung,관광지,N,자연·산책
+samhwasa,삼화사,mureung,관광지,N,역사·문화
+yongchu,용추폭포·쌍폭포,mureung,관광지,N,자연·산책
+mureung_camp,무릉계곡 힐링캠프장,mureung,숙박,N,
+cave,천곡황금박쥐동굴,cheongok,관광지,Y,체험|역사·문화
+nature_park,자연학습체험공원,cheongok,관광지,N,자연·산책|체험
+hanseom,한섬해변(한섬감성바닷길),cheongok,관광지,N,바다 보기|자연·산책
+gamchu,감추해변,cheongok,관광지,N,바다 보기
+gobulgae,고불개해변,cheongok,관광지,N,바다 보기
+cheongok_port,천곡항,cheongok,관광지,N,바다 보기
+dokkaebi,도째비골 스카이밸리,mukho,관광지,N,바다 보기|체험
+haerang,도째비골 해랑전망대,mukho,관광지,N,바다 보기
+mukho_lighthouse,묵호등대,mukho,관광지,N,바다 보기|역사·문화
+nongol,논골담길,mukho,관광지,N,역사·문화|자연·산책
+mukho_port,묵호항·활어회센터,mukho,식당,N,맛집|바다 보기
+central_market,동쪽바다 중앙시장,mukho,식당,N,맛집
+daejin,대진해변·대진서핑,mukho,관광지,N,바다 보기|체험
+bookvillage,동호지구 바닷가책방마을,mukho,관광지,Y,역사·문화|카페
+pencil_museum,연필뮤지엄,mukho,관광지,Y,역사·문화|체험
+little_prince,어린왕자포토존·별빛마을전망대,mukho,관광지,N,바다 보기
+mangsang,망상해변,mangsang,관광지,N,바다 보기|자연·산책
+mangsang_camp,망상오토캠핑리조트,mangsang,숙박,N,
+mangsang_hanok,망상해변한옥마을 '해안',mangsang,숙박,N,
