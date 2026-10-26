@@ -1,0 +1,50 @@
+/* 프로토타입(동해 길동무 프로토타입 v2)과 같은 색 토큰. 화면을 옮길 때 이 이름을 그대로 쓴다. */
+:root {
+  --bg: #F6F9FD; --surface: #FFFFFF; --mist: #EDF3FB; --line: #D8E2EE;
+  --ink: #1A2433; --muted: #566275;
+  --sea: #2462B4; --sea-deep: #183F7A; --sea-ink: #FFFFFF; --sea-soft: #DCE8F8;
+  --sun: #F29A33; --glow: #FFF1D3;
+  --go: #1E8A3C; --go-bg: #E3F4E8; --warn: #8A5F00; --warn-dot: #F2B416; --warn-bg: #FFF4D6;
+  --stop: #C9302C; --stop-bg: #FCE6E4; --on-signal: #FFFFFF;
+  --f-display: "Jua", "IBM Plex Sans KR", sans-serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0A111B; --surface: #111A27; --mist: #172437; --line: #26364C; --ink: #E8EEF6; --muted: #9FADBF;
+    --sea: #7EA9EE; --sea-deep: #BCD3F7; --sea-ink: #0A111B; --sea-soft: #1D3150; --sun: #F5A852; --glow: #3A2F1A;
+    --go: #5ACB84; --go-bg: #15301F; --warn: #F2C14A; --warn-dot: #F2C14A; --warn-bg: #33290F;
+    --stop: #F2766B; --stop-bg: #3A1A18; --on-signal: #0A111B; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+body.big { font-size: 19px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; border-radius: 8px; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 16px max(20px, env(safe-area-inset-left)); }
+.bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.brand { font-family: var(--f-display); font-size: 26px; color: var(--sea); display: flex; align-items: center; gap: 8px; }
+.brand img { height: 44px; }
+.tools { display: flex; gap: 8px; }
+.sos { border: 0; border-radius: 12px; background: var(--stop); color: #fff; min-height: 44px; padding: 0 16px; font-weight: 700; cursor: pointer; }
+.box { border: 1.5px solid var(--sea); border-radius: 12px; min-height: 44px; padding: 0 10px; background: var(--surface); color: var(--sea); font-weight: 600; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-top: 16px; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 16px; }
+.says { display: flex; gap: 10px; align-items: flex-end; margin: 10px 0; }
+.says img { height: 56px; flex: none; }
+.bubble { background: var(--surface); border: 2px solid var(--sea); border-radius: 20px; padding: 10px 14px; }
+.bubble b { display: block; font-family: var(--f-display); font-weight: 400; color: var(--sea); font-size: .85em; }
+.me { display: flex; justify-content: flex-end; margin: 10px 0; }
+.me span { background: var(--sea); color: var(--sea-ink); border-radius: 20px 20px 6px 20px; padding: 10px 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 46px; padding: 0 15px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--sun); background: var(--glow); font-weight: 600; }
+.chip.go { background: var(--sea); border-color: var(--sea); color: var(--sea-ink); font-weight: 700; }
+.badge { display: inline-flex; gap: 4px; align-items: center; font-size: .8em; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.g-G { background: var(--go-bg); color: var(--go); } .g-Y { background: var(--warn-bg); color: var(--warn); } .g-R { background: var(--stop-bg); color: var(--stop); }
+.stop { border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; margin: 8px 0; display: flex; justify-content: space-between; gap: 8px; }
+.muted { color: var(--muted); font-size: .9em; }
+.map { height: 300px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--mist); display: grid; place-items: center; }
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
