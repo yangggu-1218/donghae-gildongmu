@@ -6,7 +6,8 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, Places, Courses, Reviews, PRESETS } from "@/components/Sections";
+import { Hero, Places, Courses, Reviews, PRESETS, PlacePhoto, licName } from "@/components/Sections";
+import { PHOTOS } from "@/lib/photos";
 import { api, Conditions, Course, Extra } from "@/lib/api";
 
 type Lang = "ko" | "en";
@@ -176,7 +177,9 @@ export default function Page() {
                 <div key={s.id}>
                   <p className="muted">{t("result.drive", { m: s.drive_min })}</p>
                   <div className="stop">
-                    <div><b>{i + 1}. {name(s.id)}</b> <span className="muted">{s.arrive}</span><br /><span className="muted">{s.why}</span></div>
+                    <PlacePhoto id={s.id} lang={lang} small />
+                    <div style={{ flex: 1, minWidth: 0 }}><b>{i + 1}. {name(s.id)}</b> <span className="muted">{s.arrive}</span><br /><span className="muted">{s.why}</span>
+                      {PHOTOS[s.id] && <><br /><a className="credit" href={PHOTOS[s.id].page} target="_blank" rel="noopener">{lang === "ko" ? "사진" : "Photo"}: {PHOTOS[s.id].author} · {licName(PHOTOS[s.id].license, lang)}</a></>}</div>
                     {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
                   </div>
                   <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} />
