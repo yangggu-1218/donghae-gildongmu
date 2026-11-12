@@ -1,7 +1,7 @@
 "use client";
 // 카카오맵 JavaScript API. .env.local 에 NEXT_PUBLIC_KAKAO_JS_KEY 가 없으면 안내 문구만 보여 준다.
 // 카카오 개발자 콘솔 > 내 애플리케이션 > 플랫폼 > Web 에 http://localhost:3000 과 배포 주소를 등록해야 지도가 뜬다.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global { interface Window { kakao: any } }
 type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null };
@@ -10,9 +10,10 @@ const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 export default function KakaoMap({ pins }: { pins: Pin[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+  const [failed, setFailed] = useState(false);   // 키가 틀렸거나 도메인이 등록되지 않으면 약도로 대신한다
 
   useEffect(() => {
-    if (!key || !ref.current || !pins.length) return;
+    if (!key || failed || !ref.current || !pins.length) return;
     const draw = () => {
       const { maps } = window.kakao;
       const map = new maps.Map(ref.current, { center: new maps.LatLng(pins[0].lat, pins[0].lon), level: 8 });
@@ -27,15 +28,17 @@ export default function KakaoMap({ pins }: { pins: Pin[] }) {
       new maps.Polyline({ map, path, strokeWeight: 3, strokeColor: "#566275", strokeStyle: "shortdash" });
       map.setBounds(bounds);
     };
-    if (window.kakao?.maps) { window.kakao.maps.load(draw); return; }
+    const safeDraw = () => { try { draw(); } catch (e) { console.error(e); setFailed(true); } };
+    if (window.kakao?.maps) { window.kakao.maps.load(safeDraw); return; }
     const s = document.createElement("script");
     s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`;
-    s.onload = () => window.kakao.maps.load(draw);
+    s.onload = () => (window.kakao?.maps ? window.kakao.maps.load(safeDraw) : setFailed(true));
+    s.onerror = () => setFailed(true);
     document.head.appendChild(s);
-  }, [key, pins]);
+  }, [key, pins, failed]);
 
-  if (!key) return <Sketch pins={pins} />;
-  return <div className="map" ref={ref} role="img" aria-label="코스 지도. 아래 목록과 같은 내용입니다." />;
+  if (!key || failed || !pins.length) return <Sketch pins={pins} />;
+  return <div className="map" ref={ref} style={{ display: "block" }} role="img" aria-label="코스 지도. 아래 목록과 같은 내용입니다." />;
 }
 
 // 지도 키가 없을 때(데모·키 발급 전): 좌표로 그린 코스 약도. 실제 지도는 아니고 순서와 방향만 보여 준다.
@@ -51,7 +54,7 @@ function Sketch({ pins }: { pins: Pin[] }) {
   return (
     <div className="map" role="img" aria-label="코스 약도. 아래 목록과 같은 순서입니다." style={{ display: "block", position: "relative" }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-        <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ · 약도 (지도 키를 넣으면 실제 지도)</text>
+        <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ 코스 약도</text>
         <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />
         {pts.map(([px, py], i) => {
           const g = pins[i].grade; const bg = g ? `var(--${g === "G" ? "go" : g === "Y" ? "warn-dot" : "stop"})` : "var(--sea)";
