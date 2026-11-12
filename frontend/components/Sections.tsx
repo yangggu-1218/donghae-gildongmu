@@ -1,6 +1,20 @@
 "use client";
 // 첫 화면(히어로), 권역별 관광지, 추천 코스(예시), 이용 후기(예시). 프로토타입 v3의 섹션을 옮긴 것.
 import { useEffect, useState } from "react";
+import { PHOTOS } from "@/lib/photos";
+
+// 사진 출처 표시 (CC·공공누리는 저작자와 라이선스를 반드시 밝힌다)
+export const licName = (l: string, lang: "ko" | "en") => (l === "KOGL Type 1" ? (lang === "ko" ? "공공누리 제1유형" : "KOGL Type 1") : l);
+export function PlacePhoto({ id, lang, small = false }: { id: string; lang: "ko" | "en"; small?: boolean }) {
+  const ph = PHOTOS[id];
+  if (!ph) return null;
+  return (
+    <figure className={small ? "ph ph-s" : "ph"}>
+      <img src={ph.src} alt="" loading="lazy" />
+      {!small && <figcaption><a href={ph.page} target="_blank" rel="noopener">{lang === "ko" ? "사진" : "Photo"}: {ph.author} · {licName(ph.license, lang)}</a></figcaption>}
+    </figure>
+  );
+}
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -106,7 +120,7 @@ export function Places({ lang, onAdd, wish, gradeLabel }: { lang: Lang; onAdd: (
           const g = p.grade as string | null, inW = wish.includes(p.id);
           return (
             <article key={p.id} className="pcard">
-              <div className="art"><Art id={p.id} color={Z.c} />
+              <div className="art">{PHOTOS[p.id] ? <PlacePhoto id={p.id} lang={lang} /> : <Art id={p.id} color={Z.c} />}
                 {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
