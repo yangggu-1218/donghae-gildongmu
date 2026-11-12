@@ -4,7 +4,7 @@ export type Stop = { id: string; arrive: string; drive_min: number; grade: Grade
 export type Course = { mode: string; stops: Stop[]; overall: Grade; back_at: string; notes: string[] };
 export type Conditions = {
   who: string; move: string[]; style: string[]; days: "당일" | "1박 2일";
-  start: "동해역" | "묵호역" | "자가용"; memo: string; wish: string[]; lang: "ko" | "en";
+  start: "동해역" | "묵호역" | "자가용"; memo: string; wish: string[]; must?: string[]; rain?: boolean | null; lang: "ko" | "en";
 };
 
 // 공공데이터에서 붙는 장소별 정보 (backend/app/public_data.py)
