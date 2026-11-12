@@ -41,6 +41,11 @@ TOOLS = [
 ]
 
 
+# 프롬프트 캐싱: 매번 똑같은 시스템 프롬프트·도구 설명은 캐시해서 두 번째 호출부터 입력 비용을 크게 줄인다
+SYSTEM = [{"type": "text", "text": PROMPT, "cache_control": {"type": "ephemeral"}}]
+CACHED_TOOLS = TOOLS[:-1] + [{**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
+
+
 class Session:
     """한 번의 /api/talk 요청 동안의 상태. 도구가 조건·코스를 바꾸면 여기에 남는다."""
 
@@ -141,6 +146,7 @@ class Session:
 # ---------------- LLM 경로 ----------------
 def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
     if not llm.API_KEY:
+        llm.count("talk", False)
         return None
     msgs = [{"role": "user" if h.get("me") else "assistant", "content": h["text"]} for h in history[-10:] if h.get("text")]
     while msgs and msgs[0]["role"] != "user":
@@ -162,10 +168,11 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
         for _ in range(5):   # 도구 호출은 최대 5번
             r = httpx.post("https://api.anthropic.com/v1/messages",
                            headers=llm.headers(),
-                           json={"model": TALK_MODEL, "max_tokens": 700, "system": PROMPT, "tools": TOOLS, "messages": merged},
+                           json={"model": TALK_MODEL, "max_tokens": 700, "system": SYSTEM, "tools": CACHED_TOOLS, "messages": merged},
                            timeout=TALK_TIMEOUT)
             r.raise_for_status()
             out = r.json()
+            llm.count("talk", True, sum((out.get("usage") or {}).get(k, 0) for k in ("input_tokens", "output_tokens")))
             merged.append({"role": "assistant", "content": out["content"]})
             uses = [b for b in out["content"] if b.get("type") == "tool_use"]
             if not uses:
@@ -175,6 +182,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
                 {"type": "tool_result", "tool_use_id": u["id"], "content": json.dumps(s.call(u["name"], u.get("input") or {}), ensure_ascii=False)}
                 for u in uses]})
     except Exception as e:
+        llm.count("talk", False)
         print("[talk] llm fallback:", e, getattr(getattr(e, "response", None), "text", "")[:300])
     return None
 

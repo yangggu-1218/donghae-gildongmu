@@ -35,7 +35,7 @@ PLACES = load_places()
 def health():
     return {"ok": True, "places": len(PLACES), "verified": sum(p.verified for p in PLACES.values()),
             "official_coords": sum(bool(p.coord_source) for p in PLACES.values()),
-            "llm": bool(llm.API_KEY), "public_api": bool(public_apis.KEY), "public_files": public_data.sources()}
+            "llm": bool(llm.API_KEY), "ai": llm.status(), "public_api": bool(public_apis.KEY), "public_files": public_data.sources()}
 
 
 @app.get("/api/places")
@@ -156,6 +156,12 @@ def chat(body: dict):
     return {"edit": edit.model_dump(), "course": res.model_dump(), "conditions": c.model_dump()}
 
 
+@app.get("/api/ai")
+def ai_status():
+    """서비스가 실행 중에 외부 AI API(Anthropic Claude)를 어디에 몇 번 썼는지."""
+    return llm.status()
+
+
 @app.post("/api/talk")
 def talk(body: dict):
     """대화형 동이. body: {message, history:[{me,text}], conditions, state, course_ids, lang, lat, lon}
@@ -216,10 +222,13 @@ async def report(place_id: str = Form(...), kind: str = Form(...), note: str = F
         out.parent.mkdir(parents=True, exist_ok=True)
         img.save(out, "JPEG", quality=85)
         rec["photo"] = out.name
+        # AI 비전 분석: 관리자 검수용 제안 (판정은 사람이 확인한 뒤에만 바뀐다)
+        small = img.copy(); small.thumbnail((1024, 1024)); buf = io.BytesIO(); small.save(buf, "JPEG", quality=80)
+        rec["ai"] = llm.analyze_photo(buf.getvalue(), PLACES[place_id].name_ko, kind, note)
     log = DATA / "reports" / "reports.jsonl"
     with log.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-    return {"ok": True, "id": rid}
+    return {"ok": True, "id": rid, "ai": rec.get("ai")}
 
 
 @app.get("/api/admin/report")
