@@ -6,10 +6,11 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
+import { Hero, Places, Courses, Reviews, PRESETS } from "@/components/Sections";
 import { api, Conditions, Course, Extra } from "@/lib/api";
 
 type Lang = "ko" | "en";
-type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[] };
+type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule" };
 const Q = [
   { k: "who", q: "q.who", multi: false, o: ["혼자", "연인·친구", "부모님과", "아이와", "단체"] },
   { k: "move", q: "q.move", multi: true, none: "없어요", o: ["없어요", "휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"] },
@@ -32,6 +33,7 @@ export default function Page() {
   const [safety, setSafety] = useState<any>(null);
   const [extras, setExtras] = useState<Record<string, Extra>>({});
   const [talkState, setTalkState] = useState<Record<string, boolean>>({});
+  const [big, setBig] = useState(false);
   const [hint, setHint] = useState<{ stay: any; move: any; events: any[] } | null>(null);
 
   useEffect(() => { setLog([{ pose: "wave", text: t("plan.greet") }, { pose: "ask", text: t("q.who") }]); setStep(0); }, [lang]);
@@ -56,8 +58,24 @@ export default function Page() {
   }
   async function make() {
     const c: Conditions = { ...cond, who: ans.who?.[0] || "혼자", move: (ans.move || []).filter((x) => x !== "없어요"), style: ans.style || [], lang };
+    await makeWith(c, `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}`);
+  }
+  const toPlan = () => document.getElementById("plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // 추천 코스(예시)의 조건 그대로 코스 만들기
+  async function startPreset(i: number) {
+    const pr = PRESETS[i] as any;
+    const c: Conditions = { ...cond, who: pr.who, move: [...pr.move], style: [...pr.style], start: pr.start, rain: pr.rain ?? null, days: "당일", lang } as Conditions;
+    setAns({ who: [pr.who], move: [...pr.move], style: [...pr.style] }); toPlan();
+    await makeWith(c, [t(`opt.${pr.who}`), ...pr.move.map((m: string) => t(`opt.${m}`)), t(`opt.${pr.start}`)].join(", "));
+  }
+  // 관광지 카드의 '코스에 담기': 코스가 있으면 동이에게 넣어 달라고 하고, 없으면 담아 두었다가 코스를 만들 때 넣는다
+  function addWish(id: string) {
+    if (course) { toPlan(); chat(lang === "ko" ? `${places[id]?.name_ko} 넣어줘` : `add ${places[id]?.name_ko}`); return; }
+    setCond((c) => ({ ...c, wish: Array.from(new Set([...(c.wish || []), id])), must: Array.from(new Set([...((c as any).must || []), id])) } as Conditions));
+  }
+  async function makeWith(c: Conditions, label: string) {
     setCond(c); setBusy(true);
-    say({ me: true, text: `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}` });
+    say({ me: true, text: label });
     say({ pose: "think", text: t("plan.thinking") });
     try {
       const r = await api.course(c);
@@ -78,7 +96,7 @@ export default function Page() {
       setCond(r.conditions); setTalkState(r.state);
       if (r.course) { setCourse(r.course); setExtras((x) => ({ ...x, ...(r.extras || {}) })); setStep(Q.length + 1); setHint(null); }
       else if (!course) setStep((n) => Math.max(n, r.state.move_known ? 2 : r.state.who_known ? 1 : 0));   // 말로 답한 질문은 버튼 단계도 넘긴다
-      say({ pose: r.pose, text: r.reply, cards: r.cards });
+      say({ pose: r.pose, text: r.reply, cards: r.cards, via: r.via });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false);
   }
@@ -92,24 +110,36 @@ export default function Page() {
   const q = Q[step];
 
   return (
-    <main className="wrap">
-      <header className="bar">
-        <div className="brand"><img src="/dongi/neutral.webp" alt="" />{t("brand")}</div>
-        <div className="tools">
-          <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
-          <button className="box" onClick={() => document.body.classList.toggle("big")}>{t("tool.big")}</button>
-          <label className="sr-only" htmlFor="lang">{t("tool.lang")}</label>
-          <select id="lang" className="box" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-            <option value="ko">한국어</option><option value="en">English</option>
-          </select>
+    <>
+      <a className="skip" href="#plan">{t("nav.skip")}</a>
+      <header className="top">
+        <div className="wrap bar">
+          <a className="brand" href="#"><img src="/dongi/neutral.webp" alt="" />{t("brand")}</a>
+          <nav className="nav" aria-label={t("nav.main")}>
+            <a href="#plan">{t("nav.plan")}</a><a href="#places">{t("nav.places")}</a><a href="#courses">{t("nav.courses")}</a><a href="#reviews">{t("nav.reviews")}</a>
+          </nav>
+          <div className="tools">
+            <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
+            <button className="box" aria-pressed={big} onClick={() => { setBig(!big); document.body.classList.toggle("big"); }}>{t("tool.big")}</button>
+            <label className="sr-only" htmlFor="lang">{t("tool.lang")}</label>
+            <select id="lang" className="box" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+              <option value="ko">한국어</option><option value="en">English</option>
+            </select>
+          </div>
         </div>
       </header>
-
+      <main>
+      <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
+      <section id="plan" className="sec wrap" aria-labelledby="plan-h">
+      <div className="sec-head">
+        <h2 id="plan-h">{t("plan.h")}</h2>
+        <p>{t("plan.sub")}{(cond.wish || []).length > 0 && !course ? " " + t("plan.wished", { n: (cond.wish || []).length }) : ""}</p>
+      </div>
       <div className="grid">
         <section className="panel" aria-label={t("nav.plan")}>
           {log.map((m, i) => m.me
             ? <div key={i} className="me"><span>{m.text}</span></div>
-            : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}</Dongi>{m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
+            : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}</Dongi>{m.via && <p className={`via via-${m.via}`}>{t(m.via === "llm" ? "via.llm" : "via.rule")}</p>}{m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
 
           {step < Q.length && (
             <div className="chips">
@@ -171,14 +201,27 @@ export default function Page() {
               )}
               {hint?.stay && <p className="muted">🛏 {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
               {hint?.events?.length ? <p className="muted">🎭 {t("x.events")}: {hint.events.map((e) => `${e.name} (${e.start})`).join(", ")}</p> : null}
+              <ReportBox stops={course.stops.map((s) => ({ id: s.id, name: name(s.id) }))} t={t} />
               <p className="muted" style={{ fontSize: ".8em" }}>{t("x.src")}</p>
             </>
           )}
         </section>
       </div>
 
+      </section>
+      <Places lang={lang} wish={cond.wish || []} onAdd={addWish} gradeLabel={(g) => t(`grade.${g}`)} />
+      <Courses lang={lang} busy={busy} onStart={startPreset} />
+      <Reviews lang={lang} />
+      </main>
+      <footer className="foot">
+        <div className="wrap">
+          <p><b>{t("brand")}</b> {t("foot.team")}</p>
+          <p>{t("foot.data")}</p>
+          <p>{t("foot.ai")}</p>
+        </div>
+      </footer>
       {safety && (
-        <section className="panel" style={{ marginTop: 20 }} aria-label={t("tool.safety")}>
+        <section className="sheet" role="dialog" aria-modal="false" aria-label={t("tool.safety")}>
           <Dongi pose="neutral" name={t("dongi")}>{t("safety.say")}</Dongi>
           <p><b>119</b> {t("safety.119")} · <b>1330</b> {t("safety.1330")}</p>
           {safety.help?.length > 0 && <h3>{t("safety.help")}</h3>}
@@ -194,7 +237,7 @@ export default function Page() {
           <button className="box" onClick={() => setSafety(null)}>{t("common.close")}</button>
         </section>
       )}
-    </main>
+    </>
   );
 }
 
@@ -231,4 +274,47 @@ function HelpCard({ c, t, onSafety }: { c: { kind: string; data: any }; t: (k: s
   else if (c.kind === "taxi") body = (Array.isArray(d) ? d : [d]).map((x: any) => row(x.name, x.address || ""));
   else if (c.kind === "hospital_pharmacy") body = <button className="sos" onClick={onSafety}>{t("tool.safety")}</button>;
   return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}<p className="muted" style={{ fontSize: ".75em" }}>{t("x.src")}</p></div>;
+}
+
+// 현장 제보: 사진을 올리면 서버가 AI 비전으로 장애물을 찾아 '검수용 제안'을 돌려준다
+function ReportBox({ stops, t }: { stops: { id: string; name: string }[]; t: (k: string, v?: Record<string, string | number>) => string }) {
+  const [open, setOpen] = useState(false);
+  const [pid, setPid] = useState(stops[0]?.id || "");
+  const [kind, setKind] = useState("길 상태");
+  const [note, setNote] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<any>(null);
+  async function send(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setRes(null);
+    const fd = new FormData(); fd.append("place_id", pid); fd.append("kind", kind); fd.append("note", note); if (file) fd.append("photo", file);
+    try { const r = await fetch("/api/reports", { method: "POST", body: fd }); setRes(await r.json()); } catch { setRes({ error: true }); }
+    setBusy(false);
+  }
+  if (!open) return <button className="chip" onClick={() => setOpen(true)}>📷 {t("rep.open")}</button>;
+  return (
+    <form className="stop" style={{ display: "block" }} onSubmit={send}>
+      <b>{t("rep.title")}</b>
+      <p className="muted">{t("rep.help")}</p>
+      <div className="chips" style={{ flexWrap: "wrap" }}>
+        <label className="sr-only" htmlFor="rep-place">{t("rep.place")}</label>
+        <select id="rep-place" className="box" value={pid} onChange={(e) => setPid(e.target.value)}>{stops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+        <label className="sr-only" htmlFor="rep-kind">{t("rep.kind")}</label>
+        <select id="rep-kind" className="box" value={kind} onChange={(e) => setKind(e.target.value)}>{["길 상태", "계단", "턱", "경사", "공사", "화장실"].map((k) => <option key={k}>{k}</option>)}</select>
+      </div>
+      <p><input id="rep-photo" type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] || null)} aria-label={t("rep.photo")} /></p>
+      <p><input id="rep-note" className="box" style={{ width: "100%" }} placeholder={t("rep.note")} value={note} onChange={(e) => setNote(e.target.value)} /></p>
+      <button className="chip go" disabled={busy || !file}>{busy ? t("rep.busy") : t("rep.send")}</button>
+      {res?.ai && (res.ai.by === "ai" ? (
+        <div className="stop" style={{ display: "block", marginTop: 10 }}>
+          <p className="via via-llm">{t("rep.ai")}</p>
+          <p>{res.ai.summary}</p>
+          <ul className="muted">{res.ai.obstacles.map((o: any, i: number) => <li key={i}><b>{o.type}</b> {o.detail}</li>)}</ul>
+          {res.ai.suggested_grade && <p className="muted">{t("rep.grade")}: <span className={`badge g-${res.ai.suggested_grade}`}>{t(`grade.${res.ai.suggested_grade}`)}</span></p>}
+          <p className="muted">{t("rep.review")}</p>
+        </div>) : <p className="muted">{t("rep.noai")}</p>)}
+      {res?.ok && !res.ai && <p className="muted">{t("rep.thanks")}</p>}
+      {res?.error && <p className="muted">{t("error.server")}</p>}
+    </form>
+  );
 }
