@@ -1,5 +1,9 @@
 # 동해 길동무 (Donghae Gildongmu)
 
+**체험판 (설치 없이 브라우저에서):** https://yangggu-1218.github.io/donghae-gildongmu/  
+체험판은 AI 대신 규칙으로 대화하고 접근성 판정은 예시 데이터예요. 실제 서비스는 아래 방법으로 서버를 띄우고 API 키를 넣어 실행해요.
+
+
 가보기 전에 '갈 수 있는 길'인지 알려 주는 동해 여행 코스 웹서비스.
 2026 한림 G-Lab@동해 AI 활용 지역문제해결 해커톤 · 팀 동해물과 백두AI
 
@@ -63,6 +67,21 @@ python scripts/travel_matrix.py               # 장소 사이 이동 시간표
 python scripts/eval_ai.py                     # 규칙 검사 20세트, 실패 0건이어야 함
 python scripts/eval_talk.py                   # 대화 검사 10세트 (키를 넣은 뒤에도 돌려 볼 것)
 ```
+
+## 서비스 안에서 쓰는 외부 AI API (Anthropic Claude)
+
+AI는 만들 때만 쓴 것이 아니라 **서비스가 돌아가는 동안** 매번 불린다. `GET /api/ai` 에서 작업별 호출 수·토큰을 볼 수 있다.
+
+| 기능 | 언제 | 파일 |
+|---|---|---|
+| 대화형 동이 | 이용자가 말할 때마다, 도구 호출로 조건 저장·코스 계산·공공데이터 조회 | app/talk.py, prompts/talk.md |
+| 자유 입력 조건 해석 | 코스 만들 때 메모를 이동 조건으로 | llm.parse_conditions |
+| 말로 코스 수정 | "비 와요", "○○ 빼 줘" | llm.chat_edit |
+| 추천 이유 생성 | 코스가 나올 때 장소별 이유 | llm.explain |
+| 제보 사진 분석(비전) | 현장 제보 사진에서 계단·턱·경사 찾기 → 관리자 검수 제안 | llm.analyze_photo, prompts/analyze_photo.md |
+| 무장애 메모 구조화 | TourAPI 서술형 메모 → 구간 데이터 (사람 검수) | llm.structure_memo |
+
+판정(가능·주의·불가)과 시간 계산은 엔진이 하고, AI 답에 나온 장소·판정은 서버가 다시 검사한다. 키가 없거나 AI가 실패하면 규칙으로 대신 답하고 화면에 '기본 답변'으로 표시한다.
 
 ## 판정 규칙 (휠체어 기준)
 
