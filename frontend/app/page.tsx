@@ -6,17 +6,32 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, Places, Courses, Reviews, PRESETS, PlacePhoto, licName } from "@/components/Sections";
-import { PHOTOS } from "@/lib/photos";
-import { api, Conditions, Course, Extra } from "@/lib/api";
+import { Hero, Places, Courses, Reviews, PRESETS } from "@/components/Sections";
+import Calendar from "@/components/Calendar";
+import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
+import { api, Conditions, Course, CourseRes, Extra } from "@/lib/api";
 
 type Lang = "ko" | "en";
 type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule" };
+type Hint = { stay: any; move: any; events: any[]; onDay: boolean };
+type Snap = { course: Course; extras: Record<string, Extra>; cond: Conditions; hint: Hint | null };
+// 작업2: 큰 버튼 질문 (날짜·시각 → 누구와 → 걸음 → 식사 → 취향)
 const Q = [
+  { k: "when", q: "q.when", multi: false, o: [] as string[] },
   { k: "who", q: "q.who", multi: false, o: ["혼자", "연인·친구", "부모님과", "아이와", "단체"] },
-  { k: "move", q: "q.move", multi: true, none: "없어요", o: ["없어요", "휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"] },
+  { k: "move", q: "q.move", multi: true, none: "일반", o: ["휠체어", "보행보조기·유모차", "거동 불편 어르신", "일반"] },
+  { k: "meal", q: "q.meal", multi: true, none: "상관없어요", o: ["입식", "부드러운 메뉴", "주차 편한 곳", "상관없어요"] },
   { k: "style", q: "q.style", multi: true, o: ["바다 보기", "자연·산책", "카페", "맛집", "역사·문화"] },
 ] as const;
+// 화면의 보행 상태 → 엔진 이동 조건 (장애인등편의법 기준 판정 모드)
+const MOVE_MAP: Record<string, string[]> = {
+  "휠체어": ["휠체어"], "보행보조기·유모차": ["유모차"], "거동 불편 어르신": ["오래 걷기 어려움", "계단 어려움"], "일반": [],
+};
+const toMove = (xs: string[] = []) => Array.from(new Set(xs.flatMap((x) => MOVE_MAP[x] ?? [x])));
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+const nextWd = (wd: number) => plusDays((wd - new Date().getDay() + 7) % 7);
+const TIMES = ["09:00", "10:00", "11:00", "13:00", "14:00"];
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>("ko");
@@ -25,7 +40,8 @@ export default function Page() {
     (D[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => String(v[x] ?? ""));
   const [step, setStep] = useState(0);
   const [ans, setAns] = useState<Record<string, string[]>>({});
-  const [cond, setCond] = useState<Conditions>({ who: "혼자", move: [], style: [], days: "당일", start: "동해역", memo: "", wish: [], lang: "ko" });
+  const [cond, setCond] = useState<Conditions>({ who: "혼자", move: [], style: [], days: "당일", start: "동해역", memo: "", wish: [], lang: "ko",
+    date: iso(new Date()), start_time: "10:00", meal: [] });
   const [log, setLog] = useState<Msg[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
   const [places, setPlaces] = useState<Record<string, any>>({});
@@ -35,10 +51,34 @@ export default function Page() {
   const [extras, setExtras] = useState<Record<string, Extra>>({});
   const [talkState, setTalkState] = useState<Record<string, boolean>>({});
   const [big, setBig] = useState(false);
-  const [hint, setHint] = useState<{ stay: any; move: any; events: any[] } | null>(null);
+  const [hint, setHint] = useState<Hint | null>(null);
+  const [hist, setHist] = useState<Snap[]>([]);          // 되돌리기
+  const [fresh, setFresh] = useState<string[]>([]);      // 방금 새로 들어간 곳
+  const [showNear, setShowNear] = useState(false);
+  const [whenOpen, setWhenOpen] = useState(false);
+  const [sumOpen, setSumOpen] = useState(false);
 
-  useEffect(() => { setLog([{ pose: "wave", text: t("plan.greet") }, { pose: "ask", text: t("q.who") }]); setStep(0); }, [lang]);
+  useEffect(() => { setLog([{ pose: "wave", text: t("plan.greet") }, { pose: "ask", text: t("q.when") }]); setStep(0); }, [lang]);
   useEffect(() => { api.places().then((ps) => setPlaces(Object.fromEntries(ps.map((p) => [p.id, p])))).catch(() => {}); }, []);
+  // 작업4: 글자 크게 보기는 다음에 와도 그대로
+  useEffect(() => {
+    let on = false;
+    try { on = localStorage.getItem("gd-big") === "1"; } catch { /* 저장소를 못 쓰는 브라우저 */ }
+    setBig(on); document.body.classList.toggle("big", on);
+  }, []);
+  // 작업4: 가족이 받은 공유 링크(#plan=...)를 열면 같은 일정표를 바로 보여 준다
+  useEffect(() => {
+    const m = location.hash.match(/^#plan=(.+)$/);
+    const c = m && decodePlan(m[1]);
+    if (!c) return;
+    setLang(c.lang || "ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
+    api.course(c).then((r) => { applyRes(r); setSumOpen(true); }).catch(() => say({ pose: "worry", text: t("error.server") })).finally(() => setBusy(false));
+  }, []);
+
+  function toggleBig() {
+    const on = !big; setBig(on); document.body.classList.toggle("big", on);
+    try { localStorage.setItem("gd-big", on ? "1" : "0"); } catch { /* 무시 */ }
+  }
 
   const say = (m: Msg) => setLog((l) => [...l, m]);
   const name = (id: string) => (lang === "ko" ? places[id]?.name_ko : places[id]?.name_en || places[id]?.name_ko) ?? id;
@@ -46,9 +86,10 @@ export default function Page() {
   function pick(o: string) {
     const q = Q[step];
     if (!q.multi) { finishQ({ ...ans, [q.k]: [o] }, [o]); return; }
+    const none = "none" in q ? q.none : null;
     let cur = ans[q.k] || [];
-    if ("none" in q && o === q.none) cur = cur.includes(o) ? [] : [o];
-    else cur = cur.filter((x) => !("none" in q) || x !== q.none).includes(o) ? cur.filter((x) => x !== o) : [...cur.filter((x) => !("none" in q) || x !== q.none), o];
+    if (o === none) cur = cur.includes(o) ? [] : [o];
+    else cur = cur.filter((x) => x !== none).includes(o) ? cur.filter((x) => x !== o) : [...cur.filter((x) => x !== none), o];
     setAns({ ...ans, [q.k]: cur });
   }
   function finishQ(next: Record<string, string[]>, chosen: string[]) {
@@ -57,8 +98,17 @@ export default function Page() {
     const n = step + 1; setStep(n);
     say({ pose: "ask", text: n < Q.length ? t(Q[n].q) : t("q.last") });
   }
+  function finishWhen() {
+    const d = cond.date || iso(new Date());
+    const wd = new Date(d + "T00:00:00").getDay();
+    finishQ({ ...ans, when: [d, cond.start_time || "10:00"] }, []);
+    setLog((l) => { const c = [...l]; c[c.length - 2] = { me: true, text: `${dateLabel(d, lang)}(${wdName(wd, lang)}) ${cond.start_time}` }; return c; });
+  }
+  const baseCond = (): Conditions => ({ ...cond, lang, who: ans.who?.[0] || cond.who,
+    move: ans.move ? toMove(ans.move) : cond.move, meal: ans.meal ? ans.meal.filter((x) => x !== "상관없어요") : cond.meal || [],
+    style: ans.style || cond.style });
   async function make() {
-    const c: Conditions = { ...cond, who: ans.who?.[0] || "혼자", move: (ans.move || []).filter((x) => x !== "없어요"), style: ans.style || [], lang };
+    const c = baseCond();
     await makeWith(c, `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}`);
   }
   const toPlan = () => document.getElementById("plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -71,8 +121,21 @@ export default function Page() {
   }
   // 관광지 카드의 '코스에 담기': 코스가 있으면 동이에게 넣어 달라고 하고, 없으면 담아 두었다가 코스를 만들 때 넣는다
   function addWish(id: string) {
-    if (course) { toPlan(); chat(lang === "ko" ? `${places[id]?.name_ko} 넣어줘` : `add ${places[id]?.name_ko}`); return; }
-    setCond((c) => ({ ...c, wish: Array.from(new Set([...(c.wish || []), id])), must: Array.from(new Set([...((c as any).must || []), id])) } as Conditions));
+    if (course) { toPlan(); edit("add", id, lang === "ko" ? `${places[id]?.name_ko} 넣어줘` : `add ${places[id]?.name_ko}`); return; }
+    setCond((c) => ({ ...c, wish: Array.from(new Set([...(c.wish || []), id])), must: Array.from(new Set([...(c.must || []), id])) }));
+  }
+  function applyRes(r: CourseRes | any, before: string[] = []) {
+    setCourse(r.course); setExtras((x) => ({ ...x, ...(r.extras || {}) }));
+    if (r.conditions) setCond(r.conditions);
+    if (r.stay !== undefined) setHint({ stay: r.stay, move: r.move, events: r.events || [], onDay: !!r.events_on_day });
+    const now = r.course.stops.map((s: any) => s.id);
+    setFresh(before.length ? now.filter((i: string) => !before.includes(i)) : []);
+  }
+  function snapshot() { if (course) setHist((h) => [...h.slice(-9), { course, extras, cond, hint }]); }
+  function undo() {
+    const last = hist[hist.length - 1]; if (!last) return;
+    setHist((h) => h.slice(0, -1)); setCourse(last.course); setExtras(last.extras); setCond(last.cond); setHint(last.hint); setFresh([]);
+    say({ me: true, text: t("chat.undo") }); say({ pose: "happy", text: lang === "ko" ? "바꾸기 전 코스로 되돌렸어요." : "Back to the previous course." });
   }
   async function makeWith(c: Conditions, label: string) {
     setCond(c); setBusy(true);
@@ -80,23 +143,36 @@ export default function Page() {
     say({ pose: "think", text: t("plan.thinking") });
     try {
       const r = await api.course(c);
-      setCourse(r.course); setExtras(r.extras || {}); setHint({ stay: r.stay, move: r.move, events: r.events || [] });
-      say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length }) + (r.summary ? " " + r.summary : "") });
+      setHist([]); applyRes(r);
+      const skip = r.course.skipped.length ? " " + r.course.notes.filter((n) => r.course.skipped.some((s) => n.startsWith(s.name))).join(" ") : "";
+      say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length }) + skip + (r.summary ? " " + r.summary : "") });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false); setStep(Q.length + 1);
   }
-  // 자유 대화: 동이(LLM 또는 규칙)가 조건을 알아듣고, 코스는 서버 엔진이 계산한다
+  // 작업3: 버튼(빠른 수정·카드 버튼)은 AI 없이 규칙으로 바로 고친다. 대화창에도 같은 말이 남는다.
+  async function edit(action: string, target: string | null, sayText: string) {
+    if (!course) return;
+    snapshot(); say({ me: true, text: sayText }); setBusy(true);
+    try {
+      const before = course.stops.map((s) => s.id);
+      const r = await api.edit({ conditions: { ...cond, lang }, course_ids: before, action, target });
+      applyRes(r, before);
+      say({ pose: r.changed ? "happy" : "neutral", text: r.reply || "", via: "rule" });
+    } catch { say({ pose: "worry", text: t("error.server") }); }
+    setBusy(false);
+  }
+  // 자유 대화: 동이(LLM 또는 규칙)가 알아듣고, 코스는 서버 엔진이 계산한다
   async function chat(msg: string) {
     say({ me: true, text: msg }); setBusy(true);
-    const base: Conditions = { ...cond, lang, who: ans.who?.[0] || cond.who,
-      move: ans.move ? ans.move.filter((x) => x !== "없어요") : cond.move, style: ans.style || cond.style };
+    const before = course?.stops.map((s) => s.id) || [];
     try {
-      const r = await api.talk({ message: msg, history: log.slice(-10), conditions: base,
+      const r = await api.talk({ message: msg, history: log.slice(-10), conditions: baseCond(),
         state: { who_known: !!ans.who || talkState.who_known, move_known: !!ans.move || talkState.move_known },
-        course_ids: course?.stops.map((s) => s.id) || [] });
-      setCond(r.conditions); setTalkState(r.state);
-      if (r.course) { setCourse(r.course); setExtras((x) => ({ ...x, ...(r.extras || {}) })); setStep(Q.length + 1); setHint(null); }
-      else if (!course) setStep((n) => Math.max(n, r.state.move_known ? 2 : r.state.who_known ? 1 : 0));   // 말로 답한 질문은 버튼 단계도 넘긴다
+        course_ids: before });
+      setTalkState(r.state);
+      if (r.course) { if (course) snapshot(); applyRes(r, before); setStep(Q.length + 1); }
+      else { setCond(r.conditions); if (!course) setStep((n) => Math.max(n, r.state.move_known ? 3 : r.state.who_known ? 2 : n)); }
+      if (/충전|주차|charger|parking/i.test(msg) && course) setShowNear(true);
       say({ pose: r.pose, text: r.reply, cards: r.cards, via: r.via });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false);
@@ -109,6 +185,24 @@ export default function Page() {
   const pins = useMemo(() => (course?.stops || []).filter((s) => places[s.id]?.lat)
     .map((s) => ({ lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: s.grade })), [course, places, lang]);
   const q = Q[step];
+  const shareUrl = typeof window !== "undefined" && course ? `${location.origin}${location.pathname}#plan=${encodePlan({ ...cond, lang }, course)}` : "";
+  const startName = t(`opt.${cond.start}`);
+
+  // 함수로 부른다(컴포넌트로 만들면 렌더마다 새로 만들어져 달력의 '보는 달'이 초기화된다)
+  const whenPicker = (onDone: () => void, label: string) => (
+    <div className="when">
+      <Calendar value={cond.date || plusDays(0)} lang={lang} onChange={(d) => setCond({ ...cond, date: d })} />
+      <p className="when-h">{t("when.time")}</p>
+      <div className="chips big-chips" role="group" aria-label={t("when.time")}>
+        {TIMES.map((h) => <button key={h} className="chip" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
+        <label className="chip pick">{t("when.other")}
+          <input type="time" value={cond.start_time || "10:00"} step={600} onChange={(e) => e.target.value && setCond({ ...cond, start_time: e.target.value })} /></label>
+      </div>
+      <button className="chip go" disabled={busy} onClick={onDone}>{label}</button>
+    </div>
+  );
+  const overview = useMemo(() => Object.values(places).filter((p: any) => p.lat && !p.sample && p.type !== "숙박" && p.verified)
+    .map((p: any) => ({ lat: p.lat, lon: p.lon, label: lang === "ko" ? p.name_ko : p.name_en || p.name_ko, grade: null })), [places, lang]);
 
   return (
     <>
@@ -121,7 +215,7 @@ export default function Page() {
           </nav>
           <div className="tools">
             <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
-            <button className="box" aria-pressed={big} onClick={() => { setBig(!big); document.body.classList.toggle("big"); }}>{t("tool.big")}</button>
+            <button className="box bigt" aria-pressed={big} onClick={toggleBig}>{big ? t("tool.bigOn") : t("tool.big")}</button>
             <label className="sr-only" htmlFor="lang">{t("tool.lang")}</label>
             <select id="lang" className="box" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
               <option value="ko">한국어</option><option value="en">English</option>
@@ -142,55 +236,85 @@ export default function Page() {
             ? <div key={i} className="me"><span>{m.text}</span></div>
             : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}</Dongi>{m.via && <p className={`via via-${m.via}`}>{t(m.via === "llm" ? "via.llm" : "via.rule")}</p>}{m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
 
-          {step < Q.length && (
-            <div className="chips">
+          {step === 0 && whenPicker(finishWhen, t("plan.next"))}
+          {step > 0 && step < Q.length && (
+            <div className="chips big-chips">
               {q.o.map((o) => <button key={o} className="chip" aria-pressed={q.multi ? (ans[q.k] || []).includes(o) : undefined} onClick={() => pick(o)}>{t(`opt.${o}`)}</button>)}
               {q.multi && <button className="chip go" onClick={() => (ans[q.k] || []).length && finishQ(ans, ans[q.k])}>{t("plan.next")}</button>}
             </div>
           )}
           {step === Q.length && (
-            <div className="chips">
+            <div className="chips big-chips">
               {(["당일", "1박 2일"] as const).map((d) => <button key={d} className="chip" aria-pressed={cond.days === d} onClick={() => setCond({ ...cond, days: d })}>{t(`opt.${d}`)}</button>)}
               {(["동해역", "묵호역", "자가용"] as const).map((s) => <button key={s} className="chip" aria-pressed={cond.start === s} onClick={() => setCond({ ...cond, start: s })}>{t(`opt.${s}`)}</button>)}
               <input aria-label={t("plan.memo")} placeholder={t("plan.memoPh")} value={cond.memo} onChange={(e) => setCond({ ...cond, memo: e.target.value })} />
               <button className="chip go" disabled={busy} onClick={make}>{t("plan.make")}</button>
             </div>
           )}
-          {step > Q.length && (
-            <div className="chips">
-              {["chat.rain", "chat.less", "chat.sea"].map((k) => <button key={k} className="chip" disabled={busy} onClick={() => chat(t(k))}>{t(k)}</button>)}
+          {step > Q.length && course && (
+            <div className="qc" role="group" aria-label={lang === "ko" ? "빠른 수정" : "Quick edits"}>
+              <button className="chip" disabled={busy} onClick={() => edit("remove_uphill", null, t("qc.uphill"))}>{t("qc.uphill")}</button>
+              <button className="chip" disabled={busy} onClick={() => edit("indoor", null, t("qc.indoor"))}>{t("qc.indoor")}</button>
+              <button className="chip" disabled={busy} onClick={() => edit("replace_lunch", null, t("qc.lunch"))}>{t("qc.lunch")}</button>
+              <button className="chip" aria-pressed={showNear} onClick={() => { setShowNear(!showNear); if (!showNear) document.getElementById("timeline")?.scrollIntoView({ behavior: "smooth" }); }}>{showNear ? t("qc.nearOff") : t("qc.near")}</button>
+              <button className="chip" disabled={busy} onClick={() => edit("relax", null, t("qc.relax"))}>{t("qc.relax")}</button>
+              <button className="chip" disabled={busy} onClick={() => edit("add_cafe", null, t("qc.cafe"))}>{t("qc.cafe")}</button>
+              <button className="chip" aria-expanded={whenOpen} onClick={() => setWhenOpen(!whenOpen)}>{t("qc.when")}</button>
+              {hist.length > 0 && <button className="chip undo" disabled={busy} onClick={undo}>↶ {t("chat.undo")}</button>}
             </div>
           )}
+          {whenOpen && course && whenPicker(() => { setWhenOpen(false);
+            const wd = new Date((cond.date || "") + "T00:00:00").getDay();
+            edit("set_when", `${cond.date} ${cond.start_time}`, t("edit.whenSay", { d: `${dateLabel(cond.date || "", lang)}(${wdName(wd, lang)})`, t: cond.start_time || "" })); }, t("qc.when"))}
           <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { chat(input.trim()); setInput(""); } }} style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <input style={{ flex: 1, minHeight: 46 }} aria-label={t("chat.ph")} placeholder={step > Q.length ? t("chat.ph") : t("talk.ph")} value={input} onChange={(e) => setInput(e.target.value)} />
                 <button className="chip go" disabled={busy}>{t("chat.send")}</button>
           </form>
         </section>
 
-        <section className="panel" aria-live="polite">
-          {!course ? <Dongi pose="neutral" name={t("dongi")}>{t("plan.empty")}</Dongi> : (
+        <section className="panel" aria-live="polite" id="timeline">
+          {!course ? (<>
+              <Dongi pose="neutral" name={t("dongi")}>{t("plan.empty")}</Dongi>
+              <KakaoMap pins={overview} overview />
+              <p className="muted" style={{ fontSize: ".85em" }}>{t("map.overview", { n: overview.length })}</p>
+            </>) : (
             <>
-              <p>{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
-                : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</p>
-              <KakaoMap pins={pins} />
-              {course.stops.map((s, i) => (
-                <div key={s.id}>
-                  <p className="muted">{t("result.drive", { m: s.drive_min })}</p>
-                  <div className="stop">
-                    <PlacePhoto id={s.id} lang={lang} small />
-                    <div style={{ flex: 1, minWidth: 0 }}><b>{i + 1}. {name(s.id)}</b> <span className="muted">{s.arrive}</span><br /><span className="muted">{s.why}</span>
-                      {PHOTOS[s.id] && <><br /><a className="credit" href={PHOTOS[s.id].page} target="_blank" rel="noopener">{lang === "ko" ? "사진" : "Photo"}: {PHOTOS[s.id].author} · {licName(PHOTOS[s.id].license, lang)}</a></>}</div>
-                    {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
-                  </div>
-                  <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} />
+              <div className="tl-head">
+                <div>
+                  <p className="tl-date">{t("tl.head", { d: dateLabel(course.date, lang), w: wdName(course.weekday, lang), s: course.start_time })} · {startName}</p>
+                  <p className="muted">{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
+                    : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</p>
                 </div>
-              ))}
-              <p className="muted">{t("result.back", { s: t(`opt.${cond.start}`), t: course.back_at })}</p>
-              {course.notes.map((n) => <p key={n} className="muted">{n}</p>)}
+                <button className="chip go sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
+              </div>
+              <KakaoMap pins={pins} />
+              <div className="tl">
+                {course.stops.map((s, i) => (
+                  <div key={s.id}>
+                    <p className="muted tl-drive">{t("result.drive", { m: s.drive_min })}</p>
+                    <StopCard s={s} i={i} x={extras[s.id]} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
+                      showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
+                      onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
+                      onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))} />
+                    <details className="tl-more"><summary>{lang === "ko" ? "이야기·걷기길·택시 더 보기" : "Stories, trails, taxis"}</summary>
+                      <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} /></details>
+                  </div>
+                ))}
+              </div>
+              <p className="muted">{t("result.back", { s: startName, t: course.back_at })}</p>
+              {course.skipped.length > 0 && (
+                <div className="tl-skip"><b>{t("tl.skipped")}</b>
+                  <ul>{course.skipped.map((x) => <li key={x.id}>{x.name} — {x.reason}</li>)}</ul></div>)}
+              {course.notes.filter((n) => !course.skipped.some((x) => n.startsWith(x.name))).map((n) => <p key={n} className="muted">{n}</p>)}
+              {hint?.events?.length ? (
+                <div className={`tl-events${hint.onDay ? " on" : ""}`}>
+                  <b>🎉 {t(hint.onDay ? "tl.eventsDay" : "tl.eventsSoon")}</b>
+                  <ul>{hint.events.map((e) => <li key={e.name}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}{e.venue ? ` · ${e.venue}` : ""}</li>)}</ul>
+                </div>) : null}
               {hint?.move && (
                 <div className="stop" style={{ display: "block" }}>
                   <b>{t("x.tourTitle")}</b>
-                  {hint.move.taxi && <p className="muted">{t("x.taxiStart", { s: t(`opt.${cond.start}`), n: hint.move.taxi.spaces })}</p>}
+                  {hint.move.taxi && <p className="muted">{t("x.taxiStart", { s: startName, n: hint.move.taxi.spaces })}</p>}
                   {hint.move.mobility_center && (<>
                     <p className="muted">♿ {t("x.mobility", { n: hint.move.mobility_center.wheelchair_vehicles, t: hint.move.mobility_center.tel, f: hint.move.mobility_center.fare })}</p>
                     <p className="muted">{t("x.mobilityWho")}</p>
@@ -203,7 +327,6 @@ export default function Page() {
                 </div>
               )}
               {hint?.stay && <p className="muted">🛏 {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
-              {hint?.events?.length ? <p className="muted">🎭 {t("x.events")}: {hint.events.map((e) => `${e.name} (${e.start})`).join(", ")}</p> : null}
               <ReportBox stops={course.stops.map((s) => ({ id: s.id, name: name(s.id) }))} t={t} />
               <p className="muted" style={{ fontSize: ".8em" }}>{t("x.src")}</p>
             </>
@@ -223,6 +346,7 @@ export default function Page() {
           <p>{t("foot.ai")}</p>
         </div>
       </footer>
+      {sumOpen && course && <Summary course={course} extras={extras} name={name} t={t} lang={lang} start={startName} url={shareUrl} onClose={() => setSumOpen(false)} />}
       {safety && (
         <section className="sheet" role="dialog" aria-modal="false" aria-label={t("tool.safety")}>
           <Dongi pose="neutral" name={t("dongi")}>{t("safety.say")}</Dongi>
@@ -251,11 +375,9 @@ function StopExtra({ x, wheel, t }: { x?: Extra; wheel: boolean; t: (k: string, 
   if (x.stories?.[0]) rows.push(`📜 ${t("x.story")}: ${x.stories.slice(0, 2).map((s) => s.name).join(", ")} — ${x.stories[0].intro}`);
   if (x.trail_info?.[0]) rows.push(`🚶 ${t("x.trail")}: ${x.trail_info[0].name} ${t("x.km", { k: x.trail_info[0].length_km, d: x.trail_info[0].duration })}`);
   if (x.events_here?.[0]) rows.push(`🎉 ${t("x.eventHere")}: ${x.events_here[0].name} (${x.events_here[0].start}~${x.events_here[0].end})`);
-  if (x.hours) rows.push(`🕘 ${t("x.hours", { h: x.hours, c: x.closed_days || "-" })}${x.fee ? " · " + x.fee : ""}`);
+  if (x.fee) rows.push(`🎟 ${x.fee}`);
   if (x.park?.[0]) rows.push(`🌳 ${t("x.park")}: ${x.park[0].name} ${x.park[0].dist_m}m`);
   if (x.taxi?.[0]) rows.push(`🚕 ${t("x.taxi")}: ${x.taxi[0].name}`);
-  if (x.parking_near?.[0]) rows.push(`🅿 ${t("x.parking")}: ${x.parking_near[0].name} (${x.parking_near[0].spaces})${x.parking_near[0].disabled_free ? " · " + t("x.parkingFree") : ""}`);
-  if (wheel && x.charger) rows.push(`🔋 ${t("x.charger")}: ${x.charger.name} ${Math.round(x.charger.dist_m / 100) / 10}km · ${t("x.chargerWk", { h: x.charger.weekday_hours })}`);
   if (x.signals?.total) rows.push(`🚦 ${t("x.signals", { n: x.signals.total, c: x.signals.countdown })}`);
   if (x.phone) rows.push(`☎ ${x.phone}`);
   return rows.length ? <ul className="muted" style={{ margin: "0 0 8px 14px", padding: 0, fontSize: ".85em" }}>{rows.map((r) => <li key={r}>{r}</li>)}</ul> : null;
