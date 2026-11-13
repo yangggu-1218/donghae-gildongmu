@@ -8,7 +8,7 @@ from typing import Callable
 
 import httpx
 
-from . import engine, llm, public_data
+from . import edits, engine, llm, public_data
 from .schemas import Conditions, Place
 
 PROMPT = (Path(__file__).parent / "prompts" / "talk.md").read_text(encoding="utf-8")
@@ -29,9 +29,14 @@ TOOLS = [
          "rain": {"type": "boolean"}, "memo": {"type": "string"}}}},
     {"name": "make_course", "description": "저장된 조건으로 코스를 계산한다. 누구와·이동 조건을 알면 부른다. 결과의 판정(G 가능/Y 주의/R 불가)과 시각만 말할 것.",
      "input_schema": {"type": "object", "properties": {}}},
-    {"name": "edit_course", "description": "현재 코스를 고친다. rain=실내 위주, less_walk=덜 걷기, add/remove=장소 넣기·빼기(place_id 필요).",
-     "input_schema": {"type": "object", "properties": {"action": {"type": "string", "enum": ["rain", "less_walk", "add", "remove"]},
-                                                       "place_id": {"type": "string"}}, "required": ["action"]}},
+    {"name": "edit_course", "description": "현재 코스를 고친다. 엔진이 이동·체류 시간과 요일 휴무·브레이크타임을 다시 검사한다. "
+     "remove/replace/add=장소 빼기·다른 곳으로 바꾸기·넣기(place_id 필요), replace_lunch=점심 식당 바꾸기, remove_uphill=오르막 있는 곳 빼기, "
+     "relax=여유 있게 한 곳 줄이기, indoor=비 와서 실내로, flat=덜 걷는 평지로, add_cafe=중간에 쉴 카페, set_when=날짜·출발 시각 바꾸기(when 필요).",
+     "input_schema": {"type": "object", "properties": {"action": {"type": "string", "enum": ["remove", "replace", "add", "replace_lunch", "remove_uphill",
+                                                                                           "relax", "indoor", "flat", "add_cafe", "set_when"]},
+                                                       "place_id": {"type": "string"},
+                                                       "when": {"type": "string", "description": "YYYY-MM-DD HH:MM 중 바꿀 것만 (예: '2026-11-21', '14:00')"}},
+                      "required": ["action"]}},
     {"name": "place_info", "description": "장소 하나의 정보(구간 판정, 시설, 주변 이야기, 택시, 주차, 행사, 관람시간)를 가져온다.",
      "input_schema": {"type": "object", "properties": {"place_id": {"type": "string"}}, "required": ["place_id"]}},
     {"name": "find_help", "description": "여행 도움 정보: info_center(관광안내소·외국어), charger(전동휠체어 충전기), mobility_van(휠체어 차량 예약), city_tour, events(행사·축제), lodging(숙박, zone 필요), restaurants(식당, zone 필요), parking, taxi, hospital_pharmacy.",
@@ -54,6 +59,7 @@ class Session:
         self.c = Conditions(**body.get("conditions", {}))
         self.state = dict(body.get("state") or {})          # {"move_known": bool}
         self.course_ids = list(body.get("course_ids") or [])
+        self.course_ids_before = list(self.course_ids)
         self.course = None
         self.lat, self.lon = body.get("lat") or 37.5245, body.get("lon") or 129.1143
         self.cards: list[dict] = []                          # 화면에 붙일 정보 카드
@@ -75,17 +81,16 @@ class Session:
         res = engine.plan(self.places, self.c, rain)
         return self._course_result(res)
 
-    def edit_course(self, action, place_id=None):
-        places = self.places
-        if action == "rain": self.c.rain = True
-        elif action == "less_walk": self.c.move = sorted(set(self.c.move) | {"오래 걷기 어려움"})
-        elif action == "add" and place_id in self.places:
-            self.c.wish = list(dict.fromkeys([*self.course_ids, place_id])); self.c.must = list(dict.fromkeys([*self.c.must, place_id]))
-        elif action == "remove" and place_id in self.places:
-            self.c.wish = [i for i in self.course_ids if i != place_id]; places = {k: v for k, v in self.places.items() if k != place_id}
-        else:
+    def edit_course(self, action, place_id=None, when=None, text=""):
+        """작업3: 규칙 편집기(edits.apply)와 같은 길로 고친다 — AI가 있든 없든 결과가 같다."""
+        action = {"rain": "indoor", "less_walk": "flat"}.get(action, action)
+        if action in ("remove", "replace", "add") and place_id not in self.places:
             return {"error": "알 수 없는 장소예요", "places": {k: v.name_ko for k, v in self.places.items()}}
-        return self._course_result(engine.plan(places, self.c, bool(self.c.rain)))
+        self.c, res, reply, *_ = edits.run(self.places, self.c, self.course_ids, text, action, place_id if action != "set_when" else when)
+        self.last_reply = reply
+        out = self._course_result(res)
+        out["did"] = reply
+        return out
 
     def _course_result(self, res):
         self.course = res
@@ -236,10 +241,13 @@ def _rule(s: Session, message: str) -> dict:
             return s.result(L["help"], "rule")
     # 2) 코스가 있으면 수정
     if s.course_ids:
-        edit = llm.chat_edit(message, s.course_ids, {k: v.name_ko for k, v in s.places.items()}, s.c.lang)
-        if edit["action"] != "none":
-            s.edit_course(edit["action"], edit.get("place_id"))
-            return s.result(_made(s, L, again=True), "rule")
+        r = edits.apply(s.places, s.c, s.course_ids, message)
+        if r["action"] == "nearby":
+            s.find_help("parking"); s.find_help("charger")
+            return s.result(r["reply"], "rule")
+        if r["action"] != "none":
+            s.edit_course(r["action"], r["target"], None, message)
+            return s.result(s.last_reply, "rule")
     # 3) 조건 채우기
     who = next((w for w, p in WHO_KW if re.search(p, low)), None)
     move = [m for m, p in MOVE_KW if re.search(p, low)]

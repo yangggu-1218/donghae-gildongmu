@@ -47,9 +47,26 @@ class Place(BaseModel):
     parking: Optional[int] = None        # 주차 가능 대수
     public_facilities: list[str] = Field(default_factory=list)
     trails: list[str] = Field(default_factory=list)   # 지나는 걷기길 이름
-    hours: str = ""                      # 관람·운영 시간
-    closed_days: str = ""                # 휴관일
+    hours: str = ""                      # 관람·운영 시간 (표시용 글자)
+    closed_days: str = ""                # 휴관일 (표시용 글자)
     fee: str = ""
+    # ----- 작업1: 영업시간 (data/place_details.json) -----
+    open: Optional[str] = None           # "09:00"  (None = 정보 없음)
+    close: Optional[str] = None          # "18:00", 상시 개방은 "24:00"
+    break_time: Optional[list[str]] = None   # ["15:00", "16:30"]
+    closed_day_nums: list[int] = Field(default_factory=list)   # 정기휴무 0=일 ~ 6=토
+    last_entry: Optional[str] = None     # 마지막 입장
+    hours_source: str = ""               # 공공데이터 / 상시 개방 / 예시(확인 필요)
+    # ----- 작업1: 어르신·무장애 상세 -----
+    wheelchair: str = "확인 전"           # 가능 / 일부 / 불가 / 확인 전
+    walk_load: str = "확인 전"            # 평지 / 완만한경사 / 급경사 / 확인 전
+    entrance_step: Optional[bool] = None # 출입구 단차
+    table: Optional[str] = None          # 식당·카페: 입식 / 좌식 / 혼합
+    benches: Optional[bool] = None       # 중간 휴식 벤치
+    carer_tip: str = ""                  # 보호자 동선 꿀팁
+    access_source: str = ""
+    soft_menu: Optional[bool] = None     # 부드러운 메뉴
+    parking_easy: Optional[bool] = None  # 주차 편함
 
     @property
     def verified(self) -> bool:
@@ -68,6 +85,16 @@ class Conditions(BaseModel):
     wish: list[str] = Field(default_factory=list)   # 사용자가 담아 둔 장소 id
     must: list[str] = Field(default_factory=list)   # 대화로 "넣어 줘"라고 한 장소 (반드시 포함)
     lang: Literal["ko", "en"] = "ko"
+    # ----- 작업2·3 -----
+    date: Optional[str] = None           # 여행 날짜 YYYY-MM-DD (None = 오늘)
+    start_time: str = "10:00"            # 출발 시각
+    meal: list[str] = Field(default_factory=list)   # 입식, 부드러운 메뉴, 주차 편한 곳
+    exclude: list[str] = Field(default_factory=list)  # 대화로 뺀 장소
+    cap: Optional[int] = None            # 장소 수 (None = 당일 4·1박 6)
+    rest: Optional[bool] = None          # 중간에 쉬는 카페 (None = 이동 조건 보고 자동)
+    flat_only: bool = False              # 평지만
+    lunch: Optional[str] = None          # 이어서 쓸 점심 식당
+    skip_lunch: bool = False             # 식사를 코스에서 뺌
 
 
 class Stop(BaseModel):
@@ -76,6 +103,12 @@ class Stop(BaseModel):
     drive_min: int                       # 이전 지점에서 오는 데 걸린 시간
     grade: Optional[Grade]
     why: str = ""
+    depart: str = ""                     # 떠나는 시각
+    kind: str = "sight"                  # sight / lunch / cafe
+    open_state: str = "unknown"          # open(방문 시각 영업 중) / always(상시) / unknown(정보 없음)
+    hours_text: str = ""
+    hours_sample: bool = False           # 영업시간이 예시 값
+    wait_min: int = 0                    # 문 열 때까지 기다린 시간
 
 
 class Course(BaseModel):
@@ -84,9 +117,13 @@ class Course(BaseModel):
     overall: Optional[Grade]
     back_at: str
     notes: list[str] = Field(default_factory=list)
+    date: str = ""                       # YYYY-MM-DD
+    weekday: int = 0                     # 0=일 ~ 6=토
+    start_time: str = "10:00"
+    skipped: list[dict] = Field(default_factory=list)   # 휴무·영업시간 때문에 뺀 곳 [{id, name, reason}]
 
 
 class ChatEdit(BaseModel):
-    action: Literal["rain", "less_walk", "add", "remove", "none"]
+    action: str
     place_id: Optional[str] = None
     reply: str = ""

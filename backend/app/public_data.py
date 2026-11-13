@@ -136,6 +136,11 @@ def events(today: Optional[str] = None) -> dict:
             "upcoming": [{k: e.get(k) for k in ("name", "venue", "kind", "start", "end", "start_time", "end_time", "fee_type", "fee", "age", "tel", "ticket", "url", "lat", "lon", "festival")} for e in up]}
 
 
+def events_on(day: str) -> list[dict]:
+    """작업2: 여행 날짜에 열리는 행사·축제."""
+    return [e for e in events("0000-00-00")["upcoming"] if e["start"] <= day <= (e["end"] or e["start"])]
+
+
 def events_near(lat, lon, radius: int = 800, today: Optional[str] = None) -> list[dict]:
     if lat is None:
         return []
@@ -199,7 +204,7 @@ def chargers(lat, lon, limit: int = 2, now: Optional[dt.datetime] = None) -> lis
 
 
 def parking_near(lat, lon, radius: int = 800, limit: int = 2) -> list[dict]:
-    return [{"name": r["name"], "spaces": int(r["spaces"] or 0), "fee_type": r["fee_type"],
+    return [{"name": r["name"] if "주차" in r["name"] else f"{r['name']} 앞 공영주차장", "spaces": int(r["spaces"] or 0), "fee_type": r["fee_type"],
              "fee": f"{int(r['base_min'])}분 {int(r['base_fee'])}원" if r.get("base_fee") else "",
              "disabled_free": "장애" in (r.get("note") or ""), "note": r.get("note", ""), "dist_m": r["dist_m"]}
             for r in _near("parking", lat, lon, radius)[:limit]]

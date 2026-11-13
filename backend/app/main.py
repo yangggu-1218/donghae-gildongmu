@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import Place, Conditions, ChatEdit
-from . import engine, llm, public_apis, public_data, talk as talk_mod
+from . import edits, engine, llm, public_apis, public_data, details, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -25,7 +25,8 @@ def load_places() -> dict[str, Place]:
     if not f.exists():
         f = DATA / "places_seed.json"
     places = {p["id"]: Place(**p) for p in json.loads(f.read_text(encoding="utf-8"))}
-    return public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
+    places = public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
+    return details.apply(places)          # 영업시간·어르신 접근성 상세, 예시 식당·카페
 
 
 PLACES = load_places()
@@ -68,7 +69,8 @@ def course(c: Conditions):
         c.move = sorted(set(c.move) | set(extra.get("move", [])) - {"없어요"})
         if c.rain is None and extra.get("rain"):
             c.rain = True
-    rain = c.rain if c.rain is not None else public_apis.rain_today()["rain"]
+    today = engine.trip_date(Conditions()).isoformat()
+    rain = c.rain if c.rain is not None else (public_apis.rain_today()["rain"] if (c.date or today) == today else False)
     result = engine.plan(PLACES, c, rain)
     stops = [{"id": s.id, "name": PLACES[s.id].name_ko if c.lang == "ko" else PLACES[s.id].name_en,
               "grade": s.grade, "facilities": PLACES[s.id].facilities,
@@ -76,9 +78,38 @@ def course(c: Conditions):
     ex = llm.explain(stops, c.model_dump(), c.lang)
     for s in result.stops:
         s.why = ex["why"].get(s.id, "")
-    return {"course": result.model_dump(), "rain": rain, "summary": ex.get("summary", ""),
-            "extras": {s.id: {"phone": PLACES[s.id].phone, "address": PLACES[s.id].address, **extras(PLACES[s.id], c.lang)} for s in result.stops},
-            "stay": stay_hint(result, c), "events": public_data.events()["upcoming"][:3],
+    return course_payload(result, c, rain, ex.get("summary", ""))
+
+
+@app.post("/api/edit")
+def edit(body: dict):
+    """작업3: AI 없이 규칙으로 코스 고치기. body: {conditions, course_ids, text? | action?, target?}
+    빼기·바꾸기·날짜/시간 변경 모두 조건만 바꾸고 엔진이 처음부터 다시 계산한다(영업시간 재검사)."""
+    c, result, reply, act, target, changed = edits.run(PLACES, Conditions(**body.get("conditions", {})), body.get("course_ids", []),
+                                                       (body.get("text") or "")[:300], body.get("action") or "", body.get("target"))
+    out = course_payload(result, c, bool(c.rain))
+    out.update({"reply": reply, "action": act, "target": target, "changed": changed, "via": "rule"})
+    return out
+
+
+def stop_info(p: Place, lang: str, weekday: int, at_min: int) -> dict:
+    """작업2-3: 타임라인 카드에 한눈에 보일 값 (보행 난이도, 테이블, 주차·충전기·병원·약국)."""
+    keys = ("walk_load", "wheelchair", "entrance_step", "table", "benches", "carer_tip", "indoor", "soft_menu", "parking_easy",
+            "hours_source", "access_source", "sample", "type")
+    return {**{k: getattr(p, k) for k in keys}, "nearby": details.nearby(p, lang, weekday, at_min)}
+
+
+def course_payload(result, c: Conditions, rain: bool, summary: str = "") -> dict:
+    """코스 응답 하나로 통일 (/api/course, /api/edit, /api/talk)."""
+    for s in result.stops:
+        if not s.why:
+            p = PLACES[s.id]
+            s.why = p.tip_ko if c.lang == "ko" else (p.tip_en or p.tip_ko)
+    on_day = public_data.events_on(result.date)
+    return {"course": result.model_dump(), "rain": rain, "summary": summary, "conditions": c.model_dump(),
+            "extras": {s.id: {"phone": PLACES[s.id].phone, "address": PLACES[s.id].address, **extras(PLACES[s.id], c.lang),
+                              **stop_info(PLACES[s.id], c.lang, result.weekday, engine._mins(s.arrive))} for s in result.stops},
+            "stay": stay_hint(result, c), "events": on_day or public_data.events()["upcoming"][:3], "events_on_day": bool(on_day),
             "move": move_hint(result, c)}
 
 
@@ -169,8 +200,10 @@ def talk(body: dict):
     r = talk_mod.talk(PLACES, body)
     if r["course"]:
         lang = r["conditions"].get("lang", "ko")
-        r["extras"] = {s["id"]: {"phone": PLACES[s["id"]].phone, "address": PLACES[s["id"]].address, **extras(PLACES[s["id"]], lang)}
-                       for s in r["course"]["stops"]}
+        c = Conditions(**r["conditions"])
+        res = engine.Course(**r["course"])
+        pl = course_payload(res, c, bool(c.rain))
+        r.update({k: pl[k] for k in ("extras", "stay", "events", "events_on_day", "move")})
     return r
 
 
