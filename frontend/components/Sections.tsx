@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PHOTOS } from "@/lib/photos";
 
-// 사진 출처 표시 (CC·공공누리는 저작자와 라이선스를 반드시 밝힌다)
+// 사진 출처는 사진 위에 쓰지 않고 따로 모아 보여 준다 (lib/photos.ts 에 저작자·라이선스 보관)
 export const licName = (l: string, lang: "ko" | "en") => (l === "KOGL Type 1" ? (lang === "ko" ? "공공누리 제1유형" : "KOGL Type 1") : l);
 export function PlacePhoto({ id, lang, small = false }: { id: string; lang: "ko" | "en"; small?: boolean }) {
   const ph = PHOTOS[id];
@@ -11,7 +11,6 @@ export function PlacePhoto({ id, lang, small = false }: { id: string; lang: "ko"
   return (
     <figure className={small ? "ph ph-s" : "ph"}>
       <img src={ph.src} alt="" loading="lazy" />
-      {!small && <figcaption><a href={ph.page} target="_blank" rel="noopener">{lang === "ko" ? "사진" : "Photo"}: {ph.author} · {licName(ph.license, lang)}</a></figcaption>}
     </figure>
   );
 }

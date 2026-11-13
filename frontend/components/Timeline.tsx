@@ -1,8 +1,7 @@
 "use client";
 // 작업2·3·4: 시간표 카드(영업 중 배지·보행 난이도·입식 테이블·가까운 주차·충전기·약국), 빠른 수정 버튼, 큰 글씨 요약 일정표.
 import { Course, Conditions, Extra, Stop } from "@/lib/api";
-import { PlacePhoto, licName } from "@/components/Sections";
-import { PHOTOS } from "@/lib/photos";
+import { PlacePhoto } from "@/components/Sections";
 
 type T = (k: string, v?: Record<string, string | number>) => string;
 const WD_KO = "일월화수목금토";
@@ -57,7 +56,6 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
             <h4>{name}{s.kind !== "sight" && <small className="tl-kind">{t(s.kind === "lunch" ? "tl.lunch" : "tl.cafe")}</small>}
               {isNew && <small className="tl-kind new">{t("tl.new")}</small>}</h4>
             <p className="muted tl-hours">{s.hours_text || t("tl.unknown")}{s.hours_sample && s.open_state !== "always" ? ` · ${t("tl.sample")}` : ""}</p>
-            {PHOTOS[s.id] && <a className="credit" href={PHOTOS[s.id].page} target="_blank" rel="noopener">{lang === "ko" ? "사진" : "Photo"}: {PHOTOS[s.id].author} · {licName(PHOTOS[s.id].license, lang as "ko" | "en")}</a>}
           </div>
           {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
         </div>
