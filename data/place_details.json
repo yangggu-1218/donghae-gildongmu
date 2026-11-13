@@ -1,0 +1,671 @@
+{
+ "_note": "영업시간·접근성 상세. hours_source/access_source 가 '예시'인 값은 답사·전화로 확인 전. 요일 0=일~6=토.",
+ "details": {
+  "mureung": {
+   "open": "09:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [
+    1
+   ],
+   "hours_source": "예시",
+   "last_entry": "17:00",
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": null,
+   "benches": true,
+   "carer_tip": "방문자센터 앞에 휠체어 대여와 그늘 벤치가 있어요. 호수 데크는 완만한 오르막이라 갈 때 천천히 밀어 주세요.",
+   "access_source": "예시",
+   "stay_min": 90
+  },
+  "valley": {
+   "open": "06:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "예시",
+   "last_entry": "16:00",
+   "wheelchair": "일부",
+   "walk_load": "완만한경사",
+   "entrance_step": false,
+   "table": null,
+   "benches": true,
+   "carer_tip": "매표소부터 무릉반석까지만 다녀오세요. 반석 위는 미끄러우니 신발을 꼭 확인하세요.",
+   "access_source": "예시",
+   "stay_min": 60
+  },
+  "yongchu": {
+   "open": "06:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "예시",
+   "last_entry": "15:00",
+   "wheelchair": "불가",
+   "walk_load": "급경사",
+   "entrance_step": true,
+   "table": null,
+   "benches": false,
+   "carer_tip": "왕복 2시간 넘는 산길이에요. 어르신과는 무릉반석까지만 추천해요.",
+   "access_source": "예시",
+   "stay_min": 120
+  },
+  "dokkaebi": {
+   "open": "09:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [
+    1
+   ],
+   "hours_source": "예시",
+   "last_entry": "17:30",
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": null,
+   "benches": true,
+   "carer_tip": "매표소에서 엘리베이터로 전망 시설까지 올라가요. 스카이워크 바닥이 투명해 어지러울 수 있어요.",
+   "access_source": "예시",
+   "stay_min": 60
+  },
+  "haerang": {
+   "open": "09:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [
+    1
+   ],
+   "hours_source": "예시",
+   "last_entry": "17:30",
+   "wheelchair": "일부",
+   "walk_load": "완만한경사",
+   "entrance_step": false,
+   "table": null,
+   "benches": true,
+   "carer_tip": "스카이밸리에서 내려가는 길에 경사가 있어요. 중간 쉼터 벤치에서 쉬어 가세요.",
+   "access_source": "예시",
+   "stay_min": 30
+  },
+  "nongol": {
+   "open": "00:00",
+   "close": "24:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "상시 개방",
+   "last_entry": null,
+   "wheelchair": "불가",
+   "walk_load": "급경사",
+   "entrance_step": true,
+   "table": null,
+   "benches": false,
+   "carer_tip": "계단 골목이라 휠체어·유모차는 어려워요. 아래쪽 벽화 몇 점은 수변공원 쪽에서도 보여요.",
+   "access_source": "예시",
+   "stay_min": 40
+  },
+  "mukho_port": {
+   "open": "07:00",
+   "close": "21:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "일부",
+   "walk_load": "평지",
+   "entrance_step": true,
+   "table": "혼합",
+   "benches": true,
+   "carer_tip": "수산시장 바닥이 젖어 미끄러워요. 2층 식당은 엘리베이터 위치를 먼저 물어보세요.",
+   "access_source": "예시",
+   "stay_min": 70,
+   "soft_menu": true,
+   "parking_easy": true
+  },
+  "pencil_museum": {
+   "open": "10:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [
+    2,
+    3
+   ],
+   "hours_source": "공공데이터",
+   "last_entry": "17:30",
+   "wheelchair": "확인 전",
+   "walk_load": "평지",
+   "entrance_step": null,
+   "table": null,
+   "benches": null,
+   "carer_tip": "실내라 비 오는 날 좋아요. 층간 이동 방법은 방문 전에 전화로 확인하세요.",
+   "access_source": "예시",
+   "stay_min": 50
+  },
+  "mangsang": {
+   "open": "00:00",
+   "close": "24:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "상시 개방",
+   "last_entry": null,
+   "wheelchair": "일부",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": null,
+   "benches": true,
+   "carer_tip": "모래사장 대신 해변 데크에서 바다를 보세요. 화장실은 관광안내소 옆이 가까워요.",
+   "access_source": "예시",
+   "stay_min": 40
+  },
+  "chotdae": {
+   "open": "00:00",
+   "close": "24:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "상시 개방",
+   "last_entry": null,
+   "wheelchair": "일부",
+   "walk_load": "완만한경사",
+   "entrance_step": false,
+   "table": null,
+   "benches": true,
+   "carer_tip": "촛대바위 전망 지점은 계단이에요. 해변 산책로에서도 바위가 잘 보여요.",
+   "access_source": "예시",
+   "stay_min": 50
+  },
+  "cave": {
+   "open": "09:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "예시",
+   "last_entry": "17:00",
+   "wheelchair": "불가",
+   "walk_load": "급경사",
+   "entrance_step": true,
+   "table": null,
+   "benches": false,
+   "carer_tip": "동굴 안 계단과 낮은 천장이 있어요. 입구 옆 돌리네 공원은 평지라 쉬어 가기 좋아요.",
+   "access_source": "예시",
+   "stay_min": 40
+  },
+  "cafe_sample": {
+   "open": "10:00",
+   "close": "21:00",
+   "break_time": null,
+   "closed_days": [
+    2
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "문턱이 없고 통로가 넓어요. 창가 소파 자리가 등받이가 있어 편해요.",
+   "access_source": "예시",
+   "stay_min": 40,
+   "soft_menu": true,
+   "parking_easy": true,
+   "type": "카페"
+  },
+  "lunch_sample": {
+   "open": "11:00",
+   "close": "21:00",
+   "break_time": [
+    "15:00",
+    "16:30"
+   ],
+   "closed_days": [
+    1
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "1층 입식 테이블이에요. 생선조림처럼 부드러운 메뉴가 있어요.",
+   "access_source": "예시",
+   "stay_min": 70,
+   "soft_menu": true,
+   "parking_easy": true
+  },
+  "food_mukho_b": {
+   "open": "11:00",
+   "close": "21:00",
+   "break_time": null,
+   "closed_days": [
+    3
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "불가",
+   "walk_load": "평지",
+   "entrance_step": true,
+   "table": "좌식",
+   "benches": false,
+   "carer_tip": "좌식이라 무릎이 불편한 분께는 어려워요.",
+   "access_source": "예시",
+   "soft_menu": false,
+   "parking_easy": false
+  },
+  "food_chuam": {
+   "open": "07:00",
+   "close": "19:00",
+   "break_time": null,
+   "closed_days": [
+    2
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "아침 일찍 해돋이를 보고 들르기 좋아요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": true
+  },
+  "food_mureung": {
+   "open": "09:00",
+   "close": "19:00",
+   "break_time": [
+    "15:00",
+    "17:00"
+   ],
+   "closed_days": [],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "혼합",
+   "benches": true,
+   "carer_tip": "입식 자리가 적어 예약하면 좋아요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": true
+  },
+  "food_mangsang": {
+   "open": "11:00",
+   "close": "20:00",
+   "break_time": [
+    "15:00",
+    "16:30"
+   ],
+   "closed_days": [
+    4
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "주차장에서 문까지 10m예요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": true
+  },
+  "food_cheongok": {
+   "open": "11:30",
+   "close": "21:00",
+   "break_time": [
+    "15:00",
+    "17:00"
+   ],
+   "closed_days": [
+    0
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "엘리베이터는 건물 뒤쪽에 있어요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": false
+  },
+  "cafe_mukho": {
+   "open": "10:00",
+   "close": "21:00",
+   "break_time": null,
+   "closed_days": [
+    3
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "창가 자리는 의자가 높으니 안쪽 소파 자리를 추천해요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": false
+  },
+  "cafe_mureung": {
+   "open": "10:00",
+   "close": "18:00",
+   "break_time": null,
+   "closed_days": [
+    1
+   ],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "계곡 다녀온 뒤 쉬기 좋아요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": true
+  },
+  "cafe_chuam": {
+   "open": "09:00",
+   "close": "20:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "예시",
+   "last_entry": null,
+   "wheelchair": "가능",
+   "walk_load": "평지",
+   "entrance_step": false,
+   "table": "입식",
+   "benches": true,
+   "carer_tip": "해돋이 뒤 몸을 녹이기 좋아요.",
+   "access_source": "예시",
+   "soft_menu": true,
+   "parking_easy": true
+  }
+ },
+ "extra_places": [
+  {
+   "id": "food_mukho_b",
+   "name_ko": "묵호 좌식 횟집 (예시)",
+   "name_en": "Mukho floor-seat restaurant (sample)",
+   "zone": "mukho",
+   "type": "식당",
+   "lat": 37.5532,
+   "lon": 129.1172,
+   "stay_min": 60,
+   "styles": [
+    "맛집",
+    "바다 보기"
+   ],
+   "facilities": [
+    "테이블 없음(좌식)"
+   ],
+   "tip_ko": "신발을 벗고 앉는 좌식이에요.",
+   "tip_en": "Floor seating; shoes off.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "입구",
+     "grade": "Y",
+     "note": "턱 약 4cm",
+     "source": "예시",
+     "curb_cm": 4
+    }
+   ]
+  },
+  {
+   "id": "food_chuam",
+   "name_ko": "추암 순두부 식당 (예시)",
+   "name_en": "Chuam tofu restaurant (sample)",
+   "zone": "chuam",
+   "type": "식당",
+   "lat": 37.4775,
+   "lon": 129.1555,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [
+    "입식 테이블",
+    "장애인 주차"
+   ],
+   "tip_ko": "아침 일찍 열고 부드러운 순두부가 있어요.",
+   "tip_en": "Opens early; soft tofu dishes.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  },
+  {
+   "id": "food_mureung",
+   "name_ko": "무릉 산채 식당 (예시)",
+   "name_en": "Mureung herb restaurant (sample)",
+   "zone": "mureung",
+   "type": "식당",
+   "lat": 37.4652,
+   "lon": 129.0245,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [
+    "입식 테이블 일부",
+    "장애인 화장실"
+   ],
+   "tip_ko": "입식 자리는 창가 쪽 몇 개뿐이라 미리 말해 두세요.",
+   "tip_en": "Only a few table seats by the window; ask ahead.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  },
+  {
+   "id": "food_mangsang",
+   "name_ko": "망상 칼국수 식당 (예시)",
+   "name_en": "Mangsang noodle restaurant (sample)",
+   "zone": "mangsang",
+   "type": "식당",
+   "lat": 37.5905,
+   "lon": 129.088,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [
+    "입식 테이블",
+    "넓은 주차장"
+   ],
+   "tip_ko": "주차장에서 바로 들어가는 1층이에요.",
+   "tip_en": "Ground floor right off the parking lot.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  },
+  {
+   "id": "food_cheongok",
+   "name_ko": "천곡 한정식 (예시)",
+   "name_en": "Cheongok set-meal restaurant (sample)",
+   "zone": "cheongok",
+   "type": "식당",
+   "lat": 37.5205,
+   "lon": 129.112,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [
+    "입식 테이블",
+    "엘리베이터"
+   ],
+   "tip_ko": "엘리베이터가 있는 2층이에요. 반찬이 부드러운 편이에요.",
+   "tip_en": "Second floor with an elevator; soft side dishes.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  },
+  {
+   "id": "cafe_mukho",
+   "name_ko": "묵호 바다 카페 (예시)",
+   "name_en": "Mukho sea cafe (sample)",
+   "zone": "mukho",
+   "type": "카페",
+   "lat": 37.549,
+   "lon": 129.119,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "바다 보기"
+   ],
+   "facilities": [
+    "경사로",
+    "장애인 화장실"
+   ],
+   "tip_ko": "1층 창가에서 바다가 보여요.",
+   "tip_en": "Sea view from the ground-floor window seats.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  },
+  {
+   "id": "cafe_mureung",
+   "name_ko": "무릉 계곡 카페 (예시)",
+   "name_en": "Mureung valley cafe (sample)",
+   "zone": "mureung",
+   "type": "카페",
+   "lat": 37.464,
+   "lon": 129.023,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "자연·산책"
+   ],
+   "facilities": [
+    "경사로"
+   ],
+   "tip_ko": "주차장 옆 1층이라 이동이 짧아요.",
+   "tip_en": "Next to the parking lot, ground floor.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  },
+  {
+   "id": "cafe_chuam",
+   "name_ko": "추암 해변 카페 (예시)",
+   "name_en": "Chuam beach cafe (sample)",
+   "zone": "chuam",
+   "type": "카페",
+   "lat": 37.479,
+   "lon": 129.157,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "바다 보기"
+   ],
+   "facilities": [
+    "경사로"
+   ],
+   "tip_ko": "해변 데크와 이어져 있어요.",
+   "tip_en": "Connected to the beach deck.",
+   "indoor": true,
+   "sample": true,
+   "segments": [
+    {
+     "name": "주차장 → 입구",
+     "grade": "G",
+     "note": "평지",
+     "source": "예시"
+    },
+    {
+     "name": "입구",
+     "grade": "G",
+     "note": "문턱 없음",
+     "source": "예시"
+    }
+   ]
+  }
+ ]
+}
