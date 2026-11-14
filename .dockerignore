@@ -1,0 +1,7 @@
+frontend
+**/node_modules
+**/__pycache__
+.env
+data/reports
+data/cms
+data/raw
