@@ -1,0 +1,30 @@
+# Render 블루프린트: GitHub 저장소를 연결하면 이 설정대로 서버 하나를 띄운다.
+# 관리자가 바꾼 내용(cms.json)과 제보가 서버 재시작 뒤에도 남도록 디스크를 붙인다 (Starter 요금제 이상 필요).
+services:
+  - type: web
+    name: donghae-gildongmu
+    runtime: docker
+    plan: starter
+    region: singapore
+    healthCheckPath: /api/health
+    disk:
+      name: gildongmu-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: ADMIN_ID
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false          # Render 화면에서 직접 입력 (GitHub에 올리지 않음)
+      - key: DEMO_LOGIN
+        value: "1"           # 본선 시연용 [임시 로그인]. 대회 뒤 "0"으로
+      - key: CMS_FILE
+        value: /var/data/cms.json
+      - key: REPORTS_DIR
+        value: /var/data/reports
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DATA_GO_KR_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: claude-sonnet-5-5
