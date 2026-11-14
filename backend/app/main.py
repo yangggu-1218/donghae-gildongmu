@@ -16,6 +16,8 @@ from . import cms, edits, pages, engine, llm, public_apis, public_data, details,
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
+from . import sitelock
+app.middleware("http")(sitelock.middleware)   # SITE_PASSWORD 가 있으면 비밀번호 화면부터
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
                    allow_methods=["*"], allow_headers=["*"])
 
