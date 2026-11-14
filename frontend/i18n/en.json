@@ -223,5 +223,16 @@
   "sum.link": "Open this link to see the same plan",
   "sum.loading": "Loading the shared plan…",
   "when.other": "Other time",
-  "map.overview": "Before you plan, the map shows {n} places with checked access."
+  "map.overview": "Before you plan, the map shows {n} places with checked access.",
+  "nav.transport": "Transport",
+  "nav.map": "Facilities map",
+  "nav.my": "My trips",
+  "nav.more": "More",
+  "nav.events": "Events",
+  "nav.stay": "Stay",
+  "nav.guide": "Trip prep & FAQ",
+  "nav.sources": "Sources & criteria",
+  "nav.admin": "Admin",
+  "my.save": "Save to my trips",
+  "my.saved": "Saved"
 }

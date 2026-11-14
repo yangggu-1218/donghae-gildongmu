@@ -223,5 +223,16 @@
   "sum.link": "이 링크를 열면 같은 일정표가 보여요",
   "sum.loading": "공유받은 일정표를 불러오는 중이에요.",
   "when.other": "다른 시각",
-  "map.overview": "코스를 만들기 전에는 접근성을 확인한 관광지 {n}곳을 보여 드려요."
+  "map.overview": "코스를 만들기 전에는 접근성을 확인한 관광지 {n}곳을 보여 드려요.",
+  "nav.transport": "교통",
+  "nav.map": "편의시설 지도",
+  "nav.my": "내 일정",
+  "nav.more": "더 보기",
+  "nav.events": "행사 달력",
+  "nav.stay": "숙소",
+  "nav.guide": "여행 준비·자주 묻는 질문",
+  "nav.sources": "출처·판정 기준",
+  "nav.admin": "관리자",
+  "my.save": "내 일정에 저장",
+  "my.saved": "내 일정에 저장했어요"
 }
