@@ -12,7 +12,7 @@ from . import edits, engine, llm, public_data
 from .schemas import Conditions, Place
 
 PROMPT = (Path(__file__).parent / "prompts" / "talk.md").read_text(encoding="utf-8")
-TALK_MODEL = os.getenv("TALK_MODEL") or os.getenv("LLM_MODEL") or "claude-sonnet-5-5"
+TALK_MODEL = os.getenv("TALK_MODEL") or os.getenv("LLM_MODEL") or "claude-haiku-5-5"
 TALK_TIMEOUT = float(os.getenv("TALK_TIMEOUT") or 20)
 
 WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"]

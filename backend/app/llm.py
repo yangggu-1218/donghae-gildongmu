@@ -5,7 +5,7 @@ import httpx
 
 PROMPTS = Path(__file__).parent / "prompts"
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-MODEL = os.getenv("LLM_MODEL", "claude-sonnet-5-5")
+MODEL = os.getenv("LLM_MODEL", "claude-haiku-5-5")
 TIMEOUT = float(os.getenv("LLM_TIMEOUT") or 6)
 WORKSPACE = os.getenv("ANTHROPIC_WORKSPACE_ID", "")   # 키를 워크스페이스에 묶지 않았다면 필요
 
