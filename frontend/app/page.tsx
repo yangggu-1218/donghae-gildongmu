@@ -6,7 +6,8 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, Places, Courses, Reviews, PRESETS } from "@/components/Sections";
+import { Hero, Places, Courses, PRESETS } from "@/components/Sections";
+import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
 import { api, Conditions, Course, CourseRes, Extra } from "@/lib/api";
@@ -57,6 +58,10 @@ export default function Page() {
   const [showNear, setShowNear] = useState(false);
   const [whenOpen, setWhenOpen] = useState(false);
   const [sumOpen, setSumOpen] = useState(false);
+  const [route, setRoute] = useState<string[]>([""]);
+  const [saved, setSaved] = useState(false);
+  const [site, setSite] = useState<{ banner: any; notices: any[] } | null>(null);   // 관리자 공지 (바로 반영)
+  useEffect(() => { api.get("/api/site").then(setSite).catch(() => {}); }, [route]);
 
   useEffect(() => { setLog([{ pose: "wave", text: t("plan.greet") }, { pose: "ask", text: t("q.when") }]); setStep(0); }, [lang]);
   useEffect(() => { api.places().then((ps) => setPlaces(Object.fromEntries(ps.map((p) => [p.id, p])))).catch(() => {}); }, []);
@@ -66,14 +71,38 @@ export default function Page() {
     try { on = localStorage.getItem("gd-big") === "1"; } catch { /* 저장소를 못 쓰는 브라우저 */ }
     setBig(on); document.body.classList.toggle("big", on);
   }, []);
-  // 작업4: 가족이 받은 공유 링크(#plan=...)를 열면 같은 일정표를 바로 보여 준다
+  // 페이지 이동: '#/교통' 같은 주소. '#plan' 같은 건 처음 화면 안의 위치. '#plan=...'은 공유받은 일정표.
   useEffect(() => {
-    const m = location.hash.match(/^#plan=(.+)$/);
-    const c = m && decodePlan(m[1]);
-    if (!c) return;
-    setLang(c.lang || "ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
-    api.course(c).then((r) => { applyRes(r); setSumOpen(true); }).catch(() => say({ pose: "worry", text: t("error.server") })).finally(() => setBusy(false));
+    const onHash = () => {
+      const h = location.hash;
+      setRoute(h.startsWith("#/") ? h.slice(2).split("/") : [""]);
+      const m = h.match(/^#plan=(.+)$/);
+      const c = m && decodePlan(m[1]);
+      if (c) {
+        setLang(c.lang || "ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
+        api.course(c).then((r) => { applyRes(r); setSumOpen(true); }).catch(() => say({ pose: "worry", text: t("error.server") })).finally(() => setBusy(false));
+        return;
+      }
+      setSumOpen(false);
+      if (h.startsWith("#/")) window.scrollTo(0, 0);
+      else if (h.length > 1) setTimeout(() => document.getElementById(h.slice(1))?.scrollIntoView({ block: "start" }), 50);
+    };
+    onHash();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
+  function saveMine() {
+    if (!course) return;
+    const hash = encodePlan({ ...cond, lang }, course);
+    const plans = loadPlans().filter((p) => p.hash !== hash);
+    const ok = savePlans([{ id: Math.random().toString(16).slice(2, 10), title: "", date: course.date, start_time: course.start_time, start: startName,
+      stops: course.stops.map((s) => name(s.id)), hash, saved_at: new Date().toISOString() }, ...plans].slice(0, 20));
+    setSaved(ok);
+  }
+  function planDate(d: string) {
+    setCond((c) => ({ ...c, date: d })); location.hash = "#plan";
+    if (course) { const wd = new Date(d + "T00:00:00").getDay(); edit("set_when", `${d} ${cond.start_time}`, t("edit.whenSay", { d: `${dateLabel(d, lang)}(${wdName(wd, lang)})`, t: cond.start_time || "" })); }
+  }
 
   function toggleBig() {
     const on = !big; setBig(on); document.body.classList.toggle("big", on);
@@ -111,7 +140,7 @@ export default function Page() {
     const c = baseCond();
     await makeWith(c, `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}`);
   }
-  const toPlan = () => document.getElementById("plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const toPlan = () => { if (location.hash.startsWith("#/")) location.hash = "#plan"; else document.getElementById("plan")?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   // 추천 코스(예시)의 조건 그대로 코스 만들기
   async function startPreset(i: number) {
     const pr = PRESETS[i] as any;
@@ -125,6 +154,7 @@ export default function Page() {
     setCond((c) => ({ ...c, wish: Array.from(new Set([...(c.wish || []), id])), must: Array.from(new Set([...(c.must || []), id])) }));
   }
   function applyRes(r: CourseRes | any, before: string[] = []) {
+    setSaved(false);
     setCourse(r.course); setExtras((x) => ({ ...x, ...(r.extras || {}) }));
     if (r.conditions) setCond(r.conditions);
     if (r.stay !== undefined) setHint({ stay: r.stay, move: r.move, events: r.events || [], onDay: !!r.events_on_day });
@@ -211,7 +241,8 @@ export default function Page() {
         <div className="wrap bar">
           <a className="brand" href="#"><img src="/dongi/neutral.webp" alt="" />{t("brand")}</a>
           <nav className="nav" aria-label={t("nav.main")}>
-            <a href="#plan">{t("nav.plan")}</a><a href="#places">{t("nav.places")}</a><a href="#courses">{t("nav.courses")}</a><a href="#reviews">{t("nav.reviews")}</a>
+            {([["#plan", "nav.plan", ""], ["#/places", "nav.places", "places"], ["#/transport", "nav.transport", "transport"], ["#/map", "nav.map", "map"], ["#/my", "nav.my", "my"]] as const).map(([h, k, r]) =>
+              <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}>{t(k)}</a>)}
           </nav>
           <div className="tools">
             <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
@@ -223,7 +254,23 @@ export default function Page() {
           </div>
         </div>
       </header>
+      {(site?.banner || site?.notices?.length) ? (
+        <div className="site-notes" role="region" aria-label={lang === "ko" ? "공지" : "Notices"}>
+          {site?.banner && <p className={`site-note ${site.banner.level}`}><b>{lang === "ko" ? "공지" : "Notice"}</b> {site.banner.text}</p>}
+          {site?.notices?.map((n: any) => <p key={n.id} className={`site-note ${n.level}`}><b>{n.title}</b> {n.body}</p>)}
+        </div>) : null}
       <main>
+      {route[0] === "place" && route[1] && <PlacePage id={route[1]} lang={lang} onAdd={addWish} />}
+      {route[0] === "places" && <Places lang={lang} wish={cond.wish || []} onAdd={addWish} gradeLabel={(g) => t(`grade.${g}`)} />}
+      {route[0] === "transport" && <TransportPage lang={lang} />}
+      {route[0] === "map" && <MapPage lang={lang} />}
+      {route[0] === "my" && <MyPage lang={lang} />}
+      {route[0] === "events" && <EventsPage lang={lang} onPlanDate={planDate} />}
+      {route[0] === "stay" && <StayPage lang={lang} />}
+      {route[0] === "guide" && <GuidePage lang={lang} />}
+      {route[0] === "sources" && <SourcesPage lang={lang} />}
+      {route[0] === "admin" && <AdminPage lang={lang} />}
+      {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
       <section id="plan" className="sec wrap" aria-labelledby="plan-h">
       <div className="sec-head">
@@ -285,7 +332,10 @@ export default function Page() {
                   <p className="muted">{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
                     : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</p>
                 </div>
-                <button className="chip go sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
+                <div className="chips">
+                  <button className="chip go sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
+                  <button className="chip" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
+                </div>
               </div>
               <KakaoMap pins={pins} />
               <div className="tl">
@@ -335,12 +385,19 @@ export default function Page() {
       </div>
 
       </section>
-      <Places lang={lang} wish={cond.wish || []} onAdd={addWish} gradeLabel={(g) => t(`grade.${g}`)} />
       <Courses lang={lang} busy={busy} onStart={startPreset} />
-      <Reviews lang={lang} />
+      </>}
       </main>
+      <nav className="tabbar" aria-label={t("nav.main")}>
+        {([["#plan", "nav.plan", "", "🧭"], ["#/places", "nav.places", "places", "📍"], ["#/transport", "nav.transport", "transport", "🚌"], ["#/map", "nav.map", "map", "🗺"], ["#/my", "nav.my", "my", "📅"]] as const).map(([h, k, r, ic]) =>
+          <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><span aria-hidden="true">{ic}</span>{t(k)}</a>)}
+      </nav>
       <footer className="foot">
         <div className="wrap">
+          <nav className="foot-nav" aria-label={t("nav.more")}>
+            <a href="#/events">{t("nav.events")}</a><a href="#/stay">{t("nav.stay")}</a><a href="#/guide">{t("nav.guide")}</a>
+            <a href="#/sources">{t("nav.sources")}</a><a href="#/admin">{t("nav.admin")}</a>
+          </nav>
           <p><b>{t("brand")}</b> {t("foot.team")}</p>
           <p>{t("foot.data")}</p>
           <p>{t("foot.ai")}</p>
