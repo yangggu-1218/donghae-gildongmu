@@ -281,7 +281,7 @@ export default function Page() {
         <section className="panel" aria-label={t("nav.plan")}>
           {log.map((m, i) => m.me
             ? <div key={i} className="me"><span>{m.text}</span></div>
-            : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}</Dongi>{m.via && <p className={`via via-${m.via}`}>{t(m.via === "llm" ? "via.llm" : "via.rule")}</p>}{m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
+            : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}</Dongi>{m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
 
           {step === 0 && whenPicker(finishWhen, t("plan.next"))}
           {step > 0 && step < Q.length && (
