@@ -1,0 +1,796 @@
+{
+ "as_of": "2025-06-25",
+ "source": "전국공중화장실표준데이터(공공데이터포털) — 동해시 중 장애인용 변기가 있는 곳",
+ "items": [
+  {
+   "name": "가원습지생태자연공원",
+   "road": "동해시 지가길 64",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "강원도동해교육지원청",
+   "road": "동해시 천곡로 117",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "근로복지공단 동해병원 본관1층 화장실",
+   "road": "동해시 하평로 11",
+   "kind": "개방화장실",
+   "hours": "07:00~22:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "근로자종합복지회관",
+   "road": "동해시 동굴로 2",
+   "kind": "개방화장실",
+   "hours": "09:00~24:00",
+   "accessible": true,
+   "lat": 37.51495486,
+   "lon": 129.1050133,
+   "coord_from": "parking:근로자종합복지회관"
+  },
+  {
+   "name": "냉천공원",
+   "road": "동해시 동굴로 141",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "농업기술센터",
+   "road": "동해시 승지로 58-2",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "대진해변",
+   "road": "동해시 대진항길 60",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "도째비골 스카이밸리 화장실",
+   "road": "동해시 해맞이길 289",
+   "kind": "공중화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.55483008,
+   "lon": 129.1184699,
+   "coord_from": "attractions:묵호등대"
+  },
+  {
+   "name": "동해(동해)휴게소",
+   "road": "동해시 동해대로 6437",
+   "kind": "개방화장실",
+   "hours": "00:00~24:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해경찰서",
+   "road": "동해시 천곡로 107",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해고용센터 1층 화장실",
+   "road": "동해시 동해대로 4921",
+   "kind": "개방화장실",
+   "hours": "평일(09:00∼18:00)",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해교육도서관",
+   "road": "동해시 부곡5길 22",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해꿈빛마루도서관",
+   "road": "동해시 천곡로 114",
+   "kind": "개방화장실",
+   "hours": "09:00~22:00(휴관일 제외)",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해동인병원",
+   "road": "동해시 하평로 26",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해무릉건강숲",
+   "road": "동해시 삼화로 455",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.46510515,
+   "lon": 129.0313086,
+   "coord_from": "attractions:동해무릉건강숲"
+  },
+  {
+   "name": "동해문화원",
+   "road": "동해시 평원로 17",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해북삼동우체국",
+   "road": "동해시 효자로 669",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해북평동우체국",
+   "road": "동해시 전천로 311",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해삼화동우체국",
+   "road": "동해시 삼화로 17",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해송정동우체국",
+   "road": "동해시 동해항3길 11",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시립발한도서관",
+   "road": "동해시 해안로 535",
+   "kind": "개방화장실",
+   "hours": "09:00~22:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시립북삼도서관",
+   "road": "동해시 효자로 649",
+   "kind": "개방화장실",
+   "hours": "09:00~22:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시문화예술회관",
+   "road": "동해시 평원로 15",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시보건소(묵호건강증진센터)",
+   "road": "동해시 발한로 227",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시보건소(북삼건강생활지원센터)",
+   "road": "동해시 청운로 96",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시장애인보호작업장",
+   "road": "동해시 공단 7로 31",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해시청 본관",
+   "road": "동해시 천곡로 77",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.5248901,
+   "lon": 129.1144001,
+   "coord_from": "heritage:동해 만재 홍락섭 전적류"
+  },
+  {
+   "name": "동해시청 신관",
+   "road": "동해시 천곡로 77",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.5248901,
+   "lon": 129.1144001,
+   "coord_from": "heritage:동해 만재 홍락섭 전적류"
+  },
+  {
+   "name": "동해역",
+   "road": "동해시 동해역길 69",
+   "kind": "개방화장실",
+   "hours": "09:00~21:00",
+   "accessible": true,
+   "lat": 37.4995,
+   "lon": 129.124,
+   "coord_from": "start:동해역"
+  },
+  {
+   "name": "동해우체국",
+   "road": "동해시 천곡로 92",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해웰빙레포츠타운 국민체육센터",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "09:00~24:00",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해웰빙레포츠타운 동해체육관",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "09:00~24:00",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해웰빙레포츠타운 보조구장 외부",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해웰빙레포츠타운 생활체육공원",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해웰빙레포츠타운 전용구장 내부",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "09:00~24:00",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해웰빙레포츠타운 종합경기장 건물내부",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해웰빙레포츠타운 하키장",
+   "road": "동해시 덕골길 10",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.5160465,
+   "lon": 129.1021986,
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+  },
+  {
+   "name": "동해자유무역지역관리원청사동",
+   "road": "동해시 공단1로 177",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해지방해양수산청 민원화장실",
+   "road": "동해시 평원로 46",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해지사 1층 남/여 화장실",
+   "road": "동해시 한섬로 135",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동해해양경찰서 민원동 화장실",
+   "road": "동해시 임항로 29",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동호농산물시장",
+   "road": "동해시 동호4길 9-1",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "동호동행정복지센터",
+   "road": "동해시 동호3길 35",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "망상 제2캠핑장 7호화장실",
+   "road": "동해시 동해대로 6270-14",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": 37.59160593,
+   "lon": 129.0923204,
+   "coord_from": "attractions:망상제2오토캠핑장"
+  },
+  {
+   "name": "망상리조트 자동차캠핑장",
+   "road": "동해시 동해대로 6370",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": 37.60042576,
+   "lon": 129.0784636,
+   "coord_from": "attractions:망상오토캠핑리조트&망상해변한옥마을[해안]"
+  },
+  {
+   "name": "망상리조트 커뮤니티하우스",
+   "road": "동해시 동해대로 6370",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": 37.60042576,
+   "lon": 129.0784636,
+   "coord_from": "attractions:망상오토캠핑리조트&망상해변한옥마을[해안]"
+  },
+  {
+   "name": "망상컨벤션센터",
+   "road": "동해시 동해대로 6314",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "망상해변내 5호",
+   "road": "동해시 동해대로 6270-12",
+   "kind": "공중화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "무릉계곡 관리동",
+   "road": "동해시 삼화로 538",
+   "kind": "개방화장실",
+   "hours": "09:00~24:00",
+   "accessible": true,
+   "lat": 37.46346963,
+   "lon": 129.0193942,
+   "coord_from": "attractions:무릉계곡"
+  },
+  {
+   "name": "묵호119안전센터",
+   "road": "동해시 일출로 29",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "묵호동행정복지센터",
+   "road": "동해시 논골길 78",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "묵호등대 공용화장실",
+   "road": "동해시 해맞이길 289",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.55483008,
+   "lon": 129.1184699,
+   "coord_from": "attractions:묵호등대"
+  },
+  {
+   "name": "묵호역",
+   "road": "동해시 해안로 520",
+   "kind": "개방화장실",
+   "hours": "09:00~21:00",
+   "accessible": true,
+   "lat": 37.548,
+   "lon": 129.116,
+   "coord_from": "start:묵호역"
+  },
+  {
+   "name": "묵호우체국",
+   "road": "동해시 발한로 211-2",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "묵호할복장",
+   "road": "동해시 일출로 60",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "묵호항 북방파제",
+   "road": "동해시 일출로 92-54",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "묵호항매립지(묵호수변공원)",
+   "road": "동해시 일출로 92-11",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북평공단2공원(공단내)",
+   "road": "동해시 구호동239",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북평민속장 (파출소)",
+   "road": "동해시 대동로 132",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북평민속장주차장",
+   "road": "동해시 구미4길 21",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북평산단1공원(발전소)",
+   "road": "동해시 공단9로 156",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북평우시장",
+   "road": "동해시 오일장길 6-3",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북평동행정복지센터",
+   "road": "동해시 대동로 137",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.48374976,
+   "lon": 129.1250999,
+   "coord_from": "wheelchair_chargers:북평동행정복지센터"
+  },
+  {
+   "name": "발한중앙시장",
+   "road": "동해시 발한복개로 42",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "부곡동행정복지센터",
+   "road": "동해시 부곡로 21",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북삼119안전센터",
+   "road": "동해시 효자남길 33-10",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "북삼동행정복지센터",
+   "road": "동해시 효자남길 33-4",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "삼화동행정복지센터",
+   "road": "동해시 무릉1길 10",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "용산서원",
+   "road": "동해시 효자로 583",
+   "kind": "공중화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.48928414,
+   "lon": 129.098695,
+   "coord_from": "heritage:용산서원학규현판"
+  },
+  {
+   "name": "일출공원가리비",
+   "road": "동해시 일출로 151",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "자매공원",
+   "road": "동해시 발한로 371",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "전천 이원교차로",
+   "road": "동해시 이원길 103 (이도동)",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "전천 청운교",
+   "road": "동해시 청운2길 4 (쇄운동)",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "전천 파크골프장",
+   "road": "동해시 동해대로 4898-4 (나안동)",
+   "kind": "공중화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "종합버스터미널",
+   "road": "동해시 동해대로 5443",
+   "kind": "개방화장실",
+   "hours": "05:00~24:00",
+   "accessible": true,
+   "lat": 37.5276909,
+   "lon": 129.1040551,
+   "coord_from": "parking:공영터미널"
+  },
+  {
+   "name": "천곡동행정복지센터",
+   "road": "동해시 천곡로 98-1",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "천곡천연동굴",
+   "road": "동해시 동굴로 50",
+   "kind": "공중화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": 37.51752144,
+   "lon": 129.1104801,
+   "coord_from": "attractions:천곡황금박쥐동굴"
+  },
+  {
+   "name": "보건소화장실",
+   "road": "동해시 천곡로 100-2",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "해오름스포츠센터",
+   "road": "동해시 갯목길 114-5",
+   "kind": "개방화장실",
+   "hours": "주중06:00~20:00 / 주말 07:00~18:00 ※ 매주 월요일 휴관",
+   "accessible": true,
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  }
+ ]
+}
