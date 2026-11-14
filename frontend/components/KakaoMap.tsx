@@ -4,10 +4,11 @@
 import { useEffect, useRef, useState } from "react";
 
 declare global { interface Window { kakao: any } }
-type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null };
+type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string };
 const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 
-export default function KakaoMap({ pins, overview = false }: { pins: Pin[]; overview?: boolean }) {
+// dots: 편의시설 지도용. 색 점 + 글자 하나, 누르면 onPick(i)
+export default function KakaoMap({ pins, overview = false, dots = false, onPick, label }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
   const [failed, setFailed] = useState(false);   // 키가 틀렸거나 도메인이 등록되지 않으면 약도로 대신한다
@@ -21,7 +22,16 @@ export default function KakaoMap({ pins, overview = false }: { pins: Pin[]; over
       const path = pins.map((p) => new maps.LatLng(p.lat, p.lon));
       pins.forEach((p, i) => {
         const pos = path[i]; bounds.extend(pos);
-        const bg = p.grade ? COLOR[p.grade] : "#2462B4";
+        const bg = p.color || (p.grade ? COLOR[p.grade] : "#2462B4");
+        if (dots) {
+          const el = document.createElement("button");
+          el.type = "button"; el.title = p.label; el.setAttribute("aria-label", p.label);
+          el.style.cssText = `width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;border:2px solid #fff;font:700 12px sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35)`;
+          el.textContent = p.icon || "";
+          el.onclick = () => onPick?.(i);
+          new maps.CustomOverlay({ map, position: pos, content: el });
+          return;
+        }
         if (overview) {   // 갈 수 있는 관광지 전체 보기: 번호·경로 없이 이름만
           new maps.CustomOverlay({ map, position: pos, yAnchor: 1.1, content:
             `<div style="background:#fff;border:2px solid #2462B4;border-radius:999px;padding:2px 8px;font:600 12px sans-serif;color:#12355E;white-space:nowrap">${p.label}</div>` });
@@ -30,8 +40,8 @@ export default function KakaoMap({ pins, overview = false }: { pins: Pin[]; over
         new maps.CustomOverlay({ map, position: pos, content:
           `<div style="width:28px;height:28px;border-radius:50%;background:${bg};color:${p.grade === "Y" ? "#1A2433" : "#fff"};display:grid;place-items:center;font-weight:700;border:3px solid #fff" title="${p.label}">${i + 1}</div>` });
       });
-      if (!overview) new maps.Polyline({ map, path, strokeWeight: 3, strokeColor: "#566275", strokeStyle: "shortdash" });
-      map.setBounds(bounds);
+      if (!overview && !dots) new maps.Polyline({ map, path, strokeWeight: 3, strokeColor: "#566275", strokeStyle: "shortdash" });
+      if (pins.length > 1) map.setBounds(bounds); else map.setLevel(4);
     };
     const safeDraw = () => { try { draw(); } catch (e) { console.error(e); setFailed(true); } };
     if (window.kakao?.maps) { window.kakao.maps.load(safeDraw); return; }
@@ -40,14 +50,14 @@ export default function KakaoMap({ pins, overview = false }: { pins: Pin[]; over
     s.onload = () => (window.kakao?.maps ? window.kakao.maps.load(safeDraw) : setFailed(true));
     s.onerror = () => setFailed(true);
     document.head.appendChild(s);
-  }, [key, pins, failed, overview]);
+  }, [key, pins, failed, overview, dots]);
 
-  if (!key || failed || !pins.length) return <Sketch pins={pins} overview={overview} />;
-  return <div className="map" ref={ref} style={{ display: "block" }} role="img" aria-label={overview ? "동해 관광지 지도" : "코스 지도. 아래 목록과 같은 내용입니다."} />;
+  if (!key || failed || !pins.length) return <Sketch pins={pins} overview={overview} dots={dots} onPick={onPick} />;
+  return <div className="map" ref={ref} style={{ display: "block" }} role={dots ? undefined : "img"} aria-label={label || (overview ? "동해 관광지 지도" : "코스 지도. 아래 목록과 같은 내용입니다.")} />;
 }
 
 // 지도 키가 없을 때(데모·키 발급 전): 좌표로 그린 코스 약도. 실제 지도는 아니고 순서와 방향만 보여 준다.
-function Sketch({ pins, overview = false }: { pins: Pin[]; overview?: boolean }) {
+function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void }) {
   if (!pins.length) return <div className="map muted">코스를 만들면 여기에 경로가 그려져요.</div>;
   const W = 520, H = 300, P = 40;
   const lats = pins.map((p) => p.lat), lons = pins.map((p) => p.lon);
@@ -67,9 +77,14 @@ function Sketch({ pins, overview = false }: { pins: Pin[]; overview?: boolean })
   return (
     <div className="map" role="img" aria-label="코스 약도. 아래 목록과 같은 순서입니다." style={{ display: "block", position: "relative" }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-        <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ {overview ? "관광지 약도" : "코스 약도"}</text>
-        {!overview && <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />}
-        {pts.map(([px, py], i) => {
+        <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ {dots ? "편의시설 약도" : overview ? "관광지 약도" : "코스 약도"}</text>
+        {!overview && !dots && <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />}
+        {dots && pts.map(([px, py], i) => (
+          <g key={i} onClick={() => onPick?.(i)} style={{ cursor: "pointer" }} role="button" aria-label={pins[i].label}>
+            <circle cx={px} cy={py} r="9" fill={pins[i].color || "var(--sea)"} stroke="var(--surface)" strokeWidth="2" />
+            <text x={px} y={py + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">{pins[i].icon || ""}</text>
+          </g>))}
+        {!dots && pts.map(([px, py], i) => {
           const g = pins[i].grade; const bg = g ? `var(--${g === "G" ? "go" : g === "Y" ? "warn-dot" : "stop"})` : "var(--sea)";
           return (
             <g key={i}>

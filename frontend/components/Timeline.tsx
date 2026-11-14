@@ -60,6 +60,7 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
         </div>
         <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} /></div>
+        {s.notice && <p className="tl-notice" role="note">⚠ {s.notice}</p>}
         {s.wait_min > 0 && <p className="muted">⏳ {t("tl.wait", { m: s.wait_min })}</p>}
         {s.why && <p className="tl-why">{s.why}</p>}
         {facts.length > 0 && <p className="muted">{facts.join(" · ")}</p>}

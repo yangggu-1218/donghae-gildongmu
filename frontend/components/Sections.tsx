@@ -55,7 +55,7 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
 }
 
 /* ---------------- 장소 그림 (사진 대신, 권역 색) ---------------- */
-const ZONES = [
+export const ZONES = [
   { k: "chuam", ko: "추암", en: "Chuam", c: "#E8892A", d: ["해돋이와 기암괴석으로 유명한 남쪽 바닷가", "Southern coast known for sunrise and sea rocks"] },
   { k: "mukho", ko: "묵호", en: "Mukho", c: "#2462B4", d: ["항구와 언덕 마을, 바다 전망 시설이 모인 곳", "Harbor, hillside village and sea-view spots"] },
   { k: "mangsang", ko: "망상", en: "Mangsang", c: "#1E8FAE", d: ["넓은 백사장 해변이 이어지는 북쪽", "Northern stretch of wide sandy beaches"] },
@@ -123,9 +123,10 @@ export function Places({ lang, onAdd, wish, gradeLabel }: { lang: Lang; onAdd: (
                 {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
-                <h3>{L(p.name_ko, p.name_en || p.name_ko)}{p.sample && <span className="ex">{L("예시", "sample")}</span>}</h3>
+                <h3><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}</h3>
                 <p>{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
                 {p.facilities?.length > 0 && <ul className="fac">{p.facilities.slice(0, 4).map((f: string) => <li key={f}>{f}</li>)}</ul>}
+                <a className="more" href={`#/place/${p.id}`}>{L("길·화장실·주차 자세히 보기", "Paths, toilets, parking")}</a>
                 <button className={`add${inW ? " on" : ""}`} disabled={g === "R"} onClick={() => onAdd(p.id)}>
                   {g === "R" ? L("이 기준으로는 어려워요", "Not reachable for this need") : inW ? L("코스에 담았어요", "Added to route") : L("코스에 담기", "Add to route")}
                 </button>
