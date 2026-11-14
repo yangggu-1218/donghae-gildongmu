@@ -16,6 +16,8 @@ services:
         value: admin
       - key: ADMIN_PASSWORD
         sync: false          # Render 화면에서 직접 입력 (GitHub에 올리지 않음)
+      - key: SITE_PASSWORD
+        sync: false          # 공개 전 사이트 잠금. 공개할 때 이 변수를 지우면 끝
       - key: DEMO_LOGIN
         value: "1"           # 본선 시연용 [임시 로그인]. 대회 뒤 "0"으로
       - key: CMS_FILE

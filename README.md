@@ -111,7 +111,8 @@ cd build && MODE=server KAKAO_JS_KEY=<카카오 JS 키> node build.mjs && cd .. 
 ```
 
 1. [Render](https://render.com) 가입 → New → Blueprint → 이 저장소 선택 (`render.yaml` 사용).
-2. 환경 변수 `ADMIN_PASSWORD`, `ANTHROPIC_API_KEY` 를 Render 화면에서 입력.
+2. 환경 변수 `ADMIN_PASSWORD`, `ANTHROPIC_API_KEY`, `SITE_PASSWORD` 를 Render 화면에서 입력.
+   - `SITE_PASSWORD` 가 있으면 사이트 전체가 잠겨서 비밀번호를 아는 사람만 들어와요(`backend/app/sitelock.py`). **공개할 때는 이 변수를 지우면 끝**이에요.
 3. 배포 주소(예: `https://donghae-gildongmu.onrender.com`)를 카카오 개발자 콘솔 > 플랫폼 > Web 사이트 도메인에 추가해야 지도가 떠요.
 4. 디스크(`/var/data`)가 붙은 Starter 요금제여야 관리자 변경·제보가 재시작 뒤에도 남아요. 무료 요금제로 띄우면 잠들었다 깨어날 때 지워지니 [백업 내려받기]를 해 두세요.
 
