@@ -3,7 +3,7 @@ export type Grade = "G" | "Y" | "R" | null;
 export type Stop = {
   id: string; arrive: string; drive_min: number; grade: Grade; why: string;
   depart: string; kind: "sight" | "lunch" | "cafe"; open_state: "open" | "always" | "unknown";
-  hours_text: string; hours_sample: boolean; wait_min: number;
+  hours_text: string; hours_sample: boolean; wait_min: number; notice?: string;
 };
 export type Course = {
   mode: string; stops: Stop[]; overall: Grade; back_at: string; notes: string[];
@@ -42,7 +42,11 @@ export type Extra = {
 };
 
 async function j<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`서버 오류 ${res.status}`);
+  if (!res.ok) {
+    let msg = `서버 오류 ${res.status}`;
+    try { const b = await res.json(); if (b?.detail) msg = typeof b.detail === "string" ? b.detail : msg; } catch { /* 본문 없음 */ }
+    const e: any = new Error(msg); e.status = res.status; throw e;
+  }
   return res.json();
 }
 
@@ -64,5 +68,7 @@ export const api = {
       .then((r) => j<{ reply: string; pose: string; via: "llm" | "rule"; conditions: Conditions; state: Record<string, boolean>;
         course: Course | null; cards: { kind: string; data: any }[]; extras?: Record<string, Extra>;
         stay?: any; move?: any; events?: any[]; events_on_day?: boolean }>(r)),
-  place: (id: string, lang = "ko") => fetch(`/api/places/${id}?lang=${lang}`).then((r) => j<any>(r)),
+  place: (id: string, lang = "ko", mode = "wheel") => fetch(`/api/places/${id}?lang=${lang}&mode=${mode}`).then((r) => j<any>(r)),
+  get: (path: string, token?: string) => fetch(path, { headers: token ? { "x-admin-token": token } : {} }).then((r) => j<any>(r)),
+  post: (path: string, body: any, token?: string) => fetch(path, { method: "POST", headers: { "content-type": "application/json", ...(token ? { "x-admin-token": token } : {}) }, body: JSON.stringify(body) }).then((r) => j<any>(r)),
 };
