@@ -67,6 +67,7 @@ class Place(BaseModel):
     access_source: str = ""
     soft_menu: Optional[bool] = None     # 부드러운 메뉴
     parking_easy: Optional[bool] = None  # 주차 편함
+    notices: list[dict] = Field(default_factory=list)   # 관리자 임시 알림 (cms.py)
 
     @property
     def verified(self) -> bool:
@@ -109,6 +110,7 @@ class Stop(BaseModel):
     hours_text: str = ""
     hours_sample: bool = False           # 영업시간이 예시 값
     wait_min: int = 0                    # 문 열 때까지 기다린 시간
+    notice: str = ""                     # 그날 걸린 관리자 알림 (공사·우회 등)
 
 
 class Course(BaseModel):

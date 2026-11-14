@@ -130,10 +130,11 @@ def info_centers(lat: float, lon: float, lang: str = "ko", limit: int = 3, now: 
 
 def events(today: Optional[str] = None) -> dict:
     today = today or dt.datetime.now(KST).strftime("%Y-%m-%d")
-    evs = PUB.get("events", [])
+    from . import cms   # 관리자가 추가한 행사도 같은 목록에
+    evs = PUB.get("events", []) + [{**e, "as_of": ""} for e in cms.events()]
     up = sorted((e for e in evs if (e["end"] or e["start"]) >= today), key=lambda e: e["start"])
     return {"as_of": max((e["as_of"] for e in evs), default=""), "today": today,
-            "upcoming": [{k: e.get(k) for k in ("name", "venue", "kind", "start", "end", "start_time", "end_time", "fee_type", "fee", "age", "tel", "ticket", "url", "lat", "lon", "festival")} for e in up]}
+            "upcoming": [{k: e.get(k) for k in ("name", "venue", "kind", "start", "end", "start_time", "end_time", "fee_type", "fee", "age", "tel", "ticket", "url", "lat", "lon", "festival", "access", "added_by_admin", "id")} for e in up]}
 
 
 def events_on(day: str) -> list[dict]:

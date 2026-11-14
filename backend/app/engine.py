@@ -161,11 +161,17 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
     if dropped:
         notes.append(f"담아 두신 {D.josa(', '.join(dropped), '은는')} 이 조건으로 갈 수 없어 뺐어요.")
     # 정기휴무
+    # 정기휴무 + 관리자 임시 휴무 알림 (cms.py)
+    day_s = day.isoformat()
+    def notice_on(p, level):
+        return next((n for n in p.notices if n.get("level") == level and (not n.get("start") or n["start"] <= day_s)
+                     and (not n.get("end") or day_s <= n["end"])), None)
     for p in list(ok):
-        if wd in p.closed_day_nums:
+        tmp = notice_on(p, "closed")
+        if wd in p.closed_day_nums or tmp:
             ok.remove(p)
             if p.id in c.must or p.id in c.wish or p.id == c.lunch:
-                skipped.append({"id": p.id, "name": p.name_ko, "reason": f"{D.WD_KO[wd]}요일 휴무"})
+                skipped.append({"id": p.id, "name": p.name_ko, "reason": f"임시 휴무({tmp['title']})" if tmp else f"{D.WD_KO[wd]}요일 휴무"})
     need_table = "입식" in c.meal
     def food_ok(p):
         return not need_table or p.table in ("입식", "혼합")
@@ -200,7 +206,8 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         t = arrive + wait
         stops.append(Stop(id=p.id, arrive=hhmm(t), drive_min=dm, grade=grade_place(p, mode, less), kind=kind,
                           depart=hhmm(t + p.stay_min), open_state=st, hours_text=D.hours_text(p, c.lang),
-                          hours_sample=p.hours_source not in ("공공데이터", "상시 개방"), wait_min=wait))
+                          hours_sample=p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
+                          notice=(notice_on(p, "warn") or {}).get("title", "")))
         t += p.stay_min
         cur, cur_id = (p.lat or cur[0], p.lon or cur[1]), p.id
         seen.add(p.id)

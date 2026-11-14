@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Header, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import Place, Conditions, ChatEdit
-from . import edits, engine, llm, public_apis, public_data, details, talk as talk_mod
+from . import cms, edits, pages, engine, llm, public_apis, public_data, details, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -26,10 +26,21 @@ def load_places() -> dict[str, Place]:
         f = DATA / "places_seed.json"
     places = {p["id"]: Place(**p) for p in json.loads(f.read_text(encoding="utf-8"))}
     places = public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
-    return details.apply(places)          # 영업시간·어르신 접근성 상세, 예시 식당·카페
+    places = details.apply(places)        # 영업시간·어르신 접근성 상세, 예시 식당·카페
+    return cms.apply(places)              # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
 
 
 PLACES = load_places()
+# 제보·현장 기록은 서버를 다시 켜도 남는 곳에 (배포 때 REPORTS_DIR=/var/data/reports 처럼 디스크 경로로)
+REPORTS = Path(os.getenv("REPORTS_DIR") or DATA / "reports")
+REPORTS.mkdir(parents=True, exist_ok=True)
+
+
+def refresh():
+    """관리자가 저장하면 곧바로 다시 읽는다 — 다음 요청부터 모든 화면·코스 추천에 반영."""
+    fresh = load_places()
+    PLACES.clear()
+    PLACES.update(fresh)
 
 
 @app.get("/api/health")
@@ -45,12 +56,12 @@ def places(mode: str = "none"):
 
 
 @app.get("/api/places/{pid}")
-def place_detail(pid: str, lang: str = "ko"):
+def place_detail(pid: str, lang: str = "ko", mode: str = "wheel"):
     """장소 상세: 기본 정보 + 주변 향토유산 이야기 + 지나는 걷기길 + 가까운 관광안내소."""
     p = PLACES.get(pid)
     if not p:
         raise HTTPException(404, "알 수 없는 장소예요")
-    return {**p.model_dump(), "verified": p.verified, **extras(p, lang)}
+    return {**p.model_dump(), "verified": p.verified, **extras(p, lang), **pages.place_page(p, lang, mode), "last_visit": last_visit(pid)}
 
 
 def extras(p: Place, lang: str = "ko") -> dict:
@@ -122,6 +133,27 @@ def move_hint(result, c: Conditions):
     return {"taxi": public_data.taxi_at_start(c.start), "city_tour": public_data.city_tour(ids),
             "rentals": public_data.rentals_near(*xy),
             "mobility_center": public_data.mobility_center() if "휠체어" in c.move else None}
+
+
+@app.get("/api/transport")
+def transport(lang: str = "ko"):
+    return pages.transport(lang)
+
+
+@app.get("/api/facilities")
+def facilities():
+    return pages.facilities()
+
+
+@app.get("/api/sources")
+def sources():
+    return {**pages.sources(), "ai": llm.status()}
+
+
+@app.get("/api/events/all")
+def events_all():
+    """행사 달력: 지난 행사까지 모두."""
+    return {"events": public_data.events("0000-00-00")["upcoming"], "as_of": public_data.events()["as_of"]}
 
 
 @app.get("/api/stats")
@@ -251,25 +283,223 @@ async def report(place_id: str = Form(...), kind: str = Form(...), note: str = F
     if photo:
         img = Image.open(io.BytesIO(await photo.read())).convert("RGB")   # 다시 저장하면서 위치 정보(EXIF)를 지운다
         img.thumbnail((1600, 1600))
-        out = DATA / "reports" / f"{rid}.jpg"
+        out = REPORTS / f"{rid}.jpg"
         out.parent.mkdir(parents=True, exist_ok=True)
         img.save(out, "JPEG", quality=85)
         rec["photo"] = out.name
         # AI 비전 분석: 관리자 검수용 제안 (판정은 사람이 확인한 뒤에만 바뀐다)
         small = img.copy(); small.thumbnail((1024, 1024)); buf = io.BytesIO(); small.save(buf, "JPEG", quality=80)
         rec["ai"] = llm.analyze_photo(buf.getvalue(), PLACES[place_id].name_ko, kind, note)
-    log = DATA / "reports" / "reports.jsonl"
+    log = REPORTS / "reports.jsonl"
     with log.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     return {"ok": True, "id": rid, "ai": rec.get("ai")}
 
 
+def _admin(token: str | None):
+    """관리자 확인: [로그인]으로 받은 토큰을 X-Admin-Token 헤더로 보낸다."""
+    if not cms.account()[1]:
+        raise HTTPException(503, ".env 에 ADMIN_PASSWORD(관리자 비밀번호)를 먼저 설정해 주세요")
+    if not cms.check(token):
+        raise HTTPException(401, "다시 로그인해 주세요")
+
+
+@app.get("/api/admin/login-info")
+def admin_login_info():
+    """로그인 화면: [임시 로그인] 버튼을 보여 줄지. DEMO_LOGIN=1 일 때만 계정을 돌려준다(본선 시연용)."""
+    if cms.demo_login_enabled():
+        uid, pw = cms.account()
+        return {"demo": True, "id": uid, "password": pw}
+    return {"demo": False}
+
+
+@app.post("/api/admin/login")
+def admin_login(body: dict):
+    tok = cms.login(body.get("id", ""), body.get("password", ""))
+    if not tok:
+        raise HTTPException(401, "아이디나 비밀번호가 맞지 않아요")
+    return {"token": tok, "hours": cms.SESSION_HOURS}
+
+
+@app.post("/api/admin/logout")
+def admin_logout(x_admin_token: str | None = Header(None)):
+    cms.logout(x_admin_token)
+    return {"ok": True}
+
+
+def _today() -> str:
+    return dt.datetime.now(public_data.KST).strftime("%Y-%m-%d")
+
+
+@app.get("/api/site")
+def site():
+    """모든 화면 공통: 공지 배너, 전체 알림."""
+    return cms.site(_today())
+
+
+@app.get("/api/admin/cms")
+def admin_cms(x_admin_token: str | None = Header(None)):
+    """관리 화면 첫 데이터: 덮어쓴 값, 알림, 배너, 추가 행사, 변경 이력."""
+    _admin(x_admin_token)
+    return cms.load()
+
+
+def _guard(fn):
+    try:
+        out = fn()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    refresh()
+    return out
+
+
+@app.post("/api/admin/places/{pid}")
+def admin_place(pid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """장소 정보 고치기: {fields:{...}, segments?:[...], reason}"""
+    _admin(x_admin_token)
+    if pid not in PLACES:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    cur = PLACES[pid].model_dump()
+    return _guard(lambda: cms.set_place(pid, body.get("fields") or {}, body.get("segments"), body.get("reason") or "", cur))
+
+
+@app.post("/api/admin/notices")
+def admin_add_notice(body: dict, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    if body.get("place_id") and body["place_id"] not in PLACES:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    return _guard(lambda: cms.add_notice(body, body.get("reason") or ""))
+
+
+@app.post("/api/admin/notices/{nid}/delete")
+def admin_del_notice(nid: str, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return _guard(lambda: {"ok": cms.remove_notice(nid)})
+
+
+@app.post("/api/admin/banner")
+def admin_banner(body: dict, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return _guard(lambda: {"banner": cms.set_banner(body)})
+
+
+@app.post("/api/admin/events")
+def admin_add_event(body: dict, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return _guard(lambda: cms.add_event(body))
+
+
+@app.post("/api/admin/events/{eid}/delete")
+def admin_del_event(eid: str, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return _guard(lambda: {"ok": cms.remove_event(eid)})
+
+
+@app.post("/api/admin/history/{hid}/revert")
+def admin_revert(hid: str, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return _guard(lambda: cms.revert(hid))
+
+
+@app.get("/api/admin/backup")
+def admin_backup(x_admin_token: str | None = Header(None)):
+    """백업 내려받기 (서버 디스크가 지워지는 호스팅 대비)."""
+    _admin(x_admin_token)
+    return cms.load()
+
+
+@app.post("/api/admin/restore")
+def admin_restore(body: dict, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return _guard(lambda: cms.restore(body) or {"ok": True})
+
+
+@app.post("/api/admin/reset")
+def admin_reset(body: dict, x_admin_token: str | None = Header(None)):
+    """시연 뒤 처음 상태로 (이력은 남는다)."""
+    _admin(x_admin_token)
+    return _guard(lambda: cms.reset_all(body.get("reason") or "") or {"ok": True})
+
+
+def _jsonl(name: str) -> list[dict]:
+    f = REPORTS / name
+    return [json.loads(l) for l in f.read_text(encoding="utf-8").splitlines() if l.strip()] if f.exists() else []
+
+
+def _save_jsonl(name: str, rows: list[dict]):
+    f = REPORTS / name
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+
+
 @app.get("/api/admin/report")
-def admin_report():
-    """관리자 리포트: 장소별 제보 수. (실서비스에서는 로그인 보호 필요)"""
-    log = DATA / "reports" / "reports.jsonl"
+def admin_report(x_admin_token: str | None = Header(None)):
+    """관리자 리포트: 장소별 제보 수."""
+    _admin(x_admin_token)
     counts: dict[str, int] = {}
-    if log.exists():
-        for line in log.read_text(encoding="utf-8").splitlines():
-            r = json.loads(line); counts[r["place_id"]] = counts.get(r["place_id"], 0) + 1
-    return sorted(({"place_id": k, "name": PLACES[k].name_ko, "reports": v} for k, v in counts.items()), key=lambda x: -x["reports"])
+    for r in _jsonl("reports.jsonl"):
+        counts[r["place_id"]] = counts.get(r["place_id"], 0) + 1
+    return sorted(({"place_id": k, "name": PLACES[k].name_ko, "reports": v} for k, v in counts.items() if k in PLACES), key=lambda x: -x["reports"])
+
+
+@app.get("/api/admin/reports")
+def admin_reports(x_admin_token: str | None = Header(None)):
+    """이용자 제보 전체 (최신순) — AI 사진 분석 결과 포함, 사람이 검수한다."""
+    _admin(x_admin_token)
+    rows = _jsonl("reports.jsonl")
+    for r in rows:
+        r["name"] = PLACES[r["place_id"]].name_ko if r["place_id"] in PLACES else r["place_id"]
+    return sorted(rows, key=lambda r: r["created_at"], reverse=True)
+
+
+@app.post("/api/admin/reports/{rid}")
+def admin_review(rid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """제보 검수: status = 접수 / 확인 중 / 반영 / 반려."""
+    _admin(x_admin_token)
+    rows = _jsonl("reports.jsonl")
+    for r in rows:
+        if r["id"] == rid:
+            r["status"] = body.get("status", r["status"])
+            r["memo"] = (body.get("memo") or r.get("memo") or "")[:300]
+            r["reviewed_at"] = dt.datetime.now().isoformat(timespec="seconds")
+            n = body.get("notice")   # [반영] + 알림으로 올리기 → 사이트에 바로 보인다
+            if r["status"] == "반영" and n and n.get("level"):
+                rec = _guard(lambda: cms.add_notice({**n, "place_id": r["place_id"], "from_report": rid}, f"제보 {rid} 반영"))
+                r["notice_id"] = rec["id"]
+    _save_jsonl("reports.jsonl", rows)
+    return {"ok": True}
+
+
+@app.get("/api/admin/visits")
+def admin_visits(x_admin_token: str | None = Header(None)):
+    """현장 확인 기록 (팀 답사)."""
+    _admin(x_admin_token)
+    return sorted(_jsonl("visits.jsonl"), key=lambda r: r["date"], reverse=True)
+
+
+@app.post("/api/admin/visits")
+def admin_add_visit(body: dict, x_admin_token: str | None = Header(None)):
+    """현장 확인 기록 추가: {place_id, date, who, segment, slope_deg?, curb_cm?, width_m?, steps?, surface?, toilet?, note}"""
+    _admin(x_admin_token)
+    if body.get("place_id") not in PLACES:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    keep = ("place_id", "date", "who", "segment", "slope_deg", "curb_cm", "width_m", "steps", "surface", "toilet", "note")
+    rec = {k: body.get(k) for k in keep}
+    rec["id"] = uuid.uuid4().hex[:12]
+    rec["name"] = PLACES[rec["place_id"]].name_ko
+    rows = _jsonl("visits.jsonl") + [rec]
+    _save_jsonl("visits.jsonl", rows)
+    return {"ok": True, "id": rec["id"]}
+
+
+def last_visit(pid: str) -> dict | None:
+    vs = [v for v in _jsonl("visits.jsonl") if v["place_id"] == pid]
+    return max(vs, key=lambda v: v["date"]) if vs else None
+
+
+# ------------------------------------------------------------------ 웹 화면 (배포용)
+# gildongmu/web/index.html 이 있으면 같은 서버에서 화면도 보여 준다 (API 경로가 먼저 잡히도록 맨 끝에 둔다).
+WEB = Path(__file__).resolve().parents[2] / "web"
+if (WEB / "index.html").exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=WEB, html=True), name="web")
