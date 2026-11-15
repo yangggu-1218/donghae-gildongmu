@@ -17,3 +17,11 @@
 - 행사 달력: 라벤더축제 카드에 사진 추가
 - 출처 표: 출처가 없는 사진은 '확인 중'으로 표시
 - 수정 파일: frontend/components/Sections.tsx, frontend/components/Pages.tsx, frontend/app/globals.css, frontend/lib/photos.ts, data/photos.csv, build/build.mjs, build/make_pages.py, web/, docs/
+
+## 2026-11-15 — 3단계: 하위 페이지 공통 개편
+- 교통·편의시설 지도·내 일정·행사 달력·숙소·여행 준비 페이지 머리에 사진 띠 적용 (메인 히어로와 같은 남색 그라데이션)
+- 교통: 바로 가기 버튼(기차역·휠체어 차량·시티투어·주차장·택시·렌터카), 주차장·택시·렌터카 목록은 8곳만 먼저 보이고 '모두 보기'로 펼침
+- 숙소: 이름·종류·주소 검색창 추가
+- 내 일정: 저장한 일정이 없을 때 안내 화면을 동이 그림과 큰 버튼으로 교체
+- 팀 제공 사진은 출처 표에서 제외 (팀 대표 결정)
+- 수정 파일: frontend/components/Pages.tsx, frontend/app/globals.css, data/photos.csv, web/index.html, docs/index.html
