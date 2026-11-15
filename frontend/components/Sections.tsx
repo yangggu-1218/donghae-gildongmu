@@ -1,16 +1,18 @@
 "use client";
 // 첫 화면(히어로), 권역별 관광지, 추천 코스(예시), 이용 후기(예시). 프로토타입 v3의 섹션을 옮긴 것.
 import { useEffect, useState } from "react";
-import { PHOTOS } from "@/lib/photos";
+import { PHOTOS, photoAt } from "@/lib/photos";
 
 // 사진 출처는 사진 위에 쓰지 않고 따로 모아 보여 준다 (lib/photos.ts 에 저작자·라이선스 보관)
 export const licName = (l: string, lang: "ko" | "en") => (l === "KOGL Type 1" ? (lang === "ko" ? "공공누리 제1유형" : "KOGL Type 1") : l);
-export function PlacePhoto({ id, lang, small = false }: { id: string; lang: "ko" | "en"; small?: boolean }) {
+export function PlacePhoto({ id, lang, small = false, alt = "" }: { id: string; lang: "ko" | "en"; small?: boolean; alt?: string }) {
   const ph = PHOTOS[id];
+  const [bad, setBad] = useState(false);
   if (!ph) return null;
   return (
-    <figure className={small ? "ph ph-s" : "ph"}>
-      <img src={ph.src} alt="" loading="lazy" />
+    <figure className={`${small ? "ph ph-s" : "ph"}${bad ? " ph-bad" : ""}`}>
+      {!bad && <img src={ph.src} srcSet={small ? undefined : `${ph.src} 500w, ${photoAt(id, 960)} 960w`} sizes={small ? undefined : "(max-width: 700px) 100vw, 420px"}
+        alt={alt} loading="lazy" decoding="async" onError={() => setBad(true)} />}
     </figure>
   );
 }
@@ -18,22 +20,30 @@ export function PlacePhoto({ id, lang, small = false }: { id: string; lang: "ko"
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
 
-/* ---------------- 히어로 ---------------- */
+/* ---------------- 히어로: 실제 동해 사진 위에 '갈 수 있는지' 판정을 얹는다 ---------------- */
+const GRADE_TXT: Record<string, [string, string]> = { G: ["갈 수 있어요", "Accessible"], Y: ["주의해서 가요", "Go with care"], R: ["어려워요", "Hard to reach"] };
 export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => void; busy: boolean }) {
   const L = pick(lang);
   const [v, setV] = useState("");
+  const [spot, setSpot] = useState<any>(null);     // 사진 속 장소(추암 촛대바위)의 실제 판정
+  const [bad, setBad] = useState(false);
+  useEffect(() => { fetch("/api/places?mode=wheel").then((r) => r.json()).then((l) => setSpot((l || []).find((p: any) => p.id === "chotdae") || null)).catch(() => {}); }, []);
   const ex = lang === "ko"
     ? ["엄마랑 가는데 무릎이 안 좋으세요", "휠체어 타는 친구랑 묵호역에서 출발해요", "아기랑 유모차로 바다 보러 가요"]
     : ["Travelling with my mom, her knees hurt", "My friend uses a wheelchair, starting at Mukho Station", "Stroller trip to see the sea"];
+  const g = spot?.grade as string | undefined;
   return (
-    <section className="hero" aria-labelledby="hero-h">
+    <section className={`hero${bad ? " hero-plain" : ""}`} aria-labelledby="hero-h">
+      {!bad && <img className="hero-bg" src={photoAt("chotdae", 960)} srcSet={`${photoAt("chotdae", 960)} 960w, ${photoAt("chotdae", 1920)} 1920w`} sizes="100vw"
+        alt={L("해 뜰 무렵의 추암 촛대바위", "Chuam Chotdae Rock at sunrise")} fetchPriority="high" decoding="async" onError={() => setBad(true)} />}
       <div className="hero-in">
         <div className="hero-copy">
           <h1 id="hero-h">{L("가기 전에, 갈 수 있는 길인지 먼저 알려 드려요", "Know the way is passable before you go")}</h1>
           <p className="lead">{L(
-            "휠체어, 유모차, 무릎이 불편한 부모님과 함께라도 괜찮아요. 누구와 어떻게 다니는지 동이에게 말하면, 동해에서 실제로 다닐 수 있는 길로 코스를 짜 드려요.",
-            "Wheelchair, stroller, or parents who can't walk far. Tell Dongi who you're with, and get a Donghae route made only of paths you can actually take.")}</p>
+            "휠체어, 유모차, 무릎이 불편한 부모님과 함께라도 괜찮아요. 누구와 어떻게 다니는지 말하면, 동해에서 실제로 다닐 수 있는 길로 코스를 짜 드려요.",
+            "Wheelchair, stroller, or parents who can't walk far. Say who you're with, and get a Donghae route made only of paths you can actually take.")}</p>
           <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAsk(v.trim()); setV(""); } }}>
+            <img className="ask-dongi" src="/dongi/wave.webp" alt="" />
             <label htmlFor="hero-ask" className="sr-only">{L("동이에게 말하기", "Talk to Dongi")}</label>
             <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("예: 엄마랑 가는데 무릎이 안 좋으세요", "e.g. Travelling with my mom, her knees hurt")} />
             <button disabled={busy}>{L("코스 짜기", "Plan my route")}</button>
@@ -42,14 +52,39 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
             {ex.map((x) => <button key={x} type="button" onClick={() => onAsk(x)} disabled={busy}>{x}</button>)}
           </div>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="sun" />
-          <img src="/dongi/wave.webp" alt="" />
-        </div>
+        {spot && (
+          <a className="hero-spot" href="#/place/chotdae">
+            <span className="hero-spot-k">{L("사진 속 장소", "In this photo")}</span>
+            <b>{L(spot.name_ko, spot.name_en || spot.name_ko)}</b>
+            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}</span></span>
+            <span className="hero-spot-m">{L("길·화장실·주차 보기", "Paths, toilets, parking")}</span>
+          </a>
+        )}
       </div>
-      <div className="sea" aria-hidden="true">
-        <svg viewBox="0 0 1440 90" preserveAspectRatio="none"><path d="M0 40 Q 180 10 360 40 T 720 40 T 1080 40 T 1440 40 V90 H0Z" /></svg>
-      </div>
+    </section>
+  );
+}
+
+/* ---------------- 숫자로 보는 확인 범위 (모두 서버 데이터에서 센 값) ---------------- */
+export function HomeFacts({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const [n, setN] = useState<{ places: number; toilets: number; chargers: number; parking: number } | null>(null);
+  useEffect(() => {
+    Promise.all([fetch("/api/places?mode=none").then((r) => r.json()), fetch("/api/facilities").then((r) => r.json())])
+      .then(([pl, f]) => setN({ places: (pl || []).filter((p: any) => p.verified && !p.sample).length, toilets: f.toilets?.length || 0, chargers: f.chargers?.length || 0, parking: f.parking?.length || 0 }))
+      .catch(() => {});
+  }, []);
+  if (!n) return null;
+  const rows: [number, string, string, string][] = [
+    [n.places, L("길을 확인한 관광지", "places with checked paths"), "#/places", L("곳", "")],
+    [n.toilets, L("장애인 화장실", "accessible toilets"), "#/map", L("곳", "")],
+    [n.chargers, L("전동휠체어 급속충전기", "wheelchair fast chargers"), "#/map", L("곳", "")],
+    [n.parking, L("공영주차장", "public car parks"), "#/transport", L("곳", "")],
+  ];
+  return (
+    <section className="facts wrap" aria-label={L("확인한 범위", "What we have checked")}>
+      <ul>{rows.filter((r) => r[0] > 0).map(([v, label, href, unit]) => (
+        <li key={label}><a href={href}><b>{v}<small>{unit}</small></b><span>{label}</span></a></li>))}</ul>
     </section>
   );
 }
@@ -86,9 +121,53 @@ export function Art({ id, color }: { id: string; color: string }) {
 
 /* ---------------- 권역별 관광지 ---------------- */
 const MODES = [["none", "기준 없음", "No filter"], ["wheel", "휠체어", "Wheelchair"], ["stroller", "유모차", "Stroller"], ["walk", "오래 걷기 어려움", "Limited walking"]] as const;
-export function Places({ lang, onAdd, wish, gradeLabel }: { lang: Lang; onAdd: (id: string) => void; wish: string[]; gradeLabel: (g: string) => string }) {
+const ZONE_PHOTO: Record<string, string> = { chuam: "chotdae", mukho: "zone_mukho", mangsang: "mangsang", mureung: "zone_mureung", cheongok: "cave" };
+export function ZoneTiles({ lang }: { lang: Lang }) {
   const L = pick(lang);
-  const [zone, setZone] = useState("mukho");
+  const [cnt, setCnt] = useState<Record<string, number>>({});
+  useEffect(() => { fetch("/api/places?mode=none").then((r) => r.json()).then((l) => {
+    const c: Record<string, number> = {}; (l || []).forEach((p: any) => { if (p.type !== "숙박" && p.type !== "식당") c[p.zone] = (c[p.zone] || 0) + 1; }); setCnt(c); }).catch(() => {}); }, []);
+  return (
+    <section className="sec wrap" aria-labelledby="zones-h">
+      <div className="sec-head">
+        <h2 id="zones-h">{L("권역으로 둘러보기", "Explore by area")}</h2>
+        <p>{L("동해는 바다를 따라 다섯 권역으로 나뉘어요. 권역을 고르면 장소마다 갈 수 있는지 보여 드려요.", "Donghae runs along the coast in five areas. Pick one to see each place's access signal.")}</p>
+      </div>
+      <div className="ztiles">
+        {ZONES.map((z) => (
+          <a key={z.k} className="ztile" href={`#/places/${z.k}`} style={{ ["--z" as any]: z.c }}>
+            <PlacePhoto id={ZONE_PHOTO[z.k]} lang={lang} />
+            <span className="ztile-t"><b>{L(z.ko, z.en)}</b><span>{L(z.d[0], z.d[1])}</span>
+              {cnt[z.k] ? <em>{L(`장소 ${cnt[z.k]}곳`, `${cnt[z.k]} places`)}</em> : null}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- 더 알아보기 ---------------- */
+export function MoreLinks({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const rows: [string, string, string][] = [
+    ["#/transport", L("교통", "Getting around"), L("역에서 나오는 길, 휠체어 탑승 차량, 주차 요금 면제", "From the station, wheelchair vans, parking fee waivers")],
+    ["#/map", L("편의시설 지도", "Facilities map"), L("장애인 화장실, 충전기, 안내소, 약국을 한 지도에서", "Accessible toilets, chargers, info centers and pharmacies")],
+    ["#/events", L("행사 달력", "Events"), L("축제와 문화행사 날짜에 맞춰 코스 만들기", "Plan around festivals and cultural events")],
+    ["#/stay", L("숙소", "Stay"), L("권역별 숙박업소와 확인된 정보", "Lodging by area and what has been checked")],
+    ["#/guide", L("여행 준비", "Before you go"), L("준비물, 자주 묻는 질문, 긴급 연락처", "Checklist, FAQ and emergency contacts")],
+  ];
+  return (
+    <section className="sec wrap" aria-labelledby="more-h">
+      <div className="sec-head"><h2 id="more-h">{L("떠나기 전에 확인하세요", "Check before you leave")}</h2></div>
+      <ul className="more-grid">{rows.map(([href, t, d]) => <li key={href}><a href={href}><b>{t}</b><span>{d}</span></a></li>)}</ul>
+    </section>
+  );
+}
+
+export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; onAdd: (id: string) => void; wish: string[]; gradeLabel: (g: string) => string; zone0?: string }) {
+  const L = pick(lang);
+  const [zone, setZone] = useState(ZONES.some((z) => z.k === zone0) ? zone0! : "mukho");
+  useEffect(() => { if (ZONES.some((z) => z.k === zone0)) setZone(zone0!); }, [zone0]);
   const [mode, setMode] = useState("none");
   const [list, setList] = useState<any[]>([]);
   useEffect(() => { fetch(`/api/places?mode=${mode}`).then((r) => r.json()).then(setList).catch(() => setList([])); }, [mode]);
@@ -119,7 +198,7 @@ export function Places({ lang, onAdd, wish, gradeLabel }: { lang: Lang; onAdd: (
           const g = p.grade as string | null, inW = wish.includes(p.id);
           return (
             <article key={p.id} className="pcard">
-              <div className="art">{PHOTOS[p.id] ? <PlacePhoto id={p.id} lang={lang} /> : <Art id={p.id} color={Z.c} />}
+              <div className="art"><Art id={p.id} color={Z.c} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
                 {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
@@ -142,11 +221,11 @@ export function Places({ lang, onAdd, wish, gradeLabel }: { lang: Lang; onAdd: (
 
 /* ---------------- 추천 코스 (예시) ---------------- */
 export const PRESETS = [
-  { t: ["부모님 모시고 무릎 편한 묵호 바다", "Easy-walking Mukho seaside with parents"], who: "부모님과", move: ["오래 걷기 어려움"], style: ["바다 보기", "맛집"], start: "묵호역",
+  { t: ["부모님 모시고 무릎 편한 묵호 바다", "Easy-walking Mukho seaside with parents"], who: "부모님과", move: ["오래 걷기 어려움"], style: ["바다 보기", "맛집"], start: "묵호역", photo: "zone_mukho",
     tags: [["오래 걷기 어려움", "Limited walking"], ["부모님", "Parents"], ["기차", "By train"]], by: ["예시 코스 · 70대 부모님과", "Sample route · with parents in their 70s"] },
-  { t: ["휠체어로 무릉 반나절", "Half day in Mureung by wheelchair"], who: "연인·친구", move: ["휠체어"], style: ["자연·산책", "역사·문화"], start: "자가용",
+  { t: ["휠체어로 무릉 반나절", "Half day in Mureung by wheelchair"], who: "연인·친구", move: ["휠체어"], style: ["자연·산책", "역사·문화"], start: "자가용", photo: "valley",
     tags: [["휠체어", "Wheelchair"], ["자연", "Nature"], ["자가용", "By car"]], by: ["예시 코스 · 휠체어 이용 2인", "Sample route · two travelers, one wheelchair"] },
-  { t: ["유모차로 비 오는 날", "Rainy day with a stroller"], who: "아이와", move: ["유모차"], style: ["역사·문화", "카페"], start: "동해역", rain: true,
+  { t: ["유모차로 비 오는 날", "Rainy day with a stroller"], who: "아이와", move: ["유모차"], style: ["역사·문화", "카페"], start: "동해역", rain: true, photo: "cave",
     tags: [["유모차", "Stroller"], ["실내 위주", "Mostly indoors"], ["기차", "By train"]], by: ["예시 코스 · 아이 동반 가족", "Sample route · family with a toddler"] },
 ] as const;
 export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: number) => void; busy: boolean }) {
@@ -160,6 +239,7 @@ export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: numb
       <div className="cgrid">
         {PRESETS.map((c, i) => (
           <article key={i} className="ccard">
+            <div className="ccard-ph"><PlacePhoto id={c.photo} lang={lang} /></div>
             <h3>{L(c.t[0], c.t[1])}</h3>
             <ul className="tags">{c.tags.map((x) => <li key={x[0]}>{L(x[0], x[1])}</li>)}</ul>
             <p className="by">{L(c.by[0], c.by[1])}</p>
