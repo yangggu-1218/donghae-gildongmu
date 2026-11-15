@@ -499,3 +499,22 @@ label.day input { width: 20px !important; height: 20px; min-height: 0 !important
 .pcard .art svg { position: absolute; inset: 0; }
 .pp-photo { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-m); overflow: hidden; background: var(--mist); }
 .pp-photo .ph { aspect-ratio: auto; border-radius: 0; }
+
+/* ---------- 하위 페이지 머리: 사진 띠 ---------- */
+.page-head.has-photo { position: relative; isolation: isolate; overflow: hidden; border-radius: var(--r-l); padding: 22px 24px 24px; min-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; margin-bottom: 20px;
+  background: linear-gradient(115deg, #0C2340, #2462B4); color: #fff; }
+.page-head-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+.page-head.has-photo::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 24, 46, .86) 0%, rgba(8, 24, 46, .6) 50%, rgba(8, 24, 46, .2) 100%); }
+.page-head.has-photo h1 { color: #fff; margin: 4px 0; text-shadow: 0 2px 14px rgba(4, 14, 28, .5); }
+.page-head.has-photo .crumb, .page-head.has-photo .crumb a, .page-head.has-photo .muted { color: #EEF4FB; }
+.page-head.has-photo .crumb { margin-bottom: auto; }
+.page-head.has-photo .muted { max-width: 44em; margin: 0; font-size: 1em; }
+@media (max-width: 700px) { .page-head.has-photo { padding: 16px; min-height: 170px; } .page-head.has-photo::after { background: linear-gradient(0deg, rgba(8, 24, 46, .9), rgba(8, 24, 46, .45)); } }
+.jump { margin-bottom: 16px; }
+.more-btn { margin-top: 12px; font-weight: 600; color: var(--sea-deep); }
+.panel.empty { display: flex; gap: 20px; align-items: center; padding: 28px; }
+.panel.empty img { width: 120px; flex: none; }
+.panel.empty p { margin: 0 0 8px; }
+.btn-go { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--sea); color: var(--sea-ink); font-weight: 700; text-decoration: none; margin-top: 6px; }
+.btn-go:hover { filter: brightness(.92); }
+@media (max-width: 560px) { .panel.empty { flex-direction: column; text-align: center; } }
