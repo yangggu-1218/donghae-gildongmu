@@ -388,6 +388,81 @@
    "access_source": "예시",
    "soft_menu": true,
    "parking_easy": true
+  },
+  "mukho_lighthouse": {
+   "intro_ko": "1963년부터 묵호항 앞바다를 비춰 온 등대예요. 해발 93m 언덕 위에 있어 동해 바다와 묵호항, 두타산 능선까지 한눈에 보여요.",
+   "intro_en": "A lighthouse that has lit the sea off Mukho Port since 1963. From its hill 93 m above the sea you can take in the East Sea, the port and the Dutasan ridge.",
+   "intro_source": "팀 작성 (강원관광, 한국관광공사 등 공개 자료 참고)",
+   "about": [
+    {
+     "t": [
+      "등대의 역사",
+      "History"
+     ],
+     "i": [
+      [
+       "1963년 6월 8일에 처음 불을 밝혔어요.",
+       "First lit on 8 June 1963."
+      ],
+      [
+       "1941년에 문을 연 묵호항이 커지면서, 오징어잡이 배와 무연탄 운반선이 안전하게 다니도록 세웠어요.",
+       "Built as Mukho Port (opened 1941) grew, to guide squid boats and coal carriers safely."
+      ],
+      [
+       "등탑 높이는 25.9m이고, 등대가 선 언덕은 해발 약 93m예요.",
+       "The tower is 25.9 m tall and stands on a hill about 93 m above sea level."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "볼거리",
+      "What to see"
+     ],
+     "i": [
+      [
+       "전망대에 오르면 묵호항과 동해 바다, 두타산·청옥산 능선이 사방으로 보여요.",
+       "From the observation deck you can see the port, the East Sea and the Dutasan and Cheongoksan ridges."
+      ],
+      [
+       "밤에는 LED 조명이 여러 색으로 등대를 비춰요.",
+       "At night LED lights colour the tower."
+      ],
+      [
+       "2003년에 설치한 회전식 대형 등명기의 불빛은 맑은 날 40km 넘게 떨어진 바다에서도 보여요.",
+       "The rotating lamp installed in 2003 can be seen from more than 40 km away on a clear day."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "함께 둘러보기",
+      "Nearby"
+     ],
+     "i": [
+      [
+       "논골담길: 등대로 올라가는 골목길이에요. 뱃사람과 광부의 삶을 담은 벽화와 시가 이어져요.",
+       "Nongoldam-gil: the alley up to the lighthouse, lined with murals and poems about sailors and miners."
+      ],
+      [
+       "도째비골 스카이밸리·해랑전망대: 등대 바로 아래에 있는 스카이워크와 바다 위 산책로예요.",
+       "Dokkaebigol Sky Valley and Haerang Observatory: a skywalk and sea walkway just below the lighthouse."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "영화·드라마 촬영지",
+      "On screen"
+     ],
+     "i": [
+      [
+       "영화 〈미워도 다시 한번〉, 드라마 〈찬란한 유산〉과 〈상속자들〉을 여기서 찍었어요.",
+       "Filming location for the film Love Me Once Again and the dramas Brilliant Legacy and The Heirs."
+      ]
+     ]
+    }
+   ]
   }
  },
  "extra_places": [
