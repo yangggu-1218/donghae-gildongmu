@@ -30,4 +30,5 @@ os.makedirs(OUT, exist_ok=True)
 open(f"{OUT}/index.html","w").write(html)
 if SERVER:
     shutil.copytree(f"{SRC}/dongi", f"{OUT}/dongi", dirs_exist_ok=True)
+shutil.copytree(f"{SRC}/photos", f"{OUT}/photos", dirs_exist_ok=True)
 print(OUT, len(html)//1024,"KB")
