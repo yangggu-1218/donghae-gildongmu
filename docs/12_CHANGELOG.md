@@ -25,3 +25,7 @@
 - 내 일정: 저장한 일정이 없을 때 안내 화면을 동이 그림과 큰 버튼으로 교체
 - 팀 제공 사진은 출처 표에서 제외 (팀 대표 결정)
 - 수정 파일: frontend/components/Pages.tsx, frontend/app/globals.css, data/photos.csv, web/index.html, docs/index.html
+
+## 2026-11-16 — 묵호등대 소개
+- 팀이 정리한 자료를 다듬어 묵호등대 카드 소개 문구와 상세의 '알고 가면 더 좋아요'(역사·볼거리·함께 둘러보기·촬영지)를 추가
+- 장소 데이터에 소개 묶음(about) 항목 추가: backend/app/schemas.py, backend/app/details.py, data/place_details.json, frontend/components/Pages.tsx
