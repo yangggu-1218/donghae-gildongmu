@@ -2,14 +2,14 @@
  "_note": "영업시간·접근성 상세. hours_source/access_source 가 '예시'인 값은 답사·전화로 확인 전. 요일 0=일~6=토.",
  "details": {
   "mureung": {
-   "open": "09:00",
-   "close": "18:00",
+   "open": "09:30",
+   "close": "17:30",
    "break_time": null,
    "closed_days": [
     1
    ],
-   "hours_source": "예시",
-   "last_entry": "17:00",
+   "hours_source": "한국관광공사 TourAPI 기반 여행정보 (2026-11 확인, 동절기 기준)",
+   "last_entry": "16:30",
    "wheelchair": "가능",
    "walk_load": "평지",
    "entrance_step": false,
@@ -17,14 +17,79 @@
    "benches": true,
    "carer_tip": "방문자센터 앞에 휠체어 대여와 그늘 벤치가 있어요. 호수 데크는 완만한 오르막이라 갈 때 천천히 밀어 주세요.",
    "access_source": "예시",
-   "stay_min": 90
+   "stay_min": 90,
+   "intro_ko": "약 50년 동안 석회석을 캐던 광산 자리를 바꿔 만든 체험형 관광지예요. 에메랄드빛 호수 두 곳과 높은 석회석 절벽, 라벤더 정원이 펼쳐져요.",
+   "intro_en": "A former limestone mine of about 50 years, turned into an activity park with two emerald lakes, tall limestone cliffs and lavender gardens.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "이곳의 역사",
+      "History"
+     ],
+     "i": [
+      [
+       "1968년 문을 연 쌍용양회(현 쌍용C&E)의 석회석 광산이었고, 약 50년 동안 채광했어요.",
+       "A limestone mine opened in 1968 by Ssangyong (now Ssangyong C&E), worked for about 50 years."
+      ],
+      [
+       "채광이 끝난 뒤 동해시가 관광지로 바꿔 열었어요.",
+       "After mining ended, Donghae City reopened it as a tourist site."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "볼거리와 체험",
+      "What to see and do"
+     ],
+     "i": [
+      [
+       "청옥호와 금곡호, 두 개의 에메랄드빛 호수가 있어요.",
+       "Two emerald lakes, Cheongok and Geumgok."
+      ],
+      [
+       "두미르 전망대에 오르면 석회석 절벽과 호수가 한눈에 보여요.",
+       "Dumir Observatory looks over the cliffs and lakes."
+      ],
+      [
+       "스카이글라이더, 알파인코스터, 오프로드 루지, 집라인 같은 체험시설은 따로 요금을 내요.",
+       "Rides such as the sky glider, alpine coaster, off-road luge and zipline cost extra."
+      ],
+      [
+       "6월에는 라벤더 정원에서 라벤더축제가 열려요. 정원 사이로 무릉별열차가 다녀요.",
+       "The lavender festival is held in June; a park train runs through the gardens."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "매주 월요일은 쉬어요. 월요일이 공휴일이면 다음 날 쉬어요.",
+       "Closed Mondays (the next day if Monday is a holiday)."
+      ],
+      [
+       "입장료는 계절에 따라 달라요. 장애인·경로·국가유공자는 할인돼요.",
+       "Admission varies by season, with discounts for disabled visitors, seniors and veterans."
+      ],
+      [
+       "동해시가 무장애 체험시설을 만드는 공사를 하고 있어요. 2027년 완료 예정이에요.",
+       "The city is building barrier-free facilities here, due in 2027."
+      ]
+     ]
+    }
+   ]
   },
   "valley": {
-   "open": "06:00",
+   "open": "09:00",
    "close": "18:00",
    "break_time": null,
    "closed_days": [],
-   "hours_source": "예시",
+   "hours_source": "한국관광공사 TourAPI 기반 여행정보 (2026-11 확인, 동절기 기준); 하절기는 20:00까지",
    "last_entry": "16:00",
    "wheelchair": "일부",
    "walk_load": "완만한경사",
@@ -36,11 +101,11 @@
    "stay_min": 60
   },
   "yongchu": {
-   "open": "06:00",
+   "open": "09:00",
    "close": "18:00",
    "break_time": null,
    "closed_days": [],
-   "hours_source": "예시",
+   "hours_source": "한국관광공사 TourAPI 기반 여행정보 (2026-11 확인, 동절기 기준); 하절기는 20:00까지",
    "last_entry": "15:00",
    "wheelchair": "불가",
    "walk_load": "급경사",
@@ -49,17 +114,58 @@
    "benches": false,
    "carer_tip": "왕복 2시간 넘는 산길이에요. 어르신과는 무릉반석까지만 추천해요.",
    "access_source": "예시",
-   "stay_min": 120
+   "stay_min": 120,
+   "intro_ko": "무릉계곡 가장 안쪽에 있는 폭포예요. 청옥산에서 내려온 물이 항아리 모양 웅덩이 세 개를 차례로 채우며 떨어지고, 조금 아래에는 두 물줄기가 만나는 쌍폭포가 있어요.",
+   "intro_en": "The waterfall at the far end of Mureung Valley, falling through three jar-shaped pools; the twin falls lie just below.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "볼거리",
+      "What to see"
+     ],
+     "i": [
+      [
+       "삼화사에서 서쪽으로 약 2.5km 올라가면 나와요.",
+       "About 2.5 km up the valley from Samhwasa."
+      ],
+      [
+       "용추폭포 약 70m 아래에서 두 물줄기가 만나 쌍폭포가 돼요.",
+       "About 70 m below, two streams meet to form the twin falls."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "관리사무소에서 쌍폭포·용추폭포까지 왕복 3.1km, 1시간 30분쯤 걸려요.",
+       "3.1 km round trip from the office, about 1.5 hours."
+      ],
+      [
+       "돌길과 계단이 이어져 휠체어·유모차로는 갈 수 없어요. 비가 온 뒤엔 미끄러워요.",
+       "Rocky paths and steps; not passable by wheelchair or stroller, slippery after rain."
+      ],
+      [
+       "봄(3월 1일~5월 15일)과 가을(11월 1일~12월 15일)에는 산불 예방으로 일부 등산로가 통제될 수 있어요.",
+       "Some trails may close in spring and autumn for fire prevention."
+      ]
+     ]
+    }
+   ]
   },
   "dokkaebi": {
-   "open": "09:00",
-   "close": "18:00",
+   "open": "10:00",
+   "close": "17:00",
    "break_time": null,
    "closed_days": [
     1
    ],
-   "hours_source": "예시",
-   "last_entry": "17:30",
+   "hours_source": "한국관광공사 TourAPI 기반 여행정보 (2026-11 확인, 동절기 기준); 4~10월은 18:00까지",
+   "last_entry": "16:30",
    "wheelchair": "가능",
    "walk_load": "평지",
    "entrance_step": false,
@@ -67,7 +173,72 @@
    "benches": true,
    "carer_tip": "매표소에서 엘리베이터로 전망 시설까지 올라가요. 스카이워크 바닥이 투명해 어지러울 수 있어요.",
    "access_source": "예시",
-   "stay_min": 60
+   "stay_min": 60,
+   "intro_ko": "묵호등대 아래 골짜기에 만든 하늘 산책 시설이에요. 해발 59m 스카이워크에서 바다를 내려다보고, 스카이사이클과 자이언트 슬라이드도 탈 수 있어요.",
+   "intro_en": "A sky park in the valley below Mukho Lighthouse: a skywalk 59 m above sea level, plus a sky cycle and a giant slide.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "이름 이야기",
+      "The name"
+     ],
+     "i": [
+      [
+       "'도째비'는 도깨비를 뜻하는 묵호 사투리예요.",
+       "'Dojjaebi' is local dialect for 'goblin'."
+      ],
+      [
+       "비 오는 밤 골짜기에서 보이던 푸른 불빛이 도깨비불 같았다는 이야기가 전해져요.",
+       "Locals say blue lights in the valley on rainy nights looked like goblin fire."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "볼거리와 체험",
+      "What to see and do"
+     ],
+     "i": [
+      [
+       "2021년 5월에 문을 열었어요.",
+       "Opened in May 2021."
+      ],
+      [
+       "스카이워크는 해발 약 59m 높이에 있어요.",
+       "The skywalk sits about 59 m above sea level."
+      ],
+      [
+       "스카이사이클은 키 140cm 이상, 몸무게 100kg 미만만 탈 수 있어요.",
+       "Sky cycle: 140 cm or taller and under 100 kg."
+      ],
+      [
+       "약 30m를 내려가는 자이언트 슬라이드는 키 130cm 이상만 탈 수 있어요.",
+       "The giant slide drops about 30 m; 130 cm or taller."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "매주 월요일은 쉬어요. 바람이 세거나 비가 오면 체험시설이 멈출 수 있어요.",
+       "Closed Mondays; rides may stop in bad weather."
+      ],
+      [
+       "장애인·경로자는 입장료가 할인돼요. 주차는 무료예요.",
+       "Discounts for disabled visitors and seniors; parking is free."
+      ],
+      [
+       "동해시가 엘리베이터, 연결다리, 데크길을 새로 놓는 공사를 하고 있어요. 2027년 완료 예정이에요.",
+       "The city is adding a lift, a connecting bridge and deck paths, due in 2027."
+      ]
+     ]
+    }
+   ]
   },
   "haerang": {
    "open": "09:00",
@@ -85,7 +256,48 @@
    "benches": true,
    "carer_tip": "스카이밸리에서 내려가는 길에 경사가 있어요. 중간 쉼터 벤치에서 쉬어 가세요.",
    "access_source": "예시",
-   "stay_min": 30
+   "stay_min": 30,
+   "intro_ko": "도째비골 아래 바다 위로 85m를 뻗어 나간 다리 모양 전망대예요. 바닥이 뚫려 있어 발아래로 파도가 부서지는 모습이 보여요.",
+   "intro_en": "An 85 m walkway stretching out over the sea below Dokkaebigol, with an open floor so you can watch the waves below.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "볼거리",
+      "What to see"
+     ],
+     "i": [
+      [
+       "2021년에 문을 열었어요.",
+       "Opened in 2021."
+      ],
+      [
+       "위에서 보면 도깨비 방망이 모양이에요.",
+       "From above it is shaped like a goblin's club."
+      ],
+      [
+       "바닥 일부가 유리와 격자로 되어 있어 바다가 그대로 보여요.",
+       "Parts of the floor are glass or open grating."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "격자 바닥은 휠체어나 유모차 바퀴가 덜컹거릴 수 있어요.",
+       "Wheelchair and stroller wheels may judder on the grating."
+      ],
+      [
+       "바람이 세거나 파도가 높으면 출입이 막힐 수 있어요.",
+       "It may close in strong wind or high waves."
+      ]
+     ]
+    }
+   ]
   },
   "nongol": {
    "open": "00:00",
@@ -101,7 +313,60 @@
    "benches": false,
    "carer_tip": "계단 골목이라 휠체어·유모차는 어려워요. 아래쪽 벽화 몇 점은 수변공원 쪽에서도 보여요.",
    "access_source": "예시",
-   "stay_min": 40
+   "stay_min": 40,
+   "intro_ko": "묵호항 언덕 마을의 골목을 따라 그려진 벽화길이에요. 뱃사람과 덕장 일꾼이 살던 마을의 이야기가 담겨 있고, 꼭대기에서 묵호등대와 바다가 보여요.",
+   "intro_en": "Mural alleys on the hill above Mukho Port, telling the story of the fishermen and fish-drying workers who lived here, with the lighthouse and sea at the top.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "이름 이야기",
+      "The name"
+     ],
+     "i": [
+      [
+       "명태 덕장으로 생선을 나르던 일꾼들의 물기 때문에 흙길이 논처럼 질척해서 '논골'이라 불렀어요.",
+       "Called 'Nongol' (paddy alley) because water from the fish loads turned the dirt paths muddy."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "마을의 역사",
+      "History"
+     ],
+     "i": [
+      [
+       "1970년대까지 무연탄과 수산물을 실어 나르던 묵호항이 크게 번성했어요.",
+       "Mukho Port boomed until the 1970s shipping coal and seafood."
+      ],
+      [
+       "아랫마을엔 뱃사람, 윗마을엔 명태 덕장 일꾼이 주로 살았어요.",
+       "Fishermen lived lower down, fish-drying workers higher up."
+      ],
+      [
+       "2010년에 마을 사람들의 삶을 담은 벽화가 골목에 그려졌어요.",
+       "Murals about village life were painted in 2010."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "걸어 보기",
+      "Walking"
+     ],
+     "i": [
+      [
+       "논골 1·2·3길과 등대오름길, 네 갈래 길이 있어요. 등대오름길이 바다 전망이 가장 좋아요.",
+       "Four routes: Nongol 1, 2, 3 and Deungdae-oreum-gil, which has the best sea views."
+      ],
+      [
+       "경사가 가파르고 계단이 많아요. 천천히 쉬면서 올라가세요.",
+       "Steep with many steps; take it slowly."
+      ]
+     ]
+    }
+   ]
   },
   "mukho_port": {
    "open": "07:00",
@@ -138,7 +403,48 @@
    "benches": null,
    "carer_tip": "실내라 비 오는 날 좋아요. 층간 이동 방법은 방문 전에 전화로 확인하세요.",
    "access_source": "예시",
-   "stay_min": 50
+   "stay_min": 50,
+   "intro_ko": "전 세계 100여 개 나라에서 모은 연필 3,000여 종을 전시하는 박물관이에요. 연필의 역사부터 캐릭터·예술 연필까지 볼 수 있어요.",
+   "intro_en": "A museum of about 3,000 pencils from over 100 countries, from pencil history to character and art pencils.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "볼거리",
+      "What to see"
+     ],
+     "i": [
+      [
+       "연필이 만들어진 역사, 예술 연필, 캐릭터 연필을 주제별로 전시해요.",
+       "Themed displays on pencil history, art pencils and character pencils."
+      ],
+      [
+       "디즈니 캐릭터 연필, 세계 유명 미술관 연필, 유명인이 쓰던 연필도 있어요.",
+       "Disney pencils, museum pencils and pencils used by famous people."
+      ],
+      [
+       "연필을 직접 써 보는 체험 공간이 있고, 4층에 기념품 가게와 카페가 있어요.",
+       "A try-it-yourself corner, and a shop and café on the 4th floor."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "입장 마감은 오후 5시 30분이에요.",
+       "Last entry 17:30."
+      ],
+      [
+       "쉬는 요일과 엘리베이터 여부는 방문 전에 전화로 확인하세요.",
+       "Call ahead to check closing days and whether there is a lift."
+      ]
+     ]
+    }
+   ]
   },
   "mangsang": {
    "open": "00:00",
@@ -173,12 +479,12 @@
    "stay_min": 50
   },
   "cave": {
-   "open": "09:00",
+   "open": "08:30",
    "close": "18:00",
    "break_time": null,
    "closed_days": [],
-   "hours_source": "예시",
-   "last_entry": "17:00",
+   "hours_source": "한국관광공사 TourAPI 기반 여행정보 (2026-11 확인, 동절기 기준); 성수기는 19:30까지",
+   "last_entry": "17:30",
    "wheelchair": "불가",
    "walk_load": "급경사",
    "entrance_step": true,
@@ -186,7 +492,60 @@
    "benches": false,
    "carer_tip": "동굴 안 계단과 낮은 천장이 있어요. 입구 옆 돌리네 공원은 평지라 쉬어 가기 좋아요.",
    "access_source": "예시",
-   "stay_min": 40
+   "stay_min": 40,
+   "intro_ko": "동해 시내 한가운데에서 발견된 석회암 동굴이에요. 천연기념물 황금박쥐가 살고, 큰 종유석과 석순을 가까이서 볼 수 있어요.",
+   "intro_en": "A limestone cave found right in the city centre, home to the rare golden bat, with large stalactites and stalagmites.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "동굴의 역사",
+      "History"
+     ],
+     "i": [
+      [
+       "1991년 아파트 공사 중에 발견됐고, 1996년부터 관람할 수 있게 됐어요.",
+       "Found during apartment construction in 1991; open to visitors since 1996."
+      ],
+      [
+       "전체 길이 1,510m 중 810m를 둘러볼 수 있어요.",
+       "810 m of its 1,510 m length is open."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "볼거리",
+      "What to see"
+     ],
+     "i": [
+      [
+       "멸종위기종 황금박쥐가 사는 동굴이에요.",
+       "Home to the endangered golden bat."
+      ],
+      [
+       "천장이 물에 녹아 생긴 구멍(천장 용식구)이 국내에서 가장 큰 규모예요.",
+       "Has the largest ceiling solution pocket in Korea."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "동굴 안에는 계단과 좁고 낮은 구간이 있어 휠체어·유모차는 들어가기 어려워요.",
+       "Steps and low, narrow passages make it hard for wheelchairs and strollers."
+      ],
+      [
+       "장애인과 6세 미만은 입장료가 무료예요. 연중 쉬는 날 없이 열어요.",
+       "Free for disabled visitors and under-6s; open every day."
+      ]
+     ]
+    }
+   ]
   },
   "cafe_sample": {
    "open": "10:00",
@@ -459,6 +818,100 @@
       [
        "영화 〈미워도 다시 한번〉, 드라마 〈찬란한 유산〉과 〈상속자들〉을 여기서 찍었어요.",
        "Filming location for the film Love Me Once Again and the dramas Brilliant Legacy and The Heirs."
+      ]
+     ]
+    }
+   ]
+  },
+  "samhwasa": {
+   "intro_ko": "두타산과 청옥산에 둘러싸인 무릉계곡 안의 절이에요. 신라 때 처음 세워졌다고 전해지고, 무릉반석에서 조금만 걸으면 닿아요.",
+   "intro_en": "A temple in Mureung Valley, ringed by Dutasan and Cheongoksan, said to date from the Silla era; a short walk from Mureung Rock.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "절의 역사",
+      "History"
+     ],
+     "i": [
+      [
+       "642년에 '흑련대'라는 이름으로 세워졌다고 전해져요.",
+       "Said to have been founded in 642 as Heungnyeondae."
+      ],
+      [
+       "고려 태조 왕건이 이곳에서 삼국 통일을 빌었다는 이야기가 있어요.",
+       "Legend says Wang Geon prayed here to unify the Three Kingdoms."
+      ],
+      [
+       "세 나라가 화합하길 바란다는 뜻에서 '삼화사'라는 이름이 붙었어요.",
+       "'Samhwa' means harmony of the three kingdoms."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "무릉계곡 입장료를 내고 들어가요.",
+       "Reached through the Mureung Valley entrance (fee)."
+      ],
+      [
+       "절 마당까지 오르막과 돌계단이 있어요.",
+       "There are slopes and stone steps up to the courtyard."
+      ]
+     ]
+    }
+   ]
+  },
+  "haeamjeong": {
+   "intro_ko": "추암 촛대바위 바로 옆, 바위 언덕에 기대어 선 오래된 정자예요. 고려 때 처음 지어졌고 지금 모습은 조선 시대에 다시 지은 거예요.",
+   "intro_en": "An old pavilion against the rocks right beside Chuam's Candlestick Rock, first built in the Goryeo era.",
+   "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
+   "about": [
+    {
+     "t": [
+      "정자의 역사",
+      "History"
+     ],
+     "i": [
+      [
+       "1361년 삼척 심씨의 시조 심동로가 벼슬을 그만두고 내려와 지었어요.",
+       "Built in 1361 by Sim Dong-ro after he retired from office."
+      ],
+      [
+       "불탄 뒤 1530년에 다시 지었고, 1794년에 고쳐 지었어요.",
+       "Rebuilt in 1530 after a fire and repaired in 1794."
+      ],
+      [
+       "1979년 강원도 유형문화유산으로 지정됐어요.",
+       "Designated a Gangwon tangible cultural heritage in 1979."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "이야기",
+      "Story"
+     ],
+     "i": [
+      [
+       "우암 송시열이 귀양 가던 길에 이곳에 들러 글을 남겼다고 전해져요.",
+       "Song Si-yeol is said to have stopped here on his way into exile and left a verse."
+      ]
+     ]
+    },
+    {
+     "t": [
+      "가기 전에 알아 두세요",
+      "Before you go"
+     ],
+     "i": [
+      [
+       "추암해변에서 촛대바위·출렁다리로 가는 길 중간에 있어요.",
+       "On the way from Chuam Beach to the Candlestick Rock and suspension bridge."
       ]
      ]
     }
