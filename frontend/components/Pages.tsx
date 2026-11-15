@@ -87,7 +87,7 @@ export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: 
             {p.sample && <p className="muted">{L("이 장소는 예시 데이터예요. 실제 정보는 확인 전이에요.", "Sample data, not yet verified.")}</p>}
             {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
             {p.carer_tip && <p className="tl-tip"><b>{L("보호자 꿀팁", "Tip for carers")}</b> {p.carer_tip}</p>}
-            <p className="muted">{(lang === "ko" ? p.intro_ko || p.tip_ko : p.tip_en || p.intro_ko) || ""}</p>
+            <p className="muted">{(lang === "ko" ? p.intro_ko || p.tip_ko : p.intro_en || p.tip_en || p.intro_ko) || ""}</p>
             <div className="chips">
               <button className="chip go" onClick={() => { onAdd(p.id); location.hash = "#plan"; }}>{L("코스에 담기", "Add to route")}</button>
               <a className="chip" href="#/map">{L("편의시설 지도에서 보기", "Open facilities map")}</a>
@@ -127,6 +127,14 @@ export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: 
               {n.medical?.["응급실"] && <li><span className="dot" style={{ background: "#C9302C" }}>+</span><b>{L("응급실", "ER")}</b> {n.medical["응급실"].name} · {n.medical["응급실"].tel}</li>}
             </ul>
           </div>
+          {p.about?.length > 0 && (
+            <div className="panel about">
+              <h2 className="h3">{L("알고 가면 더 좋아요", "Good to know")}</h2>
+              {p.about.map((a: any) => (
+                <div key={a.t[0]}><h3>{L(a.t[0], a.t[1])}</h3><ul>{a.i.map((x: string[]) => <li key={x[0]}>{L(x[0], x[1])}</li>)}</ul></div>
+              ))}
+            </div>
+          )}
           {(p.stories?.length > 0 || p.trail_info?.length > 0) && (
             <div className="panel">
               <h2 className="h3">{L("이야기와 걷기길", "Stories and trails")}</h2>
