@@ -518,3 +518,8 @@ label.day input { width: 20px !important; height: 20px; min-height: 0 !important
 .btn-go { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--sea); color: var(--sea-ink); font-weight: 700; text-decoration: none; margin-top: 6px; }
 .btn-go:hover { filter: brightness(.92); }
 @media (max-width: 560px) { .panel.empty { flex-direction: column; text-align: center; } }
+
+/* ---------- 장소 소개 묶음 ---------- */
+.about h3 { font-size: 1em; font-weight: 700; color: var(--sea-deep); margin: 14px 0 4px; }
+.about ul { margin: 0; padding-left: 1.2em; }
+.about li { margin: 3px 0; }
