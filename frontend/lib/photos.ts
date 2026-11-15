@@ -67,8 +67,69 @@ export const PHOTOS: Record<string, Photo> = {
     "author": "Gangwon Office (한국관광공사 포토코리아)",
     "license": "KOGL Type 1",
     "page": "https://commons.wikimedia.org/wiki/File:Panoramic_view_of_Donghae.jpg"
+  },
+  "dokkaebi": {
+    "src": "/photos/500px-dokkaebi.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "haerang": {
+    "src": "/photos/500px-haerang.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "dokkaebi_2": {
+    "src": "/photos/500px-dokkaebi_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mureung": {
+    "src": "/photos/500px-mureung.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mureung_lavender": {
+    "src": "/photos/500px-mureung_lavender.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mureung_night": {
+    "src": "/photos/500px-mureung_night.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mureung_dumir": {
+    "src": "/photos/500px-mureung_dumir.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mukho_lighthouse": {
+    "src": "/photos/500px-mukho_lighthouse.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mukho_lighthouse_2": {
+    "src": "/photos/500px-mukho_lighthouse_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
   }
 };
 
 // 큰 화면용: 위키미디어 표준 썸네일 폭(500·960·1920)만 쓴다.
 export const photoAt = (id: string, w: 500 | 960 | 1920) => (PHOTOS[id] ? PHOTOS[id].src.replace("/500px-", `/${w}px-`) : "");
+
+// 장소 상세에 더 보여 줄 사진과 설명
+export const GALLERY: Record<string, [string, string, string][]> = {
+  dokkaebi: [["dokkaebi_2", "스카이사이클과 자이언트 슬라이드", "Sky cycle and giant slide"]],
+  mureung: [["mureung_lavender", "라벤더 정원과 무릉별열차", "Lavender garden and the park train"], ["mureung_dumir", "두미르 전망대", "Dumir Observatory"], ["mureung_night", "라벤더축제 야경", "Lavender festival at night"]],
+  mukho_lighthouse: [["mukho_lighthouse_2", "묵호등대 앞 계단", "Steps in front of Mukho Lighthouse"]],
+};
