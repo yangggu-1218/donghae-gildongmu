@@ -6,7 +6,7 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, Places, Courses, PRESETS } from "@/components/Sections";
+import { Hero, HomeFacts, ZoneTiles, MoreLinks, Places, Courses, PRESETS } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
@@ -261,7 +261,7 @@ export default function Page() {
         </div>) : null}
       <main>
       {route[0] === "place" && route[1] && <PlacePage id={route[1]} lang={lang} onAdd={addWish} />}
-      {route[0] === "places" && <Places lang={lang} wish={cond.wish || []} onAdd={addWish} gradeLabel={(g) => t(`grade.${g}`)} />}
+      {route[0] === "places" && <Places lang={lang} zone0={route[1]} wish={cond.wish || []} onAdd={addWish} gradeLabel={(g) => t(`grade.${g}`)} />}
       {route[0] === "transport" && <TransportPage lang={lang} />}
       {route[0] === "map" && <MapPage lang={lang} />}
       {route[0] === "my" && <MyPage lang={lang} />}
@@ -272,6 +272,7 @@ export default function Page() {
       {route[0] === "admin" && <AdminPage lang={lang} />}
       {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
+      <HomeFacts lang={lang} />
       <section id="plan" className="sec wrap" aria-labelledby="plan-h">
       <div className="sec-head">
         <h2 id="plan-h">{t("plan.h")}</h2>
@@ -385,7 +386,9 @@ export default function Page() {
       </div>
 
       </section>
+      <ZoneTiles lang={lang} />
       <Courses lang={lang} busy={busy} onStart={startPreset} />
+      <MoreLinks lang={lang} />
       </>}
       </main>
       <nav className="tabbar" aria-label={t("nav.main")}>
