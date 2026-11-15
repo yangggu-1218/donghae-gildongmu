@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import KakaoMap from "@/components/KakaoMap";
 import { PlacePhoto, ZONES } from "@/components/Sections";
-import { PHOTOS, GALLERY } from "@/lib/photos";
+import { PHOTOS, GALLERY, photoAt } from "@/lib/photos";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -13,10 +13,13 @@ const dist = (m?: number) => (m == null ? "" : m >= 1000 ? `${(m / 1000).toFixed
 const GRADE = { G: ["갈 수 있어요", "Accessible"], Y: ["주의", "Caution"], R: ["어려워요", "Not accessible"] } as const;
 const WALK_EN: Record<string, string> = { "평지": "Flat", "완만한경사": "Gentle slope", "급경사": "Steep", "확인 전": "Not checked" };
 
-function Head({ title, sub, crumb, lang }: { title: string; sub?: string; crumb?: [string, string][]; lang: Lang }) {
+function Head({ title, sub, crumb, lang, photo }: { title: string; sub?: string; crumb?: [string, string][]; lang: Lang; photo?: string }) {
   const L = pick(lang);
+  const [bad, setBad] = useState(false);
+  const has = !!(photo && PHOTOS[photo]) && !bad;
   return (
-    <div className="page-head">
+    <div className={`page-head${photo ? " has-photo" : ""}`}>
+      {has && <img className="page-head-bg" src={photoAt(photo!, 960)} alt="" decoding="async" onError={() => setBad(true)} />}
       <nav className="crumb" aria-label={L("현재 위치", "Breadcrumb")}>
         <a href="#/">{L("처음", "Home")}</a>
         {(crumb || []).map(([href, t]) => <span key={href}> › <a href={href}>{t}</a></span>)}
@@ -26,6 +29,11 @@ function Head({ title, sub, crumb, lang }: { title: string; sub?: string; crumb?
       {sub && <p className="muted">{sub}</p>}
     </div>
   );
+}
+// 긴 목록은 앞부분만 보여 주고 버튼으로 펼친다
+function More({ n, total, open, onToggle, lang }: { n: number; total: number; open: boolean; onToggle: () => void; lang: Lang }) {
+  if (total <= n) return null;
+  return <button className="chip more-btn" aria-expanded={open} onClick={onToggle}>{open ? (lang === "ko" ? "접기" : "Show less") : (lang === "ko" ? `${total}곳 모두 보기` : `Show all ${total}`)}</button>;
 }
 
 function useLoad<T>(fn: () => Promise<T>, deps: any[]): [T | null, boolean] {
@@ -136,11 +144,19 @@ export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: 
 export function TransportPage({ lang }: { lang: Lang }) {
   const L = pick(lang);
   const [d, err] = useLoad(() => api.get(`/api/transport?lang=${lang}`), [lang]);
+  const [allP, setAllP] = useState(false);
+  const [allT, setAllT] = useState(false);
+  const [allR, setAllR] = useState(false);
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   return (
     <section className="sec wrap">
-      <Head lang={lang} title={L("교통 안내", "Getting around")} sub={L("기차역에서 관광지까지, 휠체어 차량과 시티투어, 택시·렌터카·주차장을 한곳에 모았어요.", "Stations, wheelchair vehicles, city tour, taxis, rentals and parking.")} />
+      <Head lang={lang} photo="city" title={L("교통 안내", "Getting around")} sub={L("기차역에서 관광지까지, 휠체어 차량과 시티투어, 택시·렌터카·주차장을 한곳에 모았어요.", "Stations, wheelchair vehicles, city tour, taxis, rentals and parking.")} />
       {!d ? <Loading err={err} lang={lang} /> : (<>
-        <div className="cards2">
+        <div className="chips jump" role="group" aria-label={L("바로 가기", "Jump to")}>
+          {([["tr-station", L("기차역", "Stations")], ["tr-van", L("휠체어 차량", "Wheelchair vans")], ["tr-tour", L("시티투어", "City tour")], ["tr-parking", L("주차장", "Parking")], ["tr-taxi", L("택시·렌터카", "Taxis & rentals")]] as const)
+            .map(([id, t]) => <button key={id} className="chip" onClick={() => go(id)}>{t}</button>)}
+        </div>
+        <div className="cards2" id="tr-station">
           {d.stations.map((s: any) => (
             <div key={s.name} className="panel">
               <h2 className="h3">🚉 {s.name}</h2>
@@ -152,7 +168,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
         </div>
         {d.mobility_center && (
           <div className="panel">
-            <h2 className="h3">♿ {L("휠체어 탈 수 있는 차량", "Wheelchair-accessible vehicles")} — {d.mobility_center.name}</h2>
+            <h2 className="h3" id="tr-van">♿ {L("휠체어 탈 수 있는 차량", "Wheelchair-accessible vehicles")} — {d.mobility_center.name}</h2>
             <p>{L(`휠체어 차량 ${d.mobility_center.wheelchair_vehicles}대 · 운행 ${d.mobility_center.hours} · 시외 이동은 ${d.mobility_center.advance} 전 예약`, `${d.mobility_center.wheelchair_vehicles} vehicles · ${d.mobility_center.hours}`)}</p>
             {d.mobility_center.area_out && <p className="muted">{L(`시외 운행: ${d.mobility_center.area_out}`, `Out of town: ${d.mobility_center.area_out}`)}</p>}
             <p>☎ <a href={`tel:${d.mobility_center.tel}`}>{d.mobility_center.tel}</a>{d.mobility_center.app ? ` · ${d.mobility_center.app}` : ""} · {d.mobility_center.fare}</p>
@@ -161,27 +177,30 @@ export function TransportPage({ lang }: { lang: Lang }) {
         )}
         {d.city_tour && (
           <div className="panel">
-            <h2 className="h3">🚌 {L("동해 시티투어", "Donghae city tour")} — {d.city_tour.name}</h2>
+            <h2 className="h3" id="tr-tour">🚌 {L("동해 시티투어", "Donghae city tour")} — {d.city_tour.name}</h2>
             <p>{d.city_tour.days} · {d.city_tour.first}~{d.city_tour.last} · {L(`${d.city_tour.interval_min}분 간격`, `every ${d.city_tour.interval_min} min`)} · {d.city_tour.fare}</p>
             <ol className="stops">{d.city_tour_stops.map((s: string) => <li key={s}>{s}</li>)}</ol>
             <p className="muted">{L(`휠체어 탑승 여부는 자료에 없어요. ${d.city_tour.contact}에 먼저 물어보세요.`, `Wheelchair boarding not listed; ask ${d.city_tour.contact}.`)}</p>
           </div>
         )}
         <div className="panel">
-          <h2 className="h3">🅿 {L("공영주차장", "Public parking")}</h2>
+          <h2 className="h3" id="tr-parking">🅿 {L("공영주차장", "Public parking")}</h2>
           <div className="tbl-wrap"><table className="tbl">
             <thead><tr><th>{L("이름", "Name")}</th><th>{L("면수", "Spaces")}</th><th>{L("장애인 차량", "Disabled permit")}</th><th>{L("요금", "Fee")}</th><th>{L("평일", "Weekdays")}</th></tr></thead>
-            <tbody>{d.parking.map((r: any) => <tr key={r.name}><td>{r.name}<br /><small className="muted">{r.road}</small></td><td>{r.spaces}</td><td>{r.disabled || "-"}</td><td>{r.fee_type}{r.base_fee ? ` (${r.base_min}${L("분", "min")} ${r.base_fee}${L("원", "₩")})` : ""}</td><td>{r.wk_open}~{r.wk_close}</td></tr>)}</tbody>
+            <tbody>{(allP ? d.parking : d.parking.slice(0, 8)).map((r: any) => <tr key={r.name}><td>{r.name}<br /><small className="muted">{r.road}</small></td><td>{r.spaces}</td><td>{r.disabled || "-"}</td><td>{r.fee_type}{r.base_fee ? ` (${r.base_min}${L("분", "min")} ${r.base_fee}${L("원", "₩")})` : ""}</td><td>{r.wk_open}~{r.wk_close}</td></tr>)}</tbody>
           </table></div>
+          <More n={8} total={d.parking.length} open={allP} onToggle={() => setAllP(!allP)} lang={lang} />
         </div>
         <div className="cards2">
           <div className="panel">
-            <h2 className="h3">🚕 {L("택시 승차대", "Taxi stands")}</h2>
-            <ul className="plain">{d.taxi_stands.map((t: any) => <li key={t.name}>{t.name} · {t.spaces}{L("면", "")} <small className="muted">{t.road}</small></li>)}</ul>
+            <h2 className="h3" id="tr-taxi">🚕 {L("택시 승차대", "Taxi stands")}</h2>
+            <ul className="plain">{(allT ? d.taxi_stands : d.taxi_stands.slice(0, 8)).map((t: any) => <li key={t.name}>{t.name} · {t.spaces}{L("면", "")} <small className="muted">{t.road}</small></li>)}</ul>
+            <More n={8} total={d.taxi_stands.length} open={allT} onToggle={() => setAllT(!allT)} lang={lang} />
           </div>
           <div className="panel">
             <h2 className="h3">🚗 {L("렌터카", "Car rentals")}</h2>
-            <ul className="plain">{d.rentals.map((r: any) => <li key={r.name}>{r.name} · {L(`승용 ${r.cars} / 승합 ${r.vans}`, `${r.cars} cars / ${r.vans} vans`)} · <a href={`tel:${r.tel}`}>{r.tel}</a></li>)}</ul>
+            <ul className="plain">{(allR ? d.rentals : d.rentals.slice(0, 8)).map((r: any) => <li key={r.name}>{r.name} · {L(`승용 ${r.cars} / 승합 ${r.vans}`, `${r.cars} cars / ${r.vans} vans`)} · <a href={`tel:${r.tel}`}>{r.tel}</a></li>)}</ul>
+            <More n={8} total={d.rentals.length} open={allR} onToggle={() => setAllR(!allR)} lang={lang} />
             <p className="muted">{L("휠체어 리프트 차량 여부는 업체에 확인해 주세요.", "Ask the company about lift-equipped vans.")}</p>
           </div>
         </div>
@@ -232,7 +251,7 @@ export function MapPage({ lang }: { lang: Lang }) {
   }
   return (
     <section className="sec wrap">
-      <Head lang={lang} title={L("편의시설 지도", "Facilities map")} sub={L("보고 싶은 것만 켜세요. 점을 누르면 아래 목록에서 자세히 보여요.", "Turn layers on and tap a dot for details.")} />
+      <Head lang={lang} photo="dokkaebi" title={L("편의시설 지도", "Facilities map")} sub={L("보고 싶은 것만 켜세요. 점을 누르면 아래 목록에서 자세히 보여요.", "Turn layers on and tap a dot for details.")} />
       <div className="layers chips" role="group" aria-label={L("지도에 보일 것", "Layers")}>
         {LAYERS.map((l) => (
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
@@ -274,10 +293,16 @@ export function MyPage({ lang }: { lang: Lang }) {
   const del = (id: string) => { const v = plans.filter((p) => p.id !== id); setPlans(v); savePlans(v); };
   return (
     <section className="sec wrap">
-      <Head lang={lang} title={L("내 일정", "My trips")} sub={L("저장한 일정은 이 기기에만 남아요. 서버에는 아무것도 저장하지 않아요.", "Saved only on this device; nothing is stored on a server.")} />
+      <Head lang={lang} photo="haerang" title={L("내 일정", "My trips")} sub={L("저장한 일정은 이 기기에만 남아요. 서버에는 아무것도 저장하지 않아요.", "Saved only on this device; nothing is stored on a server.")} />
       {!plans.length ? (
-        <div className="panel"><p>{L("아직 저장한 일정이 없어요. 코스를 만든 뒤 [내 일정에 저장]을 눌러 주세요.", "No saved trips yet. Make a route and tap [Save to my trips].")}</p>
-          <a className="chip go" href="#plan">{L("코스 만들러 가기", "Plan a route")}</a></div>
+        <div className="panel empty">
+          <img src="/dongi/ask.webp" alt="" />
+          <div>
+            <p><b>{L("아직 저장한 일정이 없어요", "No saved trips yet")}</b></p>
+            <p className="muted">{L("코스를 만든 뒤 [내 일정에 저장]을 누르면 여기에 모여요. 저장한 일정은 다시 열어 고치거나 가족에게 보낼 수 있어요.", "Make a route and tap [Save to my trips]. Saved trips can be reopened, edited and shared.")}</p>
+            <a className="btn-go" href="#plan">{L("코스 만들러 가기", "Plan a route")}</a>
+          </div>
+        </div>
       ) : (
         <ul className="my-list">
           {plans.map((p) => (
@@ -312,7 +337,7 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
   const WD = lang === "ko" ? ["일", "월", "화", "수", "목", "금", "토"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return (
     <section className="sec wrap">
-      <Head lang={lang} title={L("행사·축제 달력", "Events calendar")} sub={L(`동해시 문화행사·축제 공공데이터 (기준일 ${d?.as_of || "-"})`, "Donghae events from public data")} />
+      <Head lang={lang} photo="mureung_lavender" title={L("행사·축제 달력", "Events calendar")} sub={L(`동해시 문화행사·축제 공공데이터 (기준일 ${d?.as_of || "-"})`, "Donghae events from public data")} />
       <div className="ev-grid">
         <div className="cal">
           <div className="cal-head">
@@ -359,12 +384,15 @@ export function StayPage({ lang }: { lang: Lang }) {
   const L = pick(lang);
   const [zone, setZone] = useState("mangsang");
   const [d, err] = useLoad(() => api.get(`/api/lodging?zone=${zone}&limit=0`), [zone]);
+  const [q, setQ] = useState("");
+  const key = q.trim().replace(/\s+/g, "");
+  const rows = (d?.items || []).filter((r: any) => !key || `${r.name}${r.kind}${r.address}`.replace(/\s+/g, "").includes(key));
   const Q = [L("출입구에 턱이나 계단이 있나요? 경사로가 있나요?", "Steps or a ramp at the entrance?"), L("방문 폭이 휠체어(80cm 이상) 들어갈 만큼 넓은가요?", "Room door at least 80 cm wide?"),
     L("욕실 문턱이 없나요? 손잡이가 있나요?", "Step-free bathroom with grab bars?"), L("엘리베이터가 있나요? (2층 이상 객실이면)", "Is there a lift?"),
     L("장애인 주차 구역이 건물 입구 가까이 있나요?", "Accessible parking near the entrance?"), L("침대 높이가 휠체어 좌석과 비슷한가요?", "Bed height similar to wheelchair seat?")];
   return (
     <section className="sec wrap">
-      <Head lang={lang} title={L("숙소", "Where to stay")} sub={L("공공데이터에는 객실 접근성 정보가 없어요. 예약 전에 아래 질문을 전화로 꼭 물어보세요.", "Public data has no room accessibility info. Call and ask before booking.")} />
+      <Head lang={lang} photo="mangsang" title={L("숙소", "Where to stay")} sub={L("공공데이터에는 객실 접근성 정보가 없어요. 예약 전에 아래 질문을 전화로 꼭 물어보세요.", "Public data has no room accessibility info. Call and ask before booking.")} />
       <div className="panel">
         <h2 className="h3">{L("예약 전에 물어볼 것", "Ask before booking")}</h2>
         <ul className="checks">{Q.map((q) => <li key={q}>{q}</li>)}</ul>
@@ -372,13 +400,17 @@ export function StayPage({ lang }: { lang: Lang }) {
       <div className="tabs" role="tablist" aria-label={L("권역", "Areas")}>
         {ZONES.map((z) => <button key={z.k} role="tab" aria-selected={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>)}
       </div>
+      <form className="psearch" role="search" onSubmit={(e) => e.preventDefault()}>
+        <label htmlFor="stay-q">{L("숙소 찾기", "Find lodging")}</label>
+        <input id="stay-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름·종류·주소로 찾기 (예: 호텔, 펜션)", "Search by name, type or address")} />
+      </form>
       {!d ? <Loading err={err} lang={lang} /> : (
         <div className="tbl-wrap"><table className="tbl">
           <thead><tr><th>{L("이름", "Name")}</th><th>{L("종류", "Type")}</th><th>{L("주소", "Address")}</th><th>{L("전화", "Phone")}</th></tr></thead>
-          <tbody>{d.items.map((r: any) => <tr key={r.name}><td>{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td>{r.kind}</td><td><small>{r.address}</small></td><td>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td></tr>)}</tbody>
+          <tbody>{rows.map((r: any) => <tr key={r.name + r.address}><td>{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td>{r.kind}</td><td><small>{r.address}</small></td><td>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td></tr>)}</tbody>
         </table></div>
       )}
-      <p className="muted small">{L(`${d?.count ?? 0}곳 · 무장애 객실 여부는 모두 '확인 전'이에요.`, "Accessible rooms: not verified.")}</p>
+      <p className="muted small">{L(`${key ? rows.length : d?.count ?? 0}곳 · 무장애 객실 여부는 모두 '확인 전'이에요.`, "Accessible rooms: not verified.")}</p>
     </section>
   );
 }
@@ -400,7 +432,7 @@ export function GuidePage({ lang }: { lang: Lang }) {
   ];
   return (
     <section className="sec wrap">
-      <Head lang={lang} title={L("여행 준비·자주 묻는 질문", "Trip prep & FAQ")} />
+      <Head lang={lang} photo="zone_mureung" title={L("여행 준비·자주 묻는 질문", "Trip prep & FAQ")} />
       <div className="cards2">
         {lists.map((x) => <div key={x.t} className="panel"><h2 className="h3">{x.t}</h2><ul className="checks">{x.i.map((i) => <li key={i}>{i}</li>)}</ul></div>)}
       </div>
