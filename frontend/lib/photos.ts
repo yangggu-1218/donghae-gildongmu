@@ -49,5 +49,26 @@ export const PHOTOS: Record<string, Photo> = {
     "author": "칼빈500",
     "license": "CC BY-SA 3.0",
     "page": "https://commons.wikimedia.org/wiki/File:%EB%A7%9D%EC%83%81%ED%95%B4%EC%88%98%EC%9A%95%EC%9E%A5%28AMJ%29.jpg"
+  },
+  "zone_mukho": {
+    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Mukhohang_Port.jpg/500px-Mukhohang_Port.jpg",
+    "author": "Cho Yungkwon (한국관광공사 포토코리아)",
+    "license": "KOGL Type 1",
+    "page": "https://commons.wikimedia.org/wiki/File:Mukhohang_Port.jpg"
+  },
+  "zone_mureung": {
+    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Samhwasa_and_murung_velley.jpg/500px-Samhwasa_and_murung_velley.jpg",
+    "author": "eimoberg",
+    "license": "CC BY 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Samhwasa_and_murung_velley.jpg"
+  },
+  "city": {
+    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Panoramic_view_of_Donghae.jpg/500px-Panoramic_view_of_Donghae.jpg",
+    "author": "Gangwon Office (한국관광공사 포토코리아)",
+    "license": "KOGL Type 1",
+    "page": "https://commons.wikimedia.org/wiki/File:Panoramic_view_of_Donghae.jpg"
   }
 };
+
+// 큰 화면용: 위키미디어 표준 썸네일 폭(500·960·1920)만 쓴다.
+export const photoAt = (id: string, w: 500 | 960 | 1920) => (PHOTOS[id] ? PHOTOS[id].src.replace("/500px-", `/${w}px-`) : "");
