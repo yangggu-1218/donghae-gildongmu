@@ -44,6 +44,7 @@ class Place(BaseModel):
     address: str = ""
     coord_source: str = ""               # 좌표 출처 (비어 있으면 추정 좌표)
     intro_source: str = ""
+    about: list[dict] = Field(default_factory=list)   # 장소 소개 묶음 [{t:[ko,en], i:[[ko,en],...]}]
     parking: Optional[int] = None        # 주차 가능 대수
     public_facilities: list[str] = Field(default_factory=list)
     trails: list[str] = Field(default_factory=list)   # 지나는 걷기길 이름

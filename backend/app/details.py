@@ -40,7 +40,8 @@ def apply(places: dict[str, Place]) -> dict[str, Place]:
         if not p:
             continue
         for k in ("open", "close", "break_time", "last_entry", "hours_source", "wheelchair", "walk_load", "entrance_step",
-                  "table", "benches", "carer_tip", "access_source", "soft_menu", "parking_easy", "stay_min", "type"):
+                  "table", "benches", "carer_tip", "access_source", "soft_menu", "parking_easy", "stay_min", "type",
+                  "intro_ko", "intro_en", "intro_source", "about"):
             if k in d and d[k] is not None:
                 setattr(p, k, d[k])
         p.closed_day_nums = list(d.get("closed_days", []))
