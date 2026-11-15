@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import KakaoMap from "@/components/KakaoMap";
 import { PlacePhoto, ZONES } from "@/components/Sections";
-import { PHOTOS } from "@/lib/photos";
+import { PHOTOS, GALLERY } from "@/lib/photos";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -65,7 +65,8 @@ export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: 
       <Head lang={lang} title={name} crumb={[["#/places", L("관광지", "Places")]]} sub={[zone ? L(zone.ko, zone.en) : "", p.address].filter(Boolean).join(" · ")} />
       <div className="pp-grid">
         <div>
-          {PHOTOS[p.id] && <div className="pp-photo"><PlacePhoto id={p.id} lang={lang} /></div>}
+          {PHOTOS[p.id] && <div className="pp-photo"><PlacePhoto id={p.id} lang={lang} alt={name} /></div>}
+          {GALLERY[p.id] && <ul className="pp-gallery">{GALLERY[p.id].map(([g, ko, en]) => <li key={g}><div className="pp-gph"><PlacePhoto id={g} lang={lang} alt={L(ko, en)} /></div><span>{L(ko, en)}</span></li>)}</ul>}
           {(p.notices || []).filter((n: any) => !n.end || n.end >= new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)).map((n: any) => (
             <div key={n.id} className={`pp-notice ${n.level}`} role="note">
               <b>{n.level === "closed" ? L("임시 휴무", "Temporarily closed") : n.level === "warn" ? L("주의", "Caution") : L("안내", "Notice")}</b> {n.title}
@@ -335,6 +336,7 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
             <ul className="ev-list">
               {list.map((e) => (
                 <li key={e.name + e.start} className="panel">
+                  {/라벤더/.test(e.name) && <div className="ev-ph"><PlacePhoto id="mureung_lavender" lang={lang} alt={L("라벤더 정원", "Lavender garden")} /></div>}
                   <b>{e.name}</b> <span className="badge b-plain">{e.kind}</span>
                   <p>{e.start}{e.end && e.end !== e.start ? ` ~ ${e.end}` : ""}{e.start_time ? ` · ${e.start_time}~${e.end_time || ""}` : ""} · {e.venue}</p>
                   <p className="muted">{[e.fee_type, e.fee, e.age, e.tel].filter(Boolean).join(" · ")}</p>
@@ -442,7 +444,7 @@ export function SourcesPage({ lang }: { lang: Lang }) {
           <h2 className="h3">{L("사진 출처", "Photo credits")}</h2>
           <div className="tbl-wrap"><table className="tbl">
             <thead><tr><th>{L("장소", "Place")}</th><th>{L("저작자", "Author")}</th><th>{L("라이선스", "License")}</th><th>{L("원본", "Original")}</th></tr></thead>
-            <tbody>{d.photos.map((x: any) => <tr key={x.id}><td>{x.id}</td><td>{x["저작자"]}</td><td>{x["라이선스"] === "KOGL Type 1" ? L("공공누리 제1유형", "KOGL Type 1") : x["라이선스"]}</td><td><a href={x["출처"]} target="_blank" rel="noopener">{L("위키미디어 공용", "Wikimedia Commons")}</a></td></tr>)}</tbody>
+            <tbody>{d.photos.map((x: any) => <tr key={x.id}><td>{x.id}</td><td>{x["저작자"]}</td><td>{x["라이선스"] === "KOGL Type 1" ? L("공공누리 제1유형", "KOGL Type 1") : x["라이선스"]}</td><td>{x["출처"] ? <a href={x["출처"]} target="_blank" rel="noopener">{L("위키미디어 공용", "Wikimedia Commons")}</a> : L("확인 중", "Being confirmed")}</td></tr>)}</tbody>
           </table></div>
           <p className="muted small">{L("사진이 없는 장소는 그림으로 보여 줘요.", "Places without a photo show an illustration.")}</p>
         </div>

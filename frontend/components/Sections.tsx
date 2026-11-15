@@ -171,15 +171,27 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const [mode, setMode] = useState("none");
   const [list, setList] = useState<any[]>([]);
   useEffect(() => { fetch(`/api/places?mode=${mode}`).then((r) => r.json()).then(setList).catch(() => setList([])); }, [mode]);
+  const [q, setQ] = useState("");
   const Z = ZONES.find((z) => z.k === zone)!;
-  const items = list.filter((p) => p.zone === zone && p.type !== "숙박" && p.type !== "식당");
+  const zc = (k: string) => ZONES.find((z) => z.k === k)?.c || Z.c;
+  const key = q.trim().toLowerCase().replace(/\s+/g, "");
+  const ORDER: Record<string, number> = { G: 0, Y: 1, R: 3 };
+  const items = list.filter((p) => p.type !== "숙박" && p.type !== "식당" && (key
+      ? `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key)
+      : p.zone === zone))
+    .sort((a, b) => (mode === "none" ? 0 : (ORDER[a.grade] ?? 2) - (ORDER[b.grade] ?? 2)));
   return (
     <section id="places" className="sec wrap" aria-labelledby="places-h">
       <div className="sec-head">
         <h2 id="places-h">{L("동해 다섯 권역", "Five areas of Donghae")}</h2>
         <p>{L("권역을 고르고 누구 기준으로 볼지 정하면, 장소마다 갈 수 있는지 신호등으로 보여요.", "Pick an area and whose needs to check; each place shows an access signal.")}</p>
       </div>
-      <div className="tabs" role="tablist" aria-label={L("권역", "Areas")}>
+      <form className="psearch" role="search" onSubmit={(e) => e.preventDefault()}>
+        <label htmlFor="psearch">{L("장소 찾기", "Find a place")}</label>
+        <input id="psearch" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름이나 시설로 찾기 (예: 등대, 엘리베이터)", "Search by name or facility (e.g. lighthouse, elevator)")} />
+        {q && <button type="button" className="chip" onClick={() => setQ("")}>{L("지우기", "Clear")}</button>}
+      </form>
+      <div className="tabs" role="tablist" aria-label={L("권역", "Areas")} hidden={!!key}>
         {ZONES.map((z) => (
           <button key={z.k} role="tab" aria-selected={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>
             {L(z.ko, z.en)}
@@ -192,13 +204,15 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           {MODES.map(([k, ko, en]) => <button key={k} className="chip" aria-pressed={mode === k} onClick={() => setMode(k)}>{L(ko, en)}</button>)}
         </div>
       </div>
-      <p className="zone-d"><b style={{ color: Z.c }}>{L(Z.ko, Z.en)}</b> {L(Z.d[0], Z.d[1])}</p>
+      {key
+        ? <p className="zone-d" role="status">{L(`'${q.trim()}' 검색 결과 ${items.length}곳 (모든 권역)`, `${items.length} result(s) for '${q.trim()}' in all areas`)}</p>
+        : <p className="zone-d"><b style={{ color: Z.c }}>{L(Z.ko, Z.en)}</b> {L(Z.d[0], Z.d[1])}</p>}
       <div className="pgrid">
         {items.map((p) => {
           const g = p.grade as string | null, inW = wish.includes(p.id);
           return (
             <article key={p.id} className="pcard">
-              <div className="art"><Art id={p.id} color={Z.c} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
+              <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
                 {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
@@ -213,7 +227,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
             </article>
           );
         })}
-        {!items.length && <p className="muted">{L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>}
+        {!items.length && <p className="muted">{key ? L("찾는 장소가 없어요. 다른 낱말로 찾아보거나 검색어를 지워 권역별로 보세요.", "No places found. Try another word, or clear the search to browse by area.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>}
       </div>
     </section>
   );
