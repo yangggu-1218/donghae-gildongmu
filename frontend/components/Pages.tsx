@@ -180,7 +180,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
             <p>{L(`휠체어 차량 ${d.mobility_center.wheelchair_vehicles}대 · 운행 ${d.mobility_center.hours} · 시외 이동은 ${d.mobility_center.advance} 전 예약`, `${d.mobility_center.wheelchair_vehicles} vehicles · ${d.mobility_center.hours}`)}</p>
             {d.mobility_center.area_out && <p className="muted">{L(`시외 운행: ${d.mobility_center.area_out}`, `Out of town: ${d.mobility_center.area_out}`)}</p>}
             <p>☎ <a href={`tel:${d.mobility_center.tel}`}>{d.mobility_center.tel}</a>{d.mobility_center.app ? ` · ${d.mobility_center.app}` : ""} · {d.mobility_center.fare}</p>
-            <p className="muted">{L("교통약자로 등록된 분이 이용할 수 있어요. 다른 지역 분은 출발 전에 이용 가능 여부를 전화로 확인하세요.", "Registered users only; visitors should call ahead.")}</p>
+            <p className="muted">{L("다른 지역에 사는 등록 장애인 관광객도 이용할 수 있어요(동해시 확인). 강원 교통약자 광역이동지원센터 누리집·앱이나 1577-2014로 예약하세요. 동해시에는 저상버스가 없어요.", "Registered disabled visitors from other regions can use it too (confirmed by Donghae City). Book on the Gangwon mobility center website or app, or call 1577-2014. Donghae has no low-floor buses.")}</p>
           </div>
         )}
         {d.city_tour && (
