@@ -17,3 +17,19 @@
 - 마스코트 동이 그림(`frontend/public/dongi/`)은 팀 자체 제작물이다.
 - 아이콘은 외부 아이콘 묶음을 쓰지 않았다.
 - 사진이 아직 없는 장소: 도째비골 스카이밸리·해랑전망대, 무릉별유천지, 묵호등대, 한섬, 추암 출렁다리 등. 위키미디어 공용 검색에서 쓸 수 있는 사진을 찾지 못해 그림으로 표시한다.
+
+## 팀 제공 사진 (2026-11-15 받음) — 출처 확인 필요
+
+아래 9장은 팀 대표가 대화로 전달한 사진이다. 촬영자와 라이선스를 아직 전달받지 못해 '출처 확인 중'으로 기록했다. 공개 전에 출처(직접 촬영 / 동해시·한국관광공사 제공 등)와 이용 조건을 확인해 이 표와 `data/photos.csv`를 채워야 한다.
+
+| id | 설명 | 파일 | 적용 화면 |
+|---|---|---|---|
+| dokkaebi | 도째비골 스카이밸리와 묵호등대 전경 | 960px-dokkaebi.webp | 장소 카드·상세 |
+| haerang | 해 질 무렵의 해랑전망대 | 960px-haerang.webp | 장소 카드·상세 |
+| dokkaebi_2 | 스카이사이클과 자이언트 슬라이드 | 960px-dokkaebi_2.webp | 스카이밸리 상세 사진 모음 |
+| mureung | 무릉별유천지 무릉별열차 | 960px-mureung.webp | 장소 카드·상세 |
+| mureung_lavender | 라벤더 정원과 무릉별열차 | 960px-mureung_lavender.webp | 무릉별유천지 상세, 행사 달력 |
+| mureung_night | 라벤더축제 야경 | 960px-mureung_night.webp | 무릉별유천지 상세 |
+| mureung_dumir | 두미르 전망대 | 960px-mureung_dumir.webp | 무릉별유천지 상세 |
+| mukho_lighthouse | 묵호등대 | 960px-mukho_lighthouse.webp | 장소 카드·상세 |
+| mukho_lighthouse_2 | 묵호등대 앞 계단 | 960px-mukho_lighthouse_2.webp | 묵호등대 상세 |
