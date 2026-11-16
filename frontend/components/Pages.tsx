@@ -378,7 +378,7 @@ export function MapPage({ lang }: { lang: Lang }) {
             <ul className="plain">{unmapped.map((t: any) => <li key={t.name + t.road}>{t.name} · {t.kind} · {t.hours} <small className="muted">{t.road}</small></li>)}</ul>
           </details>
         )}
-        <p className="muted small">{L(`장애인 화장실: ${d.toilet_meta?.source} (기준일 ${d.toilet_meta?.as_of}). 약국·병원은 예시 데이터예요.`, "Toilets from national public restroom data. Pharmacies are sample data.")}</p>
+        <p className="muted small">{L(`장애인 화장실: ${d.toilet_meta?.source} (기준일 ${d.toilet_meta?.as_of}). 원자료에 좌표가 없던 곳은 도로명주소로 위치를 찾았어요. 약국·병원은 예시 데이터예요.`, "Toilets from national public restroom data. Pharmacies are sample data.")}</p>
       </>)}
     </section>
   );
