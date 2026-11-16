@@ -6,7 +6,7 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, HomeFacts, ZoneTiles, MoreLinks, Places, Courses, PRESETS } from "@/components/Sections";
+import { Hero, HomeFacts, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
@@ -276,6 +276,7 @@ export default function Page() {
       {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
       <HomeFacts lang={lang} />
+      <NowDonghae lang={lang} />
       <section id="plan" className="sec wrap" aria-labelledby="plan-h">
       <div className="sec-head">
         <h2 id="plan-h">{t("plan.h")}</h2>
@@ -398,6 +399,13 @@ export default function Page() {
       <nav className="tabbar" aria-label={t("nav.main")}>
         {([["#plan", "nav.plan", "", "🧭"], ["#/places", "nav.places", "places", "📍"], ["#/transport", "nav.transport", "transport", "🚌"], ["#/map", "nav.map", "map", "🗺"], ["#/my", "nav.my", "my", "📅"]] as const).map(([h, k, r, ic]) =>
           <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><span aria-hidden="true">{ic}</span>{t(k)}</a>)}
+      </nav>
+      <nav className="quick" aria-label={lang === "ko" ? "빠른 메뉴" : "Quick menu"}>
+        <a href="#plan"><span aria-hidden="true">🧭</span>{lang === "ko" ? "코스 만들기" : "Plan"}</a>
+        <a href="#/map"><span aria-hidden="true">🚻</span>{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
+        <a href="#/events"><span aria-hidden="true">🎉</span>{lang === "ko" ? "행사" : "Events"}</a>
+        <button onClick={openSafety}><span aria-hidden="true">🆘</span>{lang === "ko" ? "안심" : "Help"}</button>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><span aria-hidden="true">↑</span>{lang === "ko" ? "맨 위로" : "Top"}</button>
       </nav>
       <footer className="foot">
         <div className="wrap">

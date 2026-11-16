@@ -545,3 +545,26 @@ label.day input { width: 20px !important; height: 20px; min-height: 0 !important
 .bf-list ul { margin: 6px 0 0; padding-left: 1.1em; }
 .chip.plain { cursor: default; }
 @media (max-width: 560px) { .cc-d { font-size: 9px; } .crowd-chart { gap: 2px; } }
+
+/* ---------- 지금의 동해 ---------- */
+.now { margin-top: 28px; }
+.now h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.5em; margin: 0 0 10px; color: var(--sea-deep); }
+.now-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.now-c { display: grid; gap: 4px; align-content: start; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--sun); border-radius: var(--r-m); text-decoration: none; color: var(--ink); }
+a.now-c:hover { border-color: var(--sea); }
+.now-k { font-size: .85em; font-weight: 700; color: var(--muted); }
+.now-c b { font-size: 1.08em; line-height: 1.4; }
+.now-c b a { color: var(--sea-deep); }
+.now-c > span:last-child { font-size: .88em; color: var(--muted); }
+
+/* ---------- 이런 곳을 찾아요 ---------- */
+.filter.needs { margin-bottom: 10px; }
+
+/* ---------- 빠른 메뉴 (넓은 화면에서만, 모바일은 아래 탭바) ---------- */
+.quick { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 6px; box-shadow: 0 16px 36px -22px rgba(18, 53, 94, .6); }
+.quick a, .quick button { display: grid; justify-items: center; gap: 2px; width: 68px; padding: 8px 4px; border: 0; background: none; border-radius: 12px;
+  font: inherit; font-size: .74em; font-weight: 600; color: var(--sea-deep); text-decoration: none; cursor: pointer; text-align: center; line-height: 1.25; }
+.quick span { font-size: 1.5em; line-height: 1; }
+.quick a:hover, .quick button:hover { background: var(--mist); }
+@media (max-width: 1320px) { .quick { display: none; } }
