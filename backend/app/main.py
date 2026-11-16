@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import Place, Conditions, ChatEdit
-from . import cms, edits, pages, engine, llm, public_apis, public_data, details, talk as talk_mod
+from . import cms, edits, pages, engine, llm, public_apis, public_data, details, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -273,6 +273,50 @@ def lodging(zone: str = "", limit: int = 20):
 @app.get("/api/weather")
 def weather():
     return public_apis.rain_today()
+
+
+# ---------------- 한국관광공사 빅데이터 ----------------
+@app.get("/api/bf")
+def bf_list(kind: str = "food"):
+    """무장애 여행 정보: 동해시 음식점(food)·숙소(stay)·관광지(sight)·문화시설(culture)."""
+    return bigdata.barrier_free(kind)
+
+
+@app.get("/api/crowd")
+def crowd_all():
+    """관광지 집중률 예측: 우리 장소별 앞으로 30일 붐빔(%)"""
+    out = {}
+    for pid, p in PLACES.items():
+        rows = bigdata.crowd_for(p.name_ko, [p.name_en or ""])
+        if rows:
+            out[pid] = rows
+    return {"places": out, "source": bigdata.crowd()["source"], "ok": bool(out)}
+
+
+@app.get("/api/visitors")
+def visitors():
+    return bigdata.visitors()
+
+
+@app.get("/api/place/{pid}/bigdata")
+def place_bigdata(pid: str, lang: str = "ko"):
+    """장소 상세의 빅데이터 묶음: 붐빔 예측, 함께 가는 곳, 근처 무장애 음식점·숙소, 해설 듣기."""
+    if pid not in PLACES:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    p = PLACES[pid]
+    return {"crowd": bigdata.crowd_for(p.name_ko, [p.name_en or ""]),
+            "related": bigdata.related_for(p.name_ko),
+            "food": bigdata.bf_near(p.lat, p.lon, "food", 2500, 4),
+            "stay": bigdata.bf_near(p.lat, p.lon, "stay", 3000, 3),
+            "audio": bigdata.audio(p.lat, p.lon, 800, "ko" if lang == "ko" else "en"),
+            "labels": bigdata.BF_LABEL}
+
+
+@app.get("/api/admin/probe")
+def admin_probe(x_admin_token: str | None = Header(None)):
+    """관리자: 공공 빅데이터 API가 실제로 응답하는지 점검 (캐시를 비우고 다시 부른다)."""
+    _admin(x_admin_token)
+    return bigdata.probe()
 
 
 @app.post("/api/reports")
