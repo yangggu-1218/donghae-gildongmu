@@ -523,3 +523,6 @@ label.day input { width: 20px !important; height: 20px; min-height: 0 !important
 .about h3 { font-size: 1em; font-weight: 700; color: var(--sea-deep); margin: 14px 0 4px; }
 .about ul { margin: 0; padding-left: 1.2em; }
 .about li { margin: 3px 0; }
+
+.tour-access li { margin: 6px 0; }
+.tour-access b { color: var(--sea-deep); margin-right: 6px; }
