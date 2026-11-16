@@ -526,3 +526,22 @@ label.day input { width: 20px !important; height: 20px; min-height: 0 !important
 
 .tour-access li { margin: 6px 0; }
 .tour-access b { color: var(--sea-deep); margin-right: 6px; }
+
+/* ---------- 빅데이터: 붐빔 예상·방문자·해설 ---------- */
+.badge.crowd-high { background: #FCE6E4; color: #B42318; }
+.badge.crowd-mid { background: #FFF2CC; color: #7A5300; }
+.badge.crowd-low { background: #E3F4E8; color: #1E7F38; }
+.bigdata section { margin-top: 16px; }
+.bigdata h3 { font-size: 1em; font-weight: 700; color: var(--sea-deep); margin: 0 0 8px; }
+.bigdata .small, .small { font-size: .88em; }
+.crowd-chart { display: flex; align-items: flex-end; gap: 4px; height: 140px; padding: 8px 0 34px; border-bottom: 1px solid var(--line); position: relative; }
+.cc-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.cc-bar { width: 100%; max-width: 26px; border-radius: 4px 4px 0 0; display: block; }
+.cc-bar.crowd-high { background: #D9534F; } .cc-bar.crowd-mid { background: #E8A33D; } .cc-bar.crowd-low { background: #3C9A5B; }
+.cc-d { position: absolute; top: 100%; margin-top: 4px; font-size: 11px; line-height: 1.2; color: var(--muted); text-align: center; white-space: nowrap; }
+.audio-row { display: grid; gap: 6px; margin-bottom: 12px; }
+.audio-row audio { width: 100%; max-width: 480px; }
+.bf-list > li { padding: 10px 0; border-top: 1px solid var(--line); }
+.bf-list ul { margin: 6px 0 0; padding-left: 1.1em; }
+.chip.plain { cursor: default; }
+@media (max-width: 560px) { .cc-d { font-size: 9px; } .crowd-chart { gap: 2px; } }

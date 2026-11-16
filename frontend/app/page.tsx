@@ -50,6 +50,9 @@ export default function Page() {
   const [input, setInput] = useState("");
   const [safety, setSafety] = useState<any>(null);
   const [extras, setExtras] = useState<Record<string, Extra>>({});
+  // 한국관광공사 관광지 집중률 예측(앞으로 30일). 못 불러오면 배지를 숨긴다.
+  const [crowdMap, setCrowdMap] = useState<Record<string, { date: string; rate: number }[]>>({});
+  useEffect(() => { fetch("/api/crowd").then((r) => r.json()).then((j) => setCrowdMap(j.places || {})).catch(() => {}); }, []);
   const [talkState, setTalkState] = useState<Record<string, boolean>>({});
   const [big, setBig] = useState(false);
   const [hint, setHint] = useState<Hint | null>(null);
@@ -346,7 +349,8 @@ export default function Page() {
                     <StopCard s={s} i={i} x={extras[s.id]} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
                       showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
                       onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
-                      onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))} />
+                      onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))}
+                      crowd={crowdMap[s.id]?.find((c) => c.date === course.date.replaceAll("-", ""))?.rate ?? null} />
                     <details className="tl-more"><summary>{lang === "ko" ? "이야기·걷기길·택시 더 보기" : "Stories, trails, taxis"}</summary>
                       <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} /></details>
                   </div>
