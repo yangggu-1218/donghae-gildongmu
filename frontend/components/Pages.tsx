@@ -188,7 +188,12 @@ export function TransportPage({ lang }: { lang: Lang }) {
             <h2 className="h3" id="tr-tour">🚌 {L("동해 시티투어", "Donghae city tour")} — {d.city_tour.name}</h2>
             <p>{d.city_tour.days} · {d.city_tour.first}~{d.city_tour.last} · {L(`${d.city_tour.interval_min}분 간격`, `every ${d.city_tour.interval_min} min`)} · {d.city_tour.fare}</p>
             <ol className="stops">{d.city_tour_stops.map((s: string) => <li key={s}>{s}</li>)}</ol>
-            <p className="muted">{L(`휠체어 탑승 여부는 자료에 없어요. ${d.city_tour.contact}에 먼저 물어보세요.`, `Wheelchair boarding not listed; ask ${d.city_tour.contact}.`)}</p>
+            <ul className="plain tour-access">
+              <li><b>{L("요금", "Fare")}</b> {L("어른 3,000원 · 어린이 1,800원. 장애인 할인은 없어요.", "Adults ₩3,000 · children ₩1,800. No disability discount.")}</li>
+              <li><b>{L("휠체어·유모차", "Wheelchairs & strollers")}</b> {L("일반 관광버스예요. 접이식 휠체어와 유모차는 접어서 실을 수 있지만, 전동휠체어나 접히지 않는 휠체어는 타기 어려워요.", "A standard coach: folding wheelchairs and strollers can be folded and stowed; power or rigid wheelchairs are hard to board.")}</li>
+              <li><b>{L("도움", "Assistance")}</b> {L("안내하시는 분이 함께 타서 오르내릴 때 도와줘요. 자격을 갖춘 전문 도우미는 아니에요.", "A guide rides along and helps with boarding, but is not a trained care assistant.")}</li>
+            </ul>
+            <p className="muted">{L(`동해문화관광재단 확인 (2026년 11월) · 문의 ${d.city_tour.contact}`, `Confirmed with Donghae Culture & Tourism Foundation (Nov 2026) · ${d.city_tour.contact}`)}</p>
           </div>
         )}
         <div className="panel">
