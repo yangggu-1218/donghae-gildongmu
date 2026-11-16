@@ -241,14 +241,12 @@
    ]
   },
   "haerang": {
-   "open": "09:00",
-   "close": "18:00",
+   "open": "10:00",
+   "close": "21:00",
    "break_time": null,
-   "closed_days": [
-    1
-   ],
-   "hours_source": "예시",
-   "last_entry": "17:30",
+   "closed_days": [],
+   "hours_source": "팀 전화 확인 (2026-11-16)",
+   "last_entry": "20:30",
    "wheelchair": "일부",
    "walk_load": "완만한경사",
    "entrance_step": false,
@@ -287,6 +285,10 @@
       "Before you go"
      ],
      "i": [
+      [
+       "오전 10시부터 밤 9시까지 열어요. 밤에는 조명이 켜져요.",
+       "Open 10:00–21:00, lit up at night."
+      ],
       [
        "격자 바닥은 휠체어나 유모차 바퀴가 덜컹거릴 수 있어요.",
        "Wheelchair and stroller wheels may judder on the grating."
@@ -369,11 +371,11 @@
    ]
   },
   "mukho_port": {
-   "open": "07:00",
-   "close": "21:00",
+   "open": "00:00",
+   "close": "24:00",
    "break_time": null,
    "closed_days": [],
-   "hours_source": "예시",
+   "hours_source": "팀 전화 확인 (2026-11-16)",
    "last_entry": null,
    "wheelchair": "일부",
    "walk_load": "평지",
@@ -394,7 +396,7 @@
     2,
     3
    ],
-   "hours_source": "공공데이터",
+   "hours_source": "팀 전화 확인 (2026-11-16): 화·수요일 휴관",
    "last_entry": "17:30",
    "wheelchair": "확인 전",
    "walk_load": "평지",
@@ -435,12 +437,12 @@
      ],
      "i": [
       [
-       "입장 마감은 오후 5시 30분이에요.",
-       "Last entry 17:30."
+       "매주 화요일과 수요일은 쉬어요. 입장 마감은 오후 5시 30분이에요.",
+       "Closed Tuesdays and Wednesdays; last entry 17:30."
       ],
       [
-       "쉬는 요일과 엘리베이터 여부는 방문 전에 전화로 확인하세요.",
-       "Call ahead to check closing days and whether there is a lift."
+       "엘리베이터 여부는 방문 전에 전화로 확인하세요.",
+       "Call ahead to check whether there is a lift."
       ]
      ]
     }
@@ -821,7 +823,12 @@
       ]
      ]
     }
-   ]
+   ],
+   "open": "09:00",
+   "close": "18:00",
+   "last_entry": "17:30",
+   "closed_days": [],
+   "hours_source": "팀 전화 확인 (2026-11-16)"
   },
   "samhwasa": {
    "intro_ko": "두타산과 청옥산에 둘러싸인 무릉계곡 안의 절이에요. 신라 때 처음 세워졌다고 전해지고, 무릉반석에서 조금만 걸으면 닿아요.",
@@ -916,6 +923,13 @@
      ]
     }
    ]
+  },
+  "central_market": {
+   "open": "08:00",
+   "close": "18:00",
+   "last_entry": "17:30",
+   "closed_days": [],
+   "hours_source": "팀 전화 확인 (2026-11-16)"
   }
  },
  "extra_places": [
