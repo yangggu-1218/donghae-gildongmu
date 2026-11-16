@@ -29,8 +29,8 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
   const [bad, setBad] = useState(false);
   useEffect(() => { fetch("/api/places?mode=wheel").then((r) => r.json()).then((l) => setSpot((l || []).find((p: any) => p.id === "chotdae") || null)).catch(() => {}); }, []);
   const ex = lang === "ko"
-    ? ["엄마랑 가는데 무릎이 안 좋으세요", "휠체어 타는 친구랑 묵호역에서 출발해요", "아기랑 유모차로 바다 보러 가요"]
-    : ["Travelling with my mom, her knees hurt", "My friend uses a wheelchair, starting at Mukho Station", "Stroller trip to see the sea"];
+    ? ["엄마랑 가는데 무릎이 안 좋으세요", "휠체어 타는 친구랑 묵호역에서 출발해요", "아기랑 유모차로 바다 보러 가요", "친구랑 바다 보고 사진 찍고 싶어요"]
+    : ["Travelling with my mom, her knees hurt", "My friend uses a wheelchair, starting at Mukho Station", "Stroller trip to see the sea", "Sea views and photo spots with a friend"];
   const g = spot?.grade as string | undefined;
   return (
     <section className={`hero${bad ? " hero-plain" : ""}`} aria-labelledby="hero-h">
@@ -40,8 +40,8 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
         <div className="hero-copy">
           <h1 id="hero-h">{L("가기 전에, 갈 수 있는 길인지 먼저 알려 드려요", "Know the way is passable before you go")}</h1>
           <p className="lead">{L(
-            "휠체어, 유모차, 무릎이 불편한 부모님과 함께라도 괜찮아요. 누구와 어떻게 다니는지 말하면, 동해에서 실제로 다닐 수 있는 길로 코스를 짜 드려요.",
-            "Wheelchair, stroller, or parents who can't walk far. Say who you're with, and get a Donghae route made only of paths you can actually take.")}</p>
+            "친구와도, 가족과도, 휠체어나 유모차와 함께여도 괜찮아요. 누구와 어떻게 다니는지 말하면 영업시간, 붐빔 예상, 길 상태까지 맞춘 동해 코스를 짜 드려요.",
+            "With friends, family, a wheelchair or a stroller. Say who you're with, and get a Donghae route checked for opening hours, crowds and path conditions.")}</p>
           <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAsk(v.trim()); setV(""); } }}>
             <img className="ask-dongi" src="/dongi/wave.webp" alt="" />
             <label htmlFor="hero-ask" className="sr-only">{L("동이에게 말하기", "Talk to Dongi")}</label>
@@ -61,6 +61,54 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
           </a>
         )}
       </div>
+    </section>
+  );
+}
+
+/* ---------------- 지금의 동해: 오늘 날씨·붐빔·행사·공지를 한 줄에 ---------------- */
+export function NowDonghae({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const [w, setW] = useState<any>(null);
+  const [crowd, setCrowd] = useState<Record<string, { date: string; rate: number }[]>>({});
+  const [names, setNames] = useState<Record<string, [string, string]>>({});
+  const [ev, setEv] = useState<any[]>([]);
+  useEffect(() => {
+    fetch("/api/weather").then((r) => r.json()).then(setW).catch(() => {});
+    fetch("/api/crowd").then((r) => r.json()).then((j) => setCrowd(j.places || {})).catch(() => {});
+    fetch("/api/places?mode=none").then((r) => r.json()).then((l) => setNames(Object.fromEntries((l || []).map((p: any) => [p.id, [p.name_ko, p.name_en || p.name_ko]])))).catch(() => {});
+    fetch("/api/events").then((r) => r.json()).then((j) => setEv(j.upcoming || [])).catch(() => {});
+  }, []);
+  const now = new Date(Date.now() + 9 * 3600e3);
+  const today = now.toISOString().slice(0, 10);
+  const week = new Date(now.getTime() + 7 * 864e5).toISOString().slice(0, 10);
+  const rates = Object.entries(crowd).map(([id, rows]) => [id, rows.find((c) => c.date === today.replaceAll("-", ""))?.rate] as const)
+    .filter(([id, r]) => r != null && names[id]) as [string, number][];
+  const quiet = [...rates].sort((a, b) => a[1] - b[1]).slice(0, 3);
+  const busy = [...rates].sort((a, b) => b[1] - a[1]).filter(([, r]) => r >= 60).slice(0, 2);
+  const soon = ev.filter((e) => e.start <= week && (e.end || e.start) >= today).slice(0, 2);
+  const nm = (id: string) => L(names[id]?.[0] || id, names[id]?.[1] || id);
+  const cards: JSX.Element[] = [];
+  if (w && !w.sample) cards.push(
+    <a key="w" className="now-c" href="#plan"><span className="now-k">{L("오늘 날씨", "Weather today")}</span>
+      <b>{w.rain ? L("비 소식이 있어요", "Rain expected") : L("비 소식 없어요", "No rain expected")}</b>
+      <span>{w.rain ? L("실내 위주로 코스를 짜 드릴게요", "We'll plan indoor stops") : L("바다·산책 코스 좋아요", "Good for sea and walks")}</span></a>);
+  if (quiet.length) cards.push(
+    <div key="q" className="now-c"><span className="now-k">{L("오늘 한산할 곳", "Quiet today")}</span>
+      <b>{quiet.map(([id], i) => <span key={id}>{i > 0 && ", "}<a href={`#/place/${id}`}>{nm(id)}</a></span>)}</b>
+      <span>{L("한국관광공사 집중률 예측", "KTO crowd forecast")}</span></div>);
+  if (busy.length) cards.push(
+    <div key="b" className="now-c"><span className="now-k">{L("오늘 붐빌 곳", "Busy today")}</span>
+      <b>{busy.map(([id], i) => <span key={id}>{i > 0 && ", "}<a href={`#/place/${id}`}>{nm(id)}</a></span>)}</b>
+      <span>{L("이른 시간이나 다른 날을 추천해요", "Go early or pick another day")}</span></div>);
+  if (soon.length) cards.push(
+    <a key="e" className="now-c" href="#/events"><span className="now-k">{L("이번 주 행사", "This week")}</span>
+      <b>{soon.map((e) => e.name).join(", ")}</b>
+      <span>{soon[0].start === (soon[0].end || soon[0].start) ? soon[0].start.slice(5).replace("-", "/") : `${soon[0].start.slice(5).replace("-", "/")}~${(soon[0].end || "").slice(5).replace("-", "/")}`} · {soon[0].venue || ""}</span></a>);
+  if (!cards.length) return null;
+  return (
+    <section className="now wrap" aria-labelledby="now-h">
+      <h2 id="now-h">{L("지금의 동해", "Donghae now")}</h2>
+      <div className="now-row">{cards}</div>
     </section>
   );
 }
@@ -172,14 +220,30 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const [list, setList] = useState<any[]>([]);
   useEffect(() => { fetch(`/api/places?mode=${mode}`).then((r) => r.json()).then(setList).catch(() => setList([])); }, [mode]);
   const [q, setQ] = useState("");
+  const [need, setNeed] = useState<string[]>([]);
+  const [crowd, setCrowd] = useState<Record<string, { date: string; rate: number }[]>>({});
+  useEffect(() => { fetch("/api/crowd").then((r) => r.json()).then((j) => setCrowd(j.places || {})).catch(() => {}); }, []);
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10).replaceAll("-", "");
+  const rateToday = (id: string) => crowd[id]?.find((c) => c.date === today)?.rate;
   const Z = ZONES.find((z) => z.k === zone)!;
   const zc = (k: string) => ZONES.find((z) => z.k === k)?.c || Z.c;
   const key = q.trim().toLowerCase().replace(/\s+/g, "");
   const ORDER: Record<string, number> = { G: 0, Y: 1, R: 3 };
-  const items = list.filter((p) => p.type !== "숙박" && p.type !== "식당" && (key
-      ? `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key)
-      : p.zone === zone))
+  const NEED_TEST: Record<string, (p: any) => boolean> = {
+    sea: (p) => (p.styles || []).includes("바다 보기"), nature: (p) => (p.styles || []).includes("자연·산책"),
+    culture: (p) => (p.styles || []).includes("역사·문화"), activity: (p) => (p.styles || []).includes("체험"),
+    indoor: (p) => !!p.indoor, flat: (p) => p.walk_load === "평지",
+    toilet: (p) => (p.facilities || []).includes("장애인 화장실"), parking: (p) => (p.facilities || []).includes("장애인 주차"),
+    quiet: (p) => { const r = rateToday(p.id); return r != null && r < 50; },
+  };
+  const filtering = !!key || need.length > 0;
+  const items = list.filter((p) => p.type !== "숙박" && p.type !== "식당" && p.type !== "카페"
+      && (key ? `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}${(p.styles || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key) : true)
+      && need.every((n) => NEED_TEST[n]?.(p))
+      && (filtering || p.zone === zone))
     .sort((a, b) => (mode === "none" ? 0 : (ORDER[a.grade] ?? 2) - (ORDER[b.grade] ?? 2)));
+  const toggle = (k: string) => setNeed(need.includes(k) ? need.filter((x) => x !== k) : [...need, k]);
+  const hasCrowd = Object.keys(crowd).length > 0;
   return (
     <section id="places" className="sec wrap" aria-labelledby="places-h">
       <div className="sec-head">
@@ -191,7 +255,17 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
         <input id="psearch" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름이나 시설로 찾기 (예: 등대, 엘리베이터)", "Search by name or facility (e.g. lighthouse, elevator)")} />
         {q && <button type="button" className="chip" onClick={() => setQ("")}>{L("지우기", "Clear")}</button>}
       </form>
-      <div className="tabs" role="tablist" aria-label={L("권역", "Areas")} hidden={!!key}>
+      <div className="filter needs">
+        <span id="need-l">{L("이런 곳을 찾아요", "I'm looking for")}</span>
+        <div className="chips" role="group" aria-labelledby="need-l">
+          {([["sea", "바다 보기", "Sea views"], ["nature", "자연·산책", "Nature walks"], ["culture", "역사·문화", "History & culture"], ["activity", "체험", "Activities"],
+            ["indoor", "비 와도 OK(실내)", "Indoor"], ["flat", "덜 걷는 곳(평지)", "Flat, little walking"], ["toilet", "장애인 화장실", "Accessible toilet"],
+            ["parking", "장애인 주차", "Accessible parking"], ...(hasCrowd ? [["quiet", "오늘 한산한 곳", "Quiet today"]] : [])] as [string, string, string][])
+            .map(([k, ko, en]) => <button key={k} className="chip" aria-pressed={need.includes(k)} onClick={() => toggle(k)}>{L(ko, en)}</button>)}
+          {need.length > 0 && <button className="chip plain" onClick={() => setNeed([])}>{L("모두 풀기", "Clear all")}</button>}
+        </div>
+      </div>
+      <div className="tabs" role="tablist" aria-label={L("권역", "Areas")} hidden={filtering}>
         {ZONES.map((z) => (
           <button key={z.k} role="tab" aria-selected={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>
             {L(z.ko, z.en)}
@@ -204,8 +278,8 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           {MODES.map(([k, ko, en]) => <button key={k} className="chip" aria-pressed={mode === k} onClick={() => setMode(k)}>{L(ko, en)}</button>)}
         </div>
       </div>
-      {key
-        ? <p className="zone-d" role="status">{L(`'${q.trim()}' 검색 결과 ${items.length}곳 (모든 권역)`, `${items.length} result(s) for '${q.trim()}' in all areas`)}</p>
+      {filtering
+        ? <p className="zone-d" role="status">{L(`${key ? `'${q.trim()}' ` : ""}조건에 맞는 곳 ${items.length}곳 (모든 권역)`, `${items.length} place(s) match${key ? ` '${q.trim()}'` : ""} in all areas`)}</p>
         : <p className="zone-d"><b style={{ color: Z.c }}>{L(Z.ko, Z.en)}</b> {L(Z.d[0], Z.d[1])}</p>}
       <div className="pgrid">
         {items.map((p) => {
@@ -217,7 +291,9 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
               </div>
               <div className="pb">
                 <h3><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}</h3>
-                <p>{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
+                <p>{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.intro_en || p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
+                {rateToday(p.id) != null && <p className="small"><span className={`badge crowd-${rateToday(p.id)! >= 70 ? "high" : rateToday(p.id)! >= 40 ? "mid" : "low"}`}>
+                  {L("오늘", "Today")} {rateToday(p.id)! >= 70 ? L("붐빔 예상", "busy") : rateToday(p.id)! >= 40 ? L("보통", "moderate") : L("여유", "quiet")} {Math.round(rateToday(p.id)!)}%</span></p>}
                 {p.facilities?.length > 0 && <ul className="fac">{p.facilities.slice(0, 4).map((f: string) => <li key={f}>{f}</li>)}</ul>}
                 <a className="more" href={`#/place/${p.id}`}>{L("길·화장실·주차 자세히 보기", "Paths, toilets, parking")}</a>
                 <button className={`add${inW ? " on" : ""}`} disabled={g === "R"} onClick={() => onAdd(p.id)}>
@@ -227,7 +303,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
             </article>
           );
         })}
-        {!items.length && <p className="muted">{key ? L("찾는 장소가 없어요. 다른 낱말로 찾아보거나 검색어를 지워 권역별로 보세요.", "No places found. Try another word, or clear the search to browse by area.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>}
+        {!items.length && <p className="muted">{filtering ? L("조건에 맞는 장소가 없어요. 조건을 하나씩 풀어 보세요.", "No places match. Try removing a filter.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>}
       </div>
     </section>
   );
