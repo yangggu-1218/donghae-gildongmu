@@ -69,6 +69,8 @@ def _call(path: str, params: dict, tag: str) -> tuple[list[dict], dict]:
             st = {"ok": False, "http": r.status_code, "error": txt[:300]}
             LAST[tag] = {"path": path, "params": params, **st}
             return [], st
+        if not isinstance(j, dict):
+            j = {}
         resp = j.get("response", j)
         head = resp.get("header", {})
         code = str(head.get("resultCode", ""))
@@ -80,7 +82,7 @@ def _call(path: str, params: dict, tag: str) -> tuple[list[dict], dict]:
             items = [items]
         st = {"ok": code in ("0000", "00", "0") or bool(items), "code": code, "msg": head.get("resultMsg", ""),
               "total": body.get("totalCount"), "n": len(items)}
-        LAST[tag] = {"path": path, "params": params, **st, "sample": items[:2]}
+        LAST[tag] = {"path": path, "params": params, **st, "sample": items[:2], **({} if items else {"raw": txt[:400]})}
         return items, st
     except Exception as e:
         st = {"ok": False, "error": str(e)[:200]}
@@ -134,8 +136,16 @@ def _bf_list(ctype: str) -> list[dict]:
     for a, s in AREA:
         cands.append(("KorWithService2/areaBasedList2", {"lDongRegnCd": a, "lDongSignguCd": s[-3:], "contentTypeId": ctype, "numOfRows": 200, "pageNo": 1}))
         cands.append(("KorWithService2/areaBasedList2", {"areaCode": a, "sigunguCode": s, "contentTypeId": ctype, "numOfRows": 200, "pageNo": 1}))
-    items = _try(cands, f"bf_list_{ctype}")
-    return [it for it in items if "동해" in (it.get("addr1") or "")]
+    # 후보마다 결과가 조금씩 달라서 모두 불러 합친다(같은 장소는 한 번만).
+    seen, out = set(), []
+    for path, params in cands:
+        items, _ = _call(path, params, f"bf_list_{ctype}")
+        for it in items:
+            cid = str(it.get("contentid"))
+            if cid not in seen and "동해시" in (it.get("addr1") or ""):
+                seen.add(cid)
+                out.append(it)
+    return out
 
 
 def _bf_detail(cid: str) -> dict:
@@ -205,13 +215,32 @@ def crowd() -> dict:
     return res
 
 
+def same_place(a: str, b: str) -> bool:
+    """이름이 같은 곳인지: 띄어쓰기·기호를 빼고 같거나, 한쪽이 다른 쪽을 품되 길이가 비슷할 때만."""
+    x, y = norm(a), norm(b)
+    if not x or not y:
+        return False
+    if x == y:
+        return True
+    s, l = (x, y) if len(x) <= len(y) else (y, x)
+    return len(s) >= 3 and s in l and len(s) / len(l) >= 0.6
+
+
+def _parts(name: str) -> list[str]:
+    """'추암해변·촛대바위' 처럼 가운뎃점으로 묶인 이름은 나눠서도 찾는다."""
+    out = [name]
+    for sep in ("·", "/", ","):
+        if sep in name:
+            out += [p.strip() for p in name.split(sep) if p.strip()]
+    return out
+
+
 def crowd_for(name: str, aliases: list[str] | None = None) -> list[dict]:
-    """우리 장소 이름으로 집중률 목록을 찾는다(띄어쓰기·가운뎃점 무시, 서로 포함되면 같은 곳)."""
+    """우리 장소 이름으로 집중률 목록을 찾는다."""
     c = crowd()["places"]
-    keys = [norm(n) for n in [name, *(aliases or [])] if n]
+    keys = [k for n in [name, *(aliases or [])] if n for k in _parts(n)]
     for nm, rows in c.items():
-        k = norm(nm)
-        if any(k and (k in q or q in k) for q in keys if len(q) >= 3):
+        if any(same_place(nm, q) for q in keys):
             return rows
     return []
 
@@ -248,10 +277,9 @@ def related() -> dict:
 
 
 def related_for(name: str) -> list[dict]:
-    q = norm(name)
+    keys = _parts(name)
     for nm, rows in related()["places"].items():
-        k = norm(nm)
-        if k and len(q) >= 3 and (k in q or q in k):
+        if any(same_place(nm, q) for q in keys):
             return rows[:8]
     return []
 
@@ -262,9 +290,20 @@ def visitors(days: int = 60) -> dict:
     if hit is not None:
         return hit
     now = dt.datetime.now(KST)
-    end, start = now - dt.timedelta(days=3), now - dt.timedelta(days=3 + days)
-    items = _try([("DataLabService/locgoRegnVisitrDDList", {"startYmd": start.strftime("%Y%m%d"), "endYmd": end.strftime("%Y%m%d"),
-                                                            "numOfRows": 50000, "pageNo": 1})], "visitors")
+    items: list[dict] = []
+    # 전국 기초지자체가 한꺼번에 오므로 짧은 기간을 여러 쪽으로 나눠 받는다(데이터는 며칠 늦게 올라온다).
+    for lag in (3, 10, 20, 40):
+        end, start = now - dt.timedelta(days=lag), now - dt.timedelta(days=lag + days)
+        page = 1
+        while page <= 12:
+            got, st = _call("DataLabService/locgoRegnVisitrDDList", {"startYmd": start.strftime("%Y%m%d"), "endYmd": end.strftime("%Y%m%d"),
+                                                                     "numOfRows": 10000, "pageNo": page}, "visitors")
+            items += got
+            if len(got) < 10000:
+                break
+            page += 1
+        if items:
+            break
     rows = [it for it in items if "동해" in str(it.get("signguNm", "")) or str(it.get("signguCode", "")) in ("51170", "42170")]
     days_: dict[str, dict] = {}
     for it in rows:
@@ -304,7 +343,7 @@ def photos(keyword: str, n: int = 6) -> list[dict]:
     items = _try([("PhotoGalleryService1/gallerySearchList1", {"keyword": keyword, "numOfRows": 20, "pageNo": 1, "arrange": "A"})], "photo")
     out = [{"url": it.get("galWebImageUrl", ""), "title": it.get("galTitle", ""), "by": it.get("galPhotographer", ""),
             "where": it.get("galPhotographyLocation", ""), "month": it.get("galPhotographyMonth", "")}
-           for it in items if it.get("galWebImageUrl")][:n]
+           for it in items if it.get("galWebImageUrl") and "동해" in (it.get("galPhotographyLocation") or "") + (it.get("galTitle") or "")][:n]
     _cache_put(name, out)
     return out
 
@@ -326,6 +365,8 @@ def probe() -> dict:
     out["related"] = len(related()["places"])
     out["visitors"] = len(visitors()["series"])
     out["audio"] = len(audio(37.5480, 129.1170, 3000))
-    out["photo"] = len(photos("동해"))
+    out["photo"] = len(photos("추암"))
+    out["crowd_names"] = sorted(crowd()["places"])
+    out["related_names"] = sorted(related()["places"])
     out["calls"] = {k: {kk: (str(vv)[:600] if kk == "sample" else vv) for kk, vv in v.items()} for k, v in LAST.items()}
     return out

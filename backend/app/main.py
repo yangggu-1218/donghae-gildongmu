@@ -279,7 +279,7 @@ def weather():
 @app.get("/api/bf")
 def bf_list(kind: str = "food"):
     """무장애 여행 정보: 동해시 음식점(food)·숙소(stay)·관광지(sight)·문화시설(culture)."""
-    return bigdata.barrier_free(kind)
+    return {**bigdata.barrier_free(kind), "labels": bigdata.BF_LABEL}
 
 
 @app.get("/api/crowd")
@@ -287,7 +287,9 @@ def crowd_all():
     """관광지 집중률 예측: 우리 장소별 앞으로 30일 붐빔(%)"""
     out = {}
     for pid, p in PLACES.items():
-        rows = bigdata.crowd_for(p.name_ko, [p.name_en or ""])
+        if p.sample or p.type in ("숙박", "식당", "카페"):
+            continue
+        rows = bigdata.crowd_for(p.name_ko)
         if rows:
             out[pid] = rows
     return {"places": out, "source": bigdata.crowd()["source"], "ok": bool(out)}
@@ -304,8 +306,13 @@ def place_bigdata(pid: str, lang: str = "ko"):
     if pid not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
     p = PLACES[pid]
-    return {"crowd": bigdata.crowd_for(p.name_ko, [p.name_en or ""]),
-            "related": bigdata.related_for(p.name_ko),
+    plain = not p.sample and p.type not in ("숙박", "식당", "카페")
+    rel = []
+    for r in (bigdata.related_for(p.name_ko) if plain else []):   # 우리 사이트에 있는 장소면 상세로 이어 준다
+        hit = next((q for q in PLACES.values() if not q.sample and any(bigdata.same_place(r["name"], x) for x in bigdata._parts(q.name_ko))), None)
+        rel.append({**r, "id": hit.id if hit else None, "name_en": hit.name_en if hit else ""})
+    return {"crowd": bigdata.crowd_for(p.name_ko) if plain else [],
+            "related": rel,
             "food": bigdata.bf_near(p.lat, p.lon, "food", 2500, 4),
             "stay": bigdata.bf_near(p.lat, p.lon, "stay", 3000, 3),
             "audio": bigdata.audio(p.lat, p.lon, 800, "ko" if lang == "ko" else "en"),
