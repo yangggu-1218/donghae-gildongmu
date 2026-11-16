@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 
 type Lang = "ko" | "en";
-const TABS = [["place", "장소 정보"], ["notice", "임시 알림"], ["site", "공지·행사"], ["reports", "제보 검수"], ["visits", "현장 확인 기록"], ["history", "변경 이력"]] as const;
+const TABS = [["place", "장소 정보"], ["notice", "임시 알림"], ["site", "공지·행사"], ["reports", "제보 검수"], ["visits", "현장 확인 기록"], ["history", "변경 이력"], ["data", "공공데이터 점검"]] as const;
 const LEVEL: Record<string, string> = { closed: "임시 휴무 (코스에서 빠짐)", warn: "주의 (공사·우회 등)", info: "안내" };
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const ACTION: Record<string, string> = { place: "장소 정보 수정", notice_add: "알림 올림", notice_remove: "알림 내림", banner: "공지 배너", event_add: "행사 추가",
@@ -91,6 +91,7 @@ function Console({ tok, onLogout, onExpired }: { tok: string; onLogout: () => vo
       {tab === "reports" && <Reports tok={tok} call={call} onExpired={onExpired} />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} />}
       {tab === "history" && <History db={db} tok={tok} call={call} name={name} />}
+      {tab === "data" && <Probe tok={tok} />}
     </section>
   );
 }
@@ -339,6 +340,27 @@ function Visits({ places, tok, call }: any) {
 }
 
 /* ---------- 변경 이력·백업 ---------- */
+// 공공 빅데이터 API 응답 점검 (캐시를 비우고 모든 서비스를 한 번씩 부른다)
+function Probe({ tok }: { tok: string }) {
+  const [r, setR] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const NAMES: Record<string, string> = { bf_food: "무장애 음식점", bf_stay: "무장애 숙소", bf_sight: "무장애 관광지", crowd: "집중률 예측(장소 수)",
+    related: "연관 관광지(장소 수)", visitors: "방문자수(일 수)", audio: "오디오 가이드", photo: "관광사진" };
+  async function run() { setBusy(true); try { setR(await api.get("/api/admin/probe", tok)); } catch (e: any) { setR({ error: String(e.message || e) }); } setBusy(false); }
+  return (
+    <div className="panel">
+      <p className="muted">공공데이터포털에서 활용 신청한 API가 실제로 응답하는지 확인해요. 1분쯤 걸릴 수 있어요. 0건이면 신청·승인 상태를 확인하세요.</p>
+      <button className="chip go" onClick={run} disabled={busy}>{busy ? "확인하는 중…" : "지금 점검하기"}</button>
+      {r && !r.error && (
+        <table className="tbl" style={{ marginTop: 12 }}><tbody>
+          {Object.keys(NAMES).map((k) => <tr key={k}><th>{NAMES[k]}</th><td>{r[k] > 0 ? `✓ ${r[k]}건` : "✗ 0건"}</td></tr>)}
+        </tbody></table>
+      )}
+      {r && <details style={{ marginTop: 12 }}><summary>자세한 응답</summary><pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{JSON.stringify(r, null, 1)}</pre></details>}
+    </div>
+  );
+}
+
 function History({ db, tok, call, name }: any) {
   const [sure, setSure] = useState(false);
   const rows: any[] = db?.history || [];

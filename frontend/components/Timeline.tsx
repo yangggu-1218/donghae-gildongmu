@@ -33,10 +33,12 @@ export function AccessBadges({ x, t, kind }: { x?: Extra; t: T; kind: string }) 
 }
 
 // ---------- 시간표 카드 ----------
-export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, onRemove, onReplace }: {
+export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, onRemove, onReplace, crowd }: {
   s: Stop; i: number; x?: Extra; name: string; t: T; lang: string; wheel: boolean; showNear: boolean; isNew: boolean; busy: boolean;
-  onRemove: () => void; onReplace: () => void;
+  onRemove: () => void; onReplace: () => void; crowd?: number | null;
 }) {
+  const lv = crowd == null ? null : crowd >= 70 ? "high" : crowd >= 40 ? "mid" : "low";
+  const crowdTxt = lv && ({ high: ["붐빔 예상", "Busy"], mid: ["보통", "Moderate"], low: ["여유", "Quiet"] } as const)[lv][lang === "ko" ? 0 : 1];
   const n = x?.nearby;
   const facts: string[] = [];
   if (x?.wheelchair && x.wheelchair !== "확인 전") facts.push(t("tl.wheel", { v: x.wheelchair }));
@@ -59,7 +61,8 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           </div>
           {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
         </div>
-        <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} /></div>
+        <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
+          {lv && <span className={`badge crowd-${lv}`} title={lang === "ko" ? "한국관광공사 관광지 집중률 예측" : "KTO crowd forecast"}>{crowdTxt} {Math.round(crowd!)}%</span>}</div>
         {s.notice && <p className="tl-notice" role="note">⚠ {s.notice}</p>}
         {s.wait_min > 0 && <p className="muted">⏳ {t("tl.wait", { m: s.wait_min })}</p>}
         {s.why && <p className="tl-why">{s.why}</p>}

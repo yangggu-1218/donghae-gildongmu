@@ -45,6 +45,95 @@ function useLoad<T>(fn: () => Promise<T>, deps: any[]): [T | null, boolean] {
 const Loading = ({ err, lang }: { err: boolean; lang: Lang }) =>
   <p className="muted">{err ? pick(lang)("정보를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.", "Couldn't load. Please try again.") : pick(lang)("불러오는 중이에요.", "Loading…")}</p>;
 
+/* ---------------- 한국관광공사 빅데이터 (장소 상세) ---------------- */
+export const crowdLevel = (r?: number | null) => (r == null ? null : r >= 70 ? "high" : r >= 40 ? "mid" : "low");
+const CROWD_TXT = { high: ["붐빔 예상", "Busy"], mid: ["보통", "Moderate"], low: ["여유", "Quiet"] } as const;
+export function CrowdBadge({ rate, lang }: { rate?: number | null; lang: Lang }) {
+  const lv = crowdLevel(rate);
+  if (!lv) return null;
+  return <span className={`badge crowd-${lv}`} title={pick(lang)("한국관광공사 관광지 집중률 예측", "KTO crowd forecast")}>{pick(lang)(CROWD_TXT[lv][0], CROWD_TXT[lv][1])} {Math.round(rate!)}%</span>;
+}
+const ymd = (s: string) => `${+s.slice(4, 6)}/${+s.slice(6, 8)}`;
+const WD = ["일", "월", "화", "수", "목", "금", "토"];
+
+function PlaceData({ id, lang }: { id: string; lang: Lang }) {
+  const L = pick(lang);
+  const [d, setD] = useState<any>(null);
+  useEffect(() => { setD(null); api.get(`/api/place/${id}/bigdata?lang=${lang}`).then(setD).catch(() => setD({})); }, [id, lang]);
+  if (!d) return null;
+  const crowd: { date: string; rate: number }[] = (d.crowd || []).slice(0, 14);
+  const quiet = [...(d.crowd || [])].sort((a: any, b: any) => a.rate - b.rate).slice(0, 3).sort((a: any, b: any) => a.date.localeCompare(b.date));
+  const max = Math.max(100, ...crowd.map((c) => c.rate || 0));
+  const has = crowd.length || d.related?.length || d.food?.length || d.stay?.length || d.audio?.length;
+  if (!has) return null;
+  const facts = (f: Record<string, string>) => Object.entries(f).filter(([k]) => ["wheelchair", "exit", "route", "restroom", "parking", "elevator", "stroller"].includes(k)).slice(0, 4);
+  return (
+    <div className="panel bigdata">
+      <h2 className="h3">{L("빅데이터로 미리 보기", "Data preview")}</h2>
+      <p className="muted small">{L("한국관광공사가 이동통신·내비게이션 데이터로 분석한 자료예요. 예측값이라 실제와 다를 수 있어요.", "From Korea Tourism Organization big data (mobile and navigation). Forecasts may differ from reality.")}</p>
+
+      {crowd.length > 0 && (
+        <section>
+          <h3>{L("앞으로 2주 붐빔 예상", "Crowd forecast, next 2 weeks")}</h3>
+          <div className="crowd-chart" role="img" aria-label={L("날짜별 붐빔 예상 막대그래프", "Bar chart of daily crowd forecast")}>
+            {crowd.map((c) => {
+              const lv = crowdLevel(c.rate) || "low";
+              const dt = new Date(+c.date.slice(0, 4), +c.date.slice(4, 6) - 1, +c.date.slice(6, 8));
+              return (
+                <div key={c.date} className="cc-col" title={`${ymd(c.date)} ${Math.round(c.rate)}%`}>
+                  <span className={`cc-bar crowd-${lv}`} style={{ height: `${Math.max(6, (c.rate / max) * 100)}%` }} />
+                  <span className="cc-d">{ymd(c.date)}<br />{lang === "ko" ? WD[dt.getDay()] : dt.toLocaleDateString("en", { weekday: "short" })}</span>
+                </div>
+              );
+            })}
+          </div>
+          {quiet.length > 0 && <p className="small">{L("가장 한산할 것으로 보이는 날", "Quietest days")}: <b>{quiet.map((q: any) => ymd(q.date)).join(", ")}</b></p>}
+        </section>
+      )}
+
+      {d.audio?.length > 0 && (
+        <section>
+          <h3>{L("해설 듣기", "Listen to the story")}</h3>
+          {d.audio.slice(0, 3).map((a: any) => (
+            <div key={a.audio} className="audio-row">
+              <b>{a.title}</b>
+              <audio controls preload="none" src={a.audio.replace(/^http:/, "https:")} />
+              {a.script && <details><summary>{L("글로 읽기", "Read transcript")}</summary><p className="small">{a.script}</p></details>}
+            </div>
+          ))}
+          <p className="muted small">{L("한국관광공사 오디오 가이드 '오디'", "KTO audio guide 'odii'")}</p>
+        </section>
+      )}
+
+      {d.related?.length > 0 && (
+        <section>
+          <h3>{L("여기 온 사람들이 함께 간 곳", "People also visited")}</h3>
+          <div className="chips">
+            {d.related.map((r: any) => r.id
+              ? <a key={r.name} className="chip" href={`#/place/${r.id}`}>{L(r.name, r.name_en || r.name)}</a>
+              : <span key={r.name} className="chip plain">{r.name}{r.region && r.region !== "동해시" ? ` · ${r.region}` : ""}</span>)}
+          </div>
+        </section>
+      )}
+
+      {(d.food?.length > 0 || d.stay?.length > 0) && (
+        <section>
+          <h3>{L("근처 무장애 정보가 있는 곳", "Nearby places with access info")}</h3>
+          <ul className="plain bf-list">
+            {[...(d.food || []), ...(d.stay || [])].map((b: any) => (
+              <li key={b.id}>
+                <b>{b.name}</b> <span className="badge b-plain">{b.type === "food" ? L("음식점", "Restaurant") : L("숙소", "Lodging")}</span> <span className="muted">{dist(b.dist_m)}</span>
+                <ul className="small">{facts(b.facts).map(([k, v]) => <li key={k}><b>{d.labels?.[k] || k}</b> {v}</li>)}</ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <p className="muted small">{L("출처: 한국관광공사 관광지 집중률 예측·연관 관광지·무장애 여행 정보·오디오 가이드 (공공데이터포털)", "Sources: Korea Tourism Organization open APIs via data.go.kr")}</p>
+    </div>
+  );
+}
+
 /* ---------------- 장소 상세 ---------------- */
 export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: (id: string) => void }) {
   const L = pick(lang);
@@ -127,6 +216,7 @@ export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: 
               {n.medical?.["응급실"] && <li><span className="dot" style={{ background: "#C9302C" }}>+</span><b>{L("응급실", "ER")}</b> {n.medical["응급실"].name} · {n.medical["응급실"].tel}</li>}
             </ul>
           </div>
+          <PlaceData id={id} lang={lang} />
           {p.about?.length > 0 && (
             <div className="panel about">
               <h2 className="h3">{L("알고 가면 더 좋아요", "Good to know")}</h2>
@@ -393,6 +483,33 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
 }
 
 /* ---------------- 숙소 ---------------- */
+// 한국관광공사 무장애 여행 정보에 올라 있는 동해시 숙소·음식점 (객실·출입 정보가 실제로 있는 곳)
+function BfStays({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const [rows, setRows] = useState<any[]>([]);
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  useEffect(() => {
+    Promise.all(["stay", "food"].map((k) => api.get(`/api/bf?kind=${k}`).catch(() => ({ items: [] }))))
+      .then(([s, f]: any[]) => { setRows([...(s.items || []), ...(f.items || [])]); setLabels(s.labels || f.labels || {}); }).catch(() => {});
+  }, []);
+  if (!rows.length) return null;
+  return (
+    <div className="panel bigdata">
+      <h2 className="h3">{L("무장애 정보가 확인된 곳", "Places with verified access info")}</h2>
+      <p className="muted small">{L("한국관광공사 무장애 여행 정보에 등록된 동해시 숙소·음식점이에요. 등록된 항목만 보여 드려요.", "Donghae lodging and restaurants listed in the KTO barrier-free travel data.")}</p>
+      <ul className="plain bf-list">
+        {rows.map((b) => (
+          <li key={b.id}>
+            <b>{b.name}</b> <span className="badge b-plain">{b.type === "food" ? L("음식점", "Restaurant") : L("숙소", "Lodging")}</span>
+            <span className="muted small"> {b.addr}{b.tel ? ` · ${b.tel}` : ""}</span>
+            <ul className="small">{Object.entries(b.facts as Record<string, string>).slice(0, 8).map(([k, v]) => <li key={k}><b>{labels[k] || k}</b> {v}</li>)}</ul>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function StayPage({ lang }: { lang: Lang }) {
   const L = pick(lang);
   const [zone, setZone] = useState("mangsang");
@@ -406,6 +523,7 @@ export function StayPage({ lang }: { lang: Lang }) {
   return (
     <section className="sec wrap">
       <Head lang={lang} photo="mangsang" title={L("숙소", "Where to stay")} sub={L("공공데이터에는 객실 접근성 정보가 없어요. 예약 전에 아래 질문을 전화로 꼭 물어보세요.", "Public data has no room accessibility info. Call and ask before booking.")} />
+      <BfStays lang={lang} />
       <div className="panel">
         <h2 className="h3">{L("예약 전에 물어볼 것", "Ask before booking")}</h2>
         <ul className="checks">{Q.map((q) => <li key={q}>{q}</li>)}</ul>
@@ -462,12 +580,39 @@ export function GuidePage({ lang }: { lang: Lang }) {
 }
 
 /* ---------------- 출처·판정 기준 ---------------- */
+// 한국관광공사 빅데이터: 동해시 일별 방문자 (현지인·외지인·외국인)
+function Visitors({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const [s, setS] = useState<any[]>([]);
+  useEffect(() => { api.get("/api/visitors").then((d: any) => setS(d.series || [])).catch(() => {}); }, []);
+  if (!s.length) return null;
+  const tot = (r: any) => Object.entries(r).filter(([k]) => k !== "date").reduce((a, [, v]) => a + (Number(v) || 0), 0);
+  const last = s.slice(-28);
+  const max = Math.max(...last.map(tot));
+  const sum = last.reduce((a, r) => a + tot(r), 0);
+  const kinds = Object.keys(last[last.length - 1]).filter((k) => k !== "date");
+  return (
+    <div className="panel bigdata">
+      <h2 className="h3">{L("동해시를 찾는 사람들", "Visitors to Donghae")}</h2>
+      <p className="muted small">{L("한국관광공사 빅데이터(이동통신 데이터)로 집계한 최근 4주 일별 방문자 수예요.", "Daily visitors over the last 4 weeks, from KTO mobile-network big data.")}</p>
+      <p>{L("4주 합계", "4-week total")} <b>{Math.round(sum).toLocaleString()}</b>{L("명", "")} · {L("하루 평균", "daily avg")} <b>{Math.round(sum / last.length).toLocaleString()}</b>{L("명", "")}</p>
+      <div className="crowd-chart" role="img" aria-label={L("일별 방문자 수 막대그래프", "Bar chart of daily visitors")}>
+        {last.map((r) => <div key={r.date} className="cc-col" title={`${ymd(r.date)} ${Math.round(tot(r)).toLocaleString()}`}>
+          <span className="cc-bar crowd-mid" style={{ height: `${Math.max(4, (tot(r) / max) * 100)}%` }} />
+          <span className="cc-d">{+r.date.slice(6, 8) % 7 === 1 ? ymd(r.date) : ""}</span></div>)}
+      </div>
+      <p className="small muted">{kinds.map((k) => `${k} ${Math.round(last.reduce((a, r) => a + (Number(r[k]) || 0), 0) / last.length).toLocaleString()}`).join(" · ")} ({L("하루 평균", "daily avg")})</p>
+    </div>
+  );
+}
+
 export function SourcesPage({ lang }: { lang: Lang }) {
   const L = pick(lang);
   const [d, err] = useLoad(() => api.get("/api/sources"), []);
   return (
     <section className="sec wrap">
       <Head lang={lang} title={L("출처·판정 기준", "Sources & criteria")} sub={L("어떤 데이터로, 어떤 기준으로 판정했는지 모두 밝혀요.", "Every dataset and rule we use.")} />
+      <Visitors lang={lang} />
       {!d ? <Loading err={err} lang={lang} /> : (<>
         <div className="panel">
           <h2 className="h3">{L("판정 기준", "Grading rules")}</h2>
