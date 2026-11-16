@@ -401,11 +401,11 @@ export default function Page() {
           <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><span aria-hidden="true">{ic}</span>{t(k)}</a>)}
       </nav>
       <nav className="quick" aria-label={lang === "ko" ? "빠른 메뉴" : "Quick menu"}>
-        <a href="#plan"><span aria-hidden="true">🧭</span>{lang === "ko" ? "코스 만들기" : "Plan"}</a>
-        <a href="#/map"><span aria-hidden="true">🚻</span>{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
-        <a href="#/events"><span aria-hidden="true">🎉</span>{lang === "ko" ? "행사" : "Events"}</a>
-        <button onClick={openSafety}><span aria-hidden="true">🆘</span>{lang === "ko" ? "안심" : "Help"}</button>
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><span aria-hidden="true">↑</span>{lang === "ko" ? "맨 위로" : "Top"}</button>
+        <a href="#plan"><img src="/photos/q-plan.webp" alt="" aria-hidden="true" />{lang === "ko" ? "코스 만들기" : "Plan"}</a>
+        <a href="#/map"><img src="/photos/q-toilet.webp" alt="" aria-hidden="true" />{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
+        <a href="#/events"><img src="/photos/q-event.webp" alt="" aria-hidden="true" />{lang === "ko" ? "행사" : "Events"}</a>
+        <button onClick={openSafety}><img src="/photos/q-safety.webp" alt="" aria-hidden="true" />{lang === "ko" ? "안심" : "Help"}</button>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><img src="/photos/q-top.webp" alt="" aria-hidden="true" />{lang === "ko" ? "맨 위로" : "Top"}</button>
       </nav>
       <footer className="foot">
         <div className="wrap">

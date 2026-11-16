@@ -152,6 +152,7 @@ h2, h3 { font-family: var(--f-display); font-weight: 400; color: var(--sea-deep)
 .me span { background: var(--sea); color: var(--sea-ink); border-radius: 20px 20px 6px 20px; padding: 10px 14px; max-width: 85%; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { min-height: 44px; padding: 0 15px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); cursor: pointer; }
+a.chip { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: var(--sea-deep); font-weight: 600; }
 .chip:hover { border-color: var(--sea); }
 .chip[aria-pressed="true"] { border-color: var(--sun); background: var(--glow); font-weight: 600; }
 .chip.go { background: var(--sea); border-color: var(--sea); color: var(--sea-ink); font-weight: 700; }
@@ -565,6 +566,6 @@ a.now-c:hover { border-color: var(--sea); }
   background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 6px; box-shadow: 0 16px 36px -22px rgba(18, 53, 94, .6); }
 .quick a, .quick button { display: grid; justify-items: center; gap: 2px; width: 68px; padding: 8px 4px; border: 0; background: none; border-radius: 12px;
   font: inherit; font-size: .74em; font-weight: 600; color: var(--sea-deep); text-decoration: none; cursor: pointer; text-align: center; line-height: 1.25; }
-.quick span { font-size: 1.5em; line-height: 1; }
+.quick img { width: 34px; height: 34px; object-fit: contain; display: block; }
 .quick a:hover, .quick button:hover { background: var(--mist); }
 @media (max-width: 1320px) { .quick { display: none; } }
