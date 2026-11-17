@@ -189,7 +189,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
         for _ in range(5):   # 도구 호출은 최대 5번
             r = httpx.post("https://api.anthropic.com/v1/messages",
                            headers=llm.headers(),
-                           json={"model": TALK_MODEL, "max_tokens": 700, "system": SYSTEM, "tools": CACHED_TOOLS, "messages": merged},
+                           json={"model": TALK_MODEL, "max_tokens": 1500, "system": SYSTEM, "tools": CACHED_TOOLS, "messages": merged},
                            timeout=TALK_TIMEOUT)
             r.raise_for_status()
             out = r.json()

@@ -53,7 +53,7 @@ def _first_json(text: str) -> dict | None:
     return None
 
 
-def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None, max_tokens: int = 800) -> dict | None:
+def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None, max_tokens: int = 2000) -> dict | None:
     """user 는 문자열 또는 content 블록 목록(이미지 포함)."""
     if not API_KEY:
         count(task, False)
@@ -162,7 +162,7 @@ ICONS = {"rain", "sun", "walk", "wheel", "crowd", "food", "closed", "time", "sea
 
 
 def brief(evidence: dict) -> dict | None:
-    data = _ask_json(_prompt("brief"), json.dumps(evidence, ensure_ascii=False), "brief", timeout=15, max_tokens=1500)
+    data = _ask_json(_prompt("brief"), json.dumps(evidence, ensure_ascii=False), "brief", timeout=30, max_tokens=4000)   # 이 모델은 답 전에 생각하는 데도 토큰을 써서 넉넉히
     if not isinstance(data, dict) or not data.get("headline"):
         return None
     ids = {s.get("id") for s in evidence.get("stops", [])}
@@ -182,7 +182,7 @@ def photo_check(jpeg: bytes, move: list[str], lang: str = "ko") -> dict:
     import base64
     content = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}},
                {"type": "text", "text": json.dumps({"move": move, "lang": lang}, ensure_ascii=False)}]
-    data = _ask_json(_prompt("photo_check"), content, "photo_check", timeout=25, max_tokens=1200)
+    data = _ask_json(_prompt("photo_check"), content, "photo_check", timeout=40, max_tokens=3000)
     if not isinstance(data, dict) or not data.get("title"):
         return {"by": "none"}
     return {"by": "ai", "model": MODEL, "verdict": data.get("verdict") if data.get("verdict") in ("G", "Y", "R") else None,
