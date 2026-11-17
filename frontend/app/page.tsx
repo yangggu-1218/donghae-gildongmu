@@ -10,7 +10,7 @@ import { Hero, HomeFacts, HowTo, NowDonghae, ZoneTiles, MoreLinks, Places, Cours
 import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
-import { api, Conditions, Course, CourseRes, Extra } from "@/lib/api";
+import { api, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON } from "@/lib/api";
 
 type Lang = "ko" | "en";
 type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule" };
@@ -65,6 +65,11 @@ export default function Page() {
   const [route, setRoute] = useState<string[]>([""]);
   const [saved, setSaved] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
+  // 일별 예보 (16일 앞까지). 날짜 고르기·조건 카드·시간표에 함께 쓴다
+  const [wx, setWx] = useState<WxDay[]>([]);
+  useEffect(() => { fetch("/api/weather").then((r) => r.json()).then((j) => setWx(j.days || [])).catch(() => {}); }, []);
+  const wxOf = (d?: string | null) => wx.find((x) => x.date === d) || null;
+  const wxText = (w: WxDay) => `${WX_ICON[w.icon] || ""} ${lang === "ko" ? w.ko : w.en} · ${lang === "ko" ? "비" : "rain"} ${w.pop}% · ${w.tmin}~${w.tmax}°C`;
   const [toast, setToast] = useState<{ text: string; act?: { label: string; fn: () => void } } | null>(null);
   const toastT = useRef<number>(0);
   const showToast = (text: string, act?: { label: string; fn: () => void }) => {
@@ -270,11 +275,17 @@ export default function Page() {
             <button key={d} type="button" className={`dchip${wd === 0 ? " sun" : wd === 6 ? " sat" : ""}`} aria-pressed={d0 === d}
               aria-label={`${dateLabel(d, lang)} ${wdName(wd, lang)}`} onClick={() => setCond({ ...cond, date: d })}>
               <small>{i === 0 ? (lang === "ko" ? "오늘" : "Today") : i === 1 ? (lang === "ko" ? "내일" : "Tmrw") : wdName(wd, lang)}</small>
-              <b>{Number(d.slice(8))}</b></button>); })}
+              <b>{Number(d.slice(8))}</b>
+              {wxOf(d) && <i className={`wx${wxOf(d)!.rain ? " wet" : ""}`} aria-hidden="true">{WX_ICON[wxOf(d)!.icon]}</i>}</button>); })}
           <button type="button" className="dchip more" aria-expanded={calOpen} onClick={() => setCalOpen(!calOpen)}>
             <small>{lang === "ko" ? "더 먼 날" : "Later"}</small><b>{lang === "ko" ? "달력" : "Cal"}</b></button>
         </div>
         {calOpen && <Calendar value={d0} lang={lang} onChange={(d) => { setCond({ ...cond, date: d }); setCalOpen(false); }} />}
+        <div className="wrow" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
+          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) ? wxText(wxOf(d0)!) : (lang === "ko" ? "예보는 16일 앞까지만 나와요" : "Forecast covers 16 days")}</span>
+          {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
+            <button key={v} type="button" className="chip sm" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{l}</button>)}
+        </div>
         <div className="trow" role="group" aria-label={t("when.time")}>
           <span>{t("when.time")}</span>
           {TIMES.map((h) => <button key={h} type="button" className="chip" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
@@ -292,6 +303,10 @@ export default function Page() {
     const wd = wdOf(cond.date || plusDays(0));
     const rows: [string, string | null][] = [
       [STEPS[lang][0], step > 0 ? `${dateLabel(cond.date || "", lang)}(${wdName(wd, lang)}) ${cond.start_time}` : null],
+      [lang === "ko" ? "날씨" : "Weather", (() => { const w = wxOf(cond.date || plusDays(0)); const pref = cond.weather_pref || "";
+        const plan = pref === "실내" ? (lang === "ko" ? "실내 위주로 짤게요" : "indoor first") : pref === "실외" ? (lang === "ko" ? "바깥 위주로 짤게요" : "outdoor first")
+          : w?.rain ? (lang === "ko" ? "비 예보라 실내를 먼저 넣을게요" : "rain expected, indoor first") : (lang === "ko" ? "날씨 보고 알아서 짤게요" : "planned by forecast");
+        return w ? `${wxText(w)} → ${plan}` : pref ? plan : null; })()],
       [STEPS[lang][1], ans.who ? ans.who.map(o).join(", ") : talkState.who_known ? o(cond.who) : null],
       [STEPS[lang][2], ans.move ? ans.move.map(o).join(", ") : talkState.move_known ? (cond.move.join(", ") || o("일반")) : null],
       [STEPS[lang][3], ans.meal ? ans.meal.map(o).join(", ") : null],
@@ -426,6 +441,12 @@ export default function Page() {
               <div className="tl-head">
                 <div>
                   <p className="tl-date">{t("tl.head", { d: dateLabel(course.date, lang), w: wdName(course.weekday, lang), s: course.start_time })} · {startName}</p>
+                  {wxOf(course.date) && <p className={`tl-wx${wxOf(course.date)!.rain ? " wet" : ""}`}>{wxText(wxOf(course.date)!)}
+                    {(cond.weather_pref === "실내" || (!cond.weather_pref && wxOf(course.date)!.rain)) ? (lang === "ko" ? " · 실내를 먼저 넣었어요" : " · indoor first")
+                      : cond.weather_pref === "실외" ? (lang === "ko" ? " · 바깥 위주로 짰어요" : " · outdoor first") : ""}
+                    {!wxOf(course.date)!.rain && cond.weather_pref !== "실외" && <button className="chip sm" onClick={() => { setCond({ ...cond, weather_pref: "실내" }); edit("indoor", null, t("qc.indoor")); }}>{lang === "ko" ? "실내로 바꾸기" : "Make it indoor"}</button>}
+                    {wxOf(course.date)!.rain && cond.weather_pref !== "실외" && <button className="chip sm" onClick={() => { snapshot(); makeWith({ ...cond, lang, weather_pref: "실외", rain: false }, lang === "ko" ? "비 와도 바깥 위주로 짜 줘" : "Outdoor anyway"); }}>{lang === "ko" ? "그래도 바깥으로" : "Outdoor anyway"}</button>}
+                  </p>}
                   <p className="muted">{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
                     : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</p>
                 </div>

@@ -654,3 +654,11 @@ html { scroll-padding-top: calc(var(--hdr, 76px) + 8px); }
   .trow > *, .trow .chip { flex: none; }
   .dchip { width: 50px; min-height: 54px; }
 }
+/* 날씨: 날짜 칸의 작은 아이콘, 고른 날 예보 한 줄, 시간표 머리의 예보 */
+.dchip .wx { font-style: normal; font-size: .85em; line-height: 1; }
+.dchip { min-height: 66px; }
+.wrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.wline { font-weight: 700; margin-right: 4px; }
+.wline.wet, .tl-wx.wet { color: var(--sea-deep); }
+.tl-wx { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 600; }
+@media (max-width: 600px) { .wrow { flex-wrap: nowrap; overflow-x: auto; } .wrow > * { flex: none; } .dchip { min-height: 62px; } }
