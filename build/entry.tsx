@@ -16,8 +16,39 @@ const KIND: [number[], string, string, string][] = [[[0], "맑음", "Clear", "su
   [[45, 48], "안개", "Fog", "fog"], [[51, 52, 53, 54, 55, 56, 57], "이슬비", "Drizzle", "rain"], [[61, 62, 63, 64, 65, 66, 67], "비", "Rain", "rain"],
   [[71, 72, 73, 74, 75, 76, 77, 85, 86], "눈", "Snow", "snow"], [[80, 81, 82], "소나기", "Showers", "rain"], [[95, 96, 99], "뇌우", "Thunderstorm", "storm"]];
 let wx: any = null, wxAt = 0;
+// 두 번째 출처: 노르웨이 기상청(MET Norway) 시간별 예보를 한국 날짜별로 묶기 (서버 _met_norway와 같은 규칙)
+const SYM: [string, string, string, string, number][] = [["thunder", "뇌우", "Thunderstorm", "storm", 95], ["snow", "눈", "Snow", "snow", 71], ["sleet", "진눈깨비", "Sleet", "snow", 66],
+  ["rainshowers", "소나기", "Showers", "rain", 80], ["rain", "비", "Rain", "rain", 61], ["fog", "안개", "Fog", "fog", 45], ["cloudy", "흐림", "Cloudy", "cloud", 3],
+  ["partlycloudy", "구름 조금", "Partly cloudy", "part", 2], ["fair", "구름 조금", "Partly cloudy", "part", 1], ["clearsky", "맑음", "Clear", "sun", 0]];
+async function metNorway() {
+  const ts = (await (await orig("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=37.5245&lon=129.1143")).json()).properties.timeseries;
+  const by: Record<string, { temps: number[]; mm: number; syms: string[] }> = {};
+  for (const t of ts) {
+    const at = new Date(new Date(t.time).getTime() + 9 * 3600e3), date = at.toISOString().slice(0, 10), h = at.getUTCHours();
+    const d = (by[date] ||= { temps: [], mm: 0, syms: [] });
+    d.temps.push(t.data.instant.details.air_temperature);
+    const n1 = t.data.next_1_hours, n6 = t.data.next_6_hours;
+    if (n1) { d.mm += n1.details?.precipitation_amount || 0; if (h >= 9 && h <= 18) d.syms.push(n1.summary.symbol_code); }
+    else if (n6 && h % 6 === 3) { d.mm += n6.details?.precipitation_amount || 0; if (h >= 6 && h <= 15) d.syms.push(n6.summary.symbol_code); }
+  }
+  return Object.entries(by).sort().filter(([, d]) => d.syms.length).map(([date, d]) => {
+    const bases = d.syms.map((x) => x.split("_")[0]);
+    const s = SYM.find((x, i) => bases.some((b) => (i < 5 ? b.includes(x[0]) : b === x[0]))) || SYM[SYM.length - 1];
+    const mm = Math.round(d.mm * 10) / 10;
+    return { date, code: s[4], ko: s[1], en: s[2], icon: s[3], pop: null, mm, tmax: Math.round(Math.max(...d.temps)), tmin: Math.round(Math.min(...d.temps)), wind: null, rain: mm >= 5 || (s[4] >= 61 && mm >= 1) };
+  });
+}
 async function weather() {
   if (wx && Date.now() - wxAt < 3600e3) return wx;
+  let days: any[] = [], source = "Open-Meteo 일별 예보 (기상청 등 수치예보 모델 종합)";
+  try { days = await openMeteo(); } catch { days = await metNorway(); source = "노르웨이 기상청(MET Norway) 예보"; }
+  api.setForecast(days);
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const t = days.find((d: any) => d.date === today) || days[0];
+  wx = { sample: false, rain: t.rain, today: t, days, source, updated: new Date().toISOString().slice(0, 16) }; wxAt = Date.now();
+  return wx;
+}
+async function openMeteo() {
   const q = "latitude=37.5245&longitude=129.1143&timezone=Asia%2FSeoul&forecast_days=16&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max";
   const j = (await (await orig("https://api.open-meteo.com/v1/forecast?" + q)).json()).daily;
   const days = j.time.map((d: string, i: number) => {
@@ -27,11 +58,7 @@ async function weather() {
     return { date: d, code, ko: k[1], en: k[2], icon: k[3], pop, mm: Math.round(mm * 10) / 10, tmax: Math.round(j.temperature_2m_max[i]), tmin: Math.round(j.temperature_2m_min[i]),
       wind: Math.round(j.wind_speed_10m_max[i] / 3.6 * 10) / 10, rain: pop >= 60 || mm >= 5 || (wet && pop >= 40) };
   });
-  api.setForecast(days);
-  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
-  const t = days.find((d: any) => d.date === today) || days[0];
-  wx = { sample: false, rain: t.rain, today: t, days, source: "Open-Meteo 일별 예보 (기상청 등 수치예보 모델 종합)", updated: new Date().toISOString().slice(0, 16) }; wxAt = Date.now();
-  return wx;
+  return days;
 }
 
 window.fetch = (async (input: any, init: any = {}) => {
