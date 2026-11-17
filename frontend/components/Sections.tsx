@@ -1,5 +1,6 @@
 "use client";
 // 첫 화면(히어로), 권역별 관광지, 추천 코스(예시), 이용 후기(예시). 프로토타입 v3의 섹션을 옮긴 것.
+import { WX_ICON } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { PHOTOS, photoAt } from "@/lib/photos";
 
@@ -90,7 +91,8 @@ export function NowDonghae({ lang }: { lang: Lang }) {
   const cards: JSX.Element[] = [];
   if (w && !w.sample) cards.push(
     <a key="w" className="now-c" href="#plan"><span className="now-k">{L("오늘 날씨", "Weather today")}</span>
-      <b>{w.rain ? L("비 소식이 있어요", "Rain expected") : L("비 소식 없어요", "No rain expected")}</b>
+      <b>{w.today ? `${WX_ICON[w.today.icon] || ""} ${L(w.today.ko, w.today.en)} · ${w.today.tmin}~${w.today.tmax}°C · ${L("비", "rain")} ${w.today.pop}%`
+        : w.rain ? L("비 소식이 있어요", "Rain expected") : L("비 소식 없어요", "No rain expected")}</b>
       <span>{w.rain ? L("실내 위주로 코스를 짜 드릴게요", "We'll plan indoor stops") : L("바다·산책 코스 좋아요", "Good for sea and walks")}</span></a>);
   if (quiet.length) cards.push(
     <div key="q" className="now-c"><span className="now-k">{L("오늘 한산할 곳", "Quiet today")}</span>
