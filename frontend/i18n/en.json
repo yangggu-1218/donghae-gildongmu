@@ -124,6 +124,7 @@
   "safety.mobility": "Call a wheelchair van",
   "talk.ph": "Or just tell me (e.g. travelling with my mom, her knees hurt)",
   "card.none": "That isn't in the public data yet.",
+  "card.eats": "{n} within {r} km · Donghae restaurant licences · ♿ = access info checked",
   "card.unverified": "{n} in total · accessibility not yet checked.",
   "via.llm": "✨ AI reply (Claude API)",
   "via.rule": "Basic reply (AI not connected)",
