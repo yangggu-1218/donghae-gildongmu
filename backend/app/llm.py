@@ -36,7 +36,21 @@ def _prompt(name: str) -> str:
     return (PROMPTS / f"{name}.md").read_text(encoding="utf-8")
 
 
-def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None) -> dict | None:
+def _first_json(text: str) -> dict | None:
+    """답 속 첫 JSON 객체를 읽는다 (앞뒤 설명·코드 울타리가 있어도)."""
+    dec = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, _ = dec.raw_decode(text[i:])
+                if isinstance(obj, dict):
+                    return obj
+            except ValueError:
+                continue
+    return None
+
+
+def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None, max_tokens: int = 800) -> dict | None:
     """user 는 문자열 또는 content 블록 목록(이미지 포함)."""
     if not API_KEY:
         count(task, False)
@@ -48,15 +62,16 @@ def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None
         r = httpx.post(
             "https://api.anthropic.com/v1/messages",
             headers=headers(),
-            json={"model": MODEL, "max_tokens": 800, "system": system,   # 이 모델은 temperature를 받지 않는다
+            json={"model": MODEL, "max_tokens": max_tokens, "system": system,   # 이 모델은 temperature를 받지 않는다
                   "messages": [{"role": "user", "content": user}]},
             timeout=timeout or TIMEOUT,
         )
         r.raise_for_status()
         out = r.json()
         text = "".join(b.get("text", "") for b in out.get("content", []))
-        m = re.search(r"\{.*\}", text, re.S)
-        data = json.loads(m.group(0)) if m else None
+        data = _first_json(text)
+        if data is None:
+            print(f"[llm] {task}: JSON을 못 읽음 (stop={out.get('stop_reason')}):", text[:300])
         count(task, data is not None, sum((out.get("usage") or {}).get(k, 0) for k in ("input_tokens", "output_tokens")))
         if data is not None:
             _cache[key] = data
@@ -143,7 +158,7 @@ ICONS = {"rain", "sun", "walk", "wheel", "crowd", "food", "closed", "time", "sea
 
 
 def brief(evidence: dict) -> dict | None:
-    data = _ask_json(_prompt("brief"), json.dumps(evidence, ensure_ascii=False), "brief", timeout=12)
+    data = _ask_json(_prompt("brief"), json.dumps(evidence, ensure_ascii=False), "brief", timeout=15, max_tokens=1500)
     if not isinstance(data, dict) or not data.get("headline"):
         return None
     ids = {s.get("id") for s in evidence.get("stops", [])}
@@ -163,7 +178,7 @@ def photo_check(jpeg: bytes, move: list[str], lang: str = "ko") -> dict:
     import base64
     content = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}},
                {"type": "text", "text": json.dumps({"move": move, "lang": lang}, ensure_ascii=False)}]
-    data = _ask_json(_prompt("photo_check"), content, "photo_check", timeout=25)
+    data = _ask_json(_prompt("photo_check"), content, "photo_check", timeout=25, max_tokens=1200)
     if not isinstance(data, dict) or not data.get("title"):
         return {"by": "none"}
     return {"by": "ai", "model": MODEL, "verdict": data.get("verdict") if data.get("verdict") in ("G", "Y", "R") else None,
