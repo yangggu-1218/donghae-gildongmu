@@ -13,8 +13,11 @@ export type Conditions = {
   who: string; move: string[]; style: string[]; days: "당일" | "1박 2일";
   start: "동해역" | "묵호역" | "자가용"; memo: string; wish: string[]; must?: string[]; rain?: boolean | null; lang: "ko" | "en";
   date?: string | null; start_time?: string; meal?: string[]; exclude?: string[]; cap?: number | null; rest?: boolean | null;
-  flat_only?: boolean; lunch?: string | null; skip_lunch?: boolean;
+  flat_only?: boolean; lunch?: string | null; skip_lunch?: boolean; weather_pref?: "" | "실내" | "실외";
 };
+// 일별 예보 하루 (backend/app/public_apis.py forecast)
+export type WxDay = { date: string; code: number; ko: string; en: string; icon: string; pop: number; mm: number; tmax: number; tmin: number; wind: number; rain: boolean };
+export const WX_ICON: Record<string, string> = { sun: "☀️", part: "⛅", cloud: "☁️", fog: "🌫️", rain: "🌧️", snow: "❄️", storm: "⛈️" };
 type Near = { name: string; dist_m?: number; tel?: string; hours?: string; open_now?: boolean; spaces?: number; own?: boolean } | null;
 export type Nearby = { parking: Near; charger: Near & { spot?: string; weekday_hours?: string }; info_center: Near; medical: Record<"약국" | "의원" | "응급실", Near> };
 export type CourseRes = {
