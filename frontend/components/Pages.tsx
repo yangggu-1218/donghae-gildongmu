@@ -135,7 +135,7 @@ function PlaceData({ id, lang }: { id: string; lang: Lang }) {
 }
 
 /* ---------------- 장소 상세 ---------------- */
-export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: (id: string) => void }) {
+export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang; onAdd: (id: string) => void; wished?: boolean }) {
   const L = pick(lang);
   const [mode, setMode] = useState<"wheel" | "stroller" | "walk">("wheel");
   const [p, err] = useLoad(() => api.place(id, lang, mode), [id, lang, mode]);
@@ -178,7 +178,7 @@ export function PlacePage({ id, lang, onAdd }: { id: string; lang: Lang; onAdd: 
             {p.carer_tip && <p className="tl-tip"><b>{L("보호자 꿀팁", "Tip for carers")}</b> {p.carer_tip}</p>}
             <p className="muted">{(lang === "ko" ? p.intro_ko || p.tip_ko : p.intro_en || p.tip_en || p.intro_ko) || ""}</p>
             <div className="chips">
-              <button className="chip go" onClick={() => { onAdd(p.id); location.hash = "#plan"; }}>{L("코스에 담기", "Add to route")}</button>
+              <button className={`chip ${wished ? "" : "go"}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}>{wished ? L("✓ 담았어요 (다시 누르면 빼기)", "✓ Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
               <a className="chip" href="#/map">{L("편의시설 지도에서 보기", "Open facilities map")}</a>
             </div>
           </div>

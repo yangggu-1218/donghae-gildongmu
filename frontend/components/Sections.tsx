@@ -214,7 +214,7 @@ export function MoreLinks({ lang }: { lang: Lang }) {
 
 export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; onAdd: (id: string) => void; wish: string[]; gradeLabel: (g: string) => string; zone0?: string }) {
   const L = pick(lang);
-  const [zone, setZone] = useState(ZONES.some((z) => z.k === zone0) ? zone0! : "mukho");
+  const [zone, setZone] = useState(ZONES.some((z) => z.k === zone0) ? zone0! : "all");
   useEffect(() => { if (ZONES.some((z) => z.k === zone0)) setZone(zone0!); }, [zone0]);
   const [mode, setMode] = useState("none");
   const [list, setList] = useState<any[]>([]);
@@ -225,8 +225,8 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   useEffect(() => { fetch("/api/crowd").then((r) => r.json()).then((j) => setCrowd(j.places || {})).catch(() => {}); }, []);
   const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10).replaceAll("-", "");
   const rateToday = (id: string) => crowd[id]?.find((c) => c.date === today)?.rate;
-  const Z = ZONES.find((z) => z.k === zone)!;
-  const zc = (k: string) => ZONES.find((z) => z.k === k)?.c || Z.c;
+  const Z = ZONES.find((z) => z.k === zone);
+  const zc = (k: string) => ZONES.find((z) => z.k === k)?.c || "#2462B4";
   const key = q.trim().toLowerCase().replace(/\s+/g, "");
   const ORDER: Record<string, number> = { G: 0, Y: 1, R: 3 };
   const NEED_TEST: Record<string, (p: any) => boolean> = {
@@ -240,7 +240,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const items = list.filter((p) => p.type !== "숙박" && p.type !== "식당" && p.type !== "카페"
       && (key ? `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}${(p.styles || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key) : true)
       && need.every((n) => NEED_TEST[n]?.(p))
-      && (filtering || p.zone === zone))
+      && (filtering || zone === "all" || p.zone === zone))
     .sort((a, b) => (mode === "none" ? 0 : (ORDER[a.grade] ?? 2) - (ORDER[b.grade] ?? 2)));
   const toggle = (k: string) => setNeed(need.includes(k) ? need.filter((x) => x !== k) : [...need, k]);
   const hasCrowd = Object.keys(crowd).length > 0;
@@ -266,6 +266,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
         </div>
       </div>
       <div className="tabs" role="tablist" aria-label={L("권역", "Areas")} hidden={filtering}>
+        <button role="tab" aria-selected={zone === "all"} onClick={() => setZone("all")} style={{ ["--z" as any]: "#12355E" }}>{L("전체", "All")}</button>
         {ZONES.map((z) => (
           <button key={z.k} role="tab" aria-selected={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>
             {L(z.ko, z.en)}
@@ -280,6 +281,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
       </div>
       {filtering
         ? <p className="zone-d" role="status">{L(`${key ? `'${q.trim()}' ` : ""}조건에 맞는 곳 ${items.length}곳 (모든 권역)`, `${items.length} place(s) match${key ? ` '${q.trim()}'` : ""} in all areas`)}</p>
+        : !Z ? <p className="zone-d"><b>{L("동해 전체", "All of Donghae")}</b> {L(`다섯 권역 ${items.length}곳을 한 번에 봐요. 권역 탭을 누르면 그 지역만 보여요.`, `${items.length} places across five areas.`)}</p>
         : <p className="zone-d"><b style={{ color: Z.c }}>{L(Z.ko, Z.en)}</b> {L(Z.d[0], Z.d[1])}</p>}
       <div className="pgrid">
         {items.map((p) => {
@@ -290,6 +292,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
                 {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
+                {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}
                 <h3><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}</h3>
                 <p>{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.intro_en || p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
                 {rateToday(p.id) != null && <p className="small"><span className={`badge crowd-${rateToday(p.id)! >= 70 ? "high" : rateToday(p.id)! >= 40 ? "mid" : "low"}`}>
@@ -297,7 +300,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
                 {p.facilities?.length > 0 && <ul className="fac">{p.facilities.slice(0, 4).map((f: string) => <li key={f}>{f}</li>)}</ul>}
                 <a className="more" href={`#/place/${p.id}`}>{L("길·화장실·주차 자세히 보기", "Paths, toilets, parking")}</a>
                 <button className={`add${inW ? " on" : ""}`} disabled={g === "R"} onClick={() => onAdd(p.id)}>
-                  {g === "R" ? L("이 기준으로는 어려워요", "Not reachable for this need") : inW ? L("코스에 담았어요", "Added to route") : L("코스에 담기", "Add to route")}
+                  {g === "R" ? L("이 기준으로는 어려워요", "Not reachable for this need") : inW ? L("✓ 담았어요", "✓ Added") : L("코스에 담기", "Add to route")}
                 </button>
               </div>
             </article>
@@ -305,6 +308,26 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
         })}
         {!items.length && <p className="muted">{filtering ? L("조건에 맞는 장소가 없어요. 조건을 하나씩 풀어 보세요.", "No places match. Try removing a filter.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>}
       </div>
+    </section>
+  );
+}
+
+/* ---------------- 이렇게 써요: 처음 온 사람에게 순서를 보여 준다 ---------------- */
+export function HowTo({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const steps: [string, string, string, string][] = [
+    ["조건 고르기", "Tell us your trip", "날짜, 누구와, 걸음 상태를 버튼으로 고르거나 \"엄마랑 가는데 무릎이 안 좋아요\"처럼 말해요.", "Pick a date, who's coming and how they get around, or just type it."],
+    ["갈 수 있는 코스 받기", "Get a course you can actually do", "그날 문 연 곳만, 오르막·계단·장애인 화장실을 확인한 순서로 시간표와 지도를 짜 드려요.", "Only places open that day, ordered with slopes, steps and accessible toilets checked."],
+    ["고치고 저장·공유", "Adjust, save, share", "\"오르막 빼줘\", \"점심 바꿔줘\"라고 말하면 바로 고쳐요. 큰 글씨 요약표로 가족에게 보낼 수 있어요.", "Say \"no uphill\" or \"change lunch\" to edit. Send a large-print summary to family."],
+  ];
+  return (
+    <section className="sec wrap howto" aria-labelledby="howto-h">
+      <h2 id="howto-h">{L("이렇게 써요", "How it works")}</h2>
+      <ol>
+        {steps.map(([k, e, dk, de], i) => <li key={k}><span className="n" aria-hidden="true">{i + 1}</span><b>{L(k, e)}</b><p>{L(dk, de)}</p></li>)}
+      </ol>
+      <p className="howto-go"><a className="btn-go" href="#plan">{L("지금 코스 짜기", "Start planning")}</a>
+        <a href="#/places">{L("먼저 관광지 둘러보기", "Browse places first")}</a></p>
     </section>
   );
 }
