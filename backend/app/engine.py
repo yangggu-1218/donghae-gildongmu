@@ -172,6 +172,10 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
             ok.remove(p)
             if p.id in c.must or p.id in c.wish or p.id == c.lunch:
                 skipped.append({"id": p.id, "name": p.name_ko, "reason": f"임시 휴무({tmp['title']})" if tmp else f"{D.WD_KO[wd]}요일 휴무"})
+        elif p.market_days and day.day % 10 not in p.market_days:   # 오일장: 장날이 아니면 빼기
+            ok.remove(p)
+            if p.id in c.must or p.id in c.wish:
+                skipped.append({"id": p.id, "name": p.name_ko, "reason": f"장날({'·'.join(map(str, p.market_days))}일)이 아니에요"})
     need_table = "입식" in c.meal
     def food_ok(p):
         return not need_table or p.table in ("입식", "혼합")

@@ -69,6 +69,7 @@ class Place(BaseModel):
     soft_menu: Optional[bool] = None     # 부드러운 메뉴
     parking_easy: Optional[bool] = None  # 주차 편함
     notices: list[dict] = Field(default_factory=list)   # 관리자 임시 알림 (cms.py)
+    market_days: list[int] = Field(default_factory=list)   # 장날: 날짜 끝자리 (예: [3, 8] = 3·8·13·18·23·28일)
 
     @property
     def verified(self) -> bool:
