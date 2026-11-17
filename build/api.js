@@ -98,6 +98,31 @@ export function makeApi(DATA) {
     return { name: ct.name, board: ct.board, days: ct.days, first: ct.first, last: ct.last, interval_min: ct.interval_min,
       fare: ct.fare.split("+").join(" · "), contact: ct.contact, url: ct.url, stops: ct.stops, covers: stopIds.filter((i) => served.has(i)), wheelchair: "확인 전" };
   }
+  // ---------- 일반음식점 (public_data.eateries) ----------
+  const EAT = DATA.eat || { rows: [] }, EAT_LINK = DATA.eat_link || {};
+  const EAT_GROUPS = [["한식", ["한식"]], ["회·해산물", ["횟집"]], ["고기·탕", ["식육(숯불구이)", "탕류(보신용)"]], ["중식", ["중국식"]],
+    ["분식·국수", ["분식", "김밥(도시락)", "냉면집"]], ["양식·일식", ["경양식", "일식", "외국음식전문점(인도,태국등)", "패스트푸드", "뷔페식"]], ["치킨", ["통닭(치킨)"]]];
+  const KIND2G = Object.fromEntries(EAT_GROUPS.flatMap(([g, ks]) => ks.map((k) => [k, g])));
+  const EAT_WORDS = [["중식", /짜장|짬뽕|중국|중식|탕수/], ["회·해산물", /회|해산물|물회|생선|횟집|조개|대게|게\b/], ["고기·탕", /고기|갈비|삼겹|숯불|곰탕|보신/],
+    ["분식·국수", /국수|분식|김밥|냉면|떡볶이|막국수|칼국수/], ["양식·일식", /양식|파스타|돈가스|돈까스|일식|초밥|스시|피자|버거/], ["치킨", /치킨|통닭/], ["한식", /한식|백반|한정식|국밥|찌개/]];
+  const eatGroup = (text) => (EAT_WORDS.find(([, p]) => p.test(text || "")) || [""])[0];
+  const eatScore = (r) => (r.checked ? 5 : 0) + 0.3 * Math.min(r.years, 30) - r.dist_m / 100;
+  function eateries(lat, lon, group = "", radius = 800, limit = 8, sort = "pick") {
+    const seen = new Set(), near = [];
+    for (const [n, k, la, lo, tel, addr, since] of EAT.rows) {
+      const d = distM(lat, lon, la, lo);
+      if (d > radius || seen.has(n)) continue;
+      seen.add(n);
+      const ln = EAT_LINK[n] || ["", false];
+      near.push({ name: n, kind: k, group: KIND2G[k] || "기타", lat: la, lon: lo, dist_m: d, tel, address: addr, since, years: since ? Math.max(0, 2026 - +since) : 0, place_id: ln[0], checked: ln[1] });
+    }
+    const groups = EAT_GROUPS.map(([g]) => [g, near.filter((r) => r.group === g).length]).filter(([, c]) => c);
+    const items = near.filter((r) => !group || r.group === group);
+    if (!["pick", "dist", "old", "access"].includes(sort)) sort = "pick";
+    const K = { pick: (r) => [-eatScore(r), r.dist_m, r.name], dist: (r) => [r.dist_m, r.name], old: (r) => [-r.years, r.dist_m, r.name], access: (r) => [r.checked ? 0 : 1, r.dist_m, r.name] }[sort];
+    items.sort(byKey(K));
+    return { count: items.length, total: near.length, group, radius, sort, groups, accessibility: "확인 전", source: EAT.source || "", coord_from: EAT.coord_from || "", items: items.slice(0, limit) };
+  }
   function restaurants(zone, kinds = null, limit = 5) {
     const rs = (PUB.restaurants || []).filter((r) => r.zone === zone && (!kinds || kinds.includes(r.kind)));
     return { zone, count: rs.length, accessibility: "확인 전",
@@ -624,7 +649,7 @@ export function makeApi(DATA) {
   const WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"], MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"], STYLE = ["바다 보기", "자연·산책", "카페", "맛집", "역사·문화"];
   const HELP_KW = [["charger", /충전|charg/], ["mobility_van", /휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)/],
     ["info_center", /안내소|통역|외국어|interpret|info\w*\s*(center|centre|desk)|information/], ["city_tour", /시티\s*투어|버스|city tour|bus/],
-    ["events", /행사|축제|공연|festival|event/], ["lodging", /숙소|숙박|호텔|펜션|게스트|hotel|stay/], ["restaurants", /식당|밥집|맛집|먹을|restaurant/],
+    ["events", /행사|축제|공연|festival|event/], ["lodging", /숙소|숙박|호텔|펜션|게스트|hotel|stay/], ["restaurants", /식당|밥집|맛집|먹을|restaurant|짜장|짬뽕|중국집|횟집|국밥|냉면|칼국수|치킨/],
     ["parking", /주차|parking/], ["taxi", /택시|taxi/], ["hospital_pharmacy", /약국|병원|아파|다쳤|응급|pharmacy|hospital/]];
   const WHO_KW = [["부모님과", /부모|엄마|아빠|어머니|아버지|할머니|할아버지|parents?|mom|dad/], ["아이와", /아이|아기|애기|딸|아들|kid|child|baby/],
     ["연인·친구", /친구|연인|여자친구|남자친구|friend/], ["단체", /단체|동아리|회사|group/], ["혼자", /혼자|alone|solo/]];
@@ -658,13 +683,17 @@ export function makeApi(DATA) {
     const made = (again) => { const k = crs.stops.filter((s) => s.grade && s.grade !== "G").length;
       const dropped = crs.notes.filter((n) => n.includes("담아"));
       return fmt(L[again ? "remade" : "made"], { n: crs.stops.length, caution: k ? fmt(L.caution, { k }) : "" }) + (dropped.length && c.lang === "ko" ? " " + dropped[0] : ""); };
-    function findHelp(kind, zone) {
+    function findHelp(kind, zone, food = "") {
       let lat = lat0, lon = lon0;
       if (courseIds.length && PLACES[courseIds[0]].lat) { lat = PLACES[courseIds[0]].lat; lon = PLACES[courseIds[0]].lon; }
+      let elat = lat, elon = lon;
+      const lunch = courseIds.map((i) => PLACES[i]).find((p) => p.type === "식당" && p.lat);
+      if (lunch) { elat = lunch.lat; elon = lunch.lon; }
+      if (zone) { const zp = Object.values(PLACES).find((p) => p.zone === zone && p.type === "관광지" && p.lat && !p.sample); if (zp) { elat = zp.lat; elon = zp.lon; } }
       zone = zone || (courseIds.length ? PLACES[courseIds[courseIds.length - 1]].zone : "mukho");
       const f = { info_center: () => infoCenters(lat, lon, c.lang, 2), charger: () => chargers(lat, lon, 2), mobility_van: () => mobilityCenter(),
         city_tour: () => cityTour(courseIds), events: () => events().upcoming.slice(0, 3), lodging: () => lodging(zone, 5),
-        restaurants: () => restaurants(zone, null, 5), parking: () => parkingNear(lat, lon, 3000, 2),
+        restaurants: () => { const e = eateries(elat, elon, food || "", 1000, 5); return e.count ? e : eateries(elat, elon, food || "", 3000, 5); }, parking: () => parkingNear(lat, lon, 3000, 2),
         taxi: () => { const x = courseIds.flatMap((pid) => taxiFor(pid)).slice(0, 2); return x.length ? x : taxiAtStart(c.start); },
         hospital_pharmacy: () => ({ say: "화면 위 '안심' 버튼에서 지금 문 연 약국·병원과 응급실을 보여 드려요. 위급하면 119." }) }[kind];
       cards.push({ kind, data: f ? f() : { error: "모르는 종류" } });
@@ -675,7 +704,7 @@ export function makeApi(DATA) {
         : "If it's an emergency, call 119 now. Tap 'Safety' at the top for nearby hospitals and pharmacies.");
     }
     for (const [kind, pat] of HELP_KW) if (pat.test(low)) {
-      const z = ZONE_KW.find(([, pz]) => pz.test(message)); findHelp(kind, z ? z[0] : null); return result(L.help);
+      const z = ZONE_KW.find(([, pz]) => pz.test(message)); findHelp(kind, z ? z[0] : null, kind === "restaurants" ? eatGroup(message) : ""); return result(L.help);
     }
     if (courseIds.length) {
       const r = applyEdit(c, courseIds.filter((i) => PLACES[i]), message);
@@ -902,6 +931,7 @@ export function makeApi(DATA) {
     if (path === "/api/talk") return talk(body);
     if (path === "/api/edit") return edit(body);
     if (path === "/api/safety") return safety(+q.lat, +q.lon, q.lang || "ko");
+    if (path === "/api/eateries") return eateries(+q.lat, +q.lon, q.group || "", Math.max(100, Math.min(+q.r || 800, 3000)), Math.max(1, Math.min(+q.limit || 8, 30)), q.sort || "pick");
     if (path === "/api/health") return { ok: true, demo: true, places: Object.keys(PLACES).length };
     throw new Error("404 " + path);
   }
