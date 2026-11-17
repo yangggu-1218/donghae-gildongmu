@@ -121,6 +121,18 @@ export const PHOTOS: Record<string, Photo> = {
     "author": "팀 제공",
     "license": "출처 확인 중",
     "page": ""
+  },
+  "pencil_museum": {
+    "src": "/photos/500px-pencil_museum.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "pencil_museum_2": {
+    "src": "/photos/500px-pencil_museum_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
   }
 };
 
@@ -131,5 +143,6 @@ export const photoAt = (id: string, w: 500 | 960 | 1920) => (PHOTOS[id] ? PHOTOS
 export const GALLERY: Record<string, [string, string, string][]> = {
   dokkaebi: [["dokkaebi_2", "스카이사이클과 자이언트 슬라이드", "Sky cycle and giant slide"]],
   mureung: [["mureung_lavender", "라벤더 정원과 무릉별열차", "Lavender garden and the park train"], ["mureung_dumir", "두미르 전망대", "Dumir Observatory"], ["mureung_night", "라벤더축제 야경", "Lavender festival at night"]],
+  pencil_museum: [["pencil_museum_2", "천장 가득 매달린 연필과 입구 표지판", "Giant pencils on the ceiling and the entrance signs"]],
   mukho_lighthouse: [["mukho_lighthouse_2", "묵호등대 앞 계단", "Steps in front of Mukho Lighthouse"]],
 };
