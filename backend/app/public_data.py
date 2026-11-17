@@ -2,7 +2,7 @@
 - data/public/public_data.json 은 scripts/ingest_public.py 가 만든다.
 - data/public/place_links.csv 로 길동무 장소 id 와 공공데이터 이름을 잇는다 (팀이 고칠 수 있게 CSV로 둠).
 쓰는 곳: 장소 좌표·전화·주소·소개 보정, 장소 상세(주변 향토유산 이야기, 걷기길), 관광안내소(외국어), 행사, 숙박."""
-import csv, datetime as dt, json, math
+import csv, datetime as dt, json, math, re
 from pathlib import Path
 from typing import Optional
 
@@ -241,7 +241,7 @@ def city_tour(stop_ids: list[str] | None = None) -> Optional[dict]:
     ct = (PUB.get("city_tour") or [None])[0]
     if not ct:
         return None
-    import re
+
     stops = [x.strip() for x in re.split(r"\s*-\s+|\s+-\s*|\)-", ct["route"]) if x.strip()]
     stops = [x + ")" if x.count("(") > x.count(")") else x for x in stops]
     served = set()
@@ -260,6 +260,75 @@ def restaurants(zone: str, kinds: list[str] | None = None, limit: int = 5) -> di
     from collections import Counter
     return {"zone": zone, "count": len(rs), "by_kind": Counter(r["kind"] for r in rs).most_common(5), "accessibility": "확인 전",
             "items": [{"name": r["name"], "kind": r["kind"], "address": r["road"] or r["jibun"], "tel": r["tel"]} for r in rs[:limit]]}
+
+
+# ---------- 일반음식점 (인허가 현황 + 카카오 주소 좌표) ----------
+EAT_F = DATA / "public" / "eateries.json"
+EAT: dict = json.loads(EAT_F.read_text(encoding="utf-8")) if EAT_F.exists() else {"rows": []}
+# 업태 → 화면에 보일 묶음. '기타'는 업태를 안 적은 곳이라 묶음 칩 없이 '전체'에만 나온다.
+EAT_GROUPS = [("한식", ["한식"]), ("회·해산물", ["횟집"]), ("고기·탕", ["식육(숯불구이)", "탕류(보신용)"]), ("중식", ["중국식"]),
+              ("분식·국수", ["분식", "김밥(도시락)", "냉면집"]), ("양식·일식", ["경양식", "일식", "외국음식전문점(인도,태국등)", "패스트푸드", "뷔페식"]),
+              ("치킨", ["통닭(치킨)"])]
+EAT_GROUP_EN = {"한식": "Korean", "회·해산물": "Seafood", "고기·탕": "BBQ & stew", "중식": "Chinese", "분식·국수": "Snacks & noodles", "양식·일식": "Western & Japanese", "치킨": "Chicken"}
+_KIND2G = {k: g for g, ks in EAT_GROUPS for k in ks}
+# 말로 물을 때: "짜장면집 있어?" → 중식
+EAT_WORDS = [("중식", r"짜장|짬뽕|중국|중식|탕수"), ("회·해산물", r"회|해산물|물회|생선|횟집|조개|대게|게\b"), ("고기·탕", r"고기|갈비|삼겹|숯불|곰탕|보신"),
+             ("분식·국수", r"국수|분식|김밥|냉면|떡볶이|막국수|칼국수"), ("양식·일식", r"양식|파스타|돈가스|돈까스|일식|초밥|스시|피자|버거"),
+             ("치킨", r"치킨|통닭"), ("한식", r"한식|백반|한정식|국밥|찌개")]
+
+
+def eat_group(text: str) -> str:
+
+    return next((g for g, pat in EAT_WORDS if re.search(pat, text or "")), "")
+
+
+EAT_LINK: dict[str, tuple[str, bool]] = {}   # 업소명 → (길동무 장소 id, 무장애 정보 확인 여부)
+
+
+def _core(n: str) -> str:
+    return re.sub(r"\(.*?\)|주식회사|본점|\s", "", n or "")
+
+
+def link_eateries(places: dict[str, Place]) -> None:
+    """길동무에 이미 있는 실제 식당·카페(예시 아님)를 인허가 목록의 같은 업소와 잇는다 (이름이 겹치고 150m 안)."""
+    EAT_LINK.clear()
+    for p in places.values():
+        if p.type not in ("식당", "카페") or p.sample or p.lat is None:
+            continue
+        core = _core(p.name_ko)
+        for n, _k, la, lo, *_ in EAT.get("rows", []):
+            c = _core(n)
+            if c and core and (core in c or c in core) and dist_m(p.lat, p.lon, la, lo) <= 150:
+                EAT_LINK[n] = (p.id, bool(p.segments))
+
+
+THIS_YEAR = 2026
+EAT_SORTS = ("pick", "dist", "old", "access")
+
+
+def _eat_score(r: dict) -> float:
+    """길동무 추천순: 무장애 정보 확인 +5, 영업 연수(최대 30년) 해마다 +0.3, 100m 멀어질 때마다 -1."""
+    return (5 if r["checked"] else 0) + 0.3 * min(r["years"], 30) - r["dist_m"] / 100
+
+
+def eateries(lat: float, lon: float, group: str = "", radius: int = 800, limit: int = 8, sort: str = "pick") -> dict:
+    """좌표 주변 일반음식점. 접근성은 확인 전이고, 한국관광공사 무장애 정보로 확인한 식당(checked)은 표시해서 먼저 보여 준다."""
+    seen, near = set(), []
+    for n, k, la, lo, tel, addr, since in EAT.get("rows", []):
+        d = dist_m(lat, lon, la, lo)
+        if d > radius or n in seen:
+            continue
+        seen.add(n)
+        near.append({"name": n, "kind": k, "group": _KIND2G.get(k, "기타"), "lat": la, "lon": lo, "dist_m": d, "tel": tel, "address": addr,
+                     "since": since, "years": max(0, THIS_YEAR - int(since)) if since else 0, "place_id": EAT_LINK.get(n, ("", False))[0], "checked": EAT_LINK.get(n, ("", False))[1]})
+    counts = {g: sum(1 for r in near if r["group"] == g) for g, _ in EAT_GROUPS}
+    items = [r for r in near if not group or r["group"] == group]
+    sort = sort if sort in EAT_SORTS else "pick"
+    key = {"pick": lambda r: (-_eat_score(r), r["dist_m"], r["name"]), "dist": lambda r: (r["dist_m"], r["name"]),
+           "old": lambda r: (-r["years"], r["dist_m"], r["name"]), "access": lambda r: (not r["checked"], r["dist_m"], r["name"])}[sort]
+    items.sort(key=key)
+    return {"count": len(items), "total": len(near), "group": group, "radius": radius, "sort": sort, "groups": [[g, c] for g, c in counts.items() if c],
+            "accessibility": "확인 전", "source": EAT.get("source", ""), "coord_from": EAT.get("coord_from", ""), "items": items[:limit]}
 
 
 def stats() -> dict:

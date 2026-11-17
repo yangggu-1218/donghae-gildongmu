@@ -29,7 +29,9 @@ def load_places() -> dict[str, Place]:
     places = {p["id"]: Place(**p) for p in json.loads(f.read_text(encoding="utf-8"))}
     places = public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
     places = details.apply(places)        # 영업시간·어르신 접근성 상세, 예시 식당·카페
-    return cms.apply(places)              # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
+    places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
+    public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
+    return places
 
 
 PLACES = load_places()
@@ -172,6 +174,12 @@ def chargers(lat: float = 37.5245, lon: float = 129.1143):
 @app.get("/api/city-tour")
 def city_tour():
     return public_data.city_tour()
+
+
+@app.get("/api/eateries")
+def eateries(lat: float, lon: float, group: str = "", r: int = 800, limit: int = 8, sort: str = "pick"):
+    """좌표 주변 일반음식점 (동해시 인허가 현황 + 카카오 주소 좌표). 접근성은 확인 전."""
+    return public_data.eateries(lat, lon, group, max(100, min(r, 3000)), max(1, min(limit, 30)), sort)
 
 
 @app.get("/api/restaurants")

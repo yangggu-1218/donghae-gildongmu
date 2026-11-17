@@ -43,9 +43,10 @@ TOOLS = [
                       "required": ["action"]}},
     {"name": "place_info", "description": "장소 하나의 정보(구간 판정, 시설, 주변 이야기, 택시, 주차, 행사, 관람시간)를 가져온다.",
      "input_schema": {"type": "object", "properties": {"place_id": {"type": "string"}}, "required": ["place_id"]}},
-    {"name": "find_help", "description": "여행 도움 정보: info_center(관광안내소·외국어), charger(전동휠체어 충전기), mobility_van(휠체어 차량 예약), city_tour, events(행사·축제), lodging(숙박, zone 필요), restaurants(식당, zone 필요), parking, taxi, hospital_pharmacy.",
+    {"name": "find_help", "description": "여행 도움 정보: info_center(관광안내소·외국어), charger(전동휠체어 충전기), mobility_van(휠체어 차량 예약), city_tour, events(행사·축제), lodging(숙박, zone 필요), restaurants(근처 식당: 동해시 일반음식점 1,400여 곳에서 거리순, 코스 점심 장소나 zone 기준. 음식 종류를 말하면 food에 넣는다), parking, taxi, hospital_pharmacy.",
      "input_schema": {"type": "object", "properties": {"kind": {"type": "string", "enum": HELP_KINDS},
-                                                       "zone": {"type": "string", "enum": ["chuam", "mureung", "cheongok", "mukho", "mangsang", "station"]}},
+                                                       "zone": {"type": "string", "enum": ["chuam", "mureung", "cheongok", "mukho", "mangsang", "station"]},
+                                                       "food": {"type": "string", "enum": ["한식", "회·해산물", "고기·탕", "중식", "분식·국수", "양식·일식", "치킨"]}},
                       "required": ["kind"]}},
 ]
 
@@ -127,10 +128,19 @@ class Session:
                 "parking": public_data.parking_near(p.lat, p.lon, limit=1), "events": public_data.events_near(p.lat, p.lon),
                 "park": public_data.parks_near(p.lat, p.lon)}
 
-    def find_help(self, kind, zone=None):
+    def find_help(self, kind, zone=None, food=None):
         lat, lon = self.lat, self.lon
         if self.course_ids and self.places[self.course_ids[0]].lat:
             p = self.places[self.course_ids[0]]; lat, lon = p.lat, p.lon
+        # 식당: 말한 권역 > 코스 점심 장소 > 코스 첫 장소 > 현재 위치
+        elat, elon = lat, lon
+        lunch = next((self.places[i] for i in self.course_ids if self.places[i].type in ("식당",) and self.places[i].lat), None)
+        if lunch:
+            elat, elon = lunch.lat, lunch.lon
+        if zone:
+            zp = next((p for p in self.places.values() if p.zone == zone and p.type == "관광지" and p.lat and not p.sample), None)
+            if zp:
+                elat, elon = zp.lat, zp.lon
         zone = zone or (self.places[self.course_ids[-1]].zone if self.course_ids else "mukho")
         data = {
             "info_center": lambda: public_data.info_centers(lat, lon, self.c.lang, 2),
@@ -139,7 +149,7 @@ class Session:
             "city_tour": lambda: public_data.city_tour(self.course_ids),
             "events": lambda: public_data.events()["upcoming"][:3],
             "lodging": lambda: public_data.lodging(zone, 5),
-            "restaurants": lambda: public_data.restaurants(zone, None, 5),
+            "restaurants": lambda: public_data.eateries(elat, elon, food or "", 1000, 5)["count"] and public_data.eateries(elat, elon, food or "", 1000, 5) or public_data.eateries(elat, elon, food or "", 3000, 5),
             "parking": lambda: public_data.parking_near(lat, lon, 3000, 2),
             "taxi": lambda: [t for pid in self.course_ids for t in public_data.taxi_for(pid)][:2] or public_data.taxi_at_start(self.c.start),
             "hospital_pharmacy": lambda: {"say": "화면 위 '안심' 버튼에서 지금 문 연 약국·병원과 응급실을 보여 드려요. 위급하면 119."},
@@ -212,7 +222,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
 HELP_KW = [("charger", r"충전|charg"), ("mobility_van", r"휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)"),
            ("info_center", r"안내소|통역|외국어|interpret|info\w*\s*(center|centre|desk)|information"), ("city_tour", r"시티\s*투어|버스|city tour|bus"),
            ("events", r"행사|축제|공연|festival|event"), ("lodging", r"숙소|숙박|호텔|펜션|게스트|hotel|stay"),
-           ("restaurants", r"식당|밥집|맛집|먹을|restaurant"), ("parking", r"주차|parking"), ("taxi", r"택시|taxi"),
+           ("restaurants", r"식당|밥집|맛집|먹을|restaurant|짜장|짬뽕|중국집|횟집|국밥|냉면|칼국수|치킨"), ("parking", r"주차|parking"), ("taxi", r"택시|taxi"),
            ("hospital_pharmacy", r"약국|병원|아파|다쳤|응급|pharmacy|hospital")]
 WHO_KW = [("부모님과", r"부모|엄마|아빠|어머니|아버지|할머니|할아버지|parents?|mom|dad"), ("아이와", r"아이|아기|애기|딸|아들|kid|child|baby"),
           ("연인·친구", r"친구|연인|여자친구|남자친구|friend"), ("단체", r"단체|동아리|회사|group"), ("혼자", r"혼자|alone|solo")]
@@ -253,7 +263,7 @@ def _rule(s: Session, message: str) -> dict:
     for kind, pat in HELP_KW:
         if re.search(pat, low):
             zone = next((z for z, pz in ZONE_KW if re.search(pz, message)), None)
-            s.find_help(kind, zone)
+            s.find_help(kind, zone, public_data.eat_group(message) if kind == "restaurants" else None)
             return s.result(L["help"], "rule")
     # 2) 코스가 있으면 수정
     if s.course_ids:
