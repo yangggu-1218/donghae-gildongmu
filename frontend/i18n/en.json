@@ -50,7 +50,7 @@
   "plan.memo": "Anything else? (optional)",
   "plan.memoPh": "e.g. It might rain",
   "plan.thinking": "Lighting up your way…",
-  "plan.done": "I planned {n} stops. Take a look!",
+  "plan.done": "Planned {n} stops (back {t}). Reasons are in the briefing.",
   "plan.empty": "Your route appears here",
   "chat.rain": "It's raining",
   "chat.less": "Less walking",
