@@ -46,7 +46,7 @@ export function ruleBrief({ course, cond, extras, wx, crowd, name, lang }: Ev): 
   const bring: string[] = [];
   if (wx?.rain) bring.push(ko ? "우산" : "Umbrella");
   if (wx && wx.tmin <= 5) bring.push(ko ? "따뜻한 겉옷" : "Warm jacket");
-  if (st.some((s) => s.id === "betel")) bring.push(ko ? "등산화" : "Hiking shoes");
+  if (st.some((s) => s.id === "betel" || s.id === "macheonru")) bring.push(ko ? "등산화" : "Hiking shoes");
   if (move.includes("휠체어") && bring.length < 3) bring.push(ko ? "충전기" : "Charger");
 
   const who = ko ? cond.who : (WHO_EN[cond.who] || cond.who);
