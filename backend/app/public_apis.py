@@ -121,7 +121,10 @@ def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
         r = httpx.get(OM, params={"latitude": lat, "longitude": lon, "timezone": "Asia/Seoul", "forecast_days": 16,
                                   "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max"},
                       timeout=4)
-        j = r.json()["daily"]
+        body = r.json()
+        if "daily" not in body:
+            raise ValueError(f"open-meteo {r.status_code}: {str(body)[:200]}")
+        j = body["daily"]
         days = []
         for i, d in enumerate(j["time"]):
             code, pop, mm = int(j["weather_code"][i] or 0), int(j["precipitation_probability_max"][i] or 0), float(j["precipitation_sum"][i] or 0)
@@ -136,8 +139,58 @@ def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
         return data
     except Exception as e:
         print("[forecast]", e, file=sys.stderr)
-        _FC["fail"] = now
+    data = _met_norway(lat, lon)          # 두 번째 출처: 노르웨이 기상청 (약 9일)
+    if data:
+        _FC.update(t=now, data=data)
+        return data
+    _FC["fail"] = now
+    return None
+
+
+MET = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+_SYM = [("thunder", "뇌우", "Thunderstorm", "storm", 95), ("snow", "눈", "Snow", "snow", 71), ("sleet", "진눈깨비", "Sleet", "snow", 66),
+        ("rainshowers", "소나기", "Showers", "rain", 80), ("rain", "비", "Rain", "rain", 61), ("fog", "안개", "Fog", "fog", 45),
+        ("cloudy", "흐림", "Cloudy", "cloud", 3), ("partlycloudy", "구름 조금", "Partly cloudy", "part", 2), ("fair", "구름 조금", "Partly cloudy", "part", 1),
+        ("clearsky", "맑음", "Clear", "sun", 0)]
+
+
+def _met_norway(lat: float, lon: float) -> dict | None:
+    """MET Norway 시간별 예보를 한국 날짜별로 묶는다. 강수확률이 없어 강수량으로 비를 판단한다."""
+    try:
+        r = httpx.get(MET, params={"lat": round(lat, 4), "lon": round(lon, 4)}, timeout=5,
+                      headers={"User-Agent": "donghae-gildongmu/1.0 github.com/yangggu-1218/donghae-gildongmu"})
+        ts = r.json()["properties"]["timeseries"]
+    except Exception as e:
+        print("[met.no]", e, file=sys.stderr)
         return None
+    kst = dt.timezone(dt.timedelta(hours=9))
+    by: dict[str, dict] = {}
+    for t in ts:
+        at = dt.datetime.fromisoformat(t["time"].replace("Z", "+00:00")).astimezone(kst)
+        d = by.setdefault(at.date().isoformat(), {"temps": [], "mm": 0.0, "syms": []})
+        d["temps"].append(t["data"]["instant"]["details"].get("air_temperature"))
+        n1, n6 = t["data"].get("next_1_hours"), t["data"].get("next_6_hours")
+        if n1:
+            d["mm"] += n1.get("details", {}).get("precipitation_amount", 0) or 0
+            if 9 <= at.hour <= 18: d["syms"].append(n1["summary"]["symbol_code"])
+        elif n6 and at.hour % 6 == 3:      # 6시간 묶음은 겹치지 않게 (KST 3·9·15·21시)
+            d["mm"] += n6.get("details", {}).get("precipitation_amount", 0) or 0
+            if 6 <= at.hour <= 15: d["syms"].append(n6["summary"]["symbol_code"])
+    days = []
+    for date, d in sorted(by.items()):
+        temps = [x for x in d["temps"] if x is not None]
+        if not temps or not d["syms"]:
+            continue
+        bases = [s.split("_")[0] for s in d["syms"]]
+        # 비·눈 종류는 이름 안에 들어 있으면(lightrain, heavyrainshowers) 같은 것으로, 나머지는 이름이 같을 때만
+        sym = next((x for i, x in enumerate(_SYM) if any((x[0] in b) if i < 5 else (b == x[0]) for b in bases)), _SYM[-1])
+        mm = round(d["mm"], 1)
+        wet = sym[4] >= 61
+        days.append({"date": date, "code": sym[4], "ko": sym[1], "en": sym[2], "icon": sym[3], "pop": None, "mm": mm,
+                     "tmax": round(max(temps)), "tmin": round(min(temps)), "wind": None, "rain": mm >= 5 or (wet and mm >= 1)})
+    if not days:
+        return None
+    return {"source": "노르웨이 기상청(MET Norway) 예보", "updated": dt.datetime.now(kst).isoformat(timespec="minutes"), "days": days}
 
 
 def rain_on(date_iso: str) -> bool:
