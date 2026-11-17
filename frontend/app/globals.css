@@ -569,3 +569,88 @@ a.now-c:hover { border-color: var(--sea); }
 .quick img { width: 34px; height: 34px; object-fit: contain; display: block; }
 .quick a:hover, .quick button:hover { background: var(--mist); }
 @media (max-width: 1320px) { .quick { display: none; } }
+
+/* ---- 코스 짜기 대화 칸: 위 진행 단계 · 가운데 대화(여기만 스크롤) · 아래 답 버튼과 입력칸(늘 보임) ---- */
+.grid > .panel.chat { position: sticky; top: 76px; height: min(780px, calc(100vh - 92px)); max-height: none; overflow: hidden; display: flex; flex-direction: column; padding: 0; }
+.steps { display: flex; gap: 4px; list-style: none; margin: 0; padding: 10px 14px 0; overflow-x: auto; font-size: .82em; font-weight: 700; color: var(--muted); flex: none; }
+.steps li { flex: 1; text-align: center; padding: 6px 4px; border-bottom: 3px solid var(--line); white-space: nowrap; }
+.steps li.done { color: var(--sea); border-color: var(--sea); }
+.steps li.cur { color: var(--sea-deep); border-color: var(--sun-deep); }
+.chat-log { flex: 1; overflow-y: auto; padding: 6px 16px 10px; overscroll-behavior: contain; min-height: 120px; }
+.chat-dock { flex: none; border-top: 1px solid var(--line); padding: 12px 14px 14px; background: var(--surface); max-height: 64%; overflow-y: auto; display: grid; gap: 10px; }
+.chat-dock .big-chips .chip { min-height: 48px; padding: 0 16px; font-size: 1em; }
+.chat-dock .chips input { flex: 1 1 200px; }
+.composer { display: flex; gap: 8px; }
+.composer input { flex: 1; min-height: 48px; }
+.typing { color: var(--muted); font-size: .9em; margin: 6px 0 0 4px; }
+.qc { display: flex; gap: 8px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+.qc .chip { flex: none; }
+.when { gap: 10px; margin: 0; }
+.when > .chip.go { justify-self: stretch; min-height: 50px; }
+.dstrip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.dchip { flex: none; width: 54px; min-height: 58px; border: 1.5px solid var(--line); border-radius: var(--r-s); background: var(--mist); display: grid; place-items: center; padding: 4px 0; font: inherit; color: inherit; cursor: pointer; }
+.dchip small { font-size: .75em; color: var(--muted); font-weight: 700; line-height: 1.2; }
+.dchip b { font-size: 1.2em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.dchip.sun b { color: var(--stop); } .dchip.sat b { color: var(--sea); }
+.dchip[aria-pressed="true"] { background: var(--sea); border-color: var(--sea); }
+.dchip[aria-pressed="true"] small, .dchip[aria-pressed="true"] b { color: var(--sea-ink); }
+.dchip.more { background: var(--surface); border-style: dashed; }
+.dchip:focus-visible { outline: 3px solid var(--sun-deep); outline-offset: 2px; }
+.trow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.trow > span { font-weight: 700; margin-right: 4px; }
+.trow .chip { min-height: 44px; padding: 0 14px; }
+.chat-dock .cal { max-width: 360px; padding: 8px; }
+.chat-dock .cal-day { aspect-ratio: auto; height: 36px; min-height: 36px; font-size: 1em; }
+.chat-dock .cal-nav { width: 38px; height: 38px; font-size: 1.3em; }
+.chat-dock .cal-sel { display: none; }
+/* 코스 만들기 전 오른쪽: 내 여행 조건 */
+.trip h3 { margin: 0 0 6px; }
+.trip dl { margin: 0 0 10px; }
+.trip dl > div { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.trip dt { color: var(--muted); font-weight: 700; font-size: .9em; }
+.trip dd { margin: 0; font-weight: 600; }
+.trip .todo dd { color: var(--muted); font-weight: 400; }
+.chip.sm { min-height: 34px; padding: 0 10px; font-size: .88em; }
+.ztag { display: inline-block; font-size: .78em; font-weight: 700; margin-bottom: 2px; }
+/* 담기 알림과 '담은 곳' 버튼 (색은 밝은·어두운 화면 모두 같은 남색) */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(640px, calc(100vw - 32px)); background: #12355E; color: #fff; padding: 10px 8px 10px 18px; border-radius: 16px; box-shadow: 0 8px 28px rgba(18, 53, 94, .3); }
+.toast .chip.go { flex: none; background: #fff; color: #12355E; border-color: #fff; }
+.toast .x { flex: none; background: none; border: 0; color: #fff; font-size: 1.4em; width: 40px; height: 40px; cursor: pointer; }
+.cart { position: fixed; left: 24px; bottom: 24px; z-index: 50; background: #12355E; color: #fff; padding: 12px 18px; border-radius: 999px; font-weight: 700; text-decoration: none; box-shadow: 0 6px 20px rgba(18, 53, 94, .3); }
+@media (max-width: 900px) {
+  .grid > .panel.chat { position: relative; top: 0; height: calc(100dvh - 150px); min-height: 480px; }
+  .toast, .cart { bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .cart { left: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .chat-log { scroll-behavior: auto; } }
+.qc .chip.go { background: var(--sea); color: var(--sea-ink); }
+/* '코스 만들기'로 오면 대화 칸이 화면 위에 꼭 맞게 */
+.howto h2 { margin-bottom: 14px; }
+.howto ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.howto li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-m); padding: 18px; display: grid; gap: 6px; align-content: start; }
+.howto .n { width: 32px; height: 32px; border-radius: 50%; background: var(--sea); color: var(--sea-ink); display: grid; place-items: center; font-weight: 700; }
+.howto b { font-size: 1.08em; color: var(--sea-deep); }
+.howto p { margin: 0; color: var(--muted); }
+.howto-go { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 16px 0 0; }
+@media (max-width: 700px) { .howto ol { grid-template-columns: 1fr; } }
+/* 대화 칸 크기: 화면 높이 − 머리말 − 아래 탭. 답 버튼 칸만 스크롤되고 입력칸은 늘 맨 아래에 보인다 */
+.grid > .panel.chat { top: calc(var(--hdr, 64px) + 10px); height: min(780px, calc(100dvh - var(--hdr, 64px) - var(--tab, 0px) - 20px)); }
+.chat-dock { display: flex; flex-direction: column; gap: 10px; overflow: hidden; max-height: 66%; }
+.dock-opts { overflow-y: auto; display: grid; gap: 10px; min-height: 0; }
+.composer { flex: none; }
+@media (max-width: 900px) {
+  .grid > .panel.chat { position: relative; top: 0; height: calc(100dvh - var(--hdr, 64px) - var(--tab, 58px) - 16px); min-height: 360px; }
+}
+@media (max-width: 600px) {
+  .bar { gap: 8px; padding-block: 6px; flex-wrap: nowrap; }
+  .brand { font-size: 20px; } .brand img { height: 32px; }
+  .tools { gap: 6px; }
+  .tools .sos, .tools .box { min-height: 40px; padding: 0 10px; font-size: .82em; white-space: nowrap; }
+}
+@media (max-width: 400px) { .brand { font-size: 0; gap: 0; } .tools .bigt { padding: 0 8px; } }
+html { scroll-padding-top: calc(var(--hdr, 76px) + 8px); }
+@media (max-width: 600px) {
+  .trow { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .trow > *, .trow .chip { flex: none; }
+  .dchip { width: 50px; min-height: 54px; }
+}
