@@ -135,3 +135,39 @@ def analyze_photo(jpeg: bytes, place_name: str, kind: str, note: str = "") -> di
     return {"by": "ai", "model": MODEL, "obstacles": obs, "summary": str(data.get("summary", ""))[:200],
             "suggested_grade": data.get("suggested_grade") if data.get("suggested_grade") in ("G", "Y", "R") else None,
             "needs_review": True}
+
+
+# ⑥ 동이 브리핑: 완성된 코스를 카드 조각(한 줄 요약·맞춘 점·챙길 것·장소별 이유)으로 정리한다.
+#    엔진이 정한 코스와 화면이 모은 근거(예보·붐빔·판정·뺀 곳)만 쓴다. 실패하면 화면의 규칙 카드가 그대로 남는다.
+ICONS = {"rain", "sun", "walk", "wheel", "crowd", "food", "closed", "time", "sea"}
+
+
+def brief(evidence: dict) -> dict | None:
+    data = _ask_json(_prompt("brief"), json.dumps(evidence, ensure_ascii=False), "brief", timeout=12)
+    if not isinstance(data, dict) or not data.get("headline"):
+        return None
+    ids = {s.get("id") for s in evidence.get("stops", [])}
+    fits = [{"icon": f["icon"], "text": str(f.get("text", ""))[:40]} for f in data.get("fits", [])
+            if isinstance(f, dict) and f.get("icon") in ICONS and f.get("text")][:4]
+    return {"by": "ai", "model": MODEL, "headline": str(data["headline"])[:40], "fits": fits,
+            "bring": [str(b)[:12] for b in data.get("bring", []) if b][:3],
+            "why": {k: str(v)[:40] for k, v in (data.get("why") or {}).items() if k in ids and v}}
+
+
+# ⑦ 사진으로 물어보기: 사용자가 찍은 입구·길 사진을 그 사람 조건(휠체어·유모차 등) 기준으로 판단해 카드로 돌려준다.
+SEEN = {"계단", "턱", "경사로", "급경사", "좁은 통로", "울퉁불퉁한 바닥", "공사·통제", "자동문", "손잡이", "장애물 없음",
+        "stairs", "step", "ramp", "steep slope", "narrow path", "uneven surface", "construction", "automatic door", "handrail", "no obstacles"}
+
+
+def photo_check(jpeg: bytes, move: list[str], lang: str = "ko") -> dict:
+    import base64
+    content = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}},
+               {"type": "text", "text": json.dumps({"move": move, "lang": lang}, ensure_ascii=False)}]
+    data = _ask_json(_prompt("photo_check"), content, "photo_check", timeout=25)
+    if not isinstance(data, dict) or not data.get("title"):
+        return {"by": "none"}
+    return {"by": "ai", "model": MODEL, "verdict": data.get("verdict") if data.get("verdict") in ("G", "Y", "R") else None,
+            "title": str(data["title"])[:40],
+            "seen": [{"type": str(x.get("type")), "detail": str(x.get("detail", ""))[:30]} for x in data.get("seen", [])
+                     if isinstance(x, dict) and x.get("type") in SEEN][:4],
+            "tips": [str(x)[:50] for x in data.get("tips", []) if x][:2]}

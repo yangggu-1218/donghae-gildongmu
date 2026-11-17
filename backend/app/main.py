@@ -87,10 +87,11 @@ def course(c: Conditions):
     stops = [{"id": s.id, "name": PLACES[s.id].name_ko if c.lang == "ko" else PLACES[s.id].name_en,
               "grade": s.grade, "facilities": PLACES[s.id].facilities,
               "tip": PLACES[s.id].tip_ko if c.lang == "ko" else PLACES[s.id].tip_en} for s in result.stops]
-    ex = llm.explain(stops, c.model_dump(), c.lang)
-    for s in result.stops:
-        s.why = ex["why"].get(s.id, "")
-    return course_payload(result, c, rain, ex.get("summary", ""))
+    # 장소별 이유·한 줄 요약은 화면의 '동이 브리핑'(/api/brief)이 따로 받아 온다 → 코스는 바로 돌려준다
+    for st in stops:
+        nxt = next(x for x in result.stops if x.id == st["id"])
+        nxt.why = st["tip"] or ""
+    return course_payload(result, c, rain, "")
 
 
 @app.post("/api/edit")
@@ -330,6 +331,20 @@ def admin_probe(x_admin_token: str | None = Header(None)):
     """관리자: 공공 빅데이터 API가 실제로 응답하는지 점검 (캐시를 비우고 다시 부른다)."""
     _admin(x_admin_token)
     return bigdata.probe()
+
+
+@app.post("/api/brief")
+def brief(body: dict):
+    """동이 브리핑 (AI). 화면이 보낸 근거(조건·예보·장소별 판정·붐빔·뺀 곳)로 카드 조각을 만든다. 실패하면 by=none."""
+    return llm.brief(body) or {"by": "none"}
+
+
+@app.post("/api/photo-check")
+async def photo_check(photo: UploadFile = File(...), move: str = Form(""), lang: str = Form("ko")):
+    """사진으로 물어보기: 사진은 저장하지 않고(위치 정보도 지운 사본만) AI에게 한 번 보여 준 뒤 버린다."""
+    img = Image.open(io.BytesIO(await photo.read())).convert("RGB")
+    img.thumbnail((1024, 1024)); buf = io.BytesIO(); img.save(buf, "JPEG", quality=80)
+    return llm.photo_check(buf.getvalue(), [m for m in move.split(",") if m], lang)
 
 
 @app.post("/api/reports")
