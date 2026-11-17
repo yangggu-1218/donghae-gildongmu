@@ -91,7 +91,7 @@ export function NowDonghae({ lang }: { lang: Lang }) {
   const cards: JSX.Element[] = [];
   if (w && !w.sample) cards.push(
     <a key="w" className="now-c" href="#plan"><span className="now-k">{L("오늘 날씨", "Weather today")}</span>
-      <b>{w.today ? `${WX_ICON[w.today.icon] || ""} ${L(w.today.ko, w.today.en)} · ${w.today.tmin}~${w.today.tmax}°C · ${L("비", "rain")} ${w.today.pop}%`
+      <b>{w.today ? `${WX_ICON[w.today.icon] || ""} ${L(w.today.ko, w.today.en)} · ${w.today.tmin}~${w.today.tmax}°C · ${w.today.pop != null ? `${L("비", "rain")} ${w.today.pop}%` : `${L("강수", "rain")} ${w.today.mm}mm`}`
         : w.rain ? L("비 소식이 있어요", "Rain expected") : L("비 소식 없어요", "No rain expected")}</b>
       <span>{w.rain ? L("실내 위주로 코스를 짜 드릴게요", "We'll plan indoor stops") : L("바다·산책 코스 좋아요", "Good for sea and walks")}</span></a>);
   if (quiet.length) cards.push(
