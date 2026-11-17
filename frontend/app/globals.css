@@ -687,3 +687,18 @@ html { scroll-padding-top: calc(var(--hdr, 76px) + 8px); }
 .pc-tips { display: grid; gap: 4px; font-weight: 600; }
 .chip.cam { flex: none; min-width: 48px; justify-content: center; cursor: pointer; font-size: 1.2em; padding: 0 12px; display: inline-flex; align-items: center; }
 .chip.cam:focus-within { outline: 3px solid var(--sun-deep); outline-offset: 2px; }
+
+/* 근처 식당 (일반음식점 인허가 현황) */
+.eats .eat-g { margin: 6px 0 8px; flex-wrap: wrap; }
+.eats .eat-g small { opacity: .6; margin-left: 2px; }
+.eat-list { list-style: none; margin: 0; padding: 0; }
+.eat-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line, #e6eaf0); }
+.eat-n { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.eat-n small { width: 100%; }
+.eat-a { display: flex; gap: 6px; flex-shrink: 0; }
+.eat-a .chip { padding: 4px 10px; font-size: .85em; }
+.tl-eats summary { cursor: pointer; font-weight: 600; margin-top: 6px; }
+.eat-sort { display: flex; gap: 4px; flex-wrap: wrap; margin: 2px 0 4px; }
+.eat-sort button { border: 0; background: none; padding: 4px 8px; border-radius: 6px; font: inherit; font-size: .85em; color: var(--muted, #5b6675); cursor: pointer; }
+.eat-sort button.on { background: var(--ink, #12355E); color: #fff; }
+.eat-why { margin: 0 0 4px; }

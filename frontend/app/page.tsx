@@ -527,7 +527,7 @@ export default function Page() {
                 {course.stops.map((s, i) => (
                   <div key={s.id}>
                     <p className="muted tl-drive">{t("result.drive", { m: s.drive_min })}</p>
-                    <StopCard s={brief?.why[s.id] ? { ...s, why: brief.why[s.id] } : s} i={i} x={extras[s.id]} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
+                    <StopCard s={brief?.why[s.id] ? { ...s, why: brief.why[s.id] } : s} i={i} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
                       showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
                       onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
                       onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))}
@@ -654,6 +654,7 @@ function HelpCard({ c, t, onSafety }: { c: { kind: string; data: any }; t: (k: s
   else if (c.kind === "mobility_van") body = <>{row(d.name, `${d.tel} · ${d.hours}`)}<p className="muted">{t("x.mobilityWho")}</p></>;
   else if (c.kind === "city_tour") body = row(`${d.name} · ${d.days}`, `${d.board} ${d.first}~${d.last} · ${d.fare}`);
   else if (c.kind === "events") body = d.map((x: any) => row(x.name, `${x.start}~${x.end} · ${x.venue}`));
+  else if (c.kind === "restaurants" && d.items?.[0]?.dist_m != null) body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}${x.checked ? " ♿" : ""}`, `${x.dist_m}m${x.tel ? " · " + x.tel : ""}`))}<p className="muted">{t("card.eats", { n: d.total, r: d.radius / 1000 })}</p></>;
   else if (c.kind === "lodging" || c.kind === "restaurants") body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}`, x.tel || x.address))}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "parking") body = d.map((x: any) => row(`${x.name} (${x.spaces})`, `${x.fee}${x.disabled_free ? " · " + t("x.parkingFree") : ""} · ${x.dist_m}m`));
   else if (c.kind === "taxi") body = (Array.isArray(d) ? d : [d]).map((x: any) => row(x.name, x.address || ""));
