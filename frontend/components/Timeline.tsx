@@ -2,6 +2,8 @@
 // 작업2·3·4: 시간표 카드(영업 중 배지·보행 난이도·입식 테이블·가까운 주차·충전기·약국), 빠른 수정 버튼, 큰 글씨 요약 일정표.
 import { Course, Conditions, Extra, Stop } from "@/lib/api";
 import { PlacePhoto } from "@/components/Sections";
+import { NearbyEats } from "@/components/Eateries";
+import { useState } from "react";
 
 type T = (k: string, v?: Record<string, string | number>) => string;
 const WD_KO = "일월화수목금토";
@@ -33,10 +35,11 @@ export function AccessBadges({ x, t, kind }: { x?: Extra; t: T; kind: string }) 
 }
 
 // ---------- 시간표 카드 ----------
-export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, onRemove, onReplace, crowd }: {
+export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, onRemove, onReplace, crowd, at }: {
   s: Stop; i: number; x?: Extra; name: string; t: T; lang: string; wheel: boolean; showNear: boolean; isNew: boolean; busy: boolean;
-  onRemove: () => void; onReplace: () => void; crowd?: number | null;
+  onRemove: () => void; onReplace: () => void; crowd?: number | null; at?: { lat: number; lon: number };
 }) {
+  const [eatOpen, setEatOpen] = useState(false);
   const lv = crowd == null ? null : crowd >= 70 ? "high" : crowd >= 40 ? "mid" : "low";
   const crowdTxt = lv && ({ high: ["붐빔 예상", "Busy"], mid: ["보통", "Moderate"], low: ["여유", "Quiet"] } as const)[lv][lang === "ko" ? 0 : 1];
   const n = x?.nearby;
@@ -78,6 +81,12 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
               {med?.["응급실"] && <li><b>{t("tl.er")}</b> {med["응급실"].name} · {dist(med["응급실"].dist_m, t)} · {med["응급실"].tel}</li>}
               {n.info_center && <li><b>ℹ</b> {n.info_center.name} · {n.info_center.tel}</li>}
             </ul>
+          </details>
+        )}
+        {s.kind === "lunch" && at && (
+          <details className="tl-eats" onToggle={(e) => setEatOpen((e.target as HTMLDetailsElement).open)}>
+            <summary>{lang === "ko" ? "🍽 근처 다른 식당 보기" : "🍽 Other places to eat nearby"}</summary>
+            {eatOpen && <NearbyEats lat={at.lat} lon={at.lon} lang={lang} r={500} limit={5} exclude={s.id} />}
           </details>
         )}
         <div className="tl-act">

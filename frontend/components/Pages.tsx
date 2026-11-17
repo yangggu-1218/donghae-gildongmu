@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import KakaoMap from "@/components/KakaoMap";
+import { NearbyEats } from "@/components/Eateries";
 import { PlacePhoto, ZONES } from "@/components/Sections";
 import { PHOTOS, GALLERY, photoAt } from "@/lib/photos";
 
@@ -216,6 +217,12 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               {n.medical?.["응급실"] && <li><span className="dot" style={{ background: "#C9302C" }}>+</span><b>{L("응급실", "ER")}</b> {n.medical["응급실"].name} · {n.medical["응급실"].tel}</li>}
             </ul>
           </div>
+          {p.lat && p.type !== "숙박" && (
+            <div className="panel">
+              <h2 className="h3">{L("근처 식당", "Places to eat nearby")}</h2>
+              <NearbyEats lat={p.lat} lon={p.lon} lang={lang} r={p.type === "관광지" ? 800 : 400} limit={6} exclude={p.id} />
+            </div>
+          )}
           <PlaceData id={id} lang={lang} />
           {p.about?.length > 0 && (
             <div className="panel about">
