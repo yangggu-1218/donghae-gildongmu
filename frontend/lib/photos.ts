@@ -122,6 +122,12 @@ export const PHOTOS: Record<string, Photo> = {
     "license": "출처 확인 중",
     "page": ""
   },
+  "yongchu": {
+    "src": "/photos/500px-yongchu.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
   "pencil_museum": {
     "src": "/photos/500px-pencil_museum.webp",
     "author": "팀 제공",
