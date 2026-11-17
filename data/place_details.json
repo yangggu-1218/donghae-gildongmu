@@ -1235,7 +1235,7 @@
    "sample": false,
    "segments": [],
    "coord_source": "카카오 장소 검색",
-   "hours": "09:00~20:00",
+   "hours": "11~2월 09:00~17:00 · 3~10월 09:00~18:00 (입장 마감 1시간 전)",
    "fee": "무료",
    "tip_ko": "다리가 흔들려요. 바람이 센 날은 천천히 건너세요.",
    "tip_en": "The bridge sways; take it slowly on windy days.",
@@ -1243,7 +1243,8 @@
    "wheelchair": "확인 전",
    "hours_source": "공개 안내",
    "open": "09:00",
-   "close": "20:00"
+   "close": "17:00",
+   "last_entry": "16:00"
   },
   {
    "id": "chuam_sculpture",
@@ -1622,6 +1623,392 @@
    "walk_load": "급경사",
    "wheelchair": "불가",
    "hours_source": ""
+  },
+  {
+   "id": "food_yeongbin",
+   "name_ko": "영빈관 (횟집)",
+   "name_en": "Yeongbingwan (raw fish)",
+   "zone": "cheongok",
+   "type": "식당",
+   "lat": 37.523088,
+   "lon": 129.118121,
+   "stay_min": 60,
+   "styles": [
+    "맛집",
+    "바다 보기"
+   ],
+   "facilities": [],
+   "intro_ko": "천곡 한섬로의 횟집이에요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 한섬로 135-3",
+   "phone": "",
+   "indoor": true,
+   "sample": false,
+   "segments": [
+    {
+     "name": "주차·도로 → 입구",
+     "grade": "G",
+     "note": "출입구까지 경사로, 주출입구 경사로로 휠체어 접근 가능",
+     "source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+     "checked_at": "2026-11-17"
+    }
+   ],
+   "coord_source": "카카오 장소 검색",
+   "table": "입식",
+   "parking_easy": null,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "출입구까지 경사로가 있고 의자식 테이블이 있어요.",
+   "tip_en": "Ramp to the entrance and chair-height tables.",
+   "wheelchair": "가능",
+   "walk_load": "평지"
+  },
+  {
+   "id": "food_geodong",
+   "name_ko": "거동탕수육",
+   "name_en": "Geodong Tangsuyuk",
+   "zone": "mukho",
+   "type": "식당",
+   "lat": 37.552422,
+   "lon": 129.116844,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [],
+   "intro_ko": "묵호 논골담길 입구 근처의 중식당이에요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 일출로 83",
+   "phone": "033-532-4778",
+   "indoor": true,
+   "sample": false,
+   "segments": [
+    {
+     "name": "주차·도로 → 입구",
+     "grade": "G",
+     "note": "주출입구까지 평지, 턱 없음",
+     "source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+     "checked_at": "2026-11-17"
+    }
+   ],
+   "coord_source": "카카오 장소 검색",
+   "table": "입식",
+   "parking_easy": null,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "입구까지 평지이고 턱이 없어요. 의자식 테이블이 있어요.",
+   "tip_en": "Level, step-free entrance and chair tables.",
+   "wheelchair": "가능",
+   "walk_load": "평지"
+  },
+  {
+   "id": "food_daege",
+   "name_ko": "동해러시아대게마을",
+   "name_en": "Donghae Russian King Crab Village",
+   "zone": "chuam",
+   "type": "식당",
+   "lat": 37.477885,
+   "lon": 129.156248,
+   "stay_min": 60,
+   "styles": [
+    "맛집",
+    "바다 보기"
+   ],
+   "facilities": [],
+   "intro_ko": "추암해변 앞 대게 식당이에요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 추암택지길 2",
+   "phone": "033-522-4774",
+   "indoor": true,
+   "sample": false,
+   "segments": [
+    {
+     "name": "주차·도로 → 입구",
+     "grade": "G",
+     "note": "출입구(여닫이문)까지 단차 없음, 경사로",
+     "source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+     "checked_at": "2026-11-17"
+    }
+   ],
+   "coord_source": "카카오 장소 검색",
+   "table": null,
+   "parking_easy": true,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "출입구까지 단차 없이 경사로로 갈 수 있고 장애인 화장실이 있어요. 지상 주차장 7대.",
+   "tip_en": "Step-free ramp entrance, accessible toilet, 7 parking spaces.",
+   "wheelchair": "가능",
+   "walk_load": "평지"
+  },
+  {
+   "id": "food_boohung",
+   "name_ko": "부흥횟집",
+   "name_en": "Buheung Hoetjip (raw fish)",
+   "zone": "mukho",
+   "type": "식당",
+   "lat": 37.55205,
+   "lon": 129.117904,
+   "stay_min": 60,
+   "styles": [
+    "맛집",
+    "바다 보기"
+   ],
+   "facilities": [],
+   "intro_ko": "묵호항 앞 횟집이에요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 일출로 93",
+   "phone": "033-531-5209",
+   "indoor": true,
+   "sample": false,
+   "segments": [
+    {
+     "name": "주차·도로 → 입구",
+     "grade": "G",
+     "note": "출입구까지 턱 없음, 장애인 주차 2대",
+     "source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+     "checked_at": "2026-11-17"
+    }
+   ],
+   "coord_source": "카카오 장소 검색",
+   "table": "입식",
+   "parking_easy": true,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "장애인 주차 2대, 입구 턱이 없고 의자식 테이블이 있어요.",
+   "tip_en": "2 accessible parking spaces, step-free entrance, chair tables.",
+   "wheelchair": "가능",
+   "walk_load": "평지"
+  },
+  {
+   "id": "food_imgye",
+   "name_ko": "임계한우타운",
+   "name_en": "Imgye Hanwoo Town (beef)",
+   "zone": "cheongok",
+   "type": "식당",
+   "lat": 37.533591,
+   "lon": 129.115174,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [],
+   "intro_ko": "한우 고깃집이에요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 평원1길 120",
+   "phone": "033-531-7553",
+   "indoor": true,
+   "sample": false,
+   "segments": [
+    {
+     "name": "주차·도로 → 입구",
+     "grade": "G",
+     "note": "출입구까지 경사로, 주출입구 경사로",
+     "source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+     "checked_at": "2026-11-17"
+    }
+   ],
+   "coord_source": "카카오 장소 검색",
+   "table": "입식",
+   "parking_easy": null,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "출입구까지 경사로가 있고 입식 테이블이 있어요.",
+   "tip_en": "Ramp to the entrance; chair-height tables.",
+   "wheelchair": "가능",
+   "walk_load": "평지"
+  },
+  {
+   "id": "cafe_bakery_dh",
+   "name_ko": "동해제빵소",
+   "name_en": "Donghae Bakery",
+   "zone": "cheongok",
+   "type": "카페",
+   "lat": 37.521376,
+   "lon": 129.117964,
+   "stay_min": 40,
+   "styles": [
+    "카페"
+   ],
+   "facilities": [],
+   "intro_ko": "천곡의 베이커리예요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 한섬로 126-1",
+   "phone": "070-7761-2966",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "카카오 장소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "보조견 동반이 가능해요. 휠체어 출입 정보는 아직 없어요.",
+   "tip_en": "Assistance dogs welcome; wheelchair access not yet recorded.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "cafe_clam",
+   "name_ko": "베이커리카페 클램",
+   "name_en": "Bakery Cafe Clam",
+   "zone": "mangsang",
+   "type": "카페",
+   "lat": 37.594094,
+   "lon": 129.088567,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "바다 보기"
+   ],
+   "facilities": [],
+   "intro_ko": "망상해변 근처 베이커리 카페예요.",
+   "intro_en": "",
+   "intro_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "address": "강원특별자치도 동해시 동해대로 6270-37",
+   "phone": "",
+   "indoor": true,
+   "sample": false,
+   "segments": [
+    {
+     "name": "주차·도로 → 입구",
+     "grade": "G",
+     "note": "출입통로 넓음, 경사로 있음 (여닫이문)",
+     "source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+     "checked_at": "2026-11-17"
+    }
+   ],
+   "coord_source": "카카오 장소 검색",
+   "table": "입식",
+   "parking_easy": null,
+   "access_source": "한국관광공사 무장애 여행정보 (KorWithService2, 2026-11 조회)",
+   "tip_ko": "출입통로가 넓고 경사로가 있어요. 의자식 테이블, 유아용 의자가 있어요.",
+   "tip_en": "Wide entrance with a ramp, chair tables, high chairs for babies.",
+   "wheelchair": "가능",
+   "walk_load": "평지"
+  },
+  {
+   "id": "cafe_karamel",
+   "name_ko": "카라멜 스테이션",
+   "name_en": "Karamel Station",
+   "zone": "mukho",
+   "type": "카페",
+   "lat": 37.549609,
+   "lon": 129.107541,
+   "stay_min": 40,
+   "styles": [
+    "카페"
+   ],
+   "facilities": [],
+   "intro_ko": "묵호의 옛 여관을 고친 카페로 콘수수 커피가 대표 메뉴예요.",
+   "intro_en": "",
+   "intro_source": "카카오 장소 검색 (이름·주소·전화)",
+   "address": "강원특별자치도 동해시 발한로 219-11",
+   "phone": "",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "카카오 장소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "옛 여관을 고친 호텔 1층·지하 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Cafe in a renovated old inn; accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "food_jangsu",
+   "name_ko": "장수돌짜장",
+   "name_en": "Jangsu Stone-pot Jjajang",
+   "zone": "mukho",
+   "type": "식당",
+   "lat": 37.568168,
+   "lon": 129.117403,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [],
+   "intro_ko": "돌판 짜장과 가리비짬뽕으로 알려진 어달해변 근처 중식당이에요.",
+   "intro_en": "",
+   "intro_source": "카카오 장소 검색 (이름·주소·전화)",
+   "address": "강원특별자치도 동해시 일출로 303",
+   "phone": "033-535-1118",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "카카오 장소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "접근성은 아직 확인 전이에요.",
+   "tip_en": "Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "nobong",
+   "name_ko": "노봉해변",
+   "name_en": "Nobong Beach",
+   "zone": "mangsang",
+   "type": "관광지",
+   "lat": 37.587502,
+   "lon": 129.100511,
+   "stay_min": 40,
+   "styles": [
+    "바다 보기"
+   ],
+   "facilities": [
+    "주차장"
+   ],
+   "intro_ko": "망상해변 아래의 아담한 해변이에요. 백사장 350m, 모래가 곱고 물이 얕아 가족끼리 조용히 쉬기 좋아요.",
+   "intro_en": "A small beach just south of Mangsang: 350 m of fine sand and shallow water, quiet and family-friendly.",
+   "intro_source": "팀 작성 (한국관광공사 여행정보 기반 안내 참고) · 좌표: 카카오 장소 검색",
+   "address": "강원특별자치도 동해시 망상동",
+   "phone": "033-530-2478",
+   "indoor": false,
+   "sample": false,
+   "segments": [],
+   "coord_source": "카카오 장소 검색",
+   "hours": "상시 개방",
+   "fee": "무료",
+   "open": "00:00",
+   "close": "24:00",
+   "hours_source": "공개 안내",
+   "tip_ko": "",
+   "tip_en": ""
+  },
+  {
+   "id": "hapyeong",
+   "name_ko": "하평해변",
+   "name_en": "Hapyeong Beach",
+   "zone": "cheongok",
+   "type": "관광지",
+   "lat": 37.533522,
+   "lon": 129.116389,
+   "stay_min": 40,
+   "styles": [
+    "바다 보기"
+   ],
+   "facilities": [
+    "주차장"
+   ],
+   "intro_ko": "해송 숲에 둘러싸인 200m 길이의 둥근 해변이에요. 갯바위가 파도를 막아 주고, 바위에서 게와 따개비를 볼 수 있어요.",
+   "intro_en": "A round 200 m beach backed by pines; rocks break the waves and you can spot crabs and barnacles.",
+   "intro_source": "팀 작성 (한국관광공사 여행정보 기반 안내 참고) · 좌표: 카카오 장소 검색",
+   "address": "강원특별자치도 동해시 평릉동 40-1",
+   "phone": "033-530-2580",
+   "indoor": false,
+   "sample": false,
+   "segments": [],
+   "coord_source": "카카오 장소 검색",
+   "hours": "상시 개방",
+   "fee": "무료",
+   "open": "00:00",
+   "close": "24:00",
+   "hours_source": "공개 안내",
+   "tip_ko": "",
+   "tip_en": ""
   }
  ]
 }
