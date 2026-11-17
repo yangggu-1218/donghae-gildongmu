@@ -77,7 +77,7 @@ class Session:
         return {"saved": self.c.model_dump(include={"who", "move", "style", "days", "start", "rain"})}
 
     def make_course(self):
-        rain = bool(self.c.rain)
+        rain = engine.rain_for(self.c)
         res = engine.plan(self.places, self.c, rain)
         return self._course_result(res)
 

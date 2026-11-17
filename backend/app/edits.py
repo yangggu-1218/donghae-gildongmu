@@ -309,13 +309,13 @@ def run(places: dict[str, Place], c: Conditions, ids: list[str], text: str = "",
     c2 = r["conditions"]
     if not r["changed"] and ids:
         _keep(c2, ids, places, set())          # 코스는 그대로 (안내만)
-    res = engine.plan(places, c2, bool(c2.rain))
+    res = engine.plan(places, c2, engine.rain_for(c2))
     reply, changed = r["reply"], r["changed"]
     if r["action"] == "add" and changed and r["target"] not in [s.id for s in res.stops]:   # 넣지 못했으면 그대로 두고 이유를 말한다
         p = places[r["target"]]
         c2 = c.model_copy(deep=True)
         _keep(c2, ids, places, set())
-        res, changed = engine.plan(places, c2, bool(c2.rain)), False
+        res, changed = engine.plan(places, c2, engine.rain_for(c2)), False
         hard = "계단·경사가 있어" if p.walk_load in ("급경사", "완만한경사") or any((sg.steps or 0) > 0 for sg in p.segments) else "길이 험해"
         reply = (f"{josa(p.name_ko, '은는')} {hard} 지금 이동 조건({', '.join(c.move) or '없음'})으로는 넣지 못했어요. 코스는 그대로 뒀어요."
                  if c.lang == "ko" else f"I couldn't add {p.name_en or p.name_ko} with your mobility needs. The course is unchanged.")

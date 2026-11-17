@@ -1,6 +1,6 @@
 """공공 API 중계: 안심(병원·약국·응급실)과 날씨. 키는 서버에만 두고, 웹 화면은 이 서버만 부른다.
 엔드포인트 이름은 공공데이터포털 각 API의 활용가이드(참고문서)로 한 번 더 확인할 것."""
-import math, os, datetime as dt
+import math, os, sys, time, datetime as dt
 import xml.etree.ElementTree as ET
 import httpx
 
@@ -91,6 +91,59 @@ def _base(now: dt.datetime) -> tuple[str, str]:
     else:
         h = hours[-1]
     return t.strftime("%Y%m%d"), f"{h:02d}00"
+
+
+# ---------- 16일 일별 예보 (키 없이 쓰는 Open-Meteo: 기상청 등 여러 나라 수치예보 모델을 합친 예보) ----------
+OM = "https://api.open-meteo.com/v1/forecast"
+_FC: dict = {"t": 0.0, "data": None, "fail": 0.0}
+RAIN_CODES = set(range(51, 68)) | {80, 81, 82, 95, 96, 99}
+SNOW_CODES = set(range(71, 78)) | {85, 86}
+KIND = [((0,), "맑음", "Clear", "sun"), ((1, 2), "구름 조금", "Partly cloudy", "part"), ((3,), "흐림", "Cloudy", "cloud"),
+        ((45, 48), "안개", "Fog", "fog"), (tuple(range(51, 58)), "이슬비", "Drizzle", "rain"), (tuple(range(61, 68)), "비", "Rain", "rain"),
+        (tuple(range(71, 78)) + (85, 86), "눈", "Snow", "snow"), ((80, 81, 82), "소나기", "Showers", "rain"), ((95, 96, 99), "뇌우", "Thunderstorm", "storm")]
+
+
+def _kind(code: int) -> tuple[str, str, str]:
+    for codes, ko, en, icon in KIND:
+        if code in codes:
+            return ko, en, icon
+    return "알 수 없음", "Unknown", "cloud"
+
+
+def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
+    """동해시 16일 일별 예보. 1시간 동안 기억하고, 실패하면 10분 동안 다시 부르지 않는다."""
+    now = time.time()
+    if _FC["data"] and now - _FC["t"] < 3600:
+        return _FC["data"]
+    if now - _FC["fail"] < 600:
+        return None
+    try:
+        r = httpx.get(OM, params={"latitude": lat, "longitude": lon, "timezone": "Asia/Seoul", "forecast_days": 16,
+                                  "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max"},
+                      timeout=4)
+        j = r.json()["daily"]
+        days = []
+        for i, d in enumerate(j["time"]):
+            code, pop, mm = int(j["weather_code"][i] or 0), int(j["precipitation_probability_max"][i] or 0), float(j["precipitation_sum"][i] or 0)
+            ko, en, icon = _kind(code)
+            wet = code in RAIN_CODES or code in SNOW_CODES
+            days.append({"date": d, "code": code, "ko": ko, "en": en, "icon": icon, "pop": pop, "mm": round(mm, 1),
+                         "tmax": round(j["temperature_2m_max"][i]), "tmin": round(j["temperature_2m_min"][i]),
+                         "wind": round(j["wind_speed_10m_max"][i] / 3.6, 1),          # m/s
+                         "rain": pop >= 60 or mm >= 5 or (wet and pop >= 40)})
+        data = {"source": "Open-Meteo 일별 예보 (기상청 등 수치예보 모델 종합)", "updated": dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).isoformat(timespec="minutes"), "days": days}
+        _FC.update(t=now, data=data)
+        return data
+    except Exception as e:
+        print("[forecast]", e, file=sys.stderr)
+        _FC["fail"] = now
+        return None
+
+
+def rain_on(date_iso: str) -> bool:
+    fc = forecast()
+    d = next((x for x in (fc or {}).get("days", []) if x["date"] == date_iso), None)
+    return bool(d and d["rain"])
 
 
 def rain_today(lat: float = 37.5245, lon: float = 129.1143) -> dict:

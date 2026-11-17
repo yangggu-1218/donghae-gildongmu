@@ -98,6 +98,7 @@ class Conditions(BaseModel):
     flat_only: bool = False              # 평지만
     lunch: Optional[str] = None          # 이어서 쓸 점심 식당
     skip_lunch: bool = False             # 식사를 코스에서 뺌
+    weather_pref: str = ""               # 날씨 고르기: "" = 예보 보고 자동 / "실내" / "실외"
 
 
 class Stop(BaseModel):

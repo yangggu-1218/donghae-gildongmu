@@ -82,8 +82,7 @@ def course(c: Conditions):
         c.move = sorted(set(c.move) | set(extra.get("move", [])) - {"없어요"})
         if c.rain is None and extra.get("rain"):
             c.rain = True
-    today = engine.trip_date(Conditions()).isoformat()
-    rain = c.rain if c.rain is not None else (public_apis.rain_today()["rain"] if (c.date or today) == today else False)
+    rain = engine.rain_for(c)
     result = engine.plan(PLACES, c, rain)
     stops = [{"id": s.id, "name": PLACES[s.id].name_ko if c.lang == "ko" else PLACES[s.id].name_en,
               "grade": s.grade, "facilities": PLACES[s.id].facilities,
@@ -100,7 +99,7 @@ def edit(body: dict):
     빼기·바꾸기·날짜/시간 변경 모두 조건만 바꾸고 엔진이 처음부터 다시 계산한다(영업시간 재검사)."""
     c, result, reply, act, target, changed = edits.run(PLACES, Conditions(**body.get("conditions", {})), body.get("course_ids", []),
                                                        (body.get("text") or "")[:300], body.get("action") or "", body.get("target"))
-    out = course_payload(result, c, bool(c.rain))
+    out = course_payload(result, c, engine.rain_for(c))
     out.update({"reply": reply, "action": act, "target": target, "changed": changed, "via": "rule"})
     return out
 
@@ -119,7 +118,8 @@ def course_payload(result, c: Conditions, rain: bool, summary: str = "") -> dict
             p = PLACES[s.id]
             s.why = p.tip_ko if c.lang == "ko" else (p.tip_en or p.tip_ko)
     on_day = public_data.events_on(result.date)
-    return {"course": result.model_dump(), "rain": rain, "summary": summary, "conditions": c.model_dump(),
+    wday = next((d for d in (public_apis.forecast() or {}).get("days", []) if d["date"] == result.date), None)
+    return {"course": result.model_dump(), "rain": rain, "summary": summary, "conditions": c.model_dump(), "weather": wday,
             "extras": {s.id: {"phone": PLACES[s.id].phone, "address": PLACES[s.id].address, **extras(PLACES[s.id], c.lang),
                               **stop_info(PLACES[s.id], c.lang, result.weekday, engine._mins(s.arrive))} for s in result.stops},
             "stay": stay_hint(result, c), "events": on_day or public_data.events()["upcoming"][:3], "events_on_day": bool(on_day),
@@ -215,9 +215,9 @@ def chat(body: dict):
     elif edit.action == "remove" and edit.place_id:
         c.wish = [i for i in ids if i != edit.place_id]
         PLACES_wo = {k: v for k, v in PLACES.items() if k != edit.place_id}
-        res = engine.plan(PLACES_wo, c, bool(c.rain))
+        res = engine.plan(PLACES_wo, c, engine.rain_for(c))
         return {"edit": edit.model_dump(), "course": res.model_dump(), "conditions": c.model_dump()}
-    res = engine.plan(PLACES, c, bool(c.rain))
+    res = engine.plan(PLACES, c, engine.rain_for(c))
     return {"edit": edit.model_dump(), "course": res.model_dump(), "conditions": c.model_dump()}
 
 
@@ -236,7 +236,7 @@ def talk(body: dict):
         lang = r["conditions"].get("lang", "ko")
         c = Conditions(**r["conditions"])
         res = engine.Course(**r["course"])
-        pl = course_payload(res, c, bool(c.rain))
+        pl = course_payload(res, c, engine.rain_for(c))
         r.update({k: pl[k] for k in ("extras", "stay", "events", "events_on_day", "move")})
     return r
 
@@ -272,7 +272,13 @@ def lodging(zone: str = "", limit: int = 20):
 
 @app.get("/api/weather")
 def weather():
-    return public_apis.rain_today()
+    """오늘과 앞으로 16일 예보. 일별 예보를 못 받으면 기상청 단기예보(오늘)로 대신한다."""
+    fc = public_apis.forecast()
+    if not fc:
+        return public_apis.rain_today()
+    today = engine.trip_date(Conditions()).isoformat()
+    t = next((d for d in fc["days"] if d["date"] == today), fc["days"][0])
+    return {"sample": False, "rain": t["rain"], "today": t, "days": fc["days"], "source": fc["source"], "updated": fc["updated"]}
 
 
 # ---------------- 한국관광공사 빅데이터 ----------------

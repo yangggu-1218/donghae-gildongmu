@@ -97,8 +97,12 @@ def hhmm(m: int) -> str:
 def score(p: Place, c: Conditions, rain: bool) -> float:
     s = 0.0
     s += 2.0 * len(set(p.styles) & set(c.style))
-    if rain:
+    if c.weather_pref == "실외":         # 바깥을 직접 고르면 예보보다 그 선택을 따른다
+        s += 1.5 if not p.indoor else -1.0
+    elif rain or c.weather_pref == "실내":   # 비 예보이거나 실내를 골랐으면 실내 먼저
         s += 3.0 if p.indoor else -2.0
+    if p.sample:                         # 예시 장소는 실제 장소가 없을 때만
+        s -= 4.0
     if p.id in c.wish:
         s += 10.0
     if any(seg.source == "현장 답사" for seg in p.segments):
@@ -135,6 +139,14 @@ def weekday_of(d: _dt.date) -> int:
 def _mins(hm: str) -> int:
     h, m = hm.split(":")
     return int(h) * 60 + int(m)
+
+
+def rain_for(c: Conditions) -> bool:
+    """비 판단: 사용자가 말한 값이 먼저, 없으면 그 날짜의 일별 예보."""
+    if c.rain is not None:
+        return bool(c.rain)
+    from . import public_apis
+    return public_apis.rain_on(trip_date(c).isoformat())
 
 
 def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
