@@ -258,6 +258,9 @@ export function makeApi(DATA) {
       if ((p.closed_day_nums || []).includes(wd) || tmp) {
         ok.splice(ok.indexOf(p), 1);
         if (c.must.includes(p.id) || c.wish.includes(p.id) || p.id === c.lunch) skipped.push({ id: p.id, name: p.name_ko, reason: tmp ? `임시 휴무(${tmp.title})` : `${WD_KO[wd]}요일 휴무` });
+      } else if ((p.market_days || []).length && !p.market_days.includes(Number(day.slice(8)) % 10)) {   // 오일장: 장날이 아니면 빼기
+        ok.splice(ok.indexOf(p), 1);
+        if (c.must.includes(p.id) || c.wish.includes(p.id)) skipped.push({ id: p.id, name: p.name_ko, reason: `장날(${p.market_days.join("·")}일)이 아니에요` });
       }
     }
     const needTable = c.meal.includes("입식");
