@@ -16,7 +16,7 @@ export type Conditions = {
   flat_only?: boolean; lunch?: string | null; skip_lunch?: boolean; weather_pref?: "" | "실내" | "실외";
 };
 // 일별 예보 하루 (backend/app/public_apis.py forecast)
-export type WxDay = { date: string; code: number; ko: string; en: string; icon: string; pop: number; mm: number; tmax: number; tmin: number; wind: number; rain: boolean };
+export type WxDay = { date: string; code: number; ko: string; en: string; icon: string; pop: number | null; mm: number; tmax: number; tmin: number; wind: number | null; rain: boolean };
 export const WX_ICON: Record<string, string> = { sun: "☀️", part: "⛅", cloud: "☁️", fog: "🌫️", rain: "🌧️", snow: "❄️", storm: "⛈️" };
 type Near = { name: string; dist_m?: number; tel?: string; hours?: string; open_now?: boolean; spaces?: number; own?: boolean } | null;
 export type Nearby = { parking: Near; charger: Near & { spot?: string; weekday_hours?: string }; info_center: Near; medical: Record<"약국" | "의원" | "응급실", Near> };
