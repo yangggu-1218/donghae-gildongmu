@@ -69,7 +69,7 @@ export default function Page() {
   const [wx, setWx] = useState<WxDay[]>([]);
   useEffect(() => { fetch("/api/weather").then((r) => r.json()).then((j) => setWx(j.days || [])).catch(() => {}); }, []);
   const wxOf = (d?: string | null) => wx.find((x) => x.date === d) || null;
-  const wxText = (w: WxDay) => `${WX_ICON[w.icon] || ""} ${lang === "ko" ? w.ko : w.en} · ${lang === "ko" ? "비" : "rain"} ${w.pop}% · ${w.tmin}~${w.tmax}°C`;
+  const wxText = (w: WxDay) => `${WX_ICON[w.icon] || ""} ${lang === "ko" ? w.ko : w.en} · ${w.pop != null ? `${lang === "ko" ? "비" : "rain"} ${w.pop}%` : `${lang === "ko" ? "강수" : "rain"} ${w.mm}mm`} · ${w.tmin}~${w.tmax}°C`;
   const [toast, setToast] = useState<{ text: string; act?: { label: string; fn: () => void } } | null>(null);
   const toastT = useRef<number>(0);
   const showToast = (text: string, act?: { label: string; fn: () => void }) => {
