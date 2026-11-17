@@ -11,9 +11,10 @@ import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuideP
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
 import { api, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON } from "@/lib/api";
+import { Brief, BRIEF_ICON, evidence, ruleBrief } from "@/lib/brief";
 
 type Lang = "ko" | "en";
-type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule" };
+type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule"; got?: string[]; img?: string; photo?: any };
 type Hint = { stay: any; move: any; events: any[]; onDay: boolean };
 type Snap = { course: Course; extras: Record<string, Extra>; cond: Conditions; hint: Hint | null };
 // 작업2: 큰 버튼 질문 (날짜·시각 → 누구와 → 걸음 → 식사 → 취향)
@@ -69,6 +70,9 @@ export default function Page() {
   const [wx, setWx] = useState<WxDay[]>([]);
   useEffect(() => { fetch("/api/weather").then((r) => r.json()).then((j) => setWx(j.days || [])).catch(() => {}); }, []);
   const wxOf = (d?: string | null) => wx.find((x) => x.date === d) || null;
+  // 동이 브리핑: 코스가 바뀌면 규칙 카드를 바로 보여 주고, AI가 같은 근거로 정리한 카드가 오면 바꿔 끼운다
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [briefBusy, setBriefBusy] = useState(false);
   const wxText = (w: WxDay) => `${WX_ICON[w.icon] || ""} ${lang === "ko" ? w.ko : w.en} · ${w.pop != null ? `${lang === "ko" ? "비" : "rain"} ${w.pop}%` : `${lang === "ko" ? "강수" : "rain"} ${w.mm}mm`} · ${w.tmin}~${w.tmax}°C`;
   const [toast, setToast] = useState<{ text: string; act?: { label: string; fn: () => void } } | null>(null);
   const toastT = useRef<number>(0);
@@ -218,8 +222,7 @@ export default function Page() {
     try {
       const r = await api.course(c);
       setHist([]); applyRes(r);
-      const skip = r.course.skipped.length ? " " + r.course.notes.filter((n) => r.course.skipped.some((s) => n.startsWith(s.name))).join(" ") : "";
-      say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length }) + skip + (r.summary ? " " + r.summary : "") });
+      say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length, t: r.course.back_at }) });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false); setStep(Q.length + 1);
   }
@@ -239,15 +242,47 @@ export default function Page() {
   async function chat(msg: string) {
     say({ me: true, text: msg }); setBusy(true);
     const before = course?.stops.map((s) => s.id) || [];
+    const before0 = baseCond();
     try {
       const r = await api.talk({ message: msg, history: log.slice(-10), conditions: baseCond(),
         state: { who_known: !!ans.who || talkState.who_known, move_known: !!ans.move || talkState.move_known },
         course_ids: before });
       setTalkState(r.state);
+      const got = r.conditions ? understood(before0, r.conditions) : [];
       if (r.course) { if (course) snapshot(); applyRes(r, before); setStep(Q.length + 1); }
       else { setCond(r.conditions); if (!course) setStep((n) => Math.max(n, r.state.move_known ? 3 : r.state.who_known ? 2 : n)); }
       if (/충전|주차|charger|parking/i.test(msg) && course) setShowNear(true);
-      say({ pose: r.pose, text: r.reply, cards: r.cards, via: r.via });
+      say({ pose: r.pose, text: r.reply, cards: r.cards, via: r.via, got });
+    } catch { say({ pose: "worry", text: t("error.server") }); }
+    setBusy(false);
+  }
+  // 말로 한 내용에서 AI·규칙이 알아낸 조건을 칩으로 보여 준다 (무엇을 알아들었는지 바로 확인)
+  function understood(a: Conditions, b: Conditions): string[] {
+    const ko = lang === "ko", o = (x: string) => t(`opt.${x}`), out: string[] = [];
+    const same = (x: any, y: any) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
+    if (!same(a.who, b.who)) out.push(`${ko ? "누구와" : "Who"} · ${o(b.who)}`);
+    if (!same(a.move, b.move)) out.push(`${ko ? "걸음" : "Walking"} · ${(b.move || []).map(o).join(", ") || (ko ? "문제 없음" : "fine")}`);
+    if (!same(a.meal, b.meal) && (b.meal || []).length) out.push(`${ko ? "식사" : "Meals"} · ${(b.meal || []).map(o).join(", ")}`);
+    if (!same(a.style, b.style) && (b.style || []).length) out.push(`${ko ? "취향" : "Style"} · ${b.style.map(o).join(", ")}`);
+    if (!same(a.date, b.date) && b.date) out.push(`${ko ? "날짜" : "Date"} · ${dateLabel(b.date, lang)}(${wdName(new Date(b.date + "T00:00:00").getDay(), lang)})`);
+    if (!same(a.start_time, b.start_time) && b.start_time) out.push(`${ko ? "출발" : "Start"} · ${b.start_time}`);
+    if (!same(a.days, b.days)) out.push(o(b.days));
+    if (!same(a.start, b.start)) out.push(`${ko ? "출발지" : "From"} · ${o(b.start)}`);
+    if (!same(a.weather_pref, b.weather_pref) && b.weather_pref) out.push(`${ko ? "날씨" : "Weather"} · ${b.weather_pref}`);
+    if (!same(a.rain, b.rain) && b.rain) out.push(ko ? "비 오는 날" : "Rainy day");
+    for (const w of (b.wish || []).filter((x) => !(a.wish || []).includes(x))) out.push(`${ko ? "꼭 갈 곳" : "Must-see"} · ${name(w)}`);
+    return out.slice(0, 6);
+  }
+  // 사진으로 물어보기: 입구·길 사진 → AI가 이 사람 조건(휠체어·유모차 등) 기준으로 지나갈 수 있는지 카드로 답한다
+  async function askPhoto(f: File) {
+    const url = URL.createObjectURL(f);
+    say({ me: true, text: lang === "ko" ? "이 사진 속 길, 지나갈 수 있을까요?" : "Can I get through here?", img: url });
+    setBusy(true);
+    try {
+      const fd = new FormData(); fd.append("photo", f); fd.append("move", (cond.move || []).join(",")); fd.append("lang", lang);
+      const r = await fetch("/api/photo-check", { method: "POST", body: fd }).then((x) => x.json());
+      if (r?.by === "ai") say({ pose: r.verdict === "R" ? "worry" : r.verdict === "G" ? "happy" : "neutral", text: r.title, photo: r, via: "llm" });
+      else say({ pose: "worry", text: lang === "ko" ? "지금은 사진을 볼 수 없어요. AI가 연결된 서버에서만 돼요. 잠시 뒤 다시 보내 주세요." : "I can't read photos right now (needs the AI server). Please try again later." });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false);
   }
@@ -297,6 +332,24 @@ export default function Page() {
       </div>
     );
   };
+  useEffect(() => {
+    if (!course) { setBrief(null); return; }
+    const crowd: Record<string, number | null> = {};
+    for (const s of course.stops) crowd[s.id] = crowdMap[s.id]?.find((c) => c.date === course.date.replaceAll("-", ""))?.rate ?? null;
+    const ev = { course, cond, extras, wx: wxOf(course.date), crowd, name, lang };
+    setBrief(ruleBrief(ev));
+    const key = course.stops.map((x) => x.id).join(",") + course.date + lang + (cond.weather_pref || "");
+    setBriefBusy(true);
+    let live = true;
+    const tm = window.setTimeout(() => {
+      fetch("/api/brief", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(evidence(ev)) })
+        .then((r) => r.json()).then((b) => { if (live && b?.by === "ai") setBrief({ ...b, by: "ai" }); })
+        .catch(() => {}).finally(() => { if (live) setBriefBusy(false); });
+    }, 300);
+    return () => { live = false; window.clearTimeout(tm); void key; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course, wx, crowdMap, lang, cond.weather_pref]);
+
   // 코스를 만들기 전 오른쪽: 지금까지 고른 조건이 한눈에 채워지는 카드 (예약 사이트의 '선택 요약'처럼)
   const tripCard = () => {
     const o = (x: string) => t(`opt.${x}`);
@@ -384,8 +437,11 @@ export default function Page() {
           </ol>
           <div className="chat-log" ref={logRef}>
             {log.map((m, i) => m.me
-              ? <div key={i} className="me"><span>{m.text}</span></div>
-              : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}</Dongi>{m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
+              ? <div key={i} className="me"><span>{m.img && <img className="me-img" src={m.img} alt={lang === "ko" ? "보낸 사진" : "Sent photo"} />}{m.text}</span></div>
+              : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}
+                  {m.got && m.got.length > 0 && <span className="got"><small>{lang === "ko" ? "이렇게 이해했어요" : "I understood"}</small>{m.got.map((g) => <span key={g} className="chip sm">{g}</span>)}</span>}
+                  {m.photo && <PhotoCard p={m.photo} t={t} lang={lang} />}</Dongi>
+                {m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
             {busy && <p className="typing" aria-live="polite">{lang === "ko" ? "동이가 생각하는 중…" : "Dongi is thinking…"}</p>}
           </div>
           <div className="chat-dock">
@@ -425,6 +481,10 @@ export default function Page() {
               <button className="chip plain" onClick={() => setWhenOpen(false)}>{t("common.close")}</button></>}
             </div>
             <form className="composer" onSubmit={(e) => { e.preventDefault(); if (input.trim()) { chat(input.trim()); setInput(""); } }}>
+              <label className="chip cam" title={lang === "ko" ? "사진으로 물어보기: 입구·길 사진을 보내면 지나갈 수 있는지 봐 드려요" : "Ask with a photo"}>
+                <span aria-hidden="true">📷</span><span className="sr-only">{lang === "ko" ? "사진으로 물어보기" : "Ask with a photo"}</span>
+                <input type="file" accept="image/*" capture="environment" hidden disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) askPhoto(f); }} />
+              </label>
               <input aria-label={t("chat.ph")} placeholder={step > Q.length ? t("chat.ph") : t("talk.ph")} value={input} onChange={(e) => setInput(e.target.value)} />
               <button className="chip go" disabled={busy || !input.trim()}>{t("chat.send")}</button>
             </form>
@@ -441,12 +501,6 @@ export default function Page() {
               <div className="tl-head">
                 <div>
                   <p className="tl-date">{t("tl.head", { d: dateLabel(course.date, lang), w: wdName(course.weekday, lang), s: course.start_time })} · {startName}</p>
-                  {wxOf(course.date) && <p className={`tl-wx${wxOf(course.date)!.rain ? " wet" : ""}`}>{wxText(wxOf(course.date)!)}
-                    {(cond.weather_pref === "실내" || (!cond.weather_pref && wxOf(course.date)!.rain)) ? (lang === "ko" ? " · 실내를 먼저 넣었어요" : " · indoor first")
-                      : cond.weather_pref === "실외" ? (lang === "ko" ? " · 바깥 위주로 짰어요" : " · outdoor first") : ""}
-                    {!wxOf(course.date)!.rain && cond.weather_pref !== "실외" && <button className="chip sm" onClick={() => { setCond({ ...cond, weather_pref: "실내" }); edit("indoor", null, t("qc.indoor")); }}>{lang === "ko" ? "실내로 바꾸기" : "Make it indoor"}</button>}
-                    {wxOf(course.date)!.rain && cond.weather_pref !== "실외" && <button className="chip sm" onClick={() => { snapshot(); makeWith({ ...cond, lang, weather_pref: "실외", rain: false }, lang === "ko" ? "비 와도 바깥 위주로 짜 줘" : "Outdoor anyway"); }}>{lang === "ko" ? "그래도 바깥으로" : "Outdoor anyway"}</button>}
-                  </p>}
                   <p className="muted">{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
                     : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</p>
                 </div>
@@ -455,12 +509,25 @@ export default function Page() {
                   <button className="chip" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
                 </div>
               </div>
+              {brief && (
+                <section className={`brief${briefBusy && brief.by === "rule" ? " pending" : ""}`} aria-label={lang === "ko" ? "동이 브리핑" : "Dongi's briefing"}>
+                  <p className="brief-k"><img src="/dongi/happy.webp" alt="" />{lang === "ko" ? "동이 브리핑" : "Dongi's briefing"}
+                    {brief.by === "ai" ? <span className="via via-llm">{lang === "ko" ? "AI가 정리했어요" : "Summarized by AI"}</span>
+                      : briefBusy ? <span className="via via-rule">{lang === "ko" ? "AI가 정리하는 중…" : "AI is summarizing…"}</span> : null}</p>
+                  <h3>{brief.headline}</h3>
+                  {brief.fits.length > 0 && <ul className="fits">{brief.fits.map((f, i) => <li key={i}><span aria-hidden="true">{BRIEF_ICON[f.icon]}</span>{f.text}</li>)}</ul>}
+                  {brief.bring.length > 0 && <p className="bring"><b>{lang === "ko" ? "챙기세요" : "Bring"}</b>{brief.bring.map((b) => <span key={b} className="chip sm">{b}</span>)}</p>}
+                  {wxOf(course.date) && <p className="brief-act">
+                    {!wxOf(course.date)!.rain && cond.weather_pref !== "실외" && cond.weather_pref !== "실내" && <button className="chip sm" onClick={() => { setCond({ ...cond, weather_pref: "실내" }); edit("indoor", null, t("qc.indoor")); }}>{lang === "ko" ? "실내로 바꾸기" : "Make it indoor"}</button>}
+                    {(wxOf(course.date)!.rain || cond.weather_pref === "실내") && cond.weather_pref !== "실외" && <button className="chip sm" onClick={() => { snapshot(); makeWith({ ...cond, lang, weather_pref: "실외", rain: false }, lang === "ko" ? "바깥 위주로 짜 줘" : "Outdoor please"); }}>{lang === "ko" ? "바깥 위주로 바꾸기" : "Make it outdoor"}</button>}
+                  </p>}
+                </section>)}
               <KakaoMap pins={pins} />
               <div className="tl">
                 {course.stops.map((s, i) => (
                   <div key={s.id}>
                     <p className="muted tl-drive">{t("result.drive", { m: s.drive_min })}</p>
-                    <StopCard s={s} i={i} x={extras[s.id]} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
+                    <StopCard s={brief?.why[s.id] ? { ...s, why: brief.why[s.id] } : s} i={i} x={extras[s.id]} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
                       showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
                       onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
                       onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))}
@@ -634,5 +701,18 @@ function ReportBox({ stops, t }: { stops: { id: string; name: string }[]; t: (k:
       {res?.ok && !res.ai && <p className="muted">{t("rep.thanks")}</p>}
       {res?.error && <p className="muted">{t("error.server")}</p>}
     </form>
+  );
+}
+
+// 사진으로 물어보기 결과 카드: 결론(판정) · 보이는 것 · 이렇게 해 보세요
+function PhotoCard({ p, t, lang }: { p: any; t: (k: string, v?: Record<string, string | number>) => string; lang: string }) {
+  const ko = lang === "ko";
+  return (
+    <span className="pcheck">
+      {p.verdict && <span className={`badge g-${p.verdict}`}>{t(`grade.${p.verdict}`)}</span>}
+      {p.seen?.length > 0 && <span className="pc-row"><small>{ko ? "보이는 것" : "I see"}</small>{p.seen.map((x: any, i: number) => <span key={i} className="chip sm"><b>{x.type}</b>{x.detail ? ` ${x.detail}` : ""}</span>)}</span>}
+      {p.tips?.length > 0 && <span className="pc-tips">{p.tips.map((x: string, i: number) => <span key={i}>✓ {x}</span>)}</span>}
+      <small className="muted">{ko ? "사진으로 본 짐작이에요. 현장에서 한 번 더 확인해 주세요." : "A guess from the photo. Please double-check on site."}</small>
+    </span>
   );
 }

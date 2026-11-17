@@ -662,3 +662,28 @@ html { scroll-padding-top: calc(var(--hdr, 76px) + 8px); }
 .wline.wet, .tl-wx.wet { color: var(--sea-deep); }
 .tl-wx { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 600; }
 @media (max-width: 600px) { .wrow { flex-wrap: nowrap; overflow-x: auto; } .wrow > * { flex: none; } .dchip { min-height: 62px; } }
+
+/* ---- 동이 브리핑: 한 줄 요약 · 이렇게 맞췄어요 · 챙기세요 ---- */
+.brief { border: 1.5px solid var(--sea); border-radius: var(--r-m); background: var(--sea-soft); padding: 14px 16px; margin: 0 0 14px; }
+.brief.pending { border-style: dashed; }
+.brief-k { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; font-weight: 700; color: var(--sea-deep); font-size: .9em; }
+.brief-k img { width: 30px; height: 30px; }
+.brief-k .via { margin: 0; }
+.brief h3 { margin: 6px 0 8px; font-size: 1.2em; line-height: 1.35; }
+.fits { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fits li { display: flex; gap: 10px; align-items: baseline; background: var(--surface); border-radius: var(--r-s); padding: 8px 12px; font-weight: 600; }
+.fits li span { flex: none; width: 1.4em; text-align: center; }
+.bring { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 0; }
+.bring b { margin-right: 4px; }
+.brief-act { margin: 10px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.brief-act:empty { display: none; }
+/* 대화: 알아들은 조건 칩, 보낸 사진, 사진 판독 카드 */
+.got { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.got small, .pc-row small { color: var(--muted); font-weight: 700; margin-right: 2px; width: 100%; }
+.me-img { display: block; max-width: 180px; max-height: 180px; border-radius: 10px; margin-bottom: 6px; object-fit: cover; }
+.pcheck { display: grid; gap: 8px; margin-top: 8px; }
+.pcheck > .badge { justify-self: start; }
+.pc-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pc-tips { display: grid; gap: 4px; font-weight: 600; }
+.chip.cam { flex: none; min-width: 48px; justify-content: center; cursor: pointer; font-size: 1.2em; padding: 0 12px; display: inline-flex; align-items: center; }
+.chip.cam:focus-within { outline: 3px solid var(--sun-deep); outline-offset: 2px; }
