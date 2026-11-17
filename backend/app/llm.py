@@ -21,13 +21,16 @@ _cache: dict[str, dict] = {}   # 데모 안정성: 같은 입력은 같은 답
 USAGE: dict[str, dict] = {}
 
 
+LAST_FAIL: dict = {}   # 작업별 마지막으로 못 읽은 AI 답 (점검용, 키·개인정보 없음)
+
+
 def count(task: str, ok: bool, tokens: int = 0):
     u = USAGE.setdefault(task, {"calls": 0, "ok": 0, "fallback": 0, "tokens": 0})
     u["calls"] += 1; u["ok" if ok else "fallback"] += 1; u["tokens"] += tokens
 
 
 def status() -> dict:
-    return {"connected": bool(API_KEY), "model": MODEL, "provider": "Anthropic Claude API", "tasks": USAGE,
+    return {"connected": bool(API_KEY), "model": MODEL, "provider": "Anthropic Claude API", "tasks": USAGE, "last_fail": LAST_FAIL,
             "runtime_features": ["대화형 동이(도구 호출)", "자유 입력 조건 해석", "말로 코스 수정", "추천 이유 생성",
                                  "제보 사진 분석(비전)", "무장애 메모 구조화"]}
 
@@ -72,6 +75,7 @@ def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None
         data = _first_json(text)
         if data is None:
             print(f"[llm] {task}: JSON을 못 읽음 (stop={out.get('stop_reason')}):", text[:300])
+            LAST_FAIL[task] = {"stop": out.get("stop_reason"), "head": text[:400], "tail": text[-200:]}
         count(task, data is not None, sum((out.get("usage") or {}).get(k, 0) for k in ("input_tokens", "output_tokens")))
         if data is not None:
             _cache[key] = data
