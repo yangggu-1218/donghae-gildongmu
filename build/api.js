@@ -153,7 +153,9 @@ export function makeApi(DATA) {
   const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   function score(p, c, rain) {
     let s = 2.0 * p.styles.filter((x) => c.style.includes(x)).length;
-    if (rain) s += p.indoor ? 3.0 : -2.0;
+    if (c.weather_pref === "실외") s += !p.indoor ? 1.5 : -1.0;
+    else if (rain || c.weather_pref === "실내") s += p.indoor ? 3.0 : -2.0;
+    if (p.sample) s -= 4.0;
     if (c.wish.includes(p.id)) s += 10.0;
     if (p.segments.some((seg) => seg.source === "현장 답사")) s += 1.0;
     if (["부모님과", "아이와"].includes(c.who) && p.styles.includes("체험")) s += 1.0;
@@ -540,11 +542,11 @@ export function makeApi(DATA) {
     const r = applyEdit(c, ids, text, action, target);
     let c2 = r.conditions;
     if (!r.changed && ids.length) keep(c2, ids, new Set());
-    let res = plan(PLACES, c2, !!c2.rain), reply = r.reply, changed = r.changed;
+    let res = plan(PLACES, c2, rainFor(c2)), reply = r.reply, changed = r.changed;
     if (r.action === "add" && changed && !res.stops.some((s) => s.id === r.target)) {
       const p = PLACES[r.target];
       c2 = JSON.parse(JSON.stringify(c)); keep(c2, ids, new Set());
-      res = plan(PLACES, c2, !!c2.rain); changed = false;
+      res = plan(PLACES, c2, rainFor(c2)); changed = false;
       const hard = (["급경사", "완만한경사"].includes(p.walk_load) || p.segments.some((sg) => (sg.steps || 0) > 0)) ? "계단·경사가 있어" : "길이 험해";
       reply = c.lang === "ko" ? `${josa(p.name_ko, "은는")} ${hard} 지금 이동 조건(${c.move.join(", ") || "없음"})으로는 넣지 못했어요. 코스는 그대로 뒀어요.`
         : `I couldn't add ${p.name_en || p.name_ko} with your mobility needs. The course is unchanged.`;
@@ -571,7 +573,7 @@ export function makeApi(DATA) {
 
   // ---------- main.py ----------
   const defaults = () => ({ who: "혼자", move: [], style: [], days: "당일", start: "동해역", memo: "", rain: null, wish: [], must: [], lang: "ko",
-    date: null, start_time: "10:00", meal: [], exclude: [], cap: null, rest: null, flat_only: false, lunch: null, skip_lunch: false });
+    date: null, start_time: "10:00", meal: [], exclude: [], cap: null, rest: null, flat_only: false, lunch: null, skip_lunch: false, weather_pref: "" });
   const cond = (c) => { const o = { ...defaults(), ...(c || {}) }; for (const k of ["move", "style", "wish", "must", "meal", "exclude"]) o[k] = o[k] || []; if (!o.start_time) o.start_time = "10:00"; return o; };
   const extras = (p, lang = "ko") => ({
     stories: stories(p.lat, p.lon), trail_info: trails(p.trails), info_center: p.lat != null ? (infoCenters(p.lat, p.lon, lang, 1)[0] || null) : null,
@@ -589,10 +591,14 @@ export function makeApi(DATA) {
     const ids = result.stops.map((s) => s.id), xy = STARTS[c.start];
     return { taxi: taxiAtStart(c.start), city_tour: cityTour(ids), rentals: rentalsNear(xy[0], xy[1]), mobility_center: c.move.includes("휠체어") ? mobilityCenter() : null };
   }
+  // ---------- 날씨: 화면이 Open-Meteo 일별 예보를 받아 넣어 준다 (데모에는 서버가 없음) ----------
+  let FC = null;
+  const setForecast = (days) => { FC = Array.isArray(days) ? days : null; };
+  const rainFor = (c) => (c.rain != null ? !!c.rain : !!((FC || []).find((d) => d.date === tripDate(c)) || {}).rain);
   function coursePayload(result, c, rain, summary = "") {
     for (const s of result.stops) if (!s.why) { const p = PLACES[s.id]; s.why = c.lang === "ko" ? p.tip_ko : (p.tip_en || p.tip_ko); }
     const onDay = eventsOn(result.date);
-    return { course: result, rain, summary, conditions: c,
+    return { course: result, rain, summary, conditions: c, weather: (FC || []).find((d) => d.date === result.date) || null,
       extras: Object.fromEntries(result.stops.map((s) => { const p = PLACES[s.id];
         return [s.id, { phone: p.phone, address: p.address, ...extras(p, c.lang), ...stopInfo(p, c.lang, result.weekday, mins(s.arrive)) }]; })),
       stay: stayHint(result, c), events: onDay.length ? onDay : events().upcoming.slice(0, 3), events_on_day: onDay.length > 0, move: moveHint(result, c) };
@@ -604,14 +610,14 @@ export function makeApi(DATA) {
       c.move = [...new Set([...c.move, ...ex.move])].filter((m) => m !== "없어요").sort();
       if (c.rain == null && ex.rain) c.rain = true;
     }
-    const rain = c.rain != null ? c.rain : false;
+    const rain = rainFor(c);
     const result = plan(PLACES, c, rain);
     for (const s of result.stops) s.why = c.lang === "ko" ? PLACES[s.id].tip_ko : PLACES[s.id].tip_en;
     return coursePayload(result, c, rain);
   }
   function edit(body) {
     const r = runEdit(cond(body.conditions), body.course_ids || [], (body.text || "").slice(0, 300), body.action || "", body.target || null);
-    return { ...coursePayload(r.res, r.c, !!r.c.rain), reply: r.reply, action: r.action, target: r.target, changed: r.changed, via: "rule" };
+    return { ...coursePayload(r.res, r.c, rainFor(r.c)), reply: r.reply, action: r.action, target: r.target, changed: r.changed, via: "rule" };
   }
 
   // ---------- talk.py 규칙 경로 ----------
@@ -647,7 +653,7 @@ export function makeApi(DATA) {
     const setRes = (res) => { crs = res; courseIds = res.stops.map((s) => s.id); };
     const result = (reply) => {
       const out = { reply, pose: crs ? "happy" : (reply.trimEnd().endsWith("?") ? "ask" : "neutral"), via: "rule", conditions: c, state, course: crs, cards };
-      if (crs) { const pl = coursePayload(crs, c, !!c.rain); for (const k of ["extras", "stay", "events", "events_on_day", "move"]) out[k] = pl[k]; }
+      if (crs) { const pl = coursePayload(crs, c, rainFor(c)); for (const k of ["extras", "stay", "events", "events_on_day", "move"]) out[k] = pl[k]; }
       return out; };
     const made = (again) => { const k = crs.stops.filter((s) => s.grade && s.grade !== "G").length;
       const dropped = crs.notes.filter((n) => n.includes("담아"));
@@ -692,7 +698,7 @@ export function makeApi(DATA) {
     if (RAIN.test(message)) c.rain = true;
     if (!state.who_known && !who && !courseIds.length) return result(L.ask_who);
     if (!state.move_known) return result(L.ask_move);
-    if (!courseIds.length || GO.test(low) || who || move.length || style.length) { setRes(plan(PLACES, c, !!c.rain)); return result(made(false)); }
+    if (!courseIds.length || GO.test(low) || who || move.length || style.length) { setRes(plan(PLACES, c, rainFor(c))); return result(made(false)); }
     return result(L.none);
   }
 
@@ -899,5 +905,5 @@ export function makeApi(DATA) {
     if (path === "/api/health") return { ok: true, demo: true, places: Object.keys(PLACES).length };
     throw new Error("404 " + path);
   }
-  return { handle, plan, talk, course, edit, parseDate, parseTime };
+  return { handle, plan, talk, course, edit, parseDate, parseTime, setForecast };
 }
