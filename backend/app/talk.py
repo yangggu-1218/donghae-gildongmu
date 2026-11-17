@@ -2,7 +2,7 @@
 - LLM 경로: Anthropic Messages API 도구 호출(tool use). 동이는 도구 결과에 있는 사실만 말한다.
 - 규칙 경로: 키가 없거나 LLM이 실패하면 같은 도구를 규칙으로 불러 대화를 이어 간다 (시연이 멈추지 않게).
 코스(장소·판정·시각)는 언제나 engine.plan 결과만 화면에 보낸다. LLM이 만든 코스는 쓰지 않는다."""
-import json, os, re
+import json, os, re, datetime as dt
 from pathlib import Path
 from typing import Callable
 
@@ -26,7 +26,11 @@ TOOLS = [
          "who": {"type": "string", "enum": WHO}, "move": {"type": "array", "items": {"type": "string", "enum": MOVE}},
          "move_none": {"type": "boolean"}, "style": {"type": "array", "items": {"type": "string", "enum": STYLE}},
          "days": {"type": "string", "enum": ["당일", "1박 2일"]}, "start": {"type": "string", "enum": ["동해역", "묵호역", "자가용"]},
-         "rain": {"type": "boolean"}, "memo": {"type": "string"}}}},
+         "rain": {"type": "boolean"}, "memo": {"type": "string"},
+         "date": {"type": "string", "description": "여행 날짜 YYYY-MM-DD. [현재 상태]의 today를 기준으로 '이번 주 금요일' 같은 말을 날짜로 바꾼다"},
+         "start_time": {"type": "string", "description": "출발 시각 HH:MM"},
+         "meal": {"type": "array", "items": {"type": "string", "enum": ["입식", "부드러운 메뉴", "주차 편한 곳"]}, "description": "식당 바람. 의자·입식 테이블=입식"},
+         "weather_pref": {"type": "string", "enum": ["", "실내", "실외"]}}}},
     {"name": "make_course", "description": "저장된 조건으로 코스를 계산한다. 누구와·이동 조건을 알면 부른다. 결과의 판정(G 가능/Y 주의/R 불가)과 시각만 말할 것.",
      "input_schema": {"type": "object", "properties": {}}},
     {"name": "edit_course", "description": "현재 코스를 고친다. 엔진이 이동·체류 시간과 요일 휴무·브레이크타임을 다시 검사한다. "
@@ -65,7 +69,8 @@ class Session:
         self.cards: list[dict] = []                          # 화면에 붙일 정보 카드
 
     # ---- 도구 ----
-    def set_conditions(self, who=None, move=None, move_none=None, style=None, days=None, start=None, rain=None, memo=None):
+    def set_conditions(self, who=None, move=None, move_none=None, style=None, days=None, start=None, rain=None, memo=None,
+                       date=None, start_time=None, meal=None, weather_pref=None):
         if who in WHO: self.c.who = who; self.state["who_known"] = True
         if move: self.c.move = sorted(set(self.c.move) | {m for m in move if m in MOVE}); self.state["move_known"] = True
         if move_none: self.c.move = []; self.state["move_known"] = True
@@ -74,7 +79,16 @@ class Session:
         if start in ("동해역", "묵호역", "자가용"): self.c.start = start
         if rain is not None: self.c.rain = bool(rain)
         if memo: self.c.memo = memo[:200]
-        return {"saved": self.c.model_dump(include={"who", "move", "style", "days", "start", "rain"})}
+        if date and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(date)):
+            try:
+                d = dt.date.fromisoformat(date)
+                if engine.trip_date(Conditions()) <= d <= engine.trip_date(Conditions()) + dt.timedelta(days=90): self.c.date = date
+            except ValueError:
+                pass
+        if start_time and re.fullmatch(r"\d{1,2}:\d{2}", str(start_time)): self.c.start_time = start_time.zfill(5)
+        if meal: self.c.meal = [m for m in meal if m in ("입식", "부드러운 메뉴", "주차 편한 곳")]
+        if weather_pref in ("", "실내", "실외"): self.c.weather_pref = weather_pref
+        return {"saved": self.c.model_dump(include={"who", "move", "style", "days", "start", "rain", "date", "start_time", "meal", "weather_pref"})}
 
     def make_course(self):
         rain = engine.rain_for(self.c)
@@ -162,7 +176,9 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
             merged[-1]["content"] += "\n" + m["content"]
         else:
             merged.append(m)
-    ctx = {"conditions": s.c.model_dump(include={"who", "move", "style", "days", "start", "rain", "lang"}),
+    today = engine.trip_date(Conditions())
+    ctx = {"today": f"{today.isoformat()} ({'월화수목금토일'[today.weekday()]})",
+           "conditions": s.c.model_dump(include={"who", "move", "style", "days", "start", "rain", "lang", "date", "start_time", "meal", "weather_pref"}),
            "state": s.state, "course": s.course_ids, "places": {k: v.name_ko for k, v in s.places.items()}}
     user = f"[현재 상태]{json.dumps(ctx, ensure_ascii=False)}\n[사용자]{message}"
     if merged and merged[-1]["role"] == "user":

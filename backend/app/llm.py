@@ -48,7 +48,7 @@ def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None
         r = httpx.post(
             "https://api.anthropic.com/v1/messages",
             headers=headers(),
-            json={"model": MODEL, "max_tokens": 800, "temperature": 0, "system": system,
+            json={"model": MODEL, "max_tokens": 800, "system": system,   # 이 모델은 temperature를 받지 않는다
                   "messages": [{"role": "user", "content": user}]},
             timeout=timeout or TIMEOUT,
         )
