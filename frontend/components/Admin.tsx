@@ -1,15 +1,22 @@
 "use client";
-// 관리자: 대표 계정 로그인 → 장소 정보·임시 알림·공지·행사를 고치면 사이트에 바로 반영. 모든 변경은 이력에 남고 되돌릴 수 있다.
-// 팀 현장 확인 기록과 이용자 제보 검수도 여기서 한다. (관리 화면은 팀용이라 한국어만)
+// 관리자: 계정마다 로그인 → 역할(총괄 관리자·편집자·현장 조사원)에 맞는 탭만 보인다.
+// 장소 정보·임시 알림·공지·행사를 고치면 사이트에 바로 반영. 모든 변경은 '누가' 바꿨는지와 함께 이력에 남고 되돌릴 수 있다.
+// 팀 현장 확인 기록과 이용자 제보 검수, 관리자 계정 관리도 여기서 한다. (관리 화면은 팀용이라 한국어만)
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { Icon } from "@/components/Icon";
 
 type Lang = "ko" | "en";
-const TABS = [["place", "장소 정보"], ["notice", "임시 알림"], ["site", "공지·행사"], ["reports", "제보 검수"], ["visits", "현장 확인 기록"], ["history", "변경 이력"], ["data", "공공데이터 점검"]] as const;
+// [탭, 이름, 필요한 권한(null = 누구나)]
+const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보 검수", "reports"],
+  ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["me", "내 계정", null]] as const;
+type TabKey = (typeof TABS)[number][0];
+type User = { id: string; name: string; role: string; role_name: string; perms: string[]; must_change?: boolean; expires_at?: string };
+const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·백업·초기화", editor: "장소·알림·공지·행사·제보·현장 기록·되돌리기", surveyor: "현장 확인 기록 입력과 제보 검수만" };
 const LEVEL: Record<string, string> = { closed: "임시 휴무 (코스에서 빠짐)", warn: "주의 (공사·우회 등)", info: "안내" };
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const ACTION: Record<string, string> = { place: "장소 정보 수정", notice_add: "알림 올림", notice_remove: "알림 내림", banner: "공지 배너", event_add: "행사 추가",
-  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로" };
+  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경" };
 const STATUS = ["접수", "확인 중", "반영", "반려"];
 const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
@@ -19,30 +26,32 @@ function Field({ label, children, wide }: { label: string; children: React.React
 
 export function AdminPage({ lang }: { lang: Lang }) {
   const [tok, setTok] = useState("");
+  const [user, setUser] = useState<User | null>(null);
   const [info, setInfo] = useState<{ demo: boolean; id?: string; password?: string } | null>(null);
   const [id, setId] = useState(""); const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   useEffect(() => {
-    try { setTok(sessionStorage.getItem("gd-admin-tok") || ""); } catch { /* 무시 */ }
+    try { const t = sessionStorage.getItem("gd-admin-tok") || ""; setTok(t);
+      if (t) api.get("/api/admin/me", t).then(setUser).catch(() => { setTok(""); sessionStorage.removeItem("gd-admin-tok"); }); } catch { /* 무시 */ }
     api.get("/api/admin/login-info").then(setInfo).catch(() => setInfo({ demo: false }));
   }, []);
   async function login(uid = id, pass = pw) {
     setErr("");
     try {
       const r = await api.post("/api/admin/login", { id: uid, password: pass });
-      setTok(r.token); try { sessionStorage.setItem("gd-admin-tok", r.token); } catch { /* 무시 */ }
+      setTok(r.token); setUser(r.user); try { sessionStorage.setItem("gd-admin-tok", r.token); } catch { /* 무시 */ }
     } catch (e: any) { setErr(e.message || "로그인하지 못했어요."); }
   }
   function demoLogin() {   // [임시 로그인]: 대표 계정을 자동으로 채우고 바로 로그인
     if (!info?.id || !info.password) return;
     setId(info.id); setPw(info.password); login(info.id, info.password);
   }
-  function logout() { api.post("/api/admin/logout", {}, tok).catch(() => {}); setTok(""); try { sessionStorage.removeItem("gd-admin-tok"); } catch { /* 무시 */ } }
+  function logout() { api.post("/api/admin/logout", {}, tok).catch(() => {}); setTok(""); setUser(null); try { sessionStorage.removeItem("gd-admin-tok"); } catch { /* 무시 */ } }
 
   if (!tok) return (
     <section className="sec wrap admin">
       <div className="page-head"><nav className="crumb"><a href="#/">처음</a> › 관리자</nav><h1>관리자 로그인</h1>
-        <p className="muted">동해 길동무 팀 대표 계정으로 들어가요. 여기서 바꾼 내용은 사이트에 바로 반영돼요.</p></div>
+        <p className="muted">관리자 계정으로 들어가요. 계정마다 할 수 있는 일이 달라요. 여기서 바꾼 내용은 사이트에 바로 반영돼요.</p></div>
       <form className="panel login" onSubmit={(e) => { e.preventDefault(); login(); }}>
         <label>아이디<input autoComplete="username" value={id} onChange={(e) => setId(e.target.value)} /></label>
         <label>비밀번호<input type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
@@ -50,23 +59,27 @@ export function AdminPage({ lang }: { lang: Lang }) {
           <button className="chip go">로그인</button>
           {info?.demo && <button type="button" className="chip demo" onClick={demoLogin}>임시 로그인</button>}
         </div>
-        {info?.demo && <p className="muted small">[임시 로그인]은 본선 시연용이에요. 누르면 대표 계정이 자동으로 들어가요. 대회가 끝나면 서버 설정(DEMO_LOGIN)에서 꺼 주세요.</p>}
+        {info?.demo && <p className="muted small">[임시 로그인]은 본선 시연용이에요. 누르면 총괄 관리자 계정이 자동으로 들어가요. 대회가 끝나면 서버 설정(DEMO_LOGIN)에서 꺼 주세요.</p>}
+        <p className="muted small">비밀번호를 5번 틀리면 10분 동안 잠겨요. 계정이 없으면 총괄 관리자에게 만들어 달라고 하세요.</p>
         {err && <p role="alert" className="err">{err}</p>}
       </form>
     </section>
   );
-  return <Console tok={tok} onLogout={logout} onExpired={() => { setTok(""); setErr("로그인 시간이 지났어요. 다시 로그인해 주세요."); }} />;
+  if (!user) return <section className="sec wrap admin"><p className="muted" role="status">계정 정보를 불러오는 중…</p></section>;
+  return <Console tok={tok} user={user} setUser={setUser} onLogout={logout} onExpired={() => { setTok(""); setUser(null); setErr("로그인 시간이 지났어요. 다시 로그인해 주세요."); }} />;
 }
 
-function Console({ tok, onLogout, onExpired }: { tok: string; onLogout: () => void; onExpired: () => void }) {
-  const [tab, setTab] = useState<(typeof TABS)[number][0]>("place");
+function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; user: User; setUser: (u: User) => void; onLogout: () => void; onExpired: () => void }) {
+  const can = (perm: string | null) => !perm || user.perms.includes(perm);
+  const tabs = TABS.filter(([, , perm]) => can(perm));
+  const [tab, setTab] = useState<TabKey>(user.must_change ? "me" : "home");
   const [db, setDb] = useState<any>(null);
   const [places, setPlaces] = useState<any[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
   const call = async (fn: () => Promise<any>, ok: string, link?: string) => {
     setMsg(null);
     try { const r = await fn(); setMsg({ ok: true, text: ok, link }); await reload(); return r; }
-    catch (e: any) { if (e.status === 401) onExpired(); else setMsg({ ok: false, text: e.message || "저장하지 못했어요." }); }
+    catch (e: any) { if (e.status === 401) onExpired(); else setMsg({ ok: false, text: e.message || "저장하지 못했어요." }); throw e; }
   };
   async function reload() {
     try { setDb(await api.get("/api/admin/cms", tok)); } catch (e: any) { if (e.status === 401) onExpired(); }
@@ -79,18 +92,26 @@ function Console({ tok, onLogout, onExpired }: { tok: string; onLogout: () => vo
       <div className="page-head admin-top">
         <div><nav className="crumb"><a href="#/">처음</a> › 관리자</nav><h1>관리자</h1>
           <p className="muted">저장하면 바로 사이트에 보여요. 잘못 바꿨으면 [변경 이력]에서 되돌리세요.</p></div>
-        <button className="chip" onClick={onLogout}>로그아웃</button>
+        <div className="admin-who">
+          <span className="who-badge"><b>{user.name}</b> <small className={`role-${user.role}`}>{user.role_name}</small></span>
+          {user.expires_at && <small className="muted">{user.expires_at.slice(11, 16)}까지 로그인 유지</small>}
+          <button className="chip" onClick={onLogout}>로그아웃</button>
+        </div>
       </div>
-      <div className="tabs admin-tabs" role="tablist">
-        {TABS.map(([k, t]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setMsg(null); }}>{t}</button>)}
+      {user.must_change && tab !== "me" && <p className="admin-msg bad" role="alert">처음 받은 임시 비밀번호예요. [내 계정]에서 비밀번호를 바꿔 주세요. <button className="link-btn" onClick={() => setTab("me")}>지금 바꾸기</button></p>}
+      <div className="tabs admin-tabs" role="group" aria-label="관리 메뉴">
+        {tabs.map(([k, t]) => <button key={k} aria-pressed={tab === k} onClick={() => { setTab(k); setMsg(null); }}>{t}</button>)}
       </div>
-      {msg && <p role="status" className={`admin-msg ${msg.ok ? "ok" : "bad"}`}>{msg.ok ? "✓ " : "⚠ "}{msg.text}{msg.link && <> · <a href={msg.link}>사이트에서 보기</a></>}</p>}
+      {msg && <p role="status" className={`admin-msg ${msg.ok ? "ok" : "bad"}`}>{msg.ok ? "✓ " : "! "}{msg.text}{msg.link && <> · <a href={msg.link}>사이트에서 보기</a></>}</p>}
+      {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey) => setTab(k)} can={can} onExpired={onExpired} />}
+      {tab === "accounts" && can("accounts") && <Accounts tok={tok} call={call} me={user} />}
+      {tab === "me" && <MyAccount tok={tok} user={user} call={call} onChanged={() => setUser({ ...user, must_change: false })} />}
       {tab === "place" && <PlaceEditor places={places} db={db} tok={tok} call={call} />}
       {tab === "notice" && <Notices places={places} db={db} tok={tok} call={call} name={name} />}
       {tab === "site" && <SiteEditor db={db} tok={tok} call={call} />}
-      {tab === "reports" && <Reports tok={tok} call={call} onExpired={onExpired} />}
-      {tab === "visits" && <Visits places={places} tok={tok} call={call} />}
-      {tab === "history" && <History db={db} tok={tok} call={call} name={name} />}
+      {tab === "reports" && <Reports tok={tok} call={call} onExpired={onExpired} canNotice={can("notice")} />}
+      {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}
+      {tab === "history" && <History db={db} tok={tok} call={call} name={name} canBackup={can("backup")} />}
       {tab === "data" && <Probe tok={tok} />}
     </section>
   );
@@ -251,25 +272,25 @@ function SiteEditor({ db, tok, call }: any) {
     <ul className="rv-list">
       {(db?.events || []).map((x: any) => (
         <li key={x.id} className="panel"><div className="seg-top"><b>{x.name}</b><small className="muted">{x.start}{x.end && x.end !== x.start ? ` ~ ${x.end}` : ""} · {x.venue}</small></div>
-          {x.access && <p className="muted">♿ {x.access}</p>}
+          {x.access && <p className="muted">휠체어 접근: {x.access}</p>}
           <button className="chip" onClick={() => call(() => api.post(`/api/admin/events/${x.id}/delete`, {}, tok), "행사를 지웠어요.")}>삭제</button></li>))}
     </ul>
   </>);
 }
 
 /* ---------- 제보 검수 (반영하면 알림으로 바로 올리기) ---------- */
-function Reports({ tok, call, onExpired }: any) {
+function Reports({ tok, call, onExpired, canNotice }: any) {
   const [rows, setRows] = useState<any[] | null>(null);
   const load = () => api.get("/api/admin/reports", tok).then(setRows).catch((e: any) => { if (e.status === 401) onExpired(); setRows([]); });
   useEffect(() => { load(); }, []);
   return (
     <ul className="rv-list">
-      {(rows || []).map((r) => <ReportRow key={r.id} r={r} onSave={(body: any) => call(() => api.post(`/api/admin/reports/${r.id}`, body, tok), body.notice ? "반영하고 장소 알림으로 올렸어요." : "검수 결과를 저장했어요.", body.notice ? `#/place/${r.place_id}` : undefined).then(load)} />)}
+      {(rows || []).map((r) => <ReportRow key={r.id} r={r} canNotice={canNotice} onSave={(body: any) => call(() => api.post(`/api/admin/reports/${r.id}`, body, tok), body.notice ? "반영하고 장소 알림으로 올렸어요." : "검수 결과를 저장했어요.", body.notice ? `#/place/${r.place_id}` : undefined).then(load)} />)}
       {rows && !rows.length && <li className="muted">아직 제보가 없어요. 코스 결과 아래 [현장 제보]로 들어와요.</li>}
     </ul>
   );
 }
-function ReportRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
+function ReportRow({ r, onSave, canNotice }: { r: any; onSave: (b: any) => void; canNotice: boolean }) {
   const [s, setS] = useState(r.status || "접수");
   const [m, setM] = useState(r.memo || "");
   const [post, setPost] = useState(false);
@@ -278,13 +299,14 @@ function ReportRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
     <li className="panel">
       <div className="seg-top"><b>{r.name}</b><span className="badge b-plain">{r.kind}</span><span className="badge b-plain">{r.status}</span><small className="muted">{r.created_at?.replace("T", " ")}</small></div>
       {r.note && <p>{r.note}</p>}
-      {r.ai && <p className="muted">🤖 AI 사진 분석: {(r.ai.obstacles || []).join(", ") || "장애물 없음"} {r.ai.summary ? `· ${r.ai.summary}` : ""} — 사람이 확인한 뒤에만 반영</p>}
+      {r.ai && <p className="muted">AI 사진 분석: {(r.ai.obstacles || []).join(", ") || "장애물 없음"} {r.ai.summary ? `· ${r.ai.summary}` : ""} — 사람이 확인한 뒤에만 반영</p>}
       {r.notice_id && <p className="muted small">이 제보로 올린 알림이 있어요.</p>}
+      {r.reviewed_by && <p className="muted small">마지막 검수: {r.reviewed_by} · {String(r.reviewed_at || "").slice(0, 16).replace("T", " ")}</p>}
       <div className="chips">
         <select value={s} onChange={(e) => setS(e.target.value)} aria-label="처리 상태">{STATUS.map((x) => <option key={x}>{x}</option>)}</select>
         <input value={m} onChange={(e) => setM(e.target.value)} placeholder="검수 메모" aria-label="검수 메모" />
       </div>
-      {s === "반영" && !r.notice_id && (
+      {s === "반영" && !r.notice_id && canNotice && (
         <div className="post-notice">
           <label className="day"><input type="checkbox" checked={post} onChange={(e) => setPost(e.target.checked)} />장소 알림으로 바로 올리기</label>
           {post && <div className="visit-form">
@@ -300,9 +322,9 @@ function ReportRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
 }
 
 /* ---------- 현장 확인 기록 ---------- */
-function Visits({ places, tok, call }: any) {
+function Visits({ places, tok, call, me }: any) {
   const [rows, setRows] = useState<any[]>([]);
-  const blank = { place_id: "", date: today(), who: "", segment: "", slope_deg: "", curb_cm: "", width_m: "", steps: "", surface: "", toilet: "", note: "" };
+  const blank = { place_id: "", date: today(), who: me?.name || "", segment: "", slope_deg: "", curb_cm: "", width_m: "", steps: "", surface: "", toilet: "", note: "" };
   const [f, setF] = useState<any>(blank);
   const load = () => api.get("/api/admin/visits", tok).then(setRows).catch(() => setRows([]));
   useEffect(() => { load(); }, []);
@@ -318,7 +340,7 @@ function Visits({ places, tok, call }: any) {
       <Field label="구간"><input list="segs" value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })} placeholder="예: 주차장 → 매표소" />
         <datalist id="segs">{seg.map((s: any) => <option key={s.name} value={s.name} />)}</datalist></Field>
       <Field label="날짜"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
-      <Field label="확인한 사람"><input value={f.who} onChange={(e) => setF({ ...f, who: e.target.value })} /></Field>
+      <Field label="확인한 사람"><input value={f.who} onChange={(e) => setF({ ...f, who: e.target.value })} placeholder={me?.name} /></Field>
       <Field label="경사(°)"><input inputMode="decimal" value={f.slope_deg} onChange={(e) => setF({ ...f, slope_deg: e.target.value })} /></Field>
       <Field label="가장 높은 턱(cm)"><input inputMode="decimal" value={f.curb_cm} onChange={(e) => setF({ ...f, curb_cm: e.target.value })} /></Field>
       <Field label="가장 좁은 폭(m)"><input inputMode="decimal" value={f.width_m} onChange={(e) => setF({ ...f, width_m: e.target.value })} /></Field>
@@ -361,12 +383,15 @@ function Probe({ tok }: { tok: string }) {
   );
 }
 
-function History({ db, tok, call, name }: any) {
+function History({ db, tok, call, name, canBackup }: any) {
   const [sure, setSure] = useState(false);
   const rows: any[] = db?.history || [];
   const what = (h: any) => h.action === "place" ? `${name(h.target)} — ${Object.keys(h.after || {}).map(label).join(", ")}`
     : h.action.startsWith("notice") ? (h.after || h.before)?.title : h.action.startsWith("event") ? (h.after || h.before)?.name
-    : h.action === "banner" ? (h.after?.text || "공지 내림") : h.reason;
+    : h.action === "banner" ? (h.after?.text || "공지 내림") : h.action.startsWith("account") ? `${h.target} (${(h.after || h.before)?.role_name || ""}${h.after && h.after.active === false ? ", 사용 멈춤" : ""})` : h.reason;
+  const [who, setWho] = useState("");
+  const people = Array.from(new Set(rows.map((h) => h.who).filter(Boolean)));
+  const shown = who ? rows.filter((h) => h.who === who) : rows;
   function download() {
     const blob = new Blob([JSON.stringify(db, null, 1)], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `gildongmu-cms-${today()}.json`; a.click();
@@ -378,25 +403,28 @@ function History({ db, tok, call, name }: any) {
     catch { call(() => Promise.reject(new Error("백업 파일을 읽지 못했어요.")), ""); }
   }
   return (<>
-    <div className="panel backup">
+    {canBackup && <div className="panel backup">
       <h2 className="h3">백업</h2>
       <p className="muted small">서버를 다시 켜면 저장한 내용이 지워지는 호스팅도 있어요. 본선 전후로 백업을 내려받아 두세요.</p>
       <div className="chips">
         <button className="chip" onClick={download}>백업 내려받기</button>
         <label className="chip">백업 올려서 복원<input type="file" accept="application/json" hidden onChange={(e) => upload(e.target.files?.[0])} /></label>
         {!sure ? <button className="chip" onClick={() => setSure(true)}>처음 상태로…</button>
-          : <button className="chip danger" onClick={() => { setSure(false); call(() => api.post("/api/admin/reset", { reason: "관리 화면에서 초기화" }, tok), "관리자 변경을 모두 지우고 처음 상태로 돌렸어요. (이력은 남아요)"); }}>정말 모두 지우기</button>}
+          : <button className="chip danger" onClick={() => { setSure(false); call(() => api.post("/api/admin/reset", { reason: "관리 화면에서 초기화" }, tok), "관리자 변경을 모두 지우고 처음 상태로 돌렸어요. (이력·계정은 남아요)"); }}>정말 모두 지우기</button>}
       </div>
-    </div>
+      <p className="muted small">백업 파일에는 관리자 계정·비밀번호가 들어가지 않아요.</p>
+    </div>}
+    {people.length > 1 && <label className="who-filter">누가 바꿨는지 골라 보기
+      <select value={who} onChange={(e) => setWho(e.target.value)}><option value="">모두</option>{people.map((p) => <option key={p}>{p}</option>)}</select></label>}
     <div className="tbl-wrap"><table className="tbl">
-      <thead><tr><th>언제</th><th>무엇을</th><th>내용</th><th>근거·이유</th><th /></tr></thead>
-      <tbody>{rows.map((h) => (
+      <thead><tr><th>언제</th><th>누가</th><th>무엇을</th><th>내용</th><th>근거·이유</th><th /></tr></thead>
+      <tbody>{shown.map((h) => (
         <tr key={h.id} className={h.reverted ? "reverted" : ""}>
-          <td><small>{h.at.slice(5, 16).replace("T", " ")}</small></td><td>{ACTION[h.action] || h.action}</td><td>{what(h)}</td><td><small>{h.reason}</small></td>
+          <td><small>{h.at.slice(5, 16).replace("T", " ")}</small></td><td><small>{h.who === "admin" ? "총괄 관리자" : h.who}</small></td><td>{ACTION[h.action] || h.action}</td><td>{what(h)}</td><td><small>{h.reason}</small></td>
           <td>{["place", "notice_add", "notice_remove", "banner", "event_add", "event_remove"].includes(h.action) && (h.reverted ? <small className="muted">되돌림</small>
             : <button className="chip" onClick={() => call(() => api.post(`/api/admin/history/${h.id}/revert`, {}, tok), "되돌렸어요. 사이트에도 바로 반영됐어요.")}>되돌리기</button>)}</td>
         </tr>))}
-        {!rows.length && <tr><td colSpan={5} className="muted">아직 바꾼 것이 없어요.</td></tr>}</tbody>
+        {!shown.length && <tr><td colSpan={6} className="muted">아직 바꾼 것이 없어요.</td></tr>}</tbody>
     </table></div>
   </>);
 }
@@ -404,3 +432,105 @@ const LABELS: Record<string, string> = { open: "여는 시각", close: "닫는 �
   phone: "전화", fee: "요금", intro_ko: "소개", tip_ko: "팁", carer_tip: "보호자 꿀팁", walk_load: "걷기 정보", wheelchair: "휠체어", entrance_step: "출입구 턱",
   table: "테이블", indoor: "실내", benches: "벤치", segments: "구간", soft_menu: "부드러운 메뉴", parking_easy: "주차" };
 const label = (k: string) => LABELS[k] || k;
+
+/* ---------- 한눈에 (로그인하면 처음 보는 화면) ---------- */
+function Dashboard({ tok, user, go, can, onExpired }: { tok: string; user: User; go: (k: TabKey) => void; can: (p: string | null) => boolean; onExpired: () => void }) {
+  const [d, setD] = useState<any>(null);
+  useEffect(() => { api.get("/api/admin/dashboard", tok).then(setD).catch((e: any) => { if (e.status === 401) onExpired(); else setD({}); }); }, []);
+  if (!d) return <p className="muted" role="status">불러오는 중…</p>;
+  const card = (k: TabKey, ic: string, title: string, big: React.ReactNode, sub: string, warn = false) => (
+    <button className={`dash-card${warn ? " warn" : ""}`} onClick={() => go(k)} disabled={!can(TABS.find((t) => t[0] === k)?.[2] ?? null)}>
+      <span className="dash-k"><Icon name={ic} />{title}</span><b>{big}</b><span className="muted small">{sub}</span></button>);
+  return (<>
+    <p className="dash-hello"><b>{user.name}</b>님, 안녕하세요. 오늘은 {d.today} 이에요. <span className="muted">({user.role_name}: {ROLE_INFO[user.role]})</span></p>
+    <div className="dash-grid">
+      {card("reports", "camera", "새 제보", d.reports?.new ?? 0, `확인 중 ${d.reports?.doing ?? 0} · 전체 ${d.reports?.total ?? 0}`, (d.reports?.new ?? 0) > 0)}
+      {card("notice", "warn", "지금 걸린 알림", d.notices?.length ?? 0, d.banner ? `공지: ${d.banner.text.slice(0, 20)}` : "사이트 공지 없음")}
+      {card("visits", "walk", "현장 확인 기록", d.visits?.total ?? 0, d.visits?.last ? `마지막 ${d.visits.last}` : "아직 없음")}
+      {card("place", "pin", "고친 장소", d.overrides ?? 0, "원본 위에 덮어쓴 곳")}
+    </div>
+    <div className="cards2">
+      <div className="panel">
+        <h2 className="h3">지금 사이트에 보이는 알림</h2>
+        {d.notices?.length ? <ul className="plain">{d.notices.map((n: any) => <li key={n.id}><span className={`badge ${n.level === "closed" ? "g-R" : n.level === "warn" ? "g-Y" : "b-plain"}`}>{LEVEL[n.level]?.split(" ")[0]}</span> {n.name ? `${n.name} · ` : ""}{n.title}{n.end ? <small className="muted"> ~{n.end}</small> : null}</li>)}</ul>
+          : <p className="muted">걸려 있는 알림이 없어요.</p>}
+        {d.events_week?.length > 0 && <><h3 className="h3" style={{ marginTop: 14 }}>이번 주 관리자 추가 행사</h3><ul className="plain">{d.events_week.map((e: any) => <li key={e.id}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}</li>)}</ul></>}
+      </div>
+      <div className="panel">
+        <h2 className="h3">최근 변경</h2>
+        {d.recent?.length ? <ul className="plain dash-recent">{d.recent.map((h: any) => <li key={h.id}><small className="muted">{h.at.slice(5, 16).replace("T", " ")}</small> <b>{h.who === "admin" ? "총괄 관리자" : h.who}</b> · {ACTION[h.action] || h.action}{h.reverted ? <small className="muted"> (되돌림)</small> : null}</li>)}</ul>
+          : <p className="muted">아직 바꾼 것이 없어요.</p>}
+        {can("history") && <button className="chip" onClick={() => go("history")}>변경 이력 전체 보기</button>}
+      </div>
+    </div>
+  </>);
+}
+
+/* ---------- 계정 관리 (총괄 관리자만) ---------- */
+function Accounts({ tok, call, me }: { tok: string; call: any; me: User }) {
+  const [d, setD] = useState<any>(null);
+  const blank = { id: "", name: "", role: "editor", password: "" };
+  const [f, setF] = useState(blank);
+  const [reset, setReset] = useState<{ id: string; pw: string } | null>(null);
+  const load = () => api.get("/api/admin/accounts", tok).then(setD).catch(() => setD({ accounts: [] }));
+  useEffect(() => { load(); }, []);
+  const temp = () => { const c = "abcdefghjkmnpqrstuvwxyz23456789"; let x = ""; const r = new Uint32Array(10); crypto.getRandomValues(r); r.forEach((n) => (x += c[n % c.length])); return x.slice(0, 6) + (r[0] % 90 + 10); };
+  const save = (fn: () => Promise<any>, ok: string) => call(fn, ok).then(load).catch(() => {});
+  return (<>
+    <div className="panel">
+      <h2 className="h3">역할마다 할 수 있는 일</h2>
+      <ul className="plain role-list">{Object.entries(ROLE_INFO).map(([k, v]) => <li key={k}><small className={`role-${k}`}>{d?.roles?.[k] || k}</small> {v}</li>)}</ul>
+    </div>
+    <form className="panel visit-form" onSubmit={(e) => { e.preventDefault(); save(() => api.post("/api/admin/accounts", f, tok), `${f.name} 계정을 만들었어요. 임시 비밀번호를 직접 전해 주세요(처음 로그인하면 바꾸라고 나와요).`).then(() => setF(blank)); }}>
+      <h2 className="h3">새 계정 만들기</h2>
+      <Field label="아이디 (영문·숫자)"><input value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="off" placeholder="예: kim.editor" /></Field>
+      <Field label="이름"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="예: 김동해" /></Field>
+      <Field label="역할"><select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}><option value="editor">편집자</option><option value="surveyor">현장 조사원</option></select></Field>
+      <Field label="임시 비밀번호 (8자 이상, 글자+숫자)"><span className="pw-row"><input value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" />
+        <button type="button" className="chip" onClick={() => setF({ ...f, password: temp() })}>만들어 주기</button></span></Field>
+      <button className="chip go" disabled={!f.id || !f.name || !f.password}>계정 만들기</button>
+    </form>
+    <div className="tbl-wrap"><table className="tbl acc-tbl">
+      <thead><tr><th>이름·아이디</th><th>역할</th><th>상태</th><th>마지막 로그인</th><th>관리</th></tr></thead>
+      <tbody>{(d?.accounts || []).map((a: any) => (
+        <tr key={a.id} className={a.active === false ? "reverted" : ""}>
+          <td><b>{a.name}</b><br /><small className="muted">{a.id}{a.id === me.id ? " · 나" : ""}</small></td>
+          <td>{a.builtin ? <small className="role-owner">{a.role_name}</small>
+            : <select aria-label={`${a.name} 역할`} value={a.role} onChange={(e) => save(() => api.post(`/api/admin/accounts/${a.id}`, { role: e.target.value }, tok), `${a.name}님 역할을 바꿨어요. 다시 로그인해야 적용돼요.`)}>
+                <option value="editor">편집자</option><option value="surveyor">현장 조사원</option></select>}</td>
+          <td>{a.builtin ? "서버 설정" : a.active === false ? "사용 멈춤" : a.must_change ? "임시 비밀번호" : "사용 중"}</td>
+          <td><small>{a.last_login ? String(a.last_login).slice(0, 16).replace("T", " ") : "-"}</small></td>
+          <td>{a.builtin ? <small className="muted">.env 의 ADMIN_ID·ADMIN_PASSWORD</small> : <div className="chips">
+            <button className="chip sm" onClick={() => save(() => api.post(`/api/admin/accounts/${a.id}`, { active: a.active === false }, tok), a.active === false ? "다시 쓸 수 있게 했어요." : "사용을 멈췄어요. 바로 로그아웃돼요.")}>{a.active === false ? "다시 쓰기" : "사용 멈춤"}</button>
+            {reset?.id === a.id
+              ? <span className="pw-row"><input aria-label="새 임시 비밀번호" value={reset!.pw} onChange={(e) => setReset({ id: a.id, pw: e.target.value })} />
+                  <button className="chip sm go" onClick={() => save(() => api.post(`/api/admin/accounts/${a.id}`, { password: reset!.pw }, tok), `새 임시 비밀번호를 정했어요: ${reset!.pw} (직접 전해 주세요)`).then(() => setReset(null))}>정하기</button>
+                  <button className="chip sm" onClick={() => setReset(null)}>취소</button></span>
+              : <button className="chip sm" onClick={() => setReset({ id: a.id, pw: temp() })}>임시 비밀번호</button>}
+          </div>}</td>
+        </tr>))}</tbody>
+    </table></div>
+    <p className="muted small">비밀번호는 그대로 저장하지 않고 바꾼 값(해시)만 저장해요. 계정을 지우는 대신 [사용 멈춤]으로 막아 두면 그 사람이 바꾼 이력도 그대로 남아요.</p>
+  </>);
+}
+
+/* ---------- 내 계정 (비밀번호 바꾸기) ---------- */
+function MyAccount({ tok, user, call, onChanged }: { tok: string; user: User; call: any; onChanged: () => void }) {
+  const [f, setF] = useState({ old: "", new: "", again: "" });
+  const mismatch = f.again !== "" && f.new !== f.again;
+  return (<>
+    <div className="panel">
+      <h2 className="h3">내 계정</h2>
+      <dl className="trip-facts"><div><dt>이름</dt><dd>{user.name}</dd></div><div><dt>아이디</dt><dd>{user.id}</dd></div><div><dt>역할</dt><dd>{user.role_name}</dd></div><div><dt>할 수 있는 일</dt><dd>{ROLE_INFO[user.role]}</dd></div></dl>
+    </div>
+    {user.role === "owner" ? <p className="panel muted">총괄 관리자 비밀번호는 서버 설정(.env 의 ADMIN_PASSWORD, Render 환경 변수)에서 바꿔요.</p> : (
+      <form className="panel visit-form" onSubmit={(e) => { e.preventDefault(); if (mismatch) return; call(() => api.post("/api/admin/password", { old: f.old, new: f.new }, tok), "비밀번호를 바꿨어요.").then(() => { setF({ old: "", new: "", again: "" }); onChanged(); }).catch(() => {}); }}>
+        <h2 className="h3">비밀번호 바꾸기</h2>
+        <Field label="지금 비밀번호"><input type="password" autoComplete="current-password" value={f.old} onChange={(e) => setF({ ...f, old: e.target.value })} /></Field>
+        <Field label="새 비밀번호 (8자 이상, 글자+숫자)"><input type="password" autoComplete="new-password" value={f.new} onChange={(e) => setF({ ...f, new: e.target.value })} /></Field>
+        <Field label="새 비밀번호 한 번 더"><input type="password" autoComplete="new-password" value={f.again} onChange={(e) => setF({ ...f, again: e.target.value })} aria-invalid={mismatch} /></Field>
+        {mismatch && <p className="err wide" role="alert">새 비밀번호가 서로 달라요.</p>}
+        <button className="chip go" disabled={!f.old || !f.new || mismatch}>바꾸기</button>
+      </form>)}
+  </>);
+}

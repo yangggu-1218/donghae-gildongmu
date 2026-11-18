@@ -58,7 +58,8 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
 
 // 지도 키가 없을 때(데모·키 발급 전): 좌표로 그린 코스 약도. 실제 지도는 아니고 순서와 방향만 보여 준다.
 function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void }) {
-  if (!pins.length) return <div className="map muted">코스를 만들면 여기에 경로가 그려져요.</div>;
+  const en = typeof document !== "undefined" && document.documentElement.lang === "en";   // 언어는 page.tsx가 <html lang>에 적어 둔다
+  if (!pins.length) return <div className="map muted">{en ? "Your route will be drawn here once you plan a course." : "코스를 만들면 여기에 경로가 그려져요."}</div>;
   const W = 520, H = 300, P = 40;
   const lats = pins.map((p) => p.lat), lons = pins.map((p) => p.lon);
   const [la0, la1, lo0, lo1] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
@@ -75,9 +76,9 @@ function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[];
     boxes.push([left, py, w]); return true;
   });
   return (
-    <div className="map" role="img" aria-label="코스 약도. 아래 목록과 같은 순서입니다." style={{ display: "block", position: "relative" }}>
+    <div className="map" role="img" aria-label={en ? "Route sketch, in the same order as the list below." : "코스 약도. 아래 목록과 같은 순서입니다."} style={{ display: "block", position: "relative" }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-        <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ {dots ? "편의시설 약도" : overview ? "관광지 약도" : "코스 약도"}</text>
+        <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ {en ? (dots ? "Facilities sketch" : overview ? "Places sketch" : "Route sketch") : dots ? "편의시설 약도" : overview ? "관광지 약도" : "코스 약도"}</text>
         {!overview && !dots && <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />}
         {dots && pts.map(([px, py], i) => (
           <g key={i} onClick={() => onPick?.(i)} style={{ cursor: "pointer" }} role="button" aria-label={pins[i].label}>

@@ -6,11 +6,14 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, HomeFacts, HowTo, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS, isGradedSight } from "@/components/Sections";
-import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans, BookLinks } from "@/components/Pages";
+import { Hero, HomeFacts, HowToStrip, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS, isGradedSight } from "@/components/Sections";
+import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
+import { MicButton } from "@/components/Voice";
+import { MyPage, loadPlans, savePlans } from "@/components/MyTrips";
+import { Icon } from "@/components/Icon";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
-import { api, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays } from "@/lib/api";
+import { api, getJSON, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays } from "@/lib/api";
 import { Brief, BRIEF_ICON, evidence, ruleBrief } from "@/lib/brief";
 
 type Lang = "ko" | "en";
@@ -58,7 +61,7 @@ export default function Page() {
   const [extras, setExtras] = useState<Record<string, Extra>>({});
   // 한국관광공사 관광지 집중률 예측(앞으로 30일). 못 불러오면 배지를 숨긴다.
   const [crowdMap, setCrowdMap] = useState<Record<string, { date: string; rate: number }[]>>({});
-  useEffect(() => { fetch("/api/crowd").then((r) => r.json()).then((j) => setCrowdMap(j.places || {})).catch(() => {}); }, []);
+  useEffect(() => { getJSON("/api/crowd").then((j) => setCrowdMap(j.places || {})).catch(() => {}); }, []);
   const [talkState, setTalkState] = useState<Record<string, boolean>>({});
   const [big, setBig] = useState(false);
   const [hint, setHint] = useState<Hint | null>(null);
@@ -70,14 +73,18 @@ export default function Page() {
   const [route, setRoute] = useState<string[]>([""]);
   const [saved, setSaved] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
+  // 사용법 안내: ×로 닫으면 이 기기에서는 다시 안 띄운다 (코스를 만든 뒤에도 숨김)
+  const [howto, setHowto] = useState(false);
+  useEffect(() => { try { setHowto(localStorage.getItem("gd-howto") !== "hide"); } catch { setHowto(true); } }, []);
+  const closeHowto = () => { setHowto(false); try { localStorage.setItem("gd-howto", "hide"); } catch { /* 무시 */ } };
   // 일별 예보 (16일 앞까지). 날짜 고르기·조건 카드·시간표에 함께 쓴다
   const [wx, setWx] = useState<WxDay[]>([]);
-  useEffect(() => { fetch("/api/weather").then((r) => r.json()).then((j) => setWx(j.days || [])).catch(() => {}); }, []);
+  useEffect(() => { getJSON("/api/weather").then((j) => setWx(j.days || [])).catch(() => {}); }, []);
   const wxOf = (d?: string | null) => wx.find((x) => x.date === d) || null;
   // 동이 브리핑: 코스가 바뀌면 규칙 카드를 바로 보여 주고, AI가 같은 근거로 정리한 카드가 오면 바꿔 끼운다
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefBusy, setBriefBusy] = useState(false);
-  const wxText = (w: WxDay) => `${WX_ICON[w.icon] || ""} ${lang === "ko" ? w.ko : w.en} · ${w.pop != null ? `${lang === "ko" ? "비" : "rain"} ${w.pop}%` : `${lang === "ko" ? "강수" : "rain"} ${w.mm}mm`} · ${w.tmin}~${w.tmax}°C`;
+  const wxText = (w: WxDay) => `${lang === "ko" ? w.ko : w.en} · ${w.pop != null ? `${lang === "ko" ? "비" : "rain"} ${w.pop}%` : `${lang === "ko" ? "강수" : "rain"} ${w.mm}mm`} · ${w.tmin}~${w.tmax}°C`;
   const [toast, setToast] = useState<{ text: string; act?: { label: string; fn: () => void } } | null>(null);
   const toastT = useRef<number>(0);
   const showToast = (text: string, act?: { label: string; fn: () => void }) => {
@@ -88,6 +95,7 @@ export default function Page() {
   const [site, setSite] = useState<{ banner: any; notices: any[] } | null>(null);   // 관리자 공지 (바로 반영)
   useEffect(() => { api.get("/api/site").then(setSite).catch(() => {}); }, [route]);
 
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);   // 스크린리더가 영어 화면을 영어로 읽게
   useEffect(() => { setLog([{ pose: "wave", text: t("plan.greet") }, { pose: "ask", text: t("q.when") }]); setStep(0); }, [lang]);
   // 대화 칸 높이를 실제 머리말·아래 탭 높이에 맞춘다 (폰마다 머리말 높이가 달라서)
   useEffect(() => {
@@ -347,7 +355,8 @@ export default function Page() {
   const wdOf = (d: string) => new Date(d + "T00:00:00").getDay();
   const whenPicker = (onDone: () => void, label: string) => {
     const d0 = cond.date || plusDays(0);
-    const strip = Array.from({ length: 14 }, (_, i) => plusDays(i));
+    const strip = Array.from({ length: 7 }, (_, i) => plusDays(i));   // 일주일만 보이고, 그 뒤는 달력에서
+    const far = !strip.includes(d0);
     return (
       <div className="when">
         <div className="dstrip" role="group" aria-label={lang === "ko" ? "날짜" : "Date"}>
@@ -356,13 +365,14 @@ export default function Page() {
               aria-label={`${dateLabel(d, lang)} ${wdName(wd, lang)}`} onClick={() => setCond({ ...cond, date: d })}>
               <small>{i === 0 ? (lang === "ko" ? "오늘" : "Today") : i === 1 ? (lang === "ko" ? "내일" : "Tmrw") : wdName(wd, lang)}</small>
               <b>{Number(d.slice(8))}</b>
-              {wxOf(d) && <i className={`wx${wxOf(d)!.rain ? " wet" : ""}`} aria-hidden="true">{WX_ICON[wxOf(d)!.icon]}</i>}</button>); })}
-          <button type="button" className="dchip more" aria-expanded={calOpen} onClick={() => setCalOpen(!calOpen)}>
-            <small>{lang === "ko" ? "더 먼 날" : "Later"}</small><b>{lang === "ko" ? "달력" : "Cal"}</b></button>
+              {wxOf(d) && <i className={`wx${wxOf(d)!.rain ? " wet" : ""}`} aria-hidden="true"><Icon name={wxOf(d)!.icon} /></i>}</button>); })}
+          <button type="button" className={`dchip more${far ? " picked" : ""}`} aria-expanded={calOpen} aria-pressed={far} onClick={() => setCalOpen(!calOpen)}
+            aria-label={far ? (lang === "ko" ? `달력에서 고른 날 ${dateLabel(d0, lang)}. 다른 날 고르기` : `Picked ${dateLabel(d0, lang)}. Pick another day`) : (lang === "ko" ? "다음 주 이후 날짜는 달력에서 고르기" : "Pick a later date from the calendar")}>
+            <Icon name="cal" /><small>{far ? `${+d0.slice(5, 7)}/${+d0.slice(8)}` : (lang === "ko" ? "달력" : "Later")}</small></button>
         </div>
         {calOpen && <Calendar value={d0} lang={lang} onChange={(d) => { setCond({ ...cond, date: d }); setCalOpen(false); }} />}
         <div className="wrow" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
-          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) ? wxText(wxOf(d0)!) : (lang === "ko" ? "예보는 16일 앞까지만 나와요" : "Forecast covers 16 days")}</span>
+          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) && <Icon name={wxOf(d0)!.icon} />}{wxOf(d0) ? " " + wxText(wxOf(d0)!) : (lang === "ko" ? "예보는 16일 앞까지만 나와요" : "Forecast covers 16 days")}</span>
           {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
             <button key={v} type="button" className="chip sm" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{l}</button>)}
         </div>
@@ -441,7 +451,7 @@ export default function Page() {
           </nav>
           <div className="tools">
             <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
-            <button className="box bigt" aria-pressed={big} onClick={toggleBig}>{big ? t("tool.bigOn") : t("tool.big")}</button>
+            <button className="box bigt" aria-pressed={big} onClick={toggleBig}><span className="long">{big ? t("tool.bigOn") : t("tool.big")}</span><span className="short" aria-hidden="true">{big ? t("tool.bigOnShort") : t("tool.bigShort")}</span></button>
             <label className="sr-only" htmlFor="lang">{t("tool.lang")}</label>
             <select id="lang" className="box" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
               <option value="ko">한국어</option><option value="en">English</option>
@@ -471,14 +481,16 @@ export default function Page() {
       <section id="plan" className="sec wrap" aria-labelledby="plan-h">
       <div className="sec-head">
         <h2 id="plan-h">{t("plan.h")}</h2>
-        <p>{t("plan.sub")}{(cond.wish || []).length > 0 && !course ? " " + t("plan.wished", { n: (cond.wish || []).length }) : ""}</p>
+        <p>{t("plan.sub")}{(cond.wish || []).length > 0 && !course ? " " + t("plan.wished", { n: (cond.wish || []).length }) : ""}
+          {!howto && !course && <button className="link-btn" onClick={() => setHowto(true)}>{lang === "ko" ? "사용법 보기" : "How it works"}</button>}</p>
       </div>
+      {howto && !course && <HowToStrip lang={lang} onClose={closeHowto} />}
       <div className="grid">
         <section className="panel chat" aria-label={t("nav.plan")}>
           <ol className="steps" aria-label={lang === "ko" ? "진행 단계" : "Progress"}>
             {STEPS[lang].map((x, i) => <li key={x} className={i < step ? "done" : i === step ? "cur" : ""} aria-current={i === step ? "step" : undefined}>{x}</li>)}
           </ol>
-          <div className="chat-log" ref={logRef}>
+          <div className="chat-log" ref={logRef} role="log" aria-live="polite" aria-label={lang === "ko" ? "동이와 나눈 대화" : "Chat with Dongi"}>
             {log.map((m, i) => m.me
               ? <div key={i} className="me"><span>{m.img && <img className="me-img" src={m.img} alt={lang === "ko" ? "보낸 사진" : "Sent photo"} />}{m.text}</span></div>
               : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}
@@ -530,9 +542,10 @@ export default function Page() {
             </div>
             <form className="composer" onSubmit={(e) => { e.preventDefault(); if (input.trim()) { chat(input.trim()); setInput(""); } }}>
               <label className="chip cam" title={lang === "ko" ? "사진으로 물어보기: 입구·길 사진을 보내면 지나갈 수 있는지 봐 드려요" : "Ask with a photo"}>
-                <span aria-hidden="true">📷</span><span className="sr-only">{lang === "ko" ? "사진으로 물어보기" : "Ask with a photo"}</span>
+                <Icon name="camera" /><span className="sr-only">{lang === "ko" ? "사진으로 물어보기" : "Ask with a photo"}</span>
                 <input type="file" accept="image/*" capture="environment" hidden disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) askPhoto(f); }} />
               </label>
+              <MicButton lang={lang} disabled={busy} onText={(x) => setInput(x)} onError={(m) => showToast(m)} />
               <input aria-label={t("chat.ph")} placeholder={step > Q.length ? t("chat.ph") : t("talk.ph")} value={input} onChange={(e) => setInput(e.target.value)} />
               <button className="chip go" disabled={busy || !input.trim()}>{t("chat.send")}</button>
             </form>
@@ -543,20 +556,20 @@ export default function Page() {
           {!course ? (<>
               {tripCard()}
               <KakaoMap pins={overview} overview />
-              <p className="muted" style={{ fontSize: ".85em" }}>{t("map.overview", { n: overview.length })}</p>
+              <p className="muted map-note">{t("map.overview", { n: overview.length })}</p>
             </>) : (
             <>
               {tripDays(cond.days) > 1 && trip[1] && (
-                <div className="day-tabs" role="tablist" aria-label={t("plan.days")}>
+                <div className="day-tabs" role="group" aria-label={t("plan.days")}>
                   {Array.from({ length: tripDays(cond.days) }, (_, i) => i + 1).map((k) => {
                     const dt = new Date(trip[1].res.course.date + "T00:00:00"); dt.setDate(dt.getDate() + k - 1);
                     const w = wxOf(iso(dt));
-                    return <button key={k} role="tab" aria-selected={k === dayNo} className={k === dayNo ? "on" : ""} disabled={busy} onClick={() => goDay(k)}>
-                      <b>{t("day.tab", { n: k })}</b><small>{dt.getMonth() + 1}/{dt.getDate()}({wdName(dt.getDay(), lang)}){w ? " " + WX_ICON[w.icon] : ""}</small></button>;
+                    return <button key={k} aria-pressed={k === dayNo} className={k === dayNo ? "on" : ""} disabled={busy} onClick={() => goDay(k)}>
+                      <b>{t("day.tab", { n: k })}</b><small>{dt.getMonth() + 1}/{dt.getDate()}({wdName(dt.getDay(), lang)}){w ? <> <Icon name={w.icon} /></> : null}</small></button>;
                   })}
                 </div>)}
               {tripDays(cond.days) > 1 && <p className="muted small">{t("day.note")}</p>}
-              {dayNo > 1 && !course.stops.some((s) => s.kind === "sight") && <p className="day-free">🌊 {t("day.free")}</p>}
+              {dayNo > 1 && !course.stops.some((s) => s.kind === "sight") && <p className="day-free"><Icon name="sea" /> {t("day.free")}</p>}
               <div className="tl-head">
                 <div>
                   <p className="tl-date">{t("tl.head", { d: dateLabel(course.date, lang), w: wdName(course.weekday, lang), s: course.start_time })} · {startName}</p>
@@ -575,7 +588,7 @@ export default function Page() {
                     {brief.by === "ai" ? <span className="via via-llm">{lang === "ko" ? "AI가 정리했어요" : "Summarized by AI"}</span>
                       : briefBusy ? <span className="via via-rule">{lang === "ko" ? "AI가 정리하는 중…" : "AI is summarizing…"}</span> : null}</p>
                   <h3>{brief.headline}</h3>
-                  {brief.fits.length > 0 && <ul className="fits">{brief.fits.map((f, i) => <li key={i}><span aria-hidden="true">{BRIEF_ICON[f.icon]}</span>{f.text}</li>)}</ul>}
+                  {brief.fits.length > 0 && <ul className="fits">{brief.fits.map((f, i) => <li key={i}><span className="fit-ic"><Icon name={f.icon} /></span>{f.text}</li>)}</ul>}
                   {brief.bring.length > 0 && <p className="bring"><b>{lang === "ko" ? "챙기세요" : "Bring"}</b>{brief.bring.map((b) => <span key={b} className="chip sm">{b}</span>)}</p>}
                   {wxOf(course.date) && <p className="brief-act">
                     {!wxOf(course.date)!.rain && cond.weather_pref !== "실외" && cond.weather_pref !== "실내" && <button className="chip sm" onClick={() => { setCond({ ...cond, weather_pref: "실내" }); edit("indoor", null, t("qc.indoor")); }}>{lang === "ko" ? "실내로 바꾸기" : "Make it indoor"}</button>}
@@ -600,11 +613,11 @@ export default function Page() {
               <p className="muted">{t("result.back", { s: startName, t: course.back_at })}</p>
               {course.skipped.length > 0 && (
                 <div className="tl-skip"><b>{t("tl.skipped")}</b>
-                  <ul>{course.skipped.map((x) => <li key={x.id}>{x.name} — {x.reason}</li>)}</ul></div>)}
-              {course.notes.filter((n) => !course.skipped.some((x) => n.startsWith(x.name))).map((n) => <p key={n} className="muted">{n}</p>)}
+                  <ul>{course.skipped.map((x) => <li key={x.id}>{lang === "ko" ? `${x.name} — ${x.reason}` : `${name(x.id)} — closed or not open at that time`}</li>)}</ul></div>)}
+              {course.notes.filter((n) => !course.skipped.some((x) => n.startsWith(x.name))).map((n) => noteText(n, lang)).filter(Boolean).map((n) => <p key={n} className="muted">{n}</p>)}
               {hint?.events?.length ? (
                 <div className={`tl-events${hint.onDay ? " on" : ""}`}>
-                  <b>🎉 {t(hint.onDay ? "tl.eventsDay" : "tl.eventsSoon")}</b>
+                  <b><Icon name="event" /> {t(hint.onDay ? "tl.eventsDay" : "tl.eventsSoon")}</b>
                   <ul>{hint.events.map((e) => <li key={e.name}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}{e.venue ? ` · ${e.venue}` : ""}</li>)}</ul>
                 </div>) : null}
               {hint?.move && (
@@ -612,19 +625,19 @@ export default function Page() {
                   <b>{t("x.tourTitle")}</b>
                   {hint.move.taxi && <p className="muted">{t("x.taxiStart", { s: startName, n: hint.move.taxi.spaces })}</p>}
                   {hint.move.mobility_center && (<>
-                    <p className="muted">♿ {t("x.mobility", { n: hint.move.mobility_center.wheelchair_vehicles, t: hint.move.mobility_center.tel, f: hint.move.mobility_center.fare })}</p>
+                    <p className="muted"><Icon name="wheel" /> {t("x.mobility", { n: hint.move.mobility_center.wheelchair_vehicles, t: hint.move.mobility_center.tel, f: hint.move.mobility_center.fare })}</p>
                     <p className="muted">{t("x.mobilityWho")}</p>
                   </>)}
-                  {hint.move.rentals?.[0] && <p className="muted">🚗 {t("x.rental", { n: hint.move.rentals[0].name, h: hint.move.rentals[0].weekday })} · {hint.move.rentals[0].tel}</p>}
+                  {hint.move.rentals?.[0] && <p className="muted"><Icon name="car" /> {t("x.rental", { n: hint.move.rentals[0].name, h: hint.move.rentals[0].weekday })} · {hint.move.rentals[0].tel}</p>}
                   {hint.move.city_tour?.covers.length > 0 && (<>
                     <p className="muted">{t("x.tour", { ...hint.move.city_tour, m: hint.move.city_tour.interval_min, n: hint.move.city_tour.covers.length })}</p>
                     {cond.move.length > 0 && <p className="muted">{t("x.tourWheel", { c: hint.move.city_tour.contact })}</p>}
                   </>)}
                 </div>
               )}
-              {hint?.stay && <p className="muted">🛏 {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
+              {hint?.stay && <p className="muted"><Icon name="bed" /> {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
               <ReportBox stops={course.stops.map((s) => ({ id: s.id, name: name(s.id) }))} t={t} />
-              <p className="muted" style={{ fontSize: ".8em" }}>{t("x.src")}</p>
+              <p className="muted small">{t("x.src")}</p>
             </>
           )}
         </section>
@@ -635,20 +648,19 @@ export default function Page() {
       <NowDonghae lang={lang} />
       <HomeFacts lang={lang} />
       <ZoneTiles lang={lang} />
-      <HowTo lang={lang} />
       <MoreLinks lang={lang} />
       </>}
       </main>
       <nav className="tabbar" aria-label={t("nav.main")}>
-        {([["#plan", "nav.plan", "", "🧭"], ["#/places", "nav.places", "places", "📍"], ["#/transport", "nav.transport", "transport", "🚌"], ["#/map", "nav.map", "map", "🗺"], ["#/my", "nav.my", "my", "📅"]] as const).map(([h, k, r, ic]) =>
-          <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><span aria-hidden="true">{ic}</span>{t(k)}</a>)}
+        {([["#plan", "nav.plan", "", "route"], ["#/places", "nav.places", "places", "pin"], ["#/transport", "nav.transport", "transport", "bus"], ["#/map", "nav.map", "map", "map"], ["#/my", "nav.my", "my", "cal"]] as const).map(([h, k, r, ic]) =>
+          <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><Icon name={ic} className="tab-ic" />{t(k)}</a>)}
       </nav>
       <nav className="quick" aria-label={lang === "ko" ? "빠른 메뉴" : "Quick menu"}>
-        <a href="#plan"><img src="/photos/q-plan.webp" alt="" aria-hidden="true" />{lang === "ko" ? "코스 만들기" : "Plan"}</a>
-        <a href="#/map"><img src="/photos/q-toilet.webp" alt="" aria-hidden="true" />{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
-        <a href="#/events"><img src="/photos/q-event.webp" alt="" aria-hidden="true" />{lang === "ko" ? "행사" : "Events"}</a>
-        <button onClick={openSafety}><img src="/photos/q-safety.webp" alt="" aria-hidden="true" />{lang === "ko" ? "안심" : "Help"}</button>
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><img src="/photos/q-top.webp" alt="" aria-hidden="true" />{lang === "ko" ? "맨 위로" : "Top"}</button>
+        <a href="#plan"><Icon name="route" />{lang === "ko" ? "코스 짜기" : "Plan"}</a>
+        <a href="#/map"><Icon name="toilet" />{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
+        <a href="#/events"><Icon name="event" />{lang === "ko" ? "행사" : "Events"}</a>
+        <button onClick={openSafety}><Icon name="shield" />{lang === "ko" ? "긴급·도움" : "Help"}</button>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Icon name="top" />{lang === "ko" ? "맨 위로" : "Top"}</button>
       </nav>
       {toast && (
         <div className="toast" role="status">
@@ -657,7 +669,7 @@ export default function Page() {
           <button className="x" aria-label={t("common.close")} onClick={() => setToast(null)}>×</button>
         </div>)}
       {(cond.wish || []).length > 0 && route[0] !== "" && !toast && (
-        <a className="cart" href="#plan">{lang === "ko" ? `담은 곳 ${(cond.wish || []).length}곳 · 코스 만들기` : `${(cond.wish || []).length} saved · Plan`}</a>)}
+        <a className="cart" href="#plan">{lang === "ko" ? `담은 곳 ${(cond.wish || []).length}곳 · 코스 짜기` : `${(cond.wish || []).length} saved · Plan`}</a>)}
       <footer className="foot">
         <div className="wrap">
           <nav className="foot-nav" aria-label={t("nav.more")}>
@@ -671,39 +683,74 @@ export default function Page() {
       </footer>
       {sumOpen && course && <Summary course={course} extras={extras} name={name} t={t} lang={lang} start={startName} url={shareUrl} onClose={() => setSumOpen(false)} />}
       {safety && (
-        <section className="sheet" role="dialog" aria-modal="false" aria-label={t("tool.safety")}>
+        <section className="sheet" role="dialog" aria-modal="false" aria-labelledby="sheet-h" onKeyDown={(e) => { if (e.key === "Escape") setSafety(null); }}>
+          <header className="sheet-top">
+            <h2 id="sheet-h">{t("tool.safety")}</h2>
+            <button className="sheet-x" onClick={() => setSafety(null)} aria-label={t("common.close")} autoFocus>×</button>
+          </header>
+          <div className="sheet-body">
           <Dongi pose="neutral" name={t("dongi")}>{t("safety.say")}</Dongi>
-          <p><b>119</b> {t("safety.119")} · <b>1330</b> {t("safety.1330")}</p>
+          <p className="sheet-call"><a className="chip go" href="tel:119"><b>119</b>&nbsp;{t("safety.119")}</a><a className="chip" href="tel:1330"><b>1330</b>&nbsp;{t("safety.1330")}</a></p>
           {safety.help?.length > 0 && <h3>{t("safety.help")}</h3>}
-          {safety.help?.map((c: any) => <div key={c.name} className="stop"><span>{c.name} · {c.languages.length ? t("safety.langs", { l: c.languages.join(", ") }) : ""}</span><span className="muted">{c.status === "check" ? t("safety.check") : `${t(c.status === "open" ? "safety.open" : "safety.closed")} ${c.hours}`} · {c.dist_m}m · {c.tel}</span></div>)}
+          {safety.help?.map((c: any) => <SheetRow key={c.name} title={[c.name, c.languages?.length ? t("safety.langs", { l: c.languages.join(", ") }) : ""]}
+            info={[c.status === "check" ? t("safety.check") : `${t(c.status === "open" ? "safety.open" : "safety.closed")} ${c.hours || ""}`, km(c.dist_m)]} tel={c.tel} />)}
           {safety.chargers?.length > 0 && <h3>{t("safety.chargers")}</h3>}
-          {safety.chargers?.map((c: any) => <div key={c.name} className="stop"><span>{c.name} · {c.spot}</span><span className="muted">{c.open_now ? t("safety.open") : t("safety.closed")} ({t("x.chargerWk", { h: c.weekday_hours })}) · {c.dist_m}m · {c.tel}</span></div>)}
+          {safety.chargers?.map((c: any) => <SheetRow key={c.name} title={[c.name, c.spot]}
+            info={[`${c.open_now ? t("safety.open") : t("safety.closed")} (${t("x.chargerWk", { h: c.weekday_hours })})`, km(c.dist_m)]} tel={c.tel} />)}
           {safety.mobility_center && <>
             <h3>{t("safety.mobility")}</h3>
-            <div className="stop"><span>{safety.mobility_center.name} · {safety.mobility_center.hours}</span><span className="muted">{safety.mobility_center.tel} · {safety.mobility_center.app}</span></div>
+            <SheetRow title={[safety.mobility_center.name, safety.mobility_center.hours]} info={[safety.mobility_center.app]} tel={safety.mobility_center.tel} />
             <p className="muted">{t("x.mobilityWho")}</p>
           </>}
-          {safety.places.map((p: any) => <div key={p.name} className="stop"><span>{p.name} · {p.kind}</span><span className="muted">{p.until} · {p.dist_m}m · {p.tel}</span></div>)}
-          <button className="box" onClick={() => setSafety(null)}>{t("common.close")}</button>
+          {safety.places?.length > 0 && <h3>{lang === "ko" ? "병원·약국" : "Clinics & pharmacies"}</h3>}
+          {safety.places.map((p: any) => <SheetRow key={p.name} title={[p.name, p.kind]} info={[p.until, km(p.dist_m)]} tel={p.tel} />)}
+          <button className="box sheet-close" onClick={() => setSafety(null)}>{t("common.close")}</button>
+          </div>
         </section>
       )}
     </>
   );
 }
 
+// 엔진이 한국어로 남기는 코스 메모를 영어 화면에서는 같은 뜻의 영어로 (모르는 문장은 숨김)
+function noteText(n: string, lang: string): string {
+  if (lang === "ko") return n;
+  const rules: [RegExp, (m: RegExpMatchArray) => string][] = [
+    [/^접근성을 아직 확인하지 못한 (\d+)곳은 코스에서 뺐어요/, (m) => `${m[1]} places whose access hasn't been checked yet were left out.`],
+    [/^담아 두신 .* 이 조건으로 갈 수 없어 뺐어요/, () => "Some places you saved can't be reached with these needs, so they were left out."],
+    [/^방문 시각에 문을 연 식당을 찾지 못했어요/, () => "No restaurant is open at that time. Try a different start time."],
+    [/^점심때까지 시간이 남아 .* 넣었어요/, () => "Added a stop to fill the time before lunch."],
+    [/^점심 전까지 .* (\d+)분 더 여유 있게 쉬어요/, (m) => `${m[1]} extra minutes to rest before lunch.`],
+  ];
+  for (const [re, f] of rules) { const m = n.match(re); if (m) return f(m); }
+  return /[가-힣]/.test(n) ? "" : n;
+}
+
+// 긴급·도움 창의 한 줄: 이름 · 정보 · 전화(누르면 걸림). 빈 값은 빼고 잇는다
+const km = (m?: number) => (m == null ? "" : m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
+function SheetRow({ title, info, tel }: { title: (string | undefined)[]; info: (string | undefined)[]; tel?: string }) {
+  return (
+    <div className="stop sheet-row">
+      <span>{title.filter(Boolean).join(" · ")}</span>
+      <span className="muted">{info.filter(Boolean).join(" · ")}{tel ? <> · <a href={`tel:${tel}`}>{tel}</a></> : null}</span>
+    </div>
+  );
+}
+
+
 // 코스 카드 아래: 공공데이터로 붙인 이야기·택시·주차·충전기·신호등
 function StopExtra({ x, wheel, t }: { x?: Extra; wheel: boolean; t: (k: string, v?: Record<string, string | number>) => string }) {
   if (!x) return null;
-  const rows: string[] = [];
-  if (x.stories?.[0]) rows.push(`📜 ${t("x.story")}: ${x.stories.slice(0, 2).map((s) => s.name).join(", ")} — ${x.stories[0].intro}`);
-  if (x.trail_info?.[0]) rows.push(`🚶 ${t("x.trail")}: ${x.trail_info[0].name} ${t("x.km", { k: x.trail_info[0].length_km, d: x.trail_info[0].duration })}`);
-  if (x.events_here?.[0]) rows.push(`🎉 ${t("x.eventHere")}: ${x.events_here[0].name} (${x.events_here[0].start}~${x.events_here[0].end})`);
-  if (x.fee) rows.push(`🎟 ${x.fee}`);
-  if (x.park?.[0]) rows.push(`🌳 ${t("x.park")}: ${x.park[0].name} ${x.park[0].dist_m}m`);
-  if (x.taxi?.[0]) rows.push(`🚕 ${t("x.taxi")}: ${x.taxi[0].name}`);
-  if (x.signals?.total) rows.push(`🚦 ${t("x.signals", { n: x.signals.total, c: x.signals.countdown })}`);
-  if (x.phone) rows.push(`☎ ${x.phone}`);
-  return rows.length ? <ul className="muted" style={{ margin: "0 0 8px 14px", padding: 0, fontSize: ".85em" }}>{rows.map((r) => <li key={r}>{r}</li>)}</ul> : null;
+  const rows: [string, string][] = [];
+  if (x.stories?.[0]) rows.push(["story", `${t("x.story")}: ${x.stories.slice(0, 2).map((s) => s.name).join(", ")} — ${x.stories[0].intro}`]);
+  if (x.trail_info?.[0]) rows.push(["walk", `${t("x.trail")}: ${x.trail_info[0].name} ${t("x.km", { k: x.trail_info[0].length_km, d: x.trail_info[0].duration })}`]);
+  if (x.events_here?.[0]) rows.push(["event", `${t("x.eventHere")}: ${x.events_here[0].name} (${x.events_here[0].start}~${x.events_here[0].end})`]);
+  if (x.fee) rows.push(["ticket", x.fee]);
+  if (x.park?.[0]) rows.push(["park", `${t("x.park")}: ${x.park[0].name} ${x.park[0].dist_m}m`]);
+  if (x.taxi?.[0]) rows.push(["taxi", `${t("x.taxi")}: ${x.taxi[0].name}`]);
+  if (x.signals?.total) rows.push(["signal", t("x.signals", { n: x.signals.total, c: x.signals.countdown })]);
+  if (x.phone) rows.push(["phone", x.phone]);
+  return rows.length ? <ul className="muted small ic-list">{rows.map(([ic, r]) => <li key={r}><Icon name={ic} />{ic === "phone" ? <a href={`tel:${r}`}>{r}</a> : <span>{r}</span>}</li>)}</ul> : null;
 }
 
 // 동이가 찾아 준 정보 카드 (공공데이터)
@@ -717,13 +764,13 @@ function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: an
   else if (c.kind === "mobility_van") body = <>{row(d.name, `${d.tel} · ${d.hours}`)}<p className="muted">{t("x.mobilityWho")}</p></>;
   else if (c.kind === "city_tour") body = row(`${d.name} · ${d.days}`, `${d.board} ${d.first}~${d.last} · ${d.fare}`);
   else if (c.kind === "events") body = d.map((x: any) => row(x.name, `${x.start}~${x.end} · ${x.venue}`));
-  else if (c.kind === "restaurants" && d.items?.[0]?.dist_m != null) body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}${x.checked ? " ♿" : ""}`, `${x.dist_m}m${x.tel ? " · " + x.tel : ""}`))}<p className="muted">{t("card.eats", { n: d.total, r: d.radius / 1000 })}</p></>;
+  else if (c.kind === "restaurants" && d.items?.[0]?.dist_m != null) body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}${x.checked ? (lang === "ko" ? " · 무장애 정보 있음" : " · access info") : ""}`, `${x.dist_m}m${x.tel ? " · " + x.tel : ""}`))}<p className="muted">{t("card.eats", { n: d.total, r: d.radius / 1000 })}</p></>;
   else if (c.kind === "lodging") body = <>{d.items.map((x: any) => <div key={x.name + x.address}>{row(`${x.name} · ${x.kind}`, x.tel || x.address)}<BookLinks name={x.name} lang={lang} /></div>)}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "lodging" || c.kind === "restaurants") body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}`, x.tel || x.address))}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "parking") body = d.map((x: any) => row(`${x.name} (${x.spaces})`, `${x.fee}${x.disabled_free ? " · " + t("x.parkingFree") : ""} · ${x.dist_m}m`));
   else if (c.kind === "taxi") body = (Array.isArray(d) ? d : [d]).map((x: any) => row(x.name, x.address || ""));
   else if (c.kind === "hospital_pharmacy") body = <button className="sos" onClick={onSafety}>{t("tool.safety")}</button>;
-  return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}<p className="muted" style={{ fontSize: ".75em" }}>{t("x.src")}</p></div>;
+  return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}<p className="muted small">{t("x.src")}</p></div>;
 }
 
 // 현장 제보: 사진을 올리면 서버가 AI 비전으로 장애물을 찾아 '검수용 제안'을 돌려준다
@@ -741,7 +788,7 @@ function ReportBox({ stops, t }: { stops: { id: string; name: string }[]; t: (k:
     try { const r = await fetch("/api/reports", { method: "POST", body: fd }); setRes(await r.json()); } catch { setRes({ error: true }); }
     setBusy(false);
   }
-  if (!open) return <button className="chip" onClick={() => setOpen(true)}>📷 {t("rep.open")}</button>;
+  if (!open) return <button className="chip" onClick={() => setOpen(true)}><Icon name="camera" />&nbsp;{t("rep.open")}</button>;
   return (
     <form className="stop" style={{ display: "block" }} onSubmit={send}>
       <b>{t("rep.title")}</b>

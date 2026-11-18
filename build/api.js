@@ -753,7 +753,58 @@ export function makeApi(DATA) {
   }
 
   // ---------- cms.py (관리자 페이지 관리) — 데모는 이 브라우저에만 저장 ----------
-  const DEMO_ID = "admin", DEMO_PW = "gildongmu2026", DEMO_TOKEN = "demo-session";
+  const DEMO_ID = "admin", DEMO_PW = "gildongmu2026";
+  // 계정·권한: 서버(cms.py)와 같은 규칙. 데모는 이 브라우저에만 저장하고, 비밀번호는 간단한 해시로 바꿔 둔다
+  // (실제 서버는 PBKDF2-SHA256). 총괄 관리자 = 위 시연용 계정.
+  const ROLES = { owner: "총괄 관리자", editor: "편집자", surveyor: "현장 조사원" };
+  const PERMS = { owner: ["place", "notice", "site", "reports", "visits", "history", "data", "accounts", "backup"],
+    editor: ["place", "notice", "site", "reports", "visits", "history", "data"], surveyor: ["reports", "visits"] };
+  const SESS = (() => { try { return JSON.parse(sessionStorage.getItem("gd-demo-sess") || "{}"); } catch { return {}; } })(), FAILS = {};
+  const sessSave = () => { try { sessionStorage.setItem("gd-demo-sess", JSON.stringify(SESS)); } catch { /* 저장 불가 */ } };
+  let ACTOR = "총괄 관리자 (admin)";
+  const pwHash = (pw, salt) => { let h = 2166136261 >>> 0; const t = salt + "|" + pw; for (let r = 0; r < 2000; r++) for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i) + r; h = Math.imul(h, 16777619) >>> 0; } return h.toString(16); };
+  const accLoad = () => { try { return JSON.parse(localStorage.getItem("gd-admin-accounts") || "[]"); } catch { return []; } };
+  const accSave = (v) => { try { localStorage.setItem("gd-admin-accounts", JSON.stringify(v)); } catch { /* 저장 불가 */ } };
+  const accPublic = (a) => ({ id: a.id, name: a.name, role: a.role, active: a.active !== false, created_at: a.created_at, created_by: a.created_by, last_login: a.last_login, must_change: !!a.must_change, role_name: ROLES[a.role] });
+  function pwRule(pw) { if (!pw || pw.length < 8 || !/[0-9]/.test(pw) || !/[A-Za-z가-힣]/.test(pw)) throw new Error("400:비밀번호는 8자 이상, 글자와 숫자를 함께 넣어 주세요."); }
+  function demoLogin(uid, pw) {
+    uid = (uid || "").trim(); const now = Date.now(), f = FAILS[uid];
+    if (f && f[1] > now) throw new Error(`401:비밀번호를 여러 번 틀려서 잠겼어요. ${Math.ceil((f[1] - now) / 60000)}분 뒤에 다시 해 주세요.`);
+    let user = null;
+    if (uid === DEMO_ID && pw === DEMO_PW) user = { id: DEMO_ID, name: "총괄 관리자", role: "owner", must_change: false };
+    else {
+      const accs = accLoad(), a = accs.find((x) => x.id === uid);
+      if (a && a.active === false) throw new Error("401:사용이 멈춘 계정이에요. 총괄 관리자에게 물어보세요.");
+      if (a && pwHash(pw || "", a.salt) === a.hash) { a.last_login = nowIso(); accSave(accs); user = { id: a.id, name: a.name, role: a.role, must_change: !!a.must_change }; }
+    }
+    if (!user) {
+      const n = (f && f[1] <= now && f[0] < 5 ? f[0] : 0) + 1; FAILS[uid] = [n, n >= 5 ? now + 600000 : 0];
+      const left = 5 - n;
+      throw new Error("401:아이디나 비밀번호가 맞지 않아요." + (left > 0 && left <= 2 ? ` ${left}번 더 틀리면 10분 동안 잠겨요.` : "") + (left <= 0 ? " 10분 동안 잠겼어요." : ""));
+    }
+    delete FAILS[uid];
+    const tok = "demo-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    SESS[tok] = { ...user, exp: now + 12 * 3600e3 }; sessSave();
+    return { token: tok, hours: 12, user: { ...user, role_name: ROLES[user.role], perms: PERMS[user.role] } };
+  }
+  function demoCheck(tok, perm) {
+    const s = SESS[tok || ""];
+    if (!s || s.exp < Date.now()) throw new Error("401:다시 로그인해 주세요");
+    if (perm && !PERMS[s.role].includes(perm)) throw new Error(`403:${ROLES[s.role]} 계정은 이 일을 할 수 없어요. 총괄 관리자에게 부탁해 주세요.`);
+    ACTOR = `${s.name} (${s.id})`; return s;
+  }
+  function permOf(path) {
+    if (/^\/api\/admin\/places\//.test(path)) return "place";
+    if (path.startsWith("/api/admin/notices")) return "notice";
+    if (path === "/api/admin/banner" || path.startsWith("/api/admin/events")) return "site";
+    if (path.startsWith("/api/admin/history")) return "history";
+    if (["/api/admin/backup", "/api/admin/restore", "/api/admin/reset"].includes(path)) return "backup";
+    if (path.startsWith("/api/admin/accounts")) return "accounts";
+    if (path.startsWith("/api/admin/reports") || path === "/api/admin/report") return "reports";
+    if (path.startsWith("/api/admin/visits")) return "visits";
+    if (path === "/api/admin/probe") return "data";
+    return null;
+  }
   const CMS_EMPTY = () => ({ overrides: {}, segments: {}, notices: [], banner: null, events: [], history: [] });
   const NONE = "__없음__";
   const CMS_FIELDS = { open: "str", close: "str", break_time: "list", closed_day_nums: "ints", last_entry: "str", stay_min: "int", phone: "str", fee: "str",
@@ -765,7 +816,7 @@ export function makeApi(DATA) {
   const nowIso = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 19) + "+09:00";
   const hid = () => Math.random().toString(16).slice(2, 12);
   function cmsLog(db, action, target, before, after, reason = "") {
-    const h = { id: hid(), at: nowIso(), who: "admin", action, target, before, after, reason: reason.slice(0, 300), reverted: false };
+    const h = { id: hid(), at: nowIso(), who: ACTOR, action, target, before, after, reason: reason.slice(0, 300), reverted: false };
     db.history = [h, ...db.history].slice(0, 500); return h;
   }
   function clean(f, v) {
@@ -844,10 +895,52 @@ export function makeApi(DATA) {
   }
   function cmsAdmin(method, path, q, body) {
     if (path === "/api/admin/login-info") return { demo: true, id: DEMO_ID, password: DEMO_PW };
-    if (path === "/api/admin/login") { if (body.id === DEMO_ID && body.password === DEMO_PW) return { token: DEMO_TOKEN, hours: 12 }; throw new Error("401:아이디나 비밀번호가 맞지 않아요"); }
-    if (path === "/api/admin/logout") return { ok: true };
-    if ((q.__token || "") !== DEMO_TOKEN) throw new Error("401:다시 로그인해 주세요");
+    if (path === "/api/admin/login") return demoLogin(body.id, body.password);
+    if (path === "/api/admin/logout") { delete SESS[q.__token || ""]; sessSave(); return { ok: true }; }
+    const me = demoCheck(q.__token, permOf(path));
     const db = cmsLoad();
+    if (path === "/api/admin/me") return { id: me.id, name: me.name, role: me.role, must_change: !!me.must_change, role_name: ROLES[me.role], perms: PERMS[me.role], expires_at: new Date(me.exp).toISOString().slice(0, 16) };
+    if (path === "/api/admin/password") {
+      if (me.id === DEMO_ID) throw new Error("400:총괄 관리자 비밀번호는 서버 설정(ADMIN_PASSWORD)에서 바꿔요.");
+      pwRule(body.new); const accs = accLoad(), a = accs.find((x) => x.id === me.id);
+      if (!a || pwHash(body.old || "", a.salt) !== a.hash) throw new Error("400:지금 비밀번호가 맞지 않아요.");
+      if (body.old === body.new) throw new Error("400:새 비밀번호는 지금과 달라야 해요.");
+      a.hash = pwHash(body.new, a.salt); a.must_change = false; accSave(accs); me.must_change = false; sessSave(); cmsLog(db, "password", me.id, null, null, "본인 비밀번호 변경"); cmsSave(db); return { ok: true };
+    }
+    if (path === "/api/admin/accounts" && method === "GET")
+      return { accounts: [{ id: DEMO_ID, name: "총괄 관리자", role: "owner", active: true, builtin: true, created_by: "서버 설정", role_name: ROLES.owner }, ...accLoad().map(accPublic)], roles: ROLES, perms: PERMS };
+    if (path === "/api/admin/accounts") {
+      const uid = (body.id || "").trim();
+      if (!/^[A-Za-z0-9._-]{3,30}$/.test(uid)) throw new Error("400:아이디는 3~30자 영문·숫자(., _, - 가능)로 지어 주세요.");
+      if (!["editor", "surveyor"].includes(body.role)) throw new Error("400:역할을 골라 주세요 (편집자 또는 현장 조사원).");
+      if (!(body.name || "").trim()) throw new Error("400:이름을 적어 주세요.");
+      pwRule(body.password); const accs = accLoad();
+      if (uid === DEMO_ID || accs.some((a) => a.id === uid)) throw new Error("400:이미 있는 아이디예요.");
+      const salt = hid(), rec = { id: uid, name: body.name.trim().slice(0, 30), role: body.role, active: true, salt, hash: pwHash(body.password, salt), created_at: nowIso(), created_by: ACTOR, last_login: null, must_change: true };
+      accSave([...accs, rec]); cmsLog(db, "account_add", uid, null, accPublic(rec)); cmsSave(db); return accPublic(rec);
+    }
+    let am;
+    if ((am = path.match(/^\/api\/admin\/accounts\/(.+)$/))) {
+      if (am[1] === DEMO_ID) throw new Error("400:총괄 관리자 계정은 서버 설정에서만 바꿀 수 있어요.");
+      const accs = accLoad(), a = accs.find((x) => x.id === am[1]); if (!a) throw new Error("400:없는 계정이에요.");
+      const before = accPublic(a);
+      if (body.role != null) { if (!["editor", "surveyor"].includes(body.role)) throw new Error("400:역할을 골라 주세요."); a.role = body.role; }
+      if (body.active != null) a.active = !!body.active;
+      if (body.name) a.name = body.name.trim().slice(0, 30);
+      if (body.password) { pwRule(body.password); a.hash = pwHash(body.password, a.salt); a.must_change = true; }
+      accSave(accs); cmsLog(db, "account_update", a.id, before, accPublic(a), body.password ? "임시 비밀번호 새로 발급" : ""); cmsSave(db);
+      if (body.role != null || body.active === false || body.password) { for (const t of Object.keys(SESS)) if (SESS[t].id === a.id) delete SESS[t]; sessSave(); }
+      return accPublic(a);
+    }
+    if (path === "/api/admin/dashboard") {
+      const day = kstNow().date, reps = adminGet("reports"), vs = adminGet("visits");
+      const wk = new Date(new Date(day + "T00:00:00").getTime() + 7 * 864e5).toISOString().slice(0, 10);
+      return { today: day, reports: { new: reps.filter((r) => r.status === "접수").length, doing: reps.filter((r) => r.status === "확인 중").length, total: reps.length },
+        notices: db.notices.filter((n) => (!n.start || n.start <= day) && (!n.end || day <= n.end)).slice(0, 8).map((n) => ({ ...n, name: n.place_id && PLACES[n.place_id] ? PLACES[n.place_id].name_ko : null })),
+        banner: cmsSite().banner, overrides: Object.keys(db.overrides).length + Object.keys(db.segments).length,
+        visits: { total: vs.length, last: vs.map((v) => v.date).sort().pop() || null },
+        events_week: db.events.filter((e) => e.start <= wk && (e.end || e.start) >= day).slice(0, 5), recent: db.history.slice(0, 8) };
+    }
     if (path === "/api/admin/cms" || path === "/api/admin/backup") return db;
     let m;
     if ((m = path.match(/^\/api\/admin\/places\/(.+)$/))) { if (!PLACES[m[1]]) throw new Error("404:알 수 없는 장소예요"); return cmsSetPlace(m[1], body.fields || {}, body.segments ?? null, body.reason || ""); }
@@ -914,6 +1007,7 @@ export function makeApi(DATA) {
   rebuild();
   function handle(method, path, q, body) {
     if (path === "/api/site") return cmsSite();
+    if (path.startsWith("/api/admin/reports") || path.startsWith("/api/admin/visits")) demoCheck(q.__token, permOf(path));
     if (path.startsWith("/api/admin/") && !path.startsWith("/api/admin/reports") && !path.startsWith("/api/admin/visits")) {
       const r = cmsAdmin(method, path, q, body || {}); if (r !== undefined) return r;
     }
@@ -932,12 +1026,12 @@ export function makeApi(DATA) {
     if (path === "/api/admin/reports" && method === "GET") return adminGet("reports").map((r) => ({ ...r, name: PLACES[r.place_id]?.name_ko || r.place_id }));
     if (path.startsWith("/api/admin/reports/")) { const id = path.split("/").pop();
       adminSet("reports", adminGet("reports").map((r) => { if (r.id !== id) return r;
-        const out = { ...r, status: body.status || r.status, memo: (body.memo || r.memo || "").slice(0, 300) };
+        const out = { ...r, status: body.status || r.status, memo: (body.memo || r.memo || "").slice(0, 300), reviewed_at: nowIso(), reviewed_by: ACTOR };
         if (out.status === "반영" && body.notice && body.notice.level) out.notice_id = cmsAddNotice({ ...body.notice, place_id: r.place_id, from_report: id }, `제보 ${id} 반영`).id;
         return out; }));
       return { ok: true }; }
     if (path === "/api/admin/visits" && method === "GET") return adminGet("visits").sort((a, b) => (a.date < b.date ? 1 : -1));
-    if (path === "/api/admin/visits") { if (!PLACES[body.place_id]) throw new Error("404"); const rec = { ...body, id: Math.random().toString(16).slice(2, 14), name: PLACES[body.place_id].name_ko }; adminSet("visits", [...adminGet("visits"), rec]); return { ok: true, id: rec.id }; }
+    if (path === "/api/admin/visits") { if (!PLACES[body.place_id]) throw new Error("404"); const rec = { ...body, who: body.who || ACTOR.replace(/ \(.*\)$/, ""), entered_by: ACTOR, id: Math.random().toString(16).slice(2, 14), name: PLACES[body.place_id].name_ko }; adminSet("visits", [...adminGet("visits"), rec]); return { ok: true, id: rec.id }; }
     if (path === "/api/places") return Object.values(PLACES).map((p) => ({ ...p, grade: p.verified ? gradePlace(p, q.mode || "none") : null }));
     if (path.startsWith("/api/places/")) { const p = PLACES[decodeURIComponent(path.split("/").pop())]; if (!p) throw new Error("404"); return { ...p, ...extras(p, q.lang || "ko"), ...placePage(p, q.lang || "ko", q.mode || "wheel") }; }
     if (path === "/api/course") return course(body);

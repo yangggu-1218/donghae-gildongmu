@@ -4,10 +4,13 @@ import { Course, Conditions, Extra, Stop } from "@/lib/api";
 import { PlacePhoto } from "@/components/Sections";
 import { NearbyEats } from "@/components/Eateries";
 import { useState } from "react";
+import { Icon } from "@/components/Icon";
 
 type T = (k: string, v?: Record<string, string | number>) => string;
 const WD_KO = "일월화수목금토";
 const WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// 휠체어 이용 값 (영어 화면용). 보호자 꿀팁은 한국어로만 쓰여 있어 영어 화면에서는 보이지 않는다
+export const WHEEL_EN: Record<string, string> = { "가능": "yes", "일부": "partly", "불가": "no" };
 const WALK_CLS: Record<string, string> = { "평지": "flat", "완만한경사": "gentle", "급경사": "steep" };
 
 export const wdName = (w: number, lang: string) => (lang === "ko" ? WD_KO[w] : WD_EN[w]);
@@ -44,7 +47,7 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
   const crowdTxt = lv && ({ high: ["붐빔 예상", "Busy"], mid: ["보통", "Moderate"], low: ["여유", "Quiet"] } as const)[lv][lang === "ko" ? 0 : 1];
   const n = x?.nearby;
   const facts: string[] = [];
-  if (x?.wheelchair && x.wheelchair !== "확인 전") facts.push(t("tl.wheel", { v: x.wheelchair }));
+  if (x?.wheelchair && x.wheelchair !== "확인 전") facts.push(t("tl.wheel", { v: lang === "ko" ? x.wheelchair : WHEEL_EN[x.wheelchair] || x.wheelchair }));
   if (x?.entrance_step === true) facts.push(t("tl.step"));
   if (x?.entrance_step === false) facts.push(t("tl.noStep"));
   if (x?.benches) facts.push(t("tl.bench"));
@@ -66,26 +69,26 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
         </div>
         <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
           {lv && <span className={`badge crowd-${lv}`} title={lang === "ko" ? "한국관광공사 관광지 집중률 예측" : "KTO crowd forecast"}>{crowdTxt} {Math.round(crowd!)}%</span>}</div>
-        {s.notice && <p className="tl-notice" role="note">⚠ {s.notice}</p>}
-        {s.wait_min > 0 && <p className="muted">⏳ {t("tl.wait", { m: s.wait_min })}</p>}
+        {s.notice && <p className="tl-notice" role="note"><Icon name="warn" /> {s.notice}</p>}
+        {s.wait_min > 0 && <p className="muted"><Icon name="wait" /> {t("tl.wait", { m: s.wait_min })}</p>}
         {s.why && <p className="tl-why">{s.why}</p>}
         {facts.length > 0 && <p className="muted">{facts.join(" · ")}</p>}
-        {x?.carer_tip && <p className="tl-tip"><b>{t("tl.carer")}</b> {x.carer_tip}</p>}
+        {x?.carer_tip && lang === "ko" && <p className="tl-tip"><b>{t("tl.carer")}</b> {x.carer_tip}</p>}
         {n && (
           <details className="tl-near" open={showNear || undefined}>
-            <summary>{[n.parking && `🅿 ${n.parking.name}`, n.charger && `🔋 ${dist(n.charger.dist_m, t)}`].filter(Boolean).join("  ·  ")}</summary>
+            <summary>{n.parking && <span className="sum-it"><Icon name="parking" />{n.parking.name}</span>}{n.charger && <span className="sum-it"><Icon name="charger" />{dist(n.charger.dist_m, t)}</span>}</summary>
             <ul>
               {n.parking && <li><b>{t("tl.parking")}</b> {n.parking.name}{n.parking.spaces ? ` (${n.parking.spaces})` : ""} {n.parking.dist_m ? dist(n.parking.dist_m, t) : ""}</li>}
               {n.charger && <li className={wheel ? "hl" : ""}><b>{t("tl.charger")}</b> {n.charger.name}{n.charger.spot ? ` · ${n.charger.spot}` : ""} · {dist(n.charger.dist_m, t)}{n.charger.weekday_hours ? ` · ${n.charger.weekday_hours}` : ""}</li>}
               {med?.["약국"] && <li><b>{t("tl.pharmacy")}</b> {med["약국"].name} · {dist(med["약국"].dist_m, t)} · {med["약국"].tel}</li>}
               {med?.["응급실"] && <li><b>{t("tl.er")}</b> {med["응급실"].name} · {dist(med["응급실"].dist_m, t)} · {med["응급실"].tel}</li>}
-              {n.info_center && <li><b>ℹ</b> {n.info_center.name} · {n.info_center.tel}</li>}
+              {n.info_center && <li><b><Icon name="info" /></b> {n.info_center.name}{n.info_center.tel ? <> · <a href={`tel:${n.info_center.tel}`}>{n.info_center.tel}</a></> : null}</li>}
             </ul>
           </details>
         )}
         {s.kind === "lunch" && at && (
           <details className="tl-eats" onToggle={(e) => setEatOpen((e.target as HTMLDetailsElement).open)}>
-            <summary>{lang === "ko" ? "🍽 근처 다른 식당 보기" : "🍽 Other places to eat nearby"}</summary>
+            <summary><Icon name="food" />&nbsp;{lang === "ko" ? "근처 다른 식당 보기" : "Other places to eat nearby"}</summary>
             {eatOpen && <NearbyEats lat={at.lat} lon={at.lon} lang={lang} r={500} limit={5} exclude={s.id} />}
           </details>
         )}
@@ -104,7 +107,7 @@ export function summaryText(course: Course, extras: Record<string, Extra>, name:
   course.stops.forEach((s, i) => {
     const x = extras[s.id];
     const bits = [x?.walk_load && x.walk_load !== "확인 전" ? t(`walk.${x.walk_load}`) : "", s.kind !== "sight" && x?.table ? t(`tl.table.${x.table}`) : ""].filter(Boolean);
-    lines.push(`${s.arrive} ${i + 1}. ${name(s.id)}${bits.length ? ` (${bits.join(", ")})` : ""}${x?.phone ? ` ☎ ${x.phone}` : ""}`);
+    lines.push(`${s.arrive} ${i + 1}. ${name(s.id)}${bits.length ? ` (${bits.join(", ")})` : ""}${x?.phone ? ` · ${x.phone}` : ""}`);
   });
   lines.push(t("sum.back", { s: start, t: course.back_at }));
   lines.push(`119 · 1330`);
@@ -143,7 +146,7 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
                     {x?.walk_load && x.walk_load !== "확인 전" ? ` · ${t(`walk.${x.walk_load}`)}` : ""}
                     {s.kind !== "sight" && x?.table ? ` · ${t(`tl.table.${x.table}`)}` : ""}
                   </p>
-                  {(x?.phone || x?.nearby?.parking) && <p className="sum-s">{x?.phone ? `☎ ${x.phone}` : ""}{x?.nearby?.parking ? `  🅿 ${x.nearby.parking.name}` : ""}</p>}
+                  {(x?.phone || x?.nearby?.parking) && <p className="sum-s">{x?.phone && <span className="sum-it"><Icon name="phone" />{x.phone}</span>}{x?.nearby?.parking && <span className="sum-it"><Icon name="parking" />{x.nearby.parking.name}</span>}</p>}
                 </div>
               </li>
             );

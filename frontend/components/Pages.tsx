@@ -7,6 +7,9 @@ import KakaoMap from "@/components/KakaoMap";
 import { NearbyEats } from "@/components/Eateries";
 import { PlacePhoto, ZONES } from "@/components/Sections";
 import { PHOTOS, GALLERY, photoAt } from "@/lib/photos";
+import { WHEEL_EN } from "@/components/Timeline";
+import { tr, dot, SOURCE_NOTES_EN } from "@/lib/ko2en";
+import { Icon } from "@/components/Icon";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -14,7 +17,7 @@ const dist = (m?: number) => (m == null ? "" : m >= 1000 ? `${(m / 1000).toFixed
 const GRADE = { G: ["갈 수 있어요", "Accessible"], Y: ["주의", "Caution"], R: ["어려워요", "Not accessible"] } as const;
 const WALK_EN: Record<string, string> = { "평지": "Flat", "완만한경사": "Gentle slope", "급경사": "Steep", "확인 전": "Not checked" };
 
-function Head({ title, sub, crumb, lang, photo }: { title: string; sub?: string; crumb?: [string, string][]; lang: Lang; photo?: string }) {
+export function Head({ title, sub, crumb, lang, photo }: { title: string; sub?: string; crumb?: [string, string][]; lang: Lang; photo?: string }) {
   const L = pick(lang);
   const [bad, setBad] = useState(false);
   const has = !!(photo && PHOTOS[photo]) && !bad;
@@ -57,6 +60,9 @@ export function CrowdBadge({ rate, lang }: { rate?: number | null; lang: Lang })
 const ymd = (s: string) => `${+s.slice(4, 6)}/${+s.slice(6, 8)}`;
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 
+// 붐빔 정도를 글자로 (색만으로 전하지 않게)
+const crowdWord = (r: number, lang: string) => (r >= 70 ? (lang === "ko" ? "붐빔 예상" : "busy") : r >= 40 ? (lang === "ko" ? "보통" : "moderate") : (lang === "ko" ? "여유" : "quiet"));
+
 function PlaceData({ id, lang }: { id: string; lang: Lang }) {
   const L = pick(lang);
   const [d, setD] = useState<any>(null);
@@ -76,19 +82,24 @@ function PlaceData({ id, lang }: { id: string; lang: Lang }) {
       {crowd.length > 0 && (
         <section>
           <h3>{L("앞으로 2주 붐빔 예상", "Crowd forecast, next 2 weeks")}</h3>
-          <div className="crowd-chart" role="img" aria-label={L("날짜별 붐빔 예상 막대그래프", "Bar chart of daily crowd forecast")}>
+          <p className="muted small">{L("막대가 높을수록 붐벼요. 주황 막대는 가장 한산할 날이에요.", "Taller bars mean busier days. Orange bars are the quietest days.")}</p>
+          <div className="crowd-chart" aria-hidden="true">
             {crowd.map((c) => {
-              const lv = crowdLevel(c.rate) || "low";
               const dt = new Date(+c.date.slice(0, 4), +c.date.slice(4, 6) - 1, +c.date.slice(6, 8));
+              const q = quiet.some((x: any) => x.date === c.date);
               return (
-                <div key={c.date} className="cc-col" title={`${ymd(c.date)} ${Math.round(c.rate)}%`}>
-                  <span className={`cc-bar crowd-${lv}`} style={{ height: `${Math.max(6, (c.rate / max) * 100)}%` }} />
+                <div key={c.date} className="cc-col" title={`${ymd(c.date)} ${Math.round(c.rate)}% (${crowdWord(c.rate, lang)})`}>
+                  {q && <span className="cc-tag">{L("한산", "quiet")}</span>}
+                  <span className={`cc-bar${q ? " quiet" : ""}`} style={{ height: `${Math.max(6, (c.rate / max) * 100)}%` }} />
                   <span className="cc-d">{ymd(c.date)}<br />{lang === "ko" ? WD[dt.getDay()] : dt.toLocaleDateString("en", { weekday: "short" })}</span>
                 </div>
               );
             })}
           </div>
           {quiet.length > 0 && <p className="small">{L("가장 한산할 것으로 보이는 날", "Quietest days")}: <b>{quiet.map((q: any) => ymd(q.date)).join(", ")}</b></p>}
+          <details className="cc-table"><summary>{L("표로 보기", "Show as a table")}</summary>
+            <table className="tbl"><thead><tr><th>{L("날짜", "Date")}</th><th>{L("붐빔 예상", "Crowd")}</th></tr></thead>
+              <tbody>{crowd.map((c) => <tr key={c.date}><td>{ymd(c.date)}</td><td>{Math.round(c.rate)}% · {crowdWord(c.rate, lang)}</td></tr>)}</tbody></table></details>
         </section>
       )}
 
@@ -147,12 +158,12 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
     closed_now: L("지금은 운영시간이 아니에요", "Closed right now"), unknown: L("운영시간 확인 필요", "Check hours") }[p.today as string];
   const n = p.nearby || {};
   const pins = [{ lat: p.lat, lon: p.lon, label: name, grade: null, color: "#12355E", icon: "★" },
-    ...(p.toilets || []).map((t: any) => ({ lat: t.lat, lon: t.lon, label: t.name, grade: null, color: "#2462B4", icon: "화" })),
+    ...(p.toilets || []).map((t: any) => ({ lat: t.lat, lon: t.lon, label: t.name, grade: null, color: "#2462B4", icon: dot(lang, "화") })),
     ...(n.parking?.lat ? [{ lat: n.parking.lat, lon: n.parking.lon, label: n.parking.name, grade: null, color: "#566275", icon: "P" }] : []),
-    ...(n.charger?.lat ? [{ lat: n.charger.lat, lon: n.charger.lon, label: n.charger.name, grade: null, color: "#1E8A3C", icon: "충" }] : [])].filter((x) => x.lat);
+    ...(n.charger?.lat ? [{ lat: n.charger.lat, lon: n.charger.lon, label: n.charger.name, grade: null, color: "#1E8A3C", icon: dot(lang, "충") }] : [])].filter((x) => x.lat);
   const chips: string[] = [];
   if (p.walk_load) chips.push(lang === "ko" ? `걷기: ${p.walk_load}` : `Walking: ${WALK_EN[p.walk_load] || p.walk_load}`);
-  if (p.wheelchair && p.wheelchair !== "확인 전") chips.push(L(`휠체어 ${p.wheelchair}`, `Wheelchair: ${p.wheelchair}`));
+  if (p.wheelchair && p.wheelchair !== "확인 전") chips.push(L(`휠체어 ${p.wheelchair}`, `Wheelchair: ${WHEEL_EN[p.wheelchair] || p.wheelchair}`));
   if (p.entrance_step === false) chips.push(L("출입구 턱 없음", "Step-free entrance"));
   if (p.entrance_step === true) chips.push(L("출입구 턱 있음", "Step at entrance"));
   if (p.table) chips.push(L(`${p.table} 테이블`, `${p.table} seating`));
@@ -171,15 +182,15 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               <small>{n.start || ""}{n.end ? ` ~ ${n.end}` : ""}</small>{n.body && <p>{n.body}</p>}
             </div>))}
           <div className="panel">
-            <p className="pp-today"><span className={`badge ${p.today === "open" || p.today === "always" ? "b-open" : "b-unknown"}`}>{today}</span> {p.hours_text}</p>
-            {p.fee && <p>🎟 {p.fee}</p>}
-            {p.phone && <p>☎ <a href={`tel:${p.phone}`}>{p.phone}</a></p>}
+            <p className="pp-today"><span className={`badge ${p.today === "open" || p.today === "always" ? "b-open" : "b-unknown"}`}>{today}</span>{p.hours_text && p.hours_text !== today ? ` ${p.hours_text}` : ""}</p>
+            {p.fee && <p className="ic-row"><Icon name="ticket" />{tr(lang, p.fee)}</p>}
+            {p.phone && <p className="ic-row"><Icon name="phone" /><a href={`tel:${p.phone}`}>{p.phone}</a></p>}
             {p.sample && <p className="muted">{L("이 장소는 예시 데이터예요. 실제 정보는 확인 전이에요.", "Sample data, not yet verified.")}</p>}
             {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
-            {p.carer_tip && <p className="tl-tip"><b>{L("보호자 꿀팁", "Tip for carers")}</b> {p.carer_tip}</p>}
+            {p.carer_tip && lang === "ko" && <p className="tl-tip"><b>{L("보호자 꿀팁", "Tip for carers")}</b> {p.carer_tip}</p>}
             <p className="muted">{(lang === "ko" ? p.intro_ko || p.tip_ko : p.intro_en || p.tip_en || p.intro_ko) || ""}</p>
             <div className="chips">
-              <button className={`chip ${wished ? "" : "go"}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}>{wished ? L("✓ 담았어요 (다시 누르면 빼기)", "✓ Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
+              <button className={`chip ${wished ? "" : "go"}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}>{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
               <a className="chip" href="#/map">{L("편의시설 지도에서 보기", "Open facilities map")}</a>
             </div>
           </div>
@@ -191,7 +202,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               {([["wheel", "휠체어", "Wheelchair"], ["stroller", "유모차", "Stroller"], ["walk", "오래 걷기 어려움", "Limited walking"]] as const).map(([k, ko, en]) =>
                 <button key={k} className="chip" aria-pressed={mode === k} onClick={() => setMode(k)}>{L(ko, en)}</button>)}
             </div>
-            {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 구간 판정은 현장 실측 전 예시예요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> ☎ <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
+            {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 구간 판정은 현장 실측 전 예시예요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
             <ol className="seglist">
               {(p.segments || []).map((s: any) => (
                 <li key={s.name}>
@@ -210,12 +221,12 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
             <h2 className="h3">{L("가까운 편의시설", "Nearby facilities")}</h2>
             <KakaoMap pins={pins} dots label={L(`${name} 주변 편의시설 지도`, "Nearby facilities map")} />
             <ul className="near-list">
-              {(p.toilets || []).map((t: any) => <li key={t.name}><span className="dot" style={{ background: "#2462B4" }}>화</span><b>{L("장애인 화장실", "Accessible toilet")}</b> {t.name} · {dist(t.dist_m)} · {t.hours}</li>)}
+              {(p.toilets || []).map((t: any) => <li key={t.name}><span className="dot" style={{ background: "#2462B4" }}>{dot(lang, "화")}</span><b>{L("장애인 화장실", "Accessible toilet")}</b> {t.name} · {dist(t.dist_m)} · {t.hours}</li>)}
               {!(p.toilets || []).length && <li className="muted">{L("1.5km 안에 위치가 확인된 장애인 화장실이 없어요. 관리 사무소에 물어보세요.", "No mapped accessible toilet within 1.5 km.")}</li>}
               {n.parking && <li><span className="dot" style={{ background: "#566275" }}>P</span><b>{L("주차", "Parking")}</b> {n.parking.name}{n.parking.spaces ? ` (${n.parking.spaces}${L("면", "")})` : ""} {n.parking.dist_m ? dist(n.parking.dist_m) : ""}</li>}
-              {n.charger && <li><span className="dot" style={{ background: "#1E8A3C" }}>충</span><b>{L("전동휠체어 충전", "Wheelchair charger")}</b> {n.charger.name} · {dist(n.charger.dist_m)}</li>}
+              {n.charger && <li><span className="dot" style={{ background: "#1E8A3C" }}>{dot(lang, "충")}</span><b>{L("전동휠체어 충전", "Wheelchair charger")}</b> {n.charger.name} · {dist(n.charger.dist_m)}</li>}
               {n.info_center && <li><span className="dot" style={{ background: "#F29A33" }}>i</span><b>{L("관광안내소", "Tourist info")}</b> {n.info_center.name} · {n.info_center.tel}</li>}
-              {n.medical?.["약국"] && <li><span className="dot" style={{ background: "#C9302C" }}>약</span><b>{L("약국", "Pharmacy")}</b> {n.medical["약국"].name} · {dist(n.medical["약국"].dist_m)}</li>}
+              {n.medical?.["약국"] && <li><span className="dot" style={{ background: "#C9302C" }}>{dot(lang, "약")}</span><b>{L("약국", "Pharmacy")}</b> {n.medical["약국"].name} · {dist(n.medical["약국"].dist_m)}</li>}
               {n.medical?.["응급실"] && <li><span className="dot" style={{ background: "#C9302C" }}>+</span><b>{L("응급실", "ER")}</b> {n.medical["응급실"].name} · {n.medical["응급실"].tel}</li>}
             </ul>
           </div>
@@ -245,7 +256,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
             <div className="panel">
               <h2 className="h3">{L("이야기와 걷기길", "Stories and trails")}</h2>
               {p.stories?.slice(0, 2).map((s: any) => <p key={s.name}><b>{s.name}</b> {s.intro?.slice(0, 120)}</p>)}
-              {p.trail_info?.map((t: any) => <p key={t.name} className="muted">🥾 {t.name} · {t.length_km}km · {t.duration}</p>)}
+              {p.trail_info?.map((t: any) => <p key={t.name} className="muted ic-row"><Icon name="trail" />{t.name} · {t.length_km}km · {t.duration}</p>)}
             </div>
           )}
         </div>
@@ -261,68 +272,123 @@ export function TransportPage({ lang }: { lang: Lang }) {
   const [allP, setAllP] = useState(false);
   const [allT, setAllT] = useState(false);
   const [allR, setAllR] = useState(false);
+  const [freeOnly, setFreeOnly] = useState(false);
+  const [pq, setPq] = useState("");
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const won = (n?: number) => (n == null ? "" : `${Math.round(n).toLocaleString()}${L("원", "₩")}`);
+  // 이 페이지를 쓰는 사람의 질문 순서: ① 휠체어로 탈 차가 있나 ② 역에서 어떻게 움직이나 ③ 시티투어 ④ 차를 가져가면 ⑤ 택시·렌터카
+  const jumps: [string, string, string][] = [["tr-van", "wheel", L("휠체어 차량", "Wheelchair van")], ["tr-station", "train", L("기차역", "Stations")],
+    ["tr-tour", "bus", L("시티투어", "City tour")], ["tr-parking", "parking", L("주차장", "Parking")], ["tr-taxi", "taxi", L("택시·렌터카", "Taxis & rentals")]];
   return (
-    <section className="sec wrap">
-      <Head lang={lang} photo="city" title={L("교통 안내", "Getting around")} sub={L("기차역에서 관광지까지, 휠체어 차량과 시티투어, 택시·렌터카·주차장을 한곳에 모았어요.", "Stations, wheelchair vehicles, city tour, taxis, rentals and parking.")} />
+    <section className="sec wrap tr-page">
+      <Head lang={lang} photo="city" title={L("교통 안내", "Getting around")} sub={L("휠체어 차량부터 기차역, 시티투어, 주차장, 택시·렌터카까지 필요한 것만 골라 보세요.", "Wheelchair vans, stations, the city tour, parking, taxis and rentals.")} />
       {!d ? <Loading err={err} lang={lang} /> : (<>
-        <div className="chips jump" role="group" aria-label={L("바로 가기", "Jump to")}>
-          {([["tr-station", L("기차역", "Stations")], ["tr-van", L("휠체어 차량", "Wheelchair vans")], ["tr-tour", L("시티투어", "City tour")], ["tr-parking", L("주차장", "Parking")], ["tr-taxi", L("택시·렌터카", "Taxis & rentals")]] as const)
-            .map(([id, t]) => <button key={id} className="chip" onClick={() => go(id)}>{t}</button>)}
-        </div>
-        <div className="cards2" id="tr-station">
-          {d.stations.map((s: any) => (
-            <div key={s.name} className="panel">
-              <h2 className="h3">🚉 {s.name}</h2>
-              {s.toilet && <p>{L("역 안 장애인 화장실", "Accessible toilet in station")}: {s.toilet.hours}</p>}
-              {s.taxi && <p>{L(`택시 승차대 ${s.taxi.spaces}면 · ${s.taxi.address}`, `Taxi stand (${s.taxi.spaces})`)}</p>}
-              {s.rentals?.length > 0 && <p className="muted">🚗 {s.rentals.map((r: any) => `${r.name}${r.vans ? L(` (승합 ${r.vans})`, ` (${r.vans} vans)`) : ""} ${r.tel}`).join(" · ")}</p>}
-            </div>
-          ))}
-        </div>
-        {d.mobility_center && (
-          <div className="panel">
-            <h2 className="h3" id="tr-van">♿ {L("휠체어 탈 수 있는 차량", "Wheelchair-accessible vehicles")} — {d.mobility_center.name}</h2>
-            <p>{L(`휠체어 차량 ${d.mobility_center.wheelchair_vehicles}대 · 운행 ${d.mobility_center.hours} · 시외 이동은 ${d.mobility_center.advance} 전 예약`, `${d.mobility_center.wheelchair_vehicles} vehicles · ${d.mobility_center.hours}`)}</p>
-            {d.mobility_center.area_out && <p className="muted">{L(`시외 운행: ${d.mobility_center.area_out}`, `Out of town: ${d.mobility_center.area_out}`)}</p>}
-            <p>☎ <a href={`tel:${d.mobility_center.tel}`}>{d.mobility_center.tel}</a>{d.mobility_center.app ? ` · ${d.mobility_center.app}` : ""} · {d.mobility_center.fare}</p>
-            <p className="muted">{L("다른 지역에 사는 등록 장애인 관광객도 이용할 수 있어요(동해시 확인). 강원 교통약자 광역이동지원센터 누리집·앱이나 1577-2014로 예약하세요. 동해시에는 저상버스가 없어요.", "Registered disabled visitors from other regions can use it too (confirmed by Donghae City). Book on the Gangwon mobility center website or app, or call 1577-2014. Donghae has no low-floor buses.")}</p>
+        <nav className="tr-jump" aria-label={L("바로 가기", "Jump to")}>
+          {jumps.map(([id, ic, t]) => <button key={id} onClick={() => go(id)}><Icon name={ic} /><span>{t}</span></button>)}
+        </nav>
+
+        {d.mobility_center && (() => { const m = d.mobility_center; return (
+          <section className="panel tr-sec tr-van" id="tr-van" aria-labelledby="tr-van-h">
+            <div className="tr-head"><Icon name="wheel" /><div><h2 id="tr-van-h">{L("휠체어 탈 수 있는 차량", "Wheelchair-accessible vehicles")}</h2><p className="muted">{m.name}</p></div></div>
+            <a className="tr-call" href={`tel:${m.tel}`}><Icon name="phone" /><span><b>{m.tel}</b><small>{L("눌러서 예약 전화", "Tap to call and book")}</small></span></a>
+            <dl className="tr-facts">
+              <div><dt>{L("차량", "Vehicles")}</dt><dd>{L(`휠체어 탑승 차량 ${m.wheelchair_vehicles}대`, `${m.wheelchair_vehicles} wheelchair vehicles`)}</dd></div>
+              <div><dt>{L("운행", "Hours")}</dt><dd>{m.hours === "00:00~23:59" ? L("24시간", "24 hours") : m.hours}</dd></div>
+              <div><dt>{L("예약", "Booking")}</dt><dd>{L(`시외로 갈 때는 ${String(m.advance || "").replace(/\(.*\)/, "")} 전까지`, `Book ${m.advance} ahead for trips out of town`)}</dd></div>
+              <div><dt>{L("요금", "Fare")}</dt><dd>{L("4km까지 1,100원, 넘으면 1km마다 100원", "₩1,100 up to 4 km, then ₩100/km")}</dd></div>
+            </dl>
+            <p>{L("다른 지역에 사는 등록 장애인 관광객도 이용할 수 있어요(동해시 확인). 앱·누리집으로도 예약돼요.", "Registered disabled visitors from other regions can use it too (confirmed by Donghae City). You can also book in the app or online.")}
+              {m.app ? <> <span className="muted">({m.app}{m.web ? ` · ${m.web}` : ""})</span></> : null}</p>
+            <details className="tr-more"><summary>{L("이용할 수 있는 사람·자세한 요금", "Who can use it, full fares")}</summary>
+              {m.who && <ol className="tr-who">{String(m.who).split(/\d\.\s*/).filter(Boolean).map((w: string) => <li key={w}>{w.trim()}</li>)}</ol>}
+              <p className="muted">{m.fare}</p>
+              {m.area_out && <p className="muted">{L(`시외 운행: ${m.area_out}`, `Out of town: ${m.area_out}`)}</p>}
+            </details>
+            <p className="tr-note">{L("동해시에는 저상버스가 없어요. 휠체어로 시내를 다닐 때는 이 차량이나 택시를 이용하세요.", "Donghae has no low-floor buses. Use this service or a taxi in a wheelchair.")}</p>
+          </section>); })()}
+
+        <section className="tr-sec" id="tr-station" aria-labelledby="tr-st-h">
+          <h2 id="tr-st-h" className="tr-h2"><Icon name="train" />{L("기차역에서", "From the stations")}</h2>
+          <div className="cards2">
+            {d.stations.map((s: any) => (
+              <div key={s.name} className="panel">
+                <h3 className="h3">{s.name}</h3>
+                <dl className="tr-facts one">
+                  <div><dt>{L("장애인 화장실", "Accessible toilet")}</dt><dd>{s.toilet ? L(`역 안 · ${s.toilet.hours}`, `In the station · ${s.toilet.hours}`) : L("확인 전", "Not checked")}</dd></div>
+                  <div><dt>{L("택시 승차대", "Taxi stand")}</dt><dd>{s.taxi ? L(`역 앞 ${s.taxi.spaces}면`, `${s.taxi.spaces} spaces in front`) : "-"}</dd></div>
+                  {s.rentals?.length > 0 && <div><dt>{L("가까운 렌터카", "Nearby rentals")}</dt><dd><ul className="tr-phones">{s.rentals.slice(0, 3).map((r: any) => <li key={r.name}>{r.name}{r.vans ? <small className="muted"> · {L(`승합 ${r.vans}대`, `${r.vans} vans`)}</small> : null} <a href={`tel:${r.tel}`}>{r.tel}</a></li>)}</ul></dd></div>}
+                </dl>
+              </div>
+            ))}
           </div>
-        )}
+        </section>
+
         {d.city_tour && (
-          <div className="panel">
-            <h2 className="h3" id="tr-tour">🚌 {L("동해 시티투어", "Donghae city tour")} — {d.city_tour.name}</h2>
-            <p>{d.city_tour.days} · {d.city_tour.first}~{d.city_tour.last} · {L(`${d.city_tour.interval_min}분 간격`, `every ${d.city_tour.interval_min} min`)} · {d.city_tour.fare}</p>
-            <ol className="stops">{d.city_tour_stops.map((s: string) => <li key={s}>{s}</li>)}</ol>
-            <ul className="plain tour-access">
-              <li><b>{L("요금", "Fare")}</b> {L("어른 3,000원 · 어린이 1,800원. 장애인 할인은 없어요.", "Adults ₩3,000 · children ₩1,800. No disability discount.")}</li>
-              <li><b>{L("휠체어·유모차", "Wheelchairs & strollers")}</b> {L("일반 관광버스예요. 접이식 휠체어와 유모차는 접어서 실을 수 있지만, 전동휠체어나 접히지 않는 휠체어는 타기 어려워요.", "A standard coach: folding wheelchairs and strollers can be folded and stowed; power or rigid wheelchairs are hard to board.")}</li>
-              <li><b>{L("도움", "Assistance")}</b> {L("안내하시는 분이 함께 타서 오르내릴 때 도와줘요. 자격을 갖춘 전문 도우미는 아니에요.", "A guide rides along and helps with boarding, but is not a trained care assistant.")}</li>
+          <section className="panel tr-sec" id="tr-tour" aria-labelledby="tr-tour-h">
+            <div className="tr-head"><Icon name="bus" /><div><h2 id="tr-tour-h">{L("동해 시티투어", "Donghae city tour")}</h2><p className="muted">{d.city_tour.name} · {d.city_tour.mode || ""}</p></div></div>
+            <dl className="tr-facts">
+              <div><dt>{L("운행일", "Days")}</dt><dd>{L("토·일요일과 공휴일", "Sat, Sun & holidays")}</dd></div>
+              <div><dt>{L("시간", "Times")}</dt><dd>{d.city_tour.first}~{d.city_tour.last} · {L(`${d.city_tour.interval_min}분마다`, `every ${d.city_tour.interval_min} min`)}</dd></div>
+              <div><dt>{L("요금", "Fare")}</dt><dd>{L("어른 3,000원 · 어린이 1,800원", "Adults ₩3,000 · children ₩1,800")}<small className="muted">{L(" (장애인 할인 없음)", " (no disability discount)")}</small></dd></div>
+              <div><dt>{L("타는 곳", "Boarding")}</dt><dd>{d.city_tour.board}</dd></div>
+            </dl>
+            <ul className="tr-checks">
+              <li><b>{L("휠체어·유모차", "Wheelchairs & strollers")}</b> {L("일반 관광버스라 접이식 휠체어·유모차는 접어서 실어요. 전동휠체어나 접히지 않는 휠체어는 타기 어려워요.", "A standard coach: folding wheelchairs and strollers are stowed; power or rigid wheelchairs are hard to board.")}</li>
+              <li><b>{L("도움", "Help")}</b> {L("안내하시는 분이 함께 타서 오르내릴 때 도와줘요. 전문 도우미는 아니에요.", "A guide rides along and helps with boarding; not a trained care assistant.")}</li>
             </ul>
-            <p className="muted">{L(`동해문화관광재단 확인 (2026년 11월) · 문의 ${d.city_tour.contact}`, `Confirmed with Donghae Culture & Tourism Foundation (Nov 2026) · ${d.city_tour.contact}`)}</p>
-          </div>
+            <details className="tr-more"><summary>{L(`도는 곳 ${d.city_tour_stops.length}곳 보기`, `See all ${d.city_tour_stops.length} stops`)}</summary>
+              <ol className="tr-route">{d.city_tour_stops.map((s: string) => <li key={s}>{s}</li>)}</ol>
+            </details>
+            <p className="muted small">{L(`요금·휠체어 안내는 동해문화관광재단에 확인했어요(2026년 11월). 공공데이터에는 어른 5,000원으로 나와 있어 타기 전 한 번 더 확인해 주세요. 문의 ${d.city_tour.contact}`,
+              `Fare and access confirmed with Donghae Culture & Tourism Foundation (Nov 2026). Public data lists ₩5,000 for adults, so please check before boarding. ${d.city_tour.contact}`)}</p>
+          </section>
         )}
-        <div className="panel">
-          <h2 className="h3" id="tr-parking">🅿 {L("공영주차장", "Public parking")}</h2>
-          <div className="tbl-wrap"><table className="tbl">
-            <thead><tr><th>{L("이름", "Name")}</th><th>{L("면수", "Spaces")}</th><th>{L("장애인 차량", "Disabled permit")}</th><th>{L("요금", "Fee")}</th><th>{L("평일", "Weekdays")}</th></tr></thead>
-            <tbody>{(allP ? d.parking : d.parking.slice(0, 8)).map((r: any) => <tr key={r.name}><td>{r.name}<br /><small className="muted">{r.road}</small></td><td>{r.spaces}</td><td>{r.disabled || "-"}</td><td>{r.fee_type}{r.base_fee ? ` (${r.base_min}${L("분", "min")} ${r.base_fee}${L("원", "₩")})` : ""}</td><td>{r.wk_open}~{r.wk_close}</td></tr>)}</tbody>
-          </table></div>
-          <More n={8} total={d.parking.length} open={allP} onToggle={() => setAllP(!allP)} lang={lang} />
-        </div>
-        <div className="cards2">
-          <div className="panel">
-            <h2 className="h3" id="tr-taxi">🚕 {L("택시 승차대", "Taxi stands")}</h2>
-            <ul className="plain">{(allT ? d.taxi_stands : d.taxi_stands.slice(0, 8)).map((t: any) => <li key={t.name}>{t.name} · {t.spaces}{L("면", "")} <small className="muted">{t.road}</small></li>)}</ul>
-            <More n={8} total={d.taxi_stands.length} open={allT} onToggle={() => setAllT(!allT)} lang={lang} />
+
+        {(() => {
+          const key = pq.trim().replace(/\s+/g, "");
+          const rows = d.parking.filter((r: any) => (!freeOnly || r.disabled) && (!key || `${r.name}${r.road}`.replace(/\s+/g, "").includes(key)));
+          return (
+            <section className="panel tr-sec" id="tr-parking" aria-labelledby="tr-p-h">
+              <div className="tr-head"><Icon name="parking" /><div><h2 id="tr-p-h">{L("공영주차장", "Public parking")}</h2>
+                <p className="muted">{L(`${d.parking.length}곳 중 ${d.parking.filter((r: any) => r.disabled).length}곳은 장애인 차량 요금 면제 (2시간 넘으면 반값)`, `${d.parking.filter((r: any) => r.disabled).length} of ${d.parking.length} waive fees for disabled permits`)}</p></div></div>
+              <div className="tr-filter">
+                <button className="chip" aria-pressed={freeOnly} onClick={() => setFreeOnly(!freeOnly)}>{L("장애인 차량 면제만", "Disabled permit free only")}</button>
+                <label><span className="sr-only">{L("주차장 찾기", "Find a car park")}</span><input type="search" value={pq} onChange={(e) => setPq(e.target.value)} placeholder={L("이름·주소로 찾기 (예: 추암)", "Search (e.g. Chuam)")} /></label>
+              </div>
+              <ul className="tr-list">
+                {(allP || key || freeOnly ? rows : rows.slice(0, 6)).map((r: any) => (
+                  <li key={r.name}>
+                    <div><b>{r.name}</b>{r.road && <small className="muted">{r.road.replace("강원특별자치도 ", "")}</small>}</div>
+                    <div className="tr-tags">
+                      <span className="badge b-plain">{L(`${r.spaces}면`, `${r.spaces} spaces`)}</span>
+                      <span className="badge b-plain">{r.fee_type === "무료" ? L("무료", "Free") : r.base_fee ? L(`${r.base_min >= 60 ? `${r.base_min / 60}시간` : `${r.base_min}분`} ${won(r.base_fee)}`, `${won(r.base_fee)} / ${r.base_min} min`) : tr(lang, r.fee_type)}</span>
+                      {r.disabled && <span className="badge g-G">{L("장애인 차량 면제", "Free with permit")}</span>}
+                      {r.wk_open && <span className="badge b-plain">{L("평일", "Wkdy")} {r.wk_open}~{r.wk_close}</span>}
+                    </div>
+                  </li>))}
+                {!rows.length && <li className="muted">{L("조건에 맞는 주차장이 없어요.", "No car parks match.")}</li>}
+              </ul>
+              {!key && !freeOnly && <More n={6} total={d.parking.length} open={allP} onToggle={() => setAllP(!allP)} lang={lang} />}
+            </section>);
+        })()}
+
+        <section className="tr-sec" id="tr-taxi" aria-labelledby="tr-t-h">
+          <h2 id="tr-t-h" className="tr-h2"><Icon name="taxi" />{L("택시·렌터카", "Taxis & car rentals")}</h2>
+          <div className="cards2">
+            <div className="panel">
+              <h3 className="h3">{L(`택시 승차대 ${d.taxi_stands.length}곳`, `${d.taxi_stands.length} taxi stands`)}</h3>
+              <ul className="tr-list compact">{(allT ? d.taxi_stands : d.taxi_stands.slice(0, 6)).map((t: any) => <li key={t.name}><div><b>{t.name}</b>{t.road && <small className="muted">{t.road.replace("강원특별자치도 ", "")}</small>}</div><span className="badge b-plain">{L(`${t.spaces}면`, `${t.spaces}`)}</span></li>)}</ul>
+              <More n={6} total={d.taxi_stands.length} open={allT} onToggle={() => setAllT(!allT)} lang={lang} />
+            </div>
+            <div className="panel">
+              <h3 className="h3">{L(`렌터카 ${d.rentals.length}곳`, `${d.rentals.length} car rentals`)}</h3>
+              <ul className="tr-list compact">{(allR ? d.rentals : d.rentals.slice(0, 6)).map((r: any) => <li key={r.name}><div><b>{r.name}</b><small className="muted">{L(`승용 ${r.cars} · 승합 ${r.vans}`, `${r.cars} cars · ${r.vans} vans`)}</small></div>
+                {r.tel && <a className="chip sm" href={`tel:${r.tel}`}><Icon name="phone" />&nbsp;{L("전화", "Call")}</a>}</li>)}</ul>
+              <More n={6} total={d.rentals.length} open={allR} onToggle={() => setAllR(!allR)} lang={lang} />
+              <p className="muted small">{L("휠체어 리프트 차량이 있는지는 업체에 꼭 물어보세요.", "Ask the company about lift-equipped vans.")}</p>
+            </div>
           </div>
-          <div className="panel">
-            <h2 className="h3">🚗 {L("렌터카", "Car rentals")}</h2>
-            <ul className="plain">{(allR ? d.rentals : d.rentals.slice(0, 8)).map((r: any) => <li key={r.name}>{r.name} · {L(`승용 ${r.cars} / 승합 ${r.vans}`, `${r.cars} cars / ${r.vans} vans`)} · <a href={`tel:${r.tel}`}>{r.tel}</a></li>)}</ul>
-            <More n={8} total={d.rentals.length} open={allR} onToggle={() => setAllR(!allR)} lang={lang} />
-            <p className="muted">{L("휠체어 리프트 차량 여부는 업체에 확인해 주세요.", "Ask the company about lift-equipped vans.")}</p>
-          </div>
-        </div>
+        </section>
       </>)}
     </section>
   );
@@ -354,16 +420,16 @@ export function MapPage({ lang }: { lang: Lang }) {
         const key = `${r.lat},${r.lon}`;
         if (l.k === "toilets" && seen.has(key)) continue;   // 같은 건물 화장실 여러 개는 점 하나로
         seen.add(key);
-        const desc = l.k === "toilets" ? `${r.kind} · ${r.hours}` : l.k === "chargers" ? `${r.spot || ""} · ${L("평일", "Wkdy")} ${r.wk_open}~${r.wk_close}`
+        const desc = l.k === "toilets" ? `${tr(lang, r.kind)} · ${tr(lang, r.hours)}` : l.k === "chargers" ? `${r.spot || ""} · ${L("평일", "Wkdy")} ${r.wk_open}~${r.wk_close}`
           : l.k === "parking" ? `${r.spaces}${L("면", "")}${r.disabled ? L(" · 장애인 차량 요금 면제", " · free for disabled permit") : ""} · ${r.fee_type}`
-          : l.k === "info_centers" ? `${r.tel || ""} ${r.hours || ""}` : `${r.kind} · ${r.open}~${r.close} · ${r.tel}`;
+          : l.k === "info_centers" ? `${r.tel || ""} ${r.hours || ""}` : [tr(lang, r.kind), `${r.open}~${r.close}`, r.tel].filter(Boolean).join(" · ");
         const dm = me ? Math.round(Math.hypot((r.lat - me[0]) * 111000, (r.lon - me[1]) * 88000)) : null;
         out.push({ id: `${l.k}:${r.name}`, layer: l, name: r.name, lat: r.lat, lon: r.lon, desc, road: r.road || r.spot || "", dm });
       }
     }
     return me ? out.sort((a, b) => a.dm - b.dm) : out;
   }, [d, on, me, lang]);
-  const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: x.layer.icon }));
+  const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon) }));
   const unmapped = (d?.toilets || []).filter((t: any) => !t.lat);
   function locate() {
     navigator.geolocation?.getCurrentPosition((p) => setMe([p.coords.latitude, p.coords.longitude]), () => setMe([37.5245, 129.1143]));
@@ -374,7 +440,7 @@ export function MapPage({ lang }: { lang: Lang }) {
       <div className="layers chips" role="group" aria-label={L("지도에 보일 것", "Layers")}>
         {LAYERS.map((l) => (
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
-            <span className="dot" style={{ background: l.color }}>{l.icon}</span>{L(l.ko, l.en)}
+            <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
           </button>))}
         <button className="chip go" onClick={locate}>{L("내 주변부터 보기", "Nearest first")}</button>
       </div>
@@ -384,7 +450,7 @@ export function MapPage({ lang }: { lang: Lang }) {
         <ul className="fac-list">
           {items.map((x, i) => (
             <li key={x.id} id={`f-${i}`} className={sel === x.id ? "sel" : ""}>
-              <span className="dot" style={{ background: x.layer.color }}>{x.layer.icon}</span>
+              <span className="dot" style={{ background: x.layer.color }}>{dot(lang, x.layer.icon)}</span>
               <div><b>{x.name}</b>{x.dm != null && <span className="muted"> · {dist(x.dm)}</span>}<br /><small className="muted">{x.desc}{x.road ? ` · ${x.road}` : ""}</small></div>
             </li>))}
         </ul>
@@ -400,44 +466,7 @@ export function MapPage({ lang }: { lang: Lang }) {
   );
 }
 
-/* ---------------- 내 일정 ---------------- */
-export type SavedPlan = { id: string; title: string; date: string; start_time: string; start: string; stops: string[]; hash: string; saved_at: string };
-export function loadPlans(): SavedPlan[] { try { return JSON.parse(localStorage.getItem("gd-plans") || "[]"); } catch { return []; } }
-export function savePlans(v: SavedPlan[]) { try { localStorage.setItem("gd-plans", JSON.stringify(v)); return true; } catch { return false; } }
-
-export function MyPage({ lang }: { lang: Lang }) {
-  const L = pick(lang);
-  const [plans, setPlans] = useState<SavedPlan[]>([]);
-  useEffect(() => setPlans(loadPlans()), []);
-  const del = (id: string) => { const v = plans.filter((p) => p.id !== id); setPlans(v); savePlans(v); };
-  return (
-    <section className="sec wrap">
-      <Head lang={lang} photo="haerang" title={L("내 일정", "My trips")} sub={L("저장한 일정은 이 기기에만 남아요. 서버에는 아무것도 저장하지 않아요.", "Saved only on this device; nothing is stored on a server.")} />
-      {!plans.length ? (
-        <div className="panel empty">
-          <img src="/dongi/ask.webp" alt="" />
-          <div>
-            <p><b>{L("아직 저장한 일정이 없어요", "No saved trips yet")}</b></p>
-            <p className="muted">{L("코스를 만든 뒤 [내 일정에 저장]을 누르면 여기에 모여요. 저장한 일정은 다시 열어 고치거나 가족에게 보낼 수 있어요.", "Make a route and tap [Save to my trips]. Saved trips can be reopened, edited and shared.")}</p>
-            <a className="btn-go" href="#plan">{L("코스 만들러 가기", "Plan a route")}</a>
-          </div>
-        </div>
-      ) : (
-        <ul className="my-list">
-          {plans.map((p) => (
-            <li key={p.id} className="panel">
-              <div><b className="my-date">{p.date} {p.start_time}</b> · {p.start}<p>{p.stops.join(" → ")}</p>
-                <small className="muted">{L("저장", "Saved")} {p.saved_at.slice(0, 16).replace("T", " ")}</small></div>
-              <div className="chips">
-                <a className="chip go" href={`#plan=${p.hash}`}>{L("열기", "Open")}</a>
-                <button className="chip" onClick={() => del(p.id)}>{L("삭제", "Delete")}</button>
-              </div>
-            </li>))}
-        </ul>
-      )}
-    </section>
-  );
-}
+/* 내 일정은 components/MyTrips.tsx 로 옮김 */
 
 /* ---------------- 행사 달력 ---------------- */
 export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: string) => void }) {
@@ -484,9 +513,9 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
                   <b>{e.name}</b> <span className="badge b-plain">{e.kind}</span>
                   <p>{e.start}{e.end && e.end !== e.start ? ` ~ ${e.end}` : ""}{e.start_time ? ` · ${e.start_time}~${e.end_time || ""}` : ""} · {e.venue}</p>
                   <p className="muted">{[e.fee_type, e.fee, e.age, e.tel].filter(Boolean).join(" · ")}</p>
-                  {e.access && <p>♿ {e.access}</p>}
+                  {e.access && <p className="ic-row"><Icon name="wheel" />{e.access}</p>}
                   <div className="chips">
-                    <button className="chip go" onClick={() => onPlanDate(day && day >= iso(today) ? day : (e.start >= iso(today) ? e.start : iso(today)))}>{L("이 날로 코스 만들기", "Plan for this day")}</button>
+                    <button className="chip go" onClick={() => onPlanDate(day && day >= iso(today) ? day : (e.start >= iso(today) ? e.start : iso(today)))}>{L("이 날로 코스 짜기", "Plan for this day")}</button>
                     {e.url && <a className="chip" href={e.url} target="_blank" rel="noopener">{L("행사 안내", "Details")}</a>}
                   </div>
                 </li>))}
@@ -556,17 +585,17 @@ export function StayPage({ lang }: { lang: Lang }) {
         <h2 className="h3">{L("예약 전에 물어볼 것", "Ask before booking")}</h2>
         <ul className="checks">{Q.map((q) => <li key={q}>{q}</li>)}</ul>
       </div>
-      <div className="tabs" role="tablist" aria-label={L("권역", "Areas")}>
-        {ZONES.map((z) => <button key={z.k} role="tab" aria-selected={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>)}
+      <div className="tabs" role="group" aria-label={L("권역", "Areas")}>
+        {ZONES.map((z) => <button key={z.k} aria-pressed={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>)}
       </div>
       <form className="psearch" role="search" onSubmit={(e) => e.preventDefault()}>
         <label htmlFor="stay-q">{L("숙소 찾기", "Find lodging")}</label>
         <input id="stay-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름·종류·주소로 찾기 (예: 호텔, 펜션)", "Search by name, type or address")} />
       </form>
       {!d ? <Loading err={err} lang={lang} /> : (
-        <div className="tbl-wrap"><table className="tbl">
+        <div className="tbl-wrap"><table className="tbl tbl-stack">
           <thead><tr><th>{L("이름", "Name")}</th><th>{L("종류", "Type")}</th><th>{L("주소", "Address")}</th><th>{L("전화", "Phone")}</th><th>{L("예약·지도", "Book · map")}</th></tr></thead>
-          <tbody>{rows.map((r: any) => <tr key={r.name + r.address}><td>{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td>{r.kind}</td><td><small>{r.address}</small></td><td>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
+          <tbody>{rows.map((r: any) => <tr key={r.name + r.address}><td className="tbl-name">{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td data-label={L("종류", "Type")}>{tr(lang, r.kind)}</td><td data-label={L("주소", "Address")}><small>{r.address}</small></td><td data-label={L("전화", "Phone")}>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td data-label={L("예약", "Book")}><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
         </table></div>
       )}
       <p className="muted small">{L(`${key ? rows.length : d?.count ?? 0}곳 · 무장애 객실 여부는 모두 '확인 전'이에요.`, "Accessible rooms: not verified.")}</p>
@@ -624,11 +653,14 @@ function Visitors({ lang }: { lang: Lang }) {
       <h2 className="h3">{L("동해시를 찾는 사람들", "Visitors to Donghae")}</h2>
       <p className="muted small">{L("한국관광공사 빅데이터(이동통신 데이터)로 집계한 최근 4주 일별 방문자 수예요.", "Daily visitors over the last 4 weeks, from KTO mobile-network big data.")}</p>
       <p>{L("4주 합계", "4-week total")} <b>{Math.round(sum).toLocaleString()}</b>{L("명", "")} · {L("하루 평균", "daily avg")} <b>{Math.round(sum / last.length).toLocaleString()}</b>{L("명", "")}</p>
-      <div className="crowd-chart" role="img" aria-label={L("일별 방문자 수 막대그래프", "Bar chart of daily visitors")}>
+      <div className="crowd-chart" aria-hidden="true">
         {last.map((r) => <div key={r.date} className="cc-col" title={`${ymd(r.date)} ${Math.round(tot(r)).toLocaleString()}`}>
-          <span className="cc-bar crowd-mid" style={{ height: `${Math.max(4, (tot(r) / max) * 100)}%` }} />
+          <span className="cc-bar" style={{ height: `${Math.max(4, (tot(r) / max) * 100)}%` }} />
           <span className="cc-d">{+r.date.slice(6, 8) % 7 === 1 ? ymd(r.date) : ""}</span></div>)}
       </div>
+      <details className="cc-table"><summary>{L("표로 보기", "Show as a table")}</summary>
+        <table className="tbl"><thead><tr><th>{L("날짜", "Date")}</th><th>{L("방문자", "Visitors")}</th></tr></thead>
+          <tbody>{last.map((r) => <tr key={r.date}><td>{ymd(r.date)}</td><td>{Math.round(tot(r)).toLocaleString()}</td></tr>)}</tbody></table></details>
       <p className="small muted">{kinds.map((k) => `${k} ${Math.round(last.reduce((a, r) => a + (Number(r[k]) || 0), 0) / last.length).toLocaleString()}`).join(" · ")} ({L("하루 평균", "daily avg")})</p>
     </div>
   );
@@ -646,9 +678,9 @@ export function SourcesPage({ lang }: { lang: Lang }) {
           <h2 className="h3">{L("판정 기준", "Grading rules")}</h2>
           <div className="tbl-wrap"><table className="tbl">
             <thead><tr><th>{L("항목", "Item")}</th><th><span className="badge g-G">{L("갈 수 있어요", "OK")}</span></th><th><span className="badge g-Y">{L("주의", "Caution")}</span></th><th><span className="badge g-R">{L("어려워요", "No")}</span></th><th>{L("근거", "Basis")}</th></tr></thead>
-            <tbody>{d.criteria.map((c: any) => <tr key={c.item}><td>{c.item}</td><td>{c.ok}</td><td>{c.warn}</td><td>{c.no}</td><td><small>{c.law}</small></td></tr>)}</tbody>
+            <tbody>{d.criteria.map((c: any) => <tr key={c.item}><td>{tr(lang, c.item)}</td><td>{tr(lang, c.ok)}</td><td>{tr(lang, c.warn)}</td><td>{tr(lang, c.no)}</td><td><small>{tr(lang, c.law)}</small></td></tr>)}</tbody>
           </table></div>
-          <ul className="plain">{d.notes.map((n: string) => <li key={n} className="muted">{n}</li>)}</ul>
+          <ul className="plain">{(lang === "ko" ? d.notes : SOURCE_NOTES_EN).map((n: string) => <li key={n} className="muted">{n}</li>)}</ul>
         </div>
         <div className="panel">
           <h2 className="h3">{L(`공공데이터 ${d.datasets.length}종`, `${d.datasets.length} public datasets`)}</h2>

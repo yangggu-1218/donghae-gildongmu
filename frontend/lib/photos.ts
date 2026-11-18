@@ -139,6 +139,198 @@ export const PHOTOS: Record<string, Photo> = {
     "author": "팀 제공",
     "license": "출처 확인 중",
     "page": ""
+  },
+  "nobong": {
+    "src": "/photos/500px-nobong.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gamchu": {
+    "src": "/photos/500px-gamchu.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "chuam_sculpture": {
+    "src": "/photos/500px-chuam_sculpture.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "chuam_sculpture_2": {
+    "src": "/photos/500px-chuam_sculpture_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "chuam_sculpture_3": {
+    "src": "/photos/500px-chuam_sculpture_3.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "manggyeongdae": {
+    "src": "/photos/500px-manggyeongdae.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hohaejeong": {
+    "src": "/photos/500px-hohaejeong.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hohaejeong_2": {
+    "src": "/photos/500px-hohaejeong_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gamchusa": {
+    "src": "/photos/500px-gamchusa.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gamchusa_2": {
+    "src": "/photos/500px-gamchusa_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gobulgae": {
+    "src": "/photos/500px-gobulgae.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gobulgae_2": {
+    "src": "/photos/500px-gobulgae_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "daejin": {
+    "src": "/photos/500px-daejin.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "daejin_2": {
+    "src": "/photos/500px-daejin_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "eodal": {
+    "src": "/photos/500px-eodal.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "eodal_2": {
+    "src": "/photos/500px-eodal_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bookvillage": {
+    "src": "/photos/500px-bookvillage.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bookvillage_2": {
+    "src": "/photos/500px-bookvillage_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "betel": {
+    "src": "/photos/500px-betel.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "betel_2": {
+    "src": "/photos/500px-betel_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hapyeong": {
+    "src": "/photos/500px-hapyeong.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hapyeong_2": {
+    "src": "/photos/500px-hapyeong_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "kkamak": {
+    "src": "/photos/500px-kkamak.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "kkamak_2": {
+    "src": "/photos/500px-kkamak_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "little_prince": {
+    "src": "/photos/500px-little_prince.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "little_prince_2": {
+    "src": "/photos/500px-little_prince_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "little_prince_3": {
+    "src": "/photos/500px-little_prince_3.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "cheongok_port": {
+    "src": "/photos/500px-cheongok_port.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "cheongok_port_2": {
+    "src": "/photos/500px-cheongok_port_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "macheonru": {
+    "src": "/photos/500px-macheonru.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "donghae_rest": {
+    "src": "/photos/500px-donghae_rest.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "donghae_rest_2": {
+    "src": "/photos/500px-donghae_rest_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
   }
 };
 
@@ -151,4 +343,17 @@ export const GALLERY: Record<string, [string, string, string][]> = {
   mureung: [["mureung_lavender", "라벤더 정원과 무릉별열차", "Lavender garden and the park train"], ["mureung_dumir", "두미르 전망대", "Dumir Observatory"], ["mureung_night", "라벤더축제 야경", "Lavender festival at night"]],
   pencil_museum: [["pencil_museum_2", "천장 가득 매달린 연필과 입구 표지판", "Giant pencils on the ceiling and the entrance signs"]],
   mukho_lighthouse: [["mukho_lighthouse_2", "묵호등대 앞 계단", "Steps in front of Mukho Lighthouse"]],
+  chuam_sculpture: [["chuam_sculpture_2", "'섬이 된 바다' 조각과 나무 데크 길", "Sculpture beside the wooden deck path"], ["chuam_sculpture_3", "언덕 위 조각 작품들", "Sculptures on the grassy hill"]],
+  hohaejeong: [["hohaejeong_2", "소나무 숲속 정자 호해정 (가는 길은 흙길)", "Hohaejeong pavilion in the pines (dirt path)"]],
+  gamchusa: [["gamchusa_2", "바닷가 바위 위 감추사와 계단", "Gamchusa temple and steps above the sea"]],
+  gobulgae: [["gobulgae_2", "해변의 어린 왕자 조형물", "Little Prince statue on the beach"]],
+  daejin: [["daejin_2", "서핑 대진 글자 조형물", "'Surfing Daejin' letters on the sand"]],
+  eodal: [["eodal_2", "바다 옆 산책로", "Seaside walkway"]],
+  bookvillage: [["bookvillage_2", "안쪽 책장과 계단식 좌석", "Bookshelves and tiered seating inside"]],
+  betel: [["betel_2", "능선의 바위 봉우리", "Rock spires along the ridge"]],
+  hapyeong: [["hapyeong_2", "나무 데크에서 본 해변과 방파제", "The beach from the wooden deck"]],
+  kkamak: [["kkamak_2", "'정동' 까막바위 표지석", "Kkamak Rock 'true east' marker stone"]],
+  little_prince: [["little_prince_2", "어린 왕자 벽화 옆 긴 계단", "Long stairway beside the Little Prince mural"], ["little_prince_3", "벽화가 그려진 언덕길", "Hillside lane with murals"]],
+  cheongok_port: [["cheongok_port_2", "천곡항 물놀이 선착장", "Cheongok Port marina"]],
+  donghae_rest: [["donghae_rest_2", "전망대로 이어지는 경사로와 점자 블록", "Ramp with tactile paving up to the lookout"]],
 };

@@ -1,4 +1,4 @@
-# 07. 디자인 시스템 (frontend/app/globals.css 의 토큰이 기준)
+# 07. 디자인 시스템 (frontend/app/globals.css 의 토큰이 기준 · 자세한 기준은 저장소 맨 위 DESIGN.md)
 
 방향: Public Service(신뢰·큰 글씨) + Map-first(지도와 시간표를 나란히) + 실제 사진. 마스코트 동이의 파랑·주황을 그대로 쓴다.
 

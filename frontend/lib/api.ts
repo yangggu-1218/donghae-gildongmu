@@ -57,11 +57,37 @@ async function j<T>(res: Response): Promise<T> {
     try { const b = await res.json(); if (b?.detail) msg = typeof b.detail === "string" ? b.detail : msg; } catch { /* 본문 없음 */ }
     const e: any = new Error(msg); e.status = res.status; throw e;
   }
-  return res.json();
+  return dropFakeTel(await res.json());
+}
+
+// 자리만 채운 전화번호(033-000-0000, 000-0000-0000 등)는 걸 수 없으니 화면에 보이지 않게 지운다.
+// 예시 데이터와 공공데이터의 빈칸이 이렇게 들어와 있다. 'tel'·'phone' 값만 본다.
+export const isFakeTel = (v: unknown) => {
+  if (typeof v !== "string") return false;
+  const d = v.replace(/\D/g, "");
+  return d.length >= 7 && (/^0+$/.test(d) || /^0+$/.test(d.replace(/^0(2|\d{2})/, "")));
+};
+export function dropFakeTel<T>(x: T): T {
+  if (Array.isArray(x)) { x.forEach(dropFakeTel); return x; }
+  if (x && typeof x === "object") {
+    for (const [k, v] of Object.entries(x as Record<string, unknown>)) {
+      if ((k === "tel" || k === "phone") && isFakeTel(v)) (x as any)[k] = "";
+      else if (v && typeof v === "object") dropFakeTel(v);
+    }
+  }
+  return x;
+}
+
+// 한 번 열린 화면 동안 바뀌지 않는 자료(장소 목록·붐빔 예측·날씨·편의시설·행사)는 한 번만 받아 같이 쓴다.
+// 예전엔 화면 조각마다 따로 받아서 장소 목록을 5번, 붐빔 예측을 3번 내려받았다. 실패하면 다음에 다시 받는다.
+const cache = new Map<string, Promise<any>>();
+export function getJSON<T = any>(url: string): Promise<T> {
+  if (!cache.has(url)) cache.set(url, fetch(url).then((r) => j<T>(r)).catch((e) => { cache.delete(url); throw e; }));
+  return cache.get(url)!;
 }
 
 export const api = {
-  places: (mode = "none") => fetch(`/api/places?mode=${mode}`).then((r) => j<any[]>(r)),
+  places: (mode = "none") => getJSON<any[]>(`/api/places?mode=${mode}`),
   course: (c: Conditions) =>
     fetch("/api/course", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(c) })
       .then((r) => j<CourseRes>(r)),

@@ -10,6 +10,19 @@ html=f'''<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="가보기 전에 갈 수 있는 길인지 알려 주는 동해 무장애 여행 코스 웹서비스">
 <title>동해 길동무</title>
+<meta name="theme-color" content="#12355E">
+<link rel="icon" type="image/webp" href="dongi/neutral.webp">
+<link rel="apple-touch-icon" href="dongi/neutral.webp">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="동해 길동무">
+<meta property="og:title" content="동해 길동무 — 가기 전에, 갈 수 있는 길인지 먼저 알려 드려요">
+<meta property="og:description" content="휠체어·유모차·무릎이 불편한 가족과도 갈 수 있는 동해 여행 코스를 짜 드려요. 영업시간·붐빔·길 상태까지 확인해요.">
+<meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/%EC%B6%94%EC%95%94%EC%B4%9B%EB%8C%80%EB%B0%94%EC%9C%84_2.jpg/960px-%EC%B6%94%EC%95%94%EC%B4%9B%EB%8C%80%EB%B0%94%EC%9C%84_2.jpg">
+<meta property="og:image:alt" content="해 뜰 무렵의 추암 촛대바위">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Jua&display=swap">
 <style>
 {css}

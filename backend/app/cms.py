@@ -7,8 +7,10 @@
 - 모든 변경은 이력에 남고, 이력 하나를 골라 되돌릴 수 있다.
 - 저장소는 JSON 파일 하나(data/cms/cms.json). 서버 디스크가 지워지는 호스팅이면 [백업 내려받기]로 보관한다.
 """
+import contextvars
 import copy
 import datetime as dt
+import hashlib
 import json
 import os
 import secrets
@@ -31,7 +33,7 @@ SEG_FIELDS = ("name", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg"
 LEVELS = ("closed", "warn", "info")
 NONE = "__없음__"   # 임시 휴무 / 주의(공사·우회) / 안내
 
-EMPTY = {"overrides": {}, "segments": {}, "notices": [], "banner": None, "events": [], "history": []}
+EMPTY = {"overrides": {}, "segments": {}, "notices": [], "banner": None, "events": [], "history": [], "accounts": []}
 
 
 def _now() -> str:
@@ -54,12 +56,27 @@ def save(db: dict):
     tmp.replace(FILE)
 
 
-# ------------------------------------------------------------------ 로그인 (대표 계정 하나)
-SESSIONS: dict[str, float] = {}
+# ------------------------------------------------------------------ 로그인·계정 (여러 관리자, 역할별 권한)
+# - 총괄 관리자(owner) 하나는 서버 설정(.env 의 ADMIN_ID / ADMIN_PASSWORD)으로 정한다. 화면에서 지우거나 막을 수 없다.
+# - 그 밖의 계정은 총괄 관리자가 화면에서 만든다. 비밀번호는 그대로 저장하지 않고 PBKDF2-SHA256(+솔트)로 바꿔 저장한다.
+# - 같은 아이디로 5번 틀리면 10분 동안 잠근다.
+# - 누가 무엇을 바꿨는지 변경 이력에 이름이 남는다.
+ROLES = {"owner": "총괄 관리자", "editor": "편집자", "surveyor": "현장 조사원"}
+PERMS = {
+    "owner": {"place", "notice", "site", "reports", "visits", "history", "data", "accounts", "backup"},
+    "editor": {"place", "notice", "site", "reports", "visits", "history", "data"},
+    "surveyor": {"reports", "visits"},
+}
+SESSIONS: dict[str, dict] = {}
 SESSION_HOURS = 12
+FAILS: dict[str, list] = {}          # 아이디 → [틀린 횟수, 잠금 끝나는 시각]
+MAX_FAILS, LOCK_MIN = 5, 10
+_PBKDF2_ROUNDS = 200_000
+ACTOR = contextvars.ContextVar("cms_actor", default="admin")   # 지금 요청을 보낸 관리자 (이력의 '누가')
 
 
 def account() -> tuple[str, str]:
+    """총괄 관리자(서버 설정) 계정."""
     return os.getenv("ADMIN_ID") or "admin", os.getenv("ADMIN_PASSWORD") or ""
 
 
@@ -68,27 +85,159 @@ def demo_login_enabled() -> bool:
     return os.getenv("DEMO_LOGIN", "0") == "1" and bool(account()[1])
 
 
-def login(uid: str, pw: str) -> str | None:
-    want_id, want_pw = account()
-    if not want_pw or not (secrets.compare_digest(uid or "", want_id) and secrets.compare_digest(pw or "", want_pw)):
-        return None
+def _hash(pw: str, salt: bytes | None = None) -> tuple[str, str]:
+    salt = salt or secrets.token_bytes(16)
+    h = hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), salt, _PBKDF2_ROUNDS)
+    return salt.hex(), h.hex()
+
+
+def _pw_ok(pw: str, salt_hex: str, hash_hex: str) -> bool:
+    return secrets.compare_digest(_hash(pw, bytes.fromhex(salt_hex))[1], hash_hex)
+
+
+def check_password_rule(pw: str):
+    if len(pw or "") < 8 or not any(c.isdigit() for c in pw) or not any(c.isalpha() for c in pw):
+        raise ValueError("비밀번호는 8자 이상, 글자와 숫자를 함께 넣어 주세요.")
+
+
+def _public(a: dict) -> dict:
+    """화면에 보낼 계정 정보 (비밀번호 해시는 빼고)."""
+    return {k: a.get(k) for k in ("id", "name", "role", "active", "created_at", "created_by", "last_login", "must_change")} | {"role_name": ROLES.get(a.get("role"), a.get("role"))}
+
+
+def accounts() -> list[dict]:
+    owner_id = account()[0]
+    owner = {"id": owner_id, "name": os.getenv("ADMIN_NAME") or "총괄 관리자", "role": "owner", "active": True, "builtin": True,
+             "created_at": None, "created_by": "서버 설정", "last_login": load().get("owner_last_login"), "role_name": ROLES["owner"]}
+    return [owner] + [_public(a) for a in load()["accounts"]]
+
+
+def login(uid: str, pw: str) -> dict:
+    """성공하면 {token, user}. 실패하면 ValueError(사람이 읽을 이유)."""
+    uid = (uid or "").strip()
+    now = dt.datetime.now().timestamp()
+    f = FAILS.get(uid)
+    if f and f[1] > now:
+        raise ValueError(f"비밀번호를 여러 번 틀려서 잠겼어요. {int((f[1] - now) // 60) + 1}분 뒤에 다시 해 주세요.")
+    owner_id, owner_pw = account()
+    user = None
+    if owner_pw and secrets.compare_digest(uid, owner_id) and secrets.compare_digest(pw or "", owner_pw):
+        user = {"id": owner_id, "name": os.getenv("ADMIN_NAME") or "총괄 관리자", "role": "owner", "must_change": False}
+        with _lock:
+            db = load(); db["owner_last_login"] = _now(); save(db)
+    else:
+        with _lock:
+            db = load()
+            a = next((x for x in db["accounts"] if x["id"] == uid), None)
+            if a and a.get("active", True) and _pw_ok(pw or "", a["salt"], a["hash"]):
+                a["last_login"] = _now(); save(db)
+                user = {"id": a["id"], "name": a["name"], "role": a["role"], "must_change": bool(a.get("must_change"))}
+            elif a and not a.get("active", True):
+                raise ValueError("사용이 멈춘 계정이에요. 총괄 관리자에게 물어보세요.")
+    if not user:
+        n = (f[0] if f and f[1] <= now and f[0] < MAX_FAILS else 0) + 1 if f else 1
+        FAILS[uid] = [n, now + LOCK_MIN * 60 if n >= MAX_FAILS else 0]
+        left = MAX_FAILS - n
+        raise ValueError("아이디나 비밀번호가 맞지 않아요." + (f" {left}번 더 틀리면 {LOCK_MIN}분 동안 잠겨요." if 0 < left <= 2 else "") +
+                         (f" {LOCK_MIN}분 동안 잠겼어요." if left <= 0 else ""))
+    FAILS.pop(uid, None)
     tok = secrets.token_urlsafe(24)
-    SESSIONS[tok] = dt.datetime.now().timestamp() + SESSION_HOURS * 3600
-    return tok
+    SESSIONS[tok] = {**user, "exp": now + SESSION_HOURS * 3600}
+    return {"token": tok, "user": user | {"role_name": ROLES[user["role"]], "perms": sorted(PERMS[user["role"]])}}
 
 
-def check(tok: str | None) -> bool:
-    exp = SESSIONS.get(tok or "")
-    if not exp:
-        return False
-    if exp < dt.datetime.now().timestamp():
+def check(tok: str | None) -> dict | None:
+    """로그인한 사람 정보 (없거나 시간이 지났으면 None)."""
+    s = SESSIONS.get(tok or "")
+    if not s:
+        return None
+    if s["exp"] < dt.datetime.now().timestamp():
         SESSIONS.pop(tok, None)
-        return False
-    return True
+        return None
+    return s
+
+
+def can(s: dict, perm: str | None) -> bool:
+    return perm is None or perm in PERMS.get(s.get("role"), set())
 
 
 def logout(tok: str | None):
     SESSIONS.pop(tok or "", None)
+
+
+def _drop_sessions(uid: str):
+    for t in [t for t, s in SESSIONS.items() if s["id"] == uid]:
+        SESSIONS.pop(t, None)
+
+
+def add_account(uid: str, name: str, role: str, pw: str) -> dict:
+    uid = (uid or "").strip()
+    if not (3 <= len(uid) <= 30) or not all(c.isalnum() or c in "._-" for c in uid):
+        raise ValueError("아이디는 3~30자 영문·숫자(., _, - 가능)로 지어 주세요.")
+    if role not in ("editor", "surveyor"):
+        raise ValueError("역할을 골라 주세요 (편집자 또는 현장 조사원).")
+    if not (name or "").strip():
+        raise ValueError("이름을 적어 주세요.")
+    check_password_rule(pw)
+    with _lock:
+        db = load()
+        if uid == account()[0] or any(a["id"] == uid for a in db["accounts"]):
+            raise ValueError("이미 있는 아이디예요.")
+        salt, h = _hash(pw)
+        rec = {"id": uid, "name": name.strip()[:30], "role": role, "active": True, "salt": salt, "hash": h,
+               "created_at": _now(), "created_by": ACTOR.get(), "last_login": None, "must_change": True}
+        db["accounts"].append(rec)
+        _log(db, "account_add", uid, None, _public(rec))
+        save(db)
+    return _public(rec)
+
+
+def update_account(uid: str, role: str | None = None, active: bool | None = None, name: str | None = None, new_pw: str | None = None) -> dict:
+    if uid == account()[0]:
+        raise ValueError("총괄 관리자 계정은 서버 설정에서만 바꿀 수 있어요.")
+    with _lock:
+        db = load()
+        a = next((x for x in db["accounts"] if x["id"] == uid), None)
+        if not a:
+            raise ValueError("없는 계정이에요.")
+        before = _public(a)
+        if role is not None:
+            if role not in ("editor", "surveyor"):
+                raise ValueError("역할을 골라 주세요.")
+            a["role"] = role
+        if active is not None:
+            a["active"] = bool(active)
+        if name:
+            a["name"] = name.strip()[:30]
+        if new_pw:
+            check_password_rule(new_pw)
+            a["salt"], a["hash"] = _hash(new_pw)
+            a["must_change"] = True
+        _log(db, "account_update", uid, before, _public(a), "임시 비밀번호 새로 발급" if new_pw else "")
+        save(db)
+    if role is not None or active is False or new_pw:
+        _drop_sessions(uid)   # 권한·비밀번호가 바뀌면 다시 로그인하게
+    return _public(a)
+
+
+def change_own_password(uid: str, old: str, new: str):
+    if uid == account()[0]:
+        raise ValueError("총괄 관리자 비밀번호는 서버 설정(ADMIN_PASSWORD)에서 바꿔요.")
+    check_password_rule(new)
+    with _lock:
+        db = load()
+        a = next((x for x in db["accounts"] if x["id"] == uid), None)
+        if not a or not _pw_ok(old or "", a["salt"], a["hash"]):
+            raise ValueError("지금 비밀번호가 맞지 않아요.")
+        if old == new:
+            raise ValueError("새 비밀번호는 지금과 달라야 해요.")
+        a["salt"], a["hash"] = _hash(new)
+        a["must_change"] = False
+        _log(db, "password", uid, None, None, "본인 비밀번호 변경")
+        save(db)
+    for s in SESSIONS.values():
+        if s["id"] == uid:
+            s["must_change"] = False
 
 
 # ------------------------------------------------------------------ 값 정리
@@ -125,8 +274,8 @@ def _seg_clean(s: dict) -> dict:
     return out
 
 
-def _log(db, action: str, target: str, before, after, reason: str = "", who: str = "admin") -> dict:
-    h = {"id": secrets.token_hex(5), "at": _now(), "who": who, "action": action, "target": target,
+def _log(db, action: str, target: str, before, after, reason: str = "", who: str | None = None) -> dict:
+    h = {"id": secrets.token_hex(5), "at": _now(), "who": who or ACTOR.get(), "action": action, "target": target,
          "before": before, "after": after, "reason": reason[:300], "reverted": False}
     db["history"].insert(0, h)
     db["history"] = db["history"][:500]
@@ -258,11 +407,18 @@ def revert(hid: str) -> dict:
         return h
 
 
+def backup() -> dict:
+    """백업 파일: 사이트 내용만 (관리자 계정·비밀번호 해시는 넣지 않는다)."""
+    db = load()
+    return {k: v for k, v in db.items() if k not in ("accounts", "owner_last_login")}
+
+
 def restore(backup: dict):
-    keep = {k: backup.get(k, copy.deepcopy(v)) for k, v in EMPTY.items() if k != "history"}
+    keep = {k: backup.get(k, copy.deepcopy(v)) for k, v in EMPTY.items() if k not in ("history", "accounts")}
     with _lock:
         db = load()
         keep["history"] = db["history"]
+        keep["accounts"] = db["accounts"]
         _log(keep, "restore", "all", None, None, "백업 파일로 복원")
         save(keep)
 
@@ -271,9 +427,9 @@ def reset_all(reason: str = "") -> None:
     """시연이 끝난 뒤 처음 상태로: 덮어쓰기·알림·배너·추가 행사를 모두 지운다 (이력은 남김)."""
     with _lock:
         db = load()
-        hist = db["history"]
+        hist, accs = db["history"], db["accounts"]
         db = copy.deepcopy(EMPTY)
-        db["history"] = hist
+        db["history"], db["accounts"] = hist, accs
         _log(db, "reset", "all", None, None, reason or "전체 초기화")
         save(db)
 

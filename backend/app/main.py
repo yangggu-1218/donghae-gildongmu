@@ -337,7 +337,7 @@ def place_bigdata(pid: str, lang: str = "ko"):
 @app.get("/api/admin/probe")
 def admin_probe(x_admin_token: str | None = Header(None)):
     """관리자: 공공 빅데이터 API가 실제로 응답하는지 점검 (캐시를 비우고 다시 부른다)."""
-    _admin(x_admin_token)
+    _admin(x_admin_token, "data")
     return bigdata.probe()
 
 
@@ -378,12 +378,21 @@ async def report(place_id: str = Form(...), kind: str = Form(...), note: str = F
     return {"ok": True, "id": rid, "ai": rec.get("ai")}
 
 
-def _admin(token: str | None):
-    """관리자 확인: [로그인]으로 받은 토큰을 X-Admin-Token 헤더로 보낸다."""
+def _admin(token: str | None, perm: str | None = None) -> dict:
+    """관리자 확인: [로그인]으로 받은 토큰을 X-Admin-Token 헤더로 보낸다. perm = 이 일을 할 수 있는 역할인지."""
     if not cms.account()[1]:
         raise HTTPException(503, ".env 에 ADMIN_PASSWORD(관리자 비밀번호)를 먼저 설정해 주세요")
-    if not cms.check(token):
+    s = cms.check(token)
+    if not s:
         raise HTTPException(401, "다시 로그인해 주세요")
+    if not cms.can(s, perm):
+        raise HTTPException(403, f"{cms.ROLES.get(s['role'], s['role'])} 계정은 이 일을 할 수 없어요. 총괄 관리자에게 부탁해 주세요.")
+    cms.ACTOR.set(f"{s['name']} ({s['id']})")   # 변경 이력의 '누가'
+    return s
+
+
+def _who(s: dict) -> str:
+    return f"{s['name']} ({s['id']})"
 
 
 @app.get("/api/admin/login-info")
@@ -397,10 +406,73 @@ def admin_login_info():
 
 @app.post("/api/admin/login")
 def admin_login(body: dict):
-    tok = cms.login(body.get("id", ""), body.get("password", ""))
-    if not tok:
-        raise HTTPException(401, "아이디나 비밀번호가 맞지 않아요")
-    return {"token": tok, "hours": cms.SESSION_HOURS}
+    try:
+        r = cms.login(body.get("id", ""), body.get("password", ""))
+    except ValueError as e:
+        raise HTTPException(401, str(e))
+    return {**r, "hours": cms.SESSION_HOURS}
+
+
+@app.get("/api/admin/me")
+def admin_me(x_admin_token: str | None = Header(None)):
+    s = _admin(x_admin_token)
+    return {"id": s["id"], "name": s["name"], "role": s["role"], "must_change": s.get("must_change", False), "role_name": cms.ROLES[s["role"]],
+            "perms": sorted(cms.PERMS[s["role"]]), "expires_at": dt.datetime.fromtimestamp(s["exp"]).isoformat(timespec="minutes")}
+
+
+@app.post("/api/admin/password")
+def admin_password(body: dict, x_admin_token: str | None = Header(None)):
+    """내 비밀번호 바꾸기 (총괄 관리자는 서버 설정에서)."""
+    s = _admin(x_admin_token)
+    try:
+        cms.change_own_password(s["id"], body.get("old", ""), body.get("new", ""))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.get("/api/admin/accounts")
+def admin_accounts(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "accounts")
+    return {"accounts": cms.accounts(), "roles": cms.ROLES, "perms": {k: sorted(v) for k, v in cms.PERMS.items()}}
+
+
+@app.post("/api/admin/accounts")
+def admin_add_account(body: dict, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "accounts")
+    try:
+        return cms.add_account(body.get("id", ""), body.get("name", ""), body.get("role", ""), body.get("password", ""))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/admin/accounts/{uid}")
+def admin_update_account(uid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """역할 바꾸기·사용 멈춤/다시 쓰기·이름·임시 비밀번호 새로 발급."""
+    _admin(x_admin_token, "accounts")
+    try:
+        return cms.update_account(uid, body.get("role"), body.get("active"), body.get("name"), body.get("password"))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/admin/dashboard")
+def admin_dashboard(x_admin_token: str | None = Header(None)):
+    """한눈에: 처리할 제보, 지금 걸린 알림·공지, 이번 주 행사, 최근 변경(누가)."""
+    _admin(x_admin_token)
+    db = cms.load()
+    day = _today()
+    reps = _jsonl("reports.jsonl")
+    visits = _jsonl("visits.jsonl")
+    week = (dt.date.fromisoformat(day) + dt.timedelta(days=7)).isoformat()
+    return {"today": day,
+            "reports": {"new": sum(r.get("status") == "접수" for r in reps), "doing": sum(r.get("status") == "확인 중" for r in reps), "total": len(reps)},
+            "notices": [{**n, "name": PLACES[n["place_id"]].name_ko if n.get("place_id") in PLACES else None} for n in db["notices"] if cms.active(n, day)][:8],
+            "banner": cms.site(day)["banner"],
+            "overrides": len(db["overrides"]) + len(db["segments"]),
+            "visits": {"total": len(visits), "last": max((v["date"] for v in visits if v.get("date")), default=None)},
+            "events_week": [e for e in cms.events() if e.get("start", "") <= week and (e.get("end") or e.get("start", "")) >= day][:5],
+            "recent": db["history"][:8]}
 
 
 @app.post("/api/admin/logout")
@@ -421,9 +493,9 @@ def site():
 
 @app.get("/api/admin/cms")
 def admin_cms(x_admin_token: str | None = Header(None)):
-    """관리 화면 첫 데이터: 덮어쓴 값, 알림, 배너, 추가 행사, 변경 이력."""
+    """관리 화면 첫 데이터: 덮어쓴 값, 알림, 배너, 추가 행사, 변경 이력 (계정 정보는 빼고)."""
     _admin(x_admin_token)
-    return cms.load()
+    return cms.backup()
 
 
 def _guard(fn):
@@ -438,7 +510,7 @@ def _guard(fn):
 @app.post("/api/admin/places/{pid}")
 def admin_place(pid: str, body: dict, x_admin_token: str | None = Header(None)):
     """장소 정보 고치기: {fields:{...}, segments?:[...], reason}"""
-    _admin(x_admin_token)
+    _admin(x_admin_token, "place")
     if pid not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
     cur = PLACES[pid].model_dump()
@@ -447,7 +519,7 @@ def admin_place(pid: str, body: dict, x_admin_token: str | None = Header(None)):
 
 @app.post("/api/admin/notices")
 def admin_add_notice(body: dict, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "notice")
     if body.get("place_id") and body["place_id"] not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
     return _guard(lambda: cms.add_notice(body, body.get("reason") or ""))
@@ -455,51 +527,51 @@ def admin_add_notice(body: dict, x_admin_token: str | None = Header(None)):
 
 @app.post("/api/admin/notices/{nid}/delete")
 def admin_del_notice(nid: str, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "notice")
     return _guard(lambda: {"ok": cms.remove_notice(nid)})
 
 
 @app.post("/api/admin/banner")
 def admin_banner(body: dict, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "site")
     return _guard(lambda: {"banner": cms.set_banner(body)})
 
 
 @app.post("/api/admin/events")
 def admin_add_event(body: dict, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "site")
     return _guard(lambda: cms.add_event(body))
 
 
 @app.post("/api/admin/events/{eid}/delete")
 def admin_del_event(eid: str, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "site")
     return _guard(lambda: {"ok": cms.remove_event(eid)})
 
 
 @app.post("/api/admin/history/{hid}/revert")
 def admin_revert(hid: str, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "history")
     return _guard(lambda: cms.revert(hid))
 
 
 @app.get("/api/admin/backup")
 def admin_backup(x_admin_token: str | None = Header(None)):
-    """백업 내려받기 (서버 디스크가 지워지는 호스팅 대비)."""
-    _admin(x_admin_token)
-    return cms.load()
+    """백업 내려받기 (서버 디스크가 지워지는 호스팅 대비). 계정·비밀번호는 넣지 않는다."""
+    _admin(x_admin_token, "backup")
+    return cms.backup()
 
 
 @app.post("/api/admin/restore")
 def admin_restore(body: dict, x_admin_token: str | None = Header(None)):
-    _admin(x_admin_token)
+    _admin(x_admin_token, "backup")
     return _guard(lambda: cms.restore(body) or {"ok": True})
 
 
 @app.post("/api/admin/reset")
 def admin_reset(body: dict, x_admin_token: str | None = Header(None)):
-    """시연 뒤 처음 상태로 (이력은 남는다)."""
-    _admin(x_admin_token)
+    """시연 뒤 처음 상태로 (이력·계정은 남는다)."""
+    _admin(x_admin_token, "backup")
     return _guard(lambda: cms.reset_all(body.get("reason") or "") or {"ok": True})
 
 
@@ -517,7 +589,7 @@ def _save_jsonl(name: str, rows: list[dict]):
 @app.get("/api/admin/report")
 def admin_report(x_admin_token: str | None = Header(None)):
     """관리자 리포트: 장소별 제보 수."""
-    _admin(x_admin_token)
+    _admin(x_admin_token, "reports")
     counts: dict[str, int] = {}
     for r in _jsonl("reports.jsonl"):
         counts[r["place_id"]] = counts.get(r["place_id"], 0) + 1
@@ -527,7 +599,7 @@ def admin_report(x_admin_token: str | None = Header(None)):
 @app.get("/api/admin/reports")
 def admin_reports(x_admin_token: str | None = Header(None)):
     """이용자 제보 전체 (최신순) — AI 사진 분석 결과 포함, 사람이 검수한다."""
-    _admin(x_admin_token)
+    _admin(x_admin_token, "reports")
     rows = _jsonl("reports.jsonl")
     for r in rows:
         r["name"] = PLACES[r["place_id"]].name_ko if r["place_id"] in PLACES else r["place_id"]
@@ -537,15 +609,16 @@ def admin_reports(x_admin_token: str | None = Header(None)):
 @app.post("/api/admin/reports/{rid}")
 def admin_review(rid: str, body: dict, x_admin_token: str | None = Header(None)):
     """제보 검수: status = 접수 / 확인 중 / 반영 / 반려."""
-    _admin(x_admin_token)
+    s = _admin(x_admin_token, "reports")
     rows = _jsonl("reports.jsonl")
     for r in rows:
         if r["id"] == rid:
             r["status"] = body.get("status", r["status"])
             r["memo"] = (body.get("memo") or r.get("memo") or "")[:300]
             r["reviewed_at"] = dt.datetime.now().isoformat(timespec="seconds")
+            r["reviewed_by"] = _who(s)
             n = body.get("notice")   # [반영] + 알림으로 올리기 → 사이트에 바로 보인다
-            if r["status"] == "반영" and n and n.get("level"):
+            if r["status"] == "반영" and n and n.get("level") and cms.can(s, "notice"):
                 rec = _guard(lambda: cms.add_notice({**n, "place_id": r["place_id"], "from_report": rid}, f"제보 {rid} 반영"))
                 r["notice_id"] = rec["id"]
     _save_jsonl("reports.jsonl", rows)
@@ -555,18 +628,20 @@ def admin_review(rid: str, body: dict, x_admin_token: str | None = Header(None))
 @app.get("/api/admin/visits")
 def admin_visits(x_admin_token: str | None = Header(None)):
     """현장 확인 기록 (팀 답사)."""
-    _admin(x_admin_token)
+    _admin(x_admin_token, "visits")
     return sorted(_jsonl("visits.jsonl"), key=lambda r: r["date"], reverse=True)
 
 
 @app.post("/api/admin/visits")
 def admin_add_visit(body: dict, x_admin_token: str | None = Header(None)):
     """현장 확인 기록 추가: {place_id, date, who, segment, slope_deg?, curb_cm?, width_m?, steps?, surface?, toilet?, note}"""
-    _admin(x_admin_token)
+    s = _admin(x_admin_token, "visits")
     if body.get("place_id") not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
     keep = ("place_id", "date", "who", "segment", "slope_deg", "curb_cm", "width_m", "steps", "surface", "toilet", "note")
     rec = {k: body.get(k) for k in keep}
+    rec["who"] = rec.get("who") or s["name"]
+    rec["entered_by"] = _who(s)
     rec["id"] = uuid.uuid4().hex[:12]
     rec["name"] = PLACES[rec["place_id"]].name_ko
     rows = _jsonl("visits.jsonl") + [rec]
