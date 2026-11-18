@@ -175,6 +175,7 @@ export function makeApi(DATA) {
   }
   function pyRound(x) { const f = Math.floor(x), d = x - f; if (d > 0.5) return f + 1; if (d < 0.5) return f; return f % 2 === 0 ? f : f + 1; }
   const drive = (fromXy, p) => (p.lat ? driveMin(fromXy, [p.lat, p.lon]) : 15);
+  const q15 = (m) => Math.ceil(m / 15) * 15;   // 시간표는 15분 단위
   const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   function score(p, c, rain) {
     let s = 2.0 * p.styles.filter((x) => c.style.includes(x)).length;
@@ -267,10 +268,10 @@ export function makeApi(DATA) {
   // ---------- engine.plan ----------
   function plan(places, c, rain) {
     const mode = modeFrom(c.move), less = c.move.includes("오래 걷기 어려움");
-    const cap = c.cap || (c.days === "1박 2일" ? 6 : 4);
+    const cap = c.cap || 4;   // 하루 4곳 (여러 날 여행은 날마다 따로 짠다)
     const day = tripDate(c), wd = weekdayOf(day);
     const notes = [], skipped = [];
-    let pool = Object.values(places).filter((p) => (p.type !== "숙박" || c.days === "1박 2일") && p.lat != null && !c.exclude.includes(p.id));
+    let pool = Object.values(places).filter((p) => p.type !== "숙박" && p.lat != null && !c.exclude.includes(p.id));
     if (mode !== "none") {
       const unv = pool.filter((p) => !p.verified && !c.must.includes(p.id));
       pool = pool.filter((p) => !unv.includes(p));
@@ -309,14 +310,15 @@ export function makeApi(DATA) {
     let needLunch = food.length > 0 && !c.skip_lunch, needCafe = !!(wantRest && cafes.length);
     const seen = new Set(); let filled = false;
     const visit = (p, kind) => {
-      const dm = drive(cur, p), arrive = t + dm;
+      const dm = drive(cur, p), arrive = q15(t + dm);
       const [, why, wait] = openCheck(p, wd, arrive, p.stay_min);
       const st = why === "always" ? "always" : why === "unknown" ? "unknown" : "open";
-      t = arrive + wait;
-      stops.push({ id: p.id, arrive: hhmm(t), drive_min: dm, grade: gradePlace(p, mode, less), why: "", depart: hhmm(t + p.stay_min), kind,
+      t = q15(arrive + wait);
+      const stay = q15(t + p.stay_min) - t;
+      stops.push({ id: p.id, arrive: hhmm(t), drive_min: dm, grade: gradePlace(p, mode, less), why: "", depart: hhmm(t + stay), kind,
         open_state: st, hours_text: hoursText(p, c.lang), hours_sample: !["공공데이터", "상시 개방", "관리자 확인"].includes(p.hours_source), wait_min: wait,
         notice: (noticeOn(p, "warn", day) || {}).title || "" });
-      t += p.stay_min; cur = [p.lat || cur[0], p.lon || cur[1]]; seen.add(p.id);
+      t += stay; cur = [p.lat || cur[0], p.lon || cur[1]]; seen.add(p.id);
     };
     const REASON = { break: "브레이크타임", after_last_entry: "마지막 입장 시간이 지남", not_open_yet: "아직 문을 열기 전" };
     const firstOpen = (cands) => {
@@ -349,7 +351,7 @@ export function makeApi(DATA) {
           const fill = (c.cap != null || filled) ? null : firstOpen(spare);
           filled = true;
           if (fill) { spare.splice(spare.indexOf(fill), 1); visit(fill, "sight"); notes.push(`점심때까지 시간이 남아 ${josa(fill.name_ko, "을를")} 넣었어요.`); continue; }
-          const last = stops[stops.length - 1], extra = 680 - 15 - t;
+          const last = stops[stops.length - 1], extra = 675 - t;
           if (extra > 0) { t += extra; last.depart = hhmm(mins(last.depart) + extra); notes.push(`점심 전까지 ${josa(places[last.id].name_ko, "에서")} ${extra}분 더 여유 있게 쉬어요.`); }
           continue;
         }
@@ -367,7 +369,7 @@ export function makeApi(DATA) {
       } else rest.splice(rest.indexOf(pick), 1);
       visit(pick, "sight");
     }
-    const back = t + driveMin(cur, start);
+    const back = q15(t + driveMin(cur, start));
     for (const s of skipped) notes.push(`${josa(s.name, "은는")} ${s.reason}라서 뺐어요.`);
     return { mode, stops, overall: mode !== "none" ? worst(stops.map((s) => s.grade)) : null, back_at: hhmm(back), notes,
       date: day, weekday: wd, start_time: hhmm(t0), skipped };
@@ -597,7 +599,18 @@ export function makeApi(DATA) {
   }
 
   // ---------- main.py ----------
-  const defaults = () => ({ who: "혼자", move: [], style: [], days: "당일", start: "동해역", memo: "", rain: null, wish: [], must: [], lang: "ko",
+  const DAY_OPTS = { "당일": 1, "1박 2일": 2, "2박 3일": 3, "3박 4일": 4, "4박 5일": 5, "6박 7일": 7, "13박 14일": 14, "한 달 살기": 30 };
+  const tripDays = (d) => DAY_OPTS[d] || 1;
+  function daysFrom(low) {   // talk.days_from과 같은 규칙
+    if (/한\s?달|한달|2주\s?이상|보름 이상|month/.test(low)) return "한 달 살기";
+    if (/2주|보름|two weeks/.test(low)) return "13박 14일";
+    if (/일주일|1주|6박|a week/.test(low)) return "6박 7일";
+    const m = low.match(/([1-4])박/);
+    if (m) return { 1: "1박 2일", 2: "2박 3일", 3: "3박 4일", 4: "4박 5일" }[m[1]];
+    if (/하룻밤|overnight/.test(low)) return "1박 2일";
+    return null;
+  }
+  const defaults = () => ({ day_no: 1, who: "혼자", move: [], style: [], days: "당일", start: "동해역", memo: "", rain: null, wish: [], must: [], lang: "ko",
     date: null, start_time: "10:00", meal: [], exclude: [], cap: null, rest: null, flat_only: false, lunch: null, skip_lunch: false, weather_pref: "" });
   const cond = (c) => { const o = { ...defaults(), ...(c || {}) }; for (const k of ["move", "style", "wish", "must", "meal", "exclude"]) o[k] = o[k] || []; if (!o.start_time) o.start_time = "10:00"; return o; };
   const extras = (p, lang = "ko") => ({
@@ -607,7 +620,7 @@ export function makeApi(DATA) {
   const STOP_KEYS = ["walk_load", "wheelchair", "entrance_step", "table", "benches", "carer_tip", "indoor", "soft_menu", "parking_easy", "hours_source", "access_source", "sample", "type"];
   const stopInfo = (p, lang, wd, at) => ({ ...Object.fromEntries(STOP_KEYS.map((k) => [k, p[k] ?? null])), nearby: nearby(p, lang, wd, at) });
   function stayHint(result, c) {
-    if (c.days !== "1박 2일" || !result.stops.length) return null;
+    if ((c.day_no || 1) >= tripDays(c.days) || !result.stops.length) return null;   // 밤을 묵는 날만
     const zone = PLACES[result.stops[result.stops.length - 1].id].zone;
     return { zone, zone_name: (c.lang === "en" ? ZONE_EN : ZONE_KO)[zone] || zone, ...lodging(zone, 5) };
   }
@@ -721,7 +734,7 @@ export function makeApi(DATA) {
     if (move.length) { c.move = [...new Set([...c.move, ...move])].sort(); state.move_known = true; }
     if (!move.length && NO_MOVE.test(low)) { c.move = []; state.move_known = true; }
     if (style.length) c.style = style;
-    if (/1박|하룻밤|overnight/.test(low)) c.days = "1박 2일";
+    const dd = daysFrom(low); if (dd) c.days = dd;
     const start = /묵호역|mukho st/.test(low) ? "묵호역" : /동해역|donghae st/.test(low) ? "동해역" : /차로|자가용|운전|by car|driving/.test(low) ? "자가용" : null;
     if (start) c.start = start;
     if (RAIN.test(message)) c.rain = true;
