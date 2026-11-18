@@ -9,8 +9,15 @@ export type Course = {
   mode: string; stops: Stop[]; overall: Grade; back_at: string; notes: string[];
   date: string; weekday: number; start_time: string; skipped: { id: string; name: string; reason: string }[];
 };
+// 여행 기간 콤보 상자: 묶음 → [값, 며칠]. 서버 schemas.DAY_OPTS와 같은 값
+export const DAY_GROUPS: { ko: string; en: string; opts: [string, number][] }[] = [
+  { ko: "짧게", en: "Short", opts: [["당일", 1], ["1박 2일", 2], ["2박 3일", 3]] },
+  { ko: "여유 있게", en: "Relaxed", opts: [["3박 4일", 4], ["4박 5일", 5], ["6박 7일", 7]] },
+  { ko: "길게 머물기", en: "Long stay", opts: [["13박 14일", 14], ["한 달 살기", 30]] },
+];
+export const tripDays = (d: string) => DAY_GROUPS.flatMap((g) => g.opts).find(([v]) => v === d)?.[1] || 1;
 export type Conditions = {
-  who: string; move: string[]; style: string[]; days: "당일" | "1박 2일";
+  who: string; move: string[]; style: string[]; days: string; day_no?: number;
   start: "동해역" | "묵호역" | "자가용"; memo: string; wish: string[]; must?: string[]; rain?: boolean | null; lang: "ko" | "en";
   date?: string | null; start_time?: string; meal?: string[]; exclude?: string[]; cap?: number | null; rest?: boolean | null;
   flat_only?: boolean; lunch?: string | null; skip_lunch?: boolean; weather_pref?: "" | "실내" | "실외";
