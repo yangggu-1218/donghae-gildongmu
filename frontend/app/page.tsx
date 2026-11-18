@@ -10,7 +10,7 @@ import { Hero, HomeFacts, HowTo, NowDonghae, ZoneTiles, MoreLinks, Places, Cours
 import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
-import { api, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON } from "@/lib/api";
+import { api, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays } from "@/lib/api";
 import { Brief, BRIEF_ICON, evidence, ruleBrief } from "@/lib/brief";
 
 type Lang = "ko" | "en";
@@ -47,6 +47,10 @@ export default function Page() {
     date: iso(new Date()), start_time: "10:00", meal: [] });
   const [log, setLog] = useState<Msg[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
+  // 여러 날 여행: 날마다 코스를 따로 짜서 모아 둔다 (n일차 → 그날 결과와 조건)
+  const [dayNo, setDayNo] = useState(1);
+  const dayRef = useRef(1);
+  const [trip, setTrip] = useState<Record<number, { res: any; cond: Conditions }>>({});
   const [places, setPlaces] = useState<Record<string, any>>({});
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState("");
@@ -203,6 +207,10 @@ export default function Page() {
   }
   function applyRes(r: CourseRes | any, before: string[] = []) {
     setSaved(false);
+    if (r.conditions && trip[1] && r.conditions.days !== trip[1].cond.days) { dayRef.current = 1; setDayNo(1); setTrip({}); }   // 여행 기간이 바뀌면 새 여행
+    const dn = dayRef.current;   // 고친 결과를 그날 코스로 다시 담아 둔다
+    setTrip((tr) => (tr[dn] ? { ...tr, [dn]: { res: { ...tr[dn].res, ...r }, cond: r.conditions || tr[dn].cond } }
+      : { 1: { res: r, cond: { ...(r.conditions || cond), day_no: 1 } } }));   // 대화로 처음 만든 코스도 1일차로
     setCourse(r.course); setExtras((x) => ({ ...x, ...(r.extras || {}) }));
     if (r.conditions) setCond(r.conditions);
     if (r.stay !== undefined) setHint({ stay: r.stay, move: r.move, events: r.events || [], onDay: !!r.events_on_day });
@@ -220,11 +228,36 @@ export default function Page() {
     say({ me: true, text: label });
     say({ pose: "think", text: t("plan.thinking") });
     try {
-      const r = await api.course(c);
+      const r = await api.course({ ...c, day_no: 1 });
+      dayRef.current = 1; setDayNo(1); setTrip({ 1: { res: r, cond: { ...c, day_no: 1 } } });
       setHist([]); applyRes(r);
       say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length, t: r.course.back_at }) });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false); setStep(Q.length + 1);
+  }
+  // 여러 날 여행: k일차로 넘어가기. 아직 안 짠 날은 1일차부터 차례로, 앞선 날에 간 곳을 빼고 짠다.
+  async function goDay(k: number) {
+    if (k === dayNo || busy || !trip[1]) return;
+    const cache = { ...trip };
+    if (course) cache[dayNo] = { res: { ...cache[dayNo]?.res, course, extras }, cond };
+    setBusy(true);
+    try {
+      const base = cache[1].cond, d0 = cache[1].res.course.date;
+      for (let j = 2; j <= k; j++) {
+        if (cache[j]) continue;
+        const used = Object.keys(cache).map(Number).filter((x) => x < j).flatMap((x) => cache[x].res.course.stops.map((s: any) => s.id));
+        const dt = new Date(d0 + "T00:00:00"); dt.setDate(dt.getDate() + j - 1);
+        const c: Conditions = { ...base, day_no: j, date: iso(dt), exclude: Array.from(new Set([...(base.exclude || []), ...used])), wish: [], must: [], lunch: null };
+        say({ pose: "think", text: t("day.making", { n: j }) });
+        cache[j] = { res: await api.course(c), cond: c };
+        if (j === k) say({ pose: "happy", text: t("plan.done", { n: cache[j].res.course.stops.length, t: cache[j].res.course.back_at }) });
+      }
+      const e = cache[k];
+      dayRef.current = k; setTrip(cache); setDayNo(k); setHist([]); setFresh([]);
+      setCourse(e.res.course); setExtras((x) => ({ ...x, ...(e.res.extras || {}) })); setCond(e.cond);
+      if (e.res.stay !== undefined) setHint({ stay: e.res.stay, move: e.res.move, events: e.res.events || [], onDay: !!e.res.events_on_day });
+    } catch { say({ pose: "worry", text: t("error.server") }); }
+    setBusy(false);
   }
   // 작업3: 버튼(빠른 수정·카드 버튼)은 AI 없이 규칙으로 바로 고친다. 대화창에도 같은 말이 남는다.
   async function edit(action: string, target: string | null, sayText: string) {
@@ -455,7 +488,11 @@ export default function Page() {
             )}
             {step === Q.length && (
               <div className="chips big-chips">
-                {(["당일", "1박 2일"] as const).map((d) => <button key={d} className="chip" aria-pressed={cond.days === d} onClick={() => setCond({ ...cond, days: d })}>{t(`opt.${d}`)}</button>)}
+                <label className="sel-days"><span>{t("plan.days")}</span>
+                  <select value={cond.days} onChange={(e) => setCond({ ...cond, days: e.target.value })}>
+                    {DAY_GROUPS.map((g) => <optgroup key={g.ko} label={lang === "ko" ? g.ko : g.en}>
+                      {g.opts.map(([v]) => <option key={v} value={v}>{t(`opt.${v}`)}</option>)}</optgroup>)}
+                  </select></label>
                 {(["동해역", "묵호역", "자가용"] as const).map((s) => <button key={s} className="chip" aria-pressed={cond.start === s} onClick={() => setCond({ ...cond, start: s })}>{t(`opt.${s}`)}</button>)}
                 <input aria-label={t("plan.memo")} placeholder={t("plan.memoPh")} value={cond.memo} onChange={(e) => setCond({ ...cond, memo: e.target.value })} />
                 <button className="chip go" disabled={busy} onClick={make}>{t("plan.make")}</button>
@@ -498,6 +535,17 @@ export default function Page() {
               <p className="muted" style={{ fontSize: ".85em" }}>{t("map.overview", { n: overview.length })}</p>
             </>) : (
             <>
+              {tripDays(cond.days) > 1 && trip[1] && (
+                <div className="day-tabs" role="tablist" aria-label={t("plan.days")}>
+                  {Array.from({ length: tripDays(cond.days) }, (_, i) => i + 1).map((k) => {
+                    const dt = new Date(trip[1].res.course.date + "T00:00:00"); dt.setDate(dt.getDate() + k - 1);
+                    const w = wxOf(iso(dt));
+                    return <button key={k} role="tab" aria-selected={k === dayNo} className={k === dayNo ? "on" : ""} disabled={busy} onClick={() => goDay(k)}>
+                      <b>{t("day.tab", { n: k })}</b><small>{dt.getMonth() + 1}/{dt.getDate()}({wdName(dt.getDay(), lang)}){w ? " " + WX_ICON[w.icon] : ""}</small></button>;
+                  })}
+                </div>)}
+              {tripDays(cond.days) > 1 && <p className="muted small">{t("day.note")}</p>}
+              {dayNo > 1 && !course.stops.some((s) => s.kind === "sight") && <p className="day-free">🌊 {t("day.free")}</p>}
               <div className="tl-head">
                 <div>
                   <p className="tl-date">{t("tl.head", { d: dateLabel(course.date, lang), w: wdName(course.weekday, lang), s: course.start_time })} · {startName}</p>

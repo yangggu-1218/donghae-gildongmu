@@ -702,3 +702,16 @@ html { scroll-padding-top: calc(var(--hdr, 76px) + 8px); }
 .eat-sort button { border: 0; background: none; padding: 4px 8px; border-radius: 6px; font: inherit; font-size: .85em; color: var(--muted, #5b6675); cursor: pointer; }
 .eat-sort button.on { background: var(--ink, #12355E); color: #fff; }
 .eat-why { margin: 0 0 4px; }
+
+/* 여행 기간 콤보 상자 */
+.sel-days { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 16px; border: 1.5px solid var(--line, #cfdbe8); border-radius: 999px; background: #fff; font-weight: 600; }
+.sel-days span { font-size: .9em; color: var(--muted, #5b6675); }
+.sel-days select { border: 0; background: transparent; font: inherit; font-weight: 700; color: var(--ink, #12355E); padding: 6px 4px; cursor: pointer; }
+.sel-days:focus-within { outline: 3px solid #f2a34a; outline-offset: 2px; }
+/* 여러 날 여행: 날짜 탭 */
+.day-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; margin-bottom: 4px; scrollbar-width: thin; }
+.day-tabs button { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 14px; border-radius: 14px; border: 1.5px solid var(--line, #cfdbe8); background: #fff; color: var(--ink, #12355E); font: inherit; cursor: pointer; }
+.day-tabs button small { font-size: .78em; color: var(--muted, #5b6675); }
+.day-tabs button.on { background: var(--ink, #12355E); border-color: var(--ink, #12355E); color: #fff; }
+.day-tabs button.on small { color: #d6e3f3; }
+.day-free { background: #eef6f4; border-radius: 12px; padding: 12px 14px; }
