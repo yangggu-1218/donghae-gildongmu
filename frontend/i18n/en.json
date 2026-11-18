@@ -235,5 +235,16 @@
   "nav.sources": "Sources & criteria",
   "nav.admin": "Admin",
   "my.save": "Save to my trips",
-  "my.saved": "Saved"
+  "my.saved": "Saved",
+  "opt.2박 3일": "3 days, 2 nights",
+  "opt.3박 4일": "4 days, 3 nights",
+  "opt.4박 5일": "5 days, 4 nights",
+  "opt.6박 7일": "A week",
+  "opt.13박 14일": "Two weeks",
+  "opt.한 달 살기": "Longer than two weeks",
+  "plan.days": "Trip length",
+  "day.tab": "Day {n}",
+  "day.free": "You've seen every Donghae spot on earlier days. Rest by the sea or visit Gangneung or Samcheok today.",
+  "day.making": "Planning day {n}…",
+  "day.note": "Each day goes to different places. Tap a day to see it."
 }
