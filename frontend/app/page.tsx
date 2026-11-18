@@ -324,6 +324,18 @@ export default function Page() {
     navigator.geolocation?.getCurrentPosition((p) => go(p.coords.latitude, p.coords.longitude), () => go(37.5245, 129.1143));
   }
 
+  // 카카오맵 길찾기 링크: 출발역 → 코스 순서대로 경유(최대 5곳) → 출발역으로 복귀. 자가용은 첫 장소에서 출발
+  // 형식: https://map.kakao.com/link/by/car/이름,위도,경도/... (카카오맵 웹 가이드 'URL로 길찾기')
+  const KAKAO_START: Record<string, [number, number]> = { "동해역": [37.4995, 129.124], "묵호역": [37.548, 129.116] };
+  const kakaoRoute = useMemo(() => {
+    const pts: [string, number, number][] = (course?.stops || []).filter((s) => places[s.id]?.lat).map((s) => [name(s.id), places[s.id].lat, places[s.id].lon]);
+    if (!pts.length) return "";
+    const st = KAKAO_START[cond.start];
+    if (st) { const nm = lang === "ko" ? cond.start : cond.start === "동해역" ? "Donghae Station" : "Mukho Station"; pts.unshift([nm, st[0], st[1]]); if (pts.length < 7) pts.push([nm, st[0], st[1]]); }
+    if (pts.length < 2) return "";
+    const seg = pts.slice(0, 7).map(([n, la, lo]) => `${encodeURIComponent(n.replace(/[,/]/g, " "))},${la},${lo}`).join("/");
+    return `https://map.kakao.com/link/by/car/${seg}`;
+  }, [course, places, cond.start, lang]);
   const pins = useMemo(() => (course?.stops || []).filter((s) => places[s.id]?.lat)
     .map((s) => ({ lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: s.grade })), [course, places, lang]);
   const q = Q[step];
@@ -555,6 +567,7 @@ export default function Page() {
                 <div className="chips">
                   <button className="chip go sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
                   <button className="chip" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
+                  {kakaoRoute && <a className="chip" href={kakaoRoute} target="_blank" rel="noreferrer">{t("route.kakao")}</a>}
                 </div>
               </div>
               {brief && (
