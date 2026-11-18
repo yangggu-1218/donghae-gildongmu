@@ -1,6 +1,13 @@
 """데이터 모양 정의. 장소(place) 안에 구간(segment)이 있고, 구간마다 측정값과 판정이 있다."""
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# 여행 기간: 화면의 콤보 상자와 같은 순서. 값 → 며칠짜리 여행인지
+DAY_OPTS = {"당일": 1, "1박 2일": 2, "2박 3일": 3, "3박 4일": 4, "4박 5일": 5, "6박 7일": 7, "13박 14일": 14, "한 달 살기": 30}
+
+
+def trip_days(days: str) -> int:
+    return DAY_OPTS.get(days, 1)
 
 Grade = Literal["G", "Y", "R"]          # G 가능 / Y 주의 / R 불가
 Mode = Literal["none", "wheel", "stroller", "walk"]
@@ -81,7 +88,13 @@ class Conditions(BaseModel):
     who: str = "혼자"
     move: list[str] = Field(default_factory=list)   # 휠체어, 오래 걷기 어려움, 계단 어려움, 유모차
     style: list[str] = Field(default_factory=list)
-    days: Literal["당일", "1박 2일"] = "당일"
+    days: str = "당일"                   # DAY_OPTS 중 하나 (당일 ~ 한 달 살기)
+    day_no: int = 1                      # 여러 날 여행에서 몇째 날 코스인지 (1부터)
+
+    @field_validator("days")
+    @classmethod
+    def _days_ok(cls, v):
+        return v if v in DAY_OPTS else "당일"
     start: Literal["동해역", "묵호역", "자가용"] = "동해역"
     memo: str = ""
     rain: Optional[bool] = None          # None이면 기상청 예보로 판단

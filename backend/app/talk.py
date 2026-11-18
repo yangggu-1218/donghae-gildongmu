@@ -9,7 +9,7 @@ from typing import Callable
 import httpx
 
 from . import edits, engine, llm, public_data
-from .schemas import Conditions, Place
+from .schemas import DAY_OPTS, Conditions, Place
 
 PROMPT = (Path(__file__).parent / "prompts" / "talk.md").read_text(encoding="utf-8")
 TALK_MODEL = os.getenv("TALK_MODEL") or os.getenv("LLM_MODEL") or "claude-haiku-5-5"
@@ -25,7 +25,7 @@ TOOLS = [
      "input_schema": {"type": "object", "properties": {
          "who": {"type": "string", "enum": WHO}, "move": {"type": "array", "items": {"type": "string", "enum": MOVE}},
          "move_none": {"type": "boolean"}, "style": {"type": "array", "items": {"type": "string", "enum": STYLE}},
-         "days": {"type": "string", "enum": ["당일", "1박 2일"]}, "start": {"type": "string", "enum": ["동해역", "묵호역", "자가용"]},
+         "days": {"type": "string", "enum": list(DAY_OPTS)}, "start": {"type": "string", "enum": ["동해역", "묵호역", "자가용"]},
          "rain": {"type": "boolean"}, "memo": {"type": "string"},
          "date": {"type": "string", "description": "여행 날짜 YYYY-MM-DD. [현재 상태]의 today를 기준으로 '이번 주 금요일' 같은 말을 날짜로 바꾼다"},
          "start_time": {"type": "string", "description": "출발 시각 HH:MM"},
@@ -76,7 +76,7 @@ class Session:
         if move: self.c.move = sorted(set(self.c.move) | {m for m in move if m in MOVE}); self.state["move_known"] = True
         if move_none: self.c.move = []; self.state["move_known"] = True
         if style: self.c.style = [s for s in style if s in STYLE]
-        if days in ("당일", "1박 2일"): self.c.days = days
+        if days in DAY_OPTS: self.c.days = days
         if start in ("동해역", "묵호역", "자가용"): self.c.start = start
         if rain is not None: self.c.rain = bool(rain)
         if memo: self.c.memo = memo[:200]
@@ -173,6 +173,17 @@ class Session:
 
 
 # ---------------- LLM 경로 ----------------
+def days_from(low: str):
+    """'2박 3일', '하룻밤', '일주일', '2주', '한 달' → 여행 기간 값."""
+    if re.search(r"한\s?달|한달|2주\s?이상|보름 이상|month", low): return "한 달 살기"
+    if re.search(r"2주|보름|two weeks", low): return "13박 14일"
+    if re.search(r"일주일|1주|6박|a week", low): return "6박 7일"
+    m = re.search(r"([1-4])박", low)
+    if m: return {"1": "1박 2일", "2": "2박 3일", "3": "3박 4일", "4": "4박 5일"}[m.group(1)]
+    if re.search(r"하룻밤|overnight", low): return "1박 2일"
+    return None
+
+
 def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
     if not llm.API_KEY:
         llm.count("talk", False)
@@ -279,7 +290,7 @@ def _rule(s: Session, message: str) -> dict:
     move = [m for m, p in MOVE_KW if re.search(p, low)]
     style = [st for st, p in STYLE_KW if re.search(p, low)]
     s.set_conditions(who=who, move=move or None, move_none=bool(re.search(NO_MOVE, low)) and not move, style=style or None,
-                     days="1박 2일" if re.search(r"1박|하룻밤|overnight", low) else None,
+                     days=days_from(low),
                      start=("묵호역" if re.search(r"묵호역|mukho st", low) else "동해역" if re.search(r"동해역|donghae st", low)
                            else "자가용" if re.search(r"차로|자가용|운전|by car|driving", low) else None),
                      rain=True if llm.RAIN.search(message) else None)

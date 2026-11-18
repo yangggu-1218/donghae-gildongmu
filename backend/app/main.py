@@ -11,7 +11,7 @@ from fastapi import Header, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
-from .schemas import Place, Conditions, ChatEdit
+from .schemas import trip_days, Place, Conditions, ChatEdit
 from . import cms, edits, pages, engine, llm, public_apis, public_data, details, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
@@ -188,8 +188,8 @@ def restaurants(zone: str, kind: str = "", limit: int = 10):
 
 
 def stay_hint(result, c: Conditions):
-    """1박 2일이면 마지막 관광지 권역의 숙박업소 수를 알려 준다 (접근성은 확인 전)."""
-    if c.days != "1박 2일" or not result.stops:
+    """밤을 묵는 날이면 마지막 관광지 권역의 숙박업소 수를 알려 준다 (접근성은 확인 전)."""
+    if c.day_no >= trip_days(c.days) or not result.stops:   # 밤을 묵는 날만
         return None
     zone = PLACES[result.stops[-1].id].zone
     lg = public_data.lodging(zone, limit=5)

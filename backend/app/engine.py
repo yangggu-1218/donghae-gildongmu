@@ -90,6 +90,11 @@ def drive(from_id: str, from_xy, p: Place) -> int:
     return drive_min(from_xy, (p.lat, p.lon)) if p.lat else 15
 
 
+def q15(m: int) -> int:
+    """시간표는 15분 단위로 (11:16 → 11:30). 남는 몇 분은 이동·주차 여유가 된다."""
+    return -(-m // 15) * 15
+
+
 def hhmm(m: int) -> str:
     return f"{m // 60:02d}:{m % 60:02d}"
 
@@ -155,12 +160,12 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
     from . import details as D
     mode = mode_from(c.move)
     less = "오래 걷기 어려움" in c.move
-    cap = c.cap or (6 if c.days == "1박 2일" else 4)
+    cap = c.cap or 4                     # 하루 4곳 (여러 날 여행은 날마다 따로 짠다)
     day = trip_date(c)
     wd = weekday_of(day)
     notes, skipped = [], []
 
-    pool = [p for p in places.values() if (p.type != "숙박" or c.days == "1박 2일") and p.lat is not None and p.id not in c.exclude]
+    pool = [p for p in places.values() if p.type != "숙박" and p.lat is not None and p.id not in c.exclude]
     if mode != "none":   # 이동에 어려움이 있으면 접근성을 확인한 곳만 (담아 둔·넣어 달라고 한 곳은 '확인 필요'로 남김)
         unv = [p for p in pool if not p.verified and p.id not in c.must]
         pool = [p for p in pool if p not in unv]
@@ -216,15 +221,16 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
     def visit(p, kind):
         nonlocal t, cur, cur_id
         dm = drive(cur_id, cur, p)
-        arrive = t + dm
+        arrive = q15(t + dm)
         okk, why, wait = D.open_check(p, wd, arrive, p.stay_min)
         st = "always" if why == "always" else "unknown" if why == "unknown" else "open"
-        t = arrive + wait
+        t = q15(arrive + wait)
+        stay = q15(t + p.stay_min) - t
         stops.append(Stop(id=p.id, arrive=hhmm(t), drive_min=dm, grade=grade_place(p, mode, less), kind=kind,
-                          depart=hhmm(t + p.stay_min), open_state=st, hours_text=D.hours_text(p, c.lang),
+                          depart=hhmm(t + stay), open_state=st, hours_text=D.hours_text(p, c.lang),
                           hours_sample=p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
                           notice=(notice_on(p, "warn") or {}).get("title", "")))
-        t += p.stay_min
+        t += stay
         cur, cur_id = (p.lat or cur[0], p.lon or cur[1]), p.id
         seen.add(p.id)
 
@@ -279,7 +285,7 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
                     notes.append(f"점심때까지 시간이 남아 {D.josa(fill.name_ko, '을를')} 넣었어요.")
                     continue
                 last = stops[-1]
-                extra = 11 * 60 + 20 - 15 - t
+                extra = 11 * 60 + 15 - t
                 if extra > 0:
                     t += extra
                     last.depart = hhmm(_mins(last.depart) + extra)
@@ -307,7 +313,7 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         else:
             rest.remove(pick)
         visit(pick, "sight")
-    back = t + drive_min(cur, start)
+    back = q15(t + drive_min(cur, start))
     for s in skipped:
         notes.append(f"{D.josa(s['name'], '은는')} {s['reason']}라서 뺐어요.")
 
