@@ -191,13 +191,15 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               {([["wheel", "휠체어", "Wheelchair"], ["stroller", "유모차", "Stroller"], ["walk", "오래 걷기 어려움", "Limited walking"]] as const).map(([k, ko, en]) =>
                 <button key={k} className="chip" aria-pressed={mode === k} onClick={() => setMode(k)}>{L(ko, en)}</button>)}
             </div>
+            {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 구간 판정은 현장 실측 전 예시예요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> ☎ <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
             <ol className="seglist">
               {(p.segments || []).map((s: any) => (
                 <li key={s.name}>
                   <div className="seg-top"><b>{s.name}</b><span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span></div>
                   {s.facts.length > 0 && <p>{s.facts.join(" · ")}</p>}
                   {s.note && <p className="muted">{s.note}</p>}
-                  <p className="muted seg-src">{s.measured ? L("측정값으로 판정", "Graded from measurements") : L("답사 기록 판정", "Graded from survey notes")} · {L("출처", "Source")}: {s.source || "-"}</p>
+                  <p className="muted seg-src">{s.source === "예시" ? L("예시 판정 · 현장 확인 전이에요", "Sample grade · not yet surveyed")
+                    : <>{s.measured ? L("측정값으로 판정", "Graded from measurements") : L("답사 기록 판정", "Graded from survey notes")} · {L("출처", "Source")}: {s.source || "-"}</>}</p>
                 </li>
               ))}
               {!(p.segments || []).length && <li className="muted">{L("아직 구간 정보가 없어요.", "No path data yet.")}</li>}
@@ -217,6 +219,13 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               {n.medical?.["응급실"] && <li><span className="dot" style={{ background: "#C9302C" }}>+</span><b>{L("응급실", "ER")}</b> {n.medical["응급실"].name} · {n.medical["응급실"].tel}</li>}
             </ul>
           </div>
+          {p.type === "숙박" && (
+            <div className="panel">
+              <h2 className="h3">{L("예약", "Booking")}</h2>
+              <p className="muted small">{L("네이버 지도에서 빈 객실·예약을 확인할 수 있어요. 무장애 객실 여부는 전화로 꼭 물어보세요.", "Check rooms on Naver Map. Ask about accessible rooms by phone.")}</p>
+              <BookLinks name={p.name_ko} lang={lang} />
+            </div>
+          )}
           {p.lat && p.type !== "숙박" && (
             <div className="panel">
               <h2 className="h3">{L("근처 식당", "Places to eat nearby")}</h2>
@@ -490,6 +499,17 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
 }
 
 /* ---------------- 숙소 ---------------- */
+// 숙소 예약으로 바로 가기: 네이버 지도(예약 가능한 곳은 '예약' 버튼이 뜸)·카카오맵 검색. 예약을 대신하지 않고 이동만 시킨다
+export function BookLinks({ name, lang }: { name: string; lang: Lang }) {
+  const L = pick(lang), q = encodeURIComponent(`동해 ${name}`);
+  return (
+    <span className="book">
+      <a className="chip go" href={`https://map.naver.com/p/search/${q}`} target="_blank" rel="noreferrer">{L("예약하기", "Book")}</a>
+      <a className="chip" href={`https://map.kakao.com/?q=${q}`} target="_blank" rel="noreferrer">{L("카카오맵", "Kakao Map")}</a>
+    </span>
+  );
+}
+
 // 한국관광공사 무장애 여행 정보에 올라 있는 동해시 숙소·음식점 (객실·출입 정보가 실제로 있는 곳)
 function BfStays({ lang }: { lang: Lang }) {
   const L = pick(lang);
@@ -510,6 +530,7 @@ function BfStays({ lang }: { lang: Lang }) {
             <b>{b.name}</b> <span className="badge b-plain">{b.type === "food" ? L("음식점", "Restaurant") : L("숙소", "Lodging")}</span>
             <span className="muted small"> {b.addr}{b.tel ? ` · ${b.tel}` : ""}</span>
             <ul className="small">{Object.entries(b.facts as Record<string, string>).slice(0, 8).map(([k, v]) => <li key={k}><b>{labels[k] || k}</b> {v}</li>)}</ul>
+            {b.type !== "food" && <BookLinks name={b.name} lang={lang} />}
           </li>
         ))}
       </ul>
@@ -529,7 +550,7 @@ export function StayPage({ lang }: { lang: Lang }) {
     L("장애인 주차 구역이 건물 입구 가까이 있나요?", "Accessible parking near the entrance?"), L("침대 높이가 휠체어 좌석과 비슷한가요?", "Bed height similar to wheelchair seat?")];
   return (
     <section className="sec wrap">
-      <Head lang={lang} photo="mangsang" title={L("숙소", "Where to stay")} sub={L("공공데이터에는 객실 접근성 정보가 없어요. 예약 전에 아래 질문을 전화로 꼭 물어보세요.", "Public data has no room accessibility info. Call and ask before booking.")} />
+      <Head lang={lang} photo="mangsang" title={L("숙소", "Where to stay")} sub={L("공공데이터에는 객실 접근성 정보가 없어요. 예약 전에 아래 질문을 전화로 꼭 물어보세요. '예약하기'는 네이버 지도로 이어져요.", "Public data has no room accessibility info. Call and ask before booking. 'Book' opens Naver Map.")} />
       <BfStays lang={lang} />
       <div className="panel">
         <h2 className="h3">{L("예약 전에 물어볼 것", "Ask before booking")}</h2>
@@ -544,8 +565,8 @@ export function StayPage({ lang }: { lang: Lang }) {
       </form>
       {!d ? <Loading err={err} lang={lang} /> : (
         <div className="tbl-wrap"><table className="tbl">
-          <thead><tr><th>{L("이름", "Name")}</th><th>{L("종류", "Type")}</th><th>{L("주소", "Address")}</th><th>{L("전화", "Phone")}</th></tr></thead>
-          <tbody>{rows.map((r: any) => <tr key={r.name + r.address}><td>{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td>{r.kind}</td><td><small>{r.address}</small></td><td>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td></tr>)}</tbody>
+          <thead><tr><th>{L("이름", "Name")}</th><th>{L("종류", "Type")}</th><th>{L("주소", "Address")}</th><th>{L("전화", "Phone")}</th><th>{L("예약·지도", "Book · map")}</th></tr></thead>
+          <tbody>{rows.map((r: any) => <tr key={r.name + r.address}><td>{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td>{r.kind}</td><td><small>{r.address}</small></td><td>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
         </table></div>
       )}
       <p className="muted small">{L(`${key ? rows.length : d?.count ?? 0}곳 · 무장애 객실 여부는 모두 '확인 전'이에요.`, "Accessible rooms: not verified.")}</p>

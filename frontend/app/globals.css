@@ -715,3 +715,22 @@ html { scroll-padding-top: calc(var(--hdr, 76px) + 8px); }
 .day-tabs button.on { background: var(--ink, #12355E); border-color: var(--ink, #12355E); color: #fff; }
 .day-tabs button.on small { color: #d6e3f3; }
 .day-free { background: #eef6f4; border-radius: 12px; padding: 12px 14px; }
+
+/* 칩: 글자가 위로 붙거나 줄바꿈되지 않게 (span·a·button 모두 같은 모양) */
+.chip { display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.25; }
+span.chip, .chip.plain { cursor: default; white-space: nowrap; }
+.chip.plain { display: inline-flex; padding: 0 15px; gap: 0; color: var(--muted); }
+.chip.plain:hover { border-color: var(--line); }
+/* 숙소 예약 링크 */
+.book { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.book .chip { min-height: 34px; padding: 0 12px; font-size: .88em; text-decoration: none; }
+/* 예시(현장 실측 전) 판정 표시: 판정 배지 안의 작은 꼬리표와 장소 상세 안내 */
+.badge .ex-in { font-size: .85em; font-weight: 600; opacity: .85; }
+.seg-ex { background: var(--warn-bg, #FFF2CC); color: var(--ink); border-radius: 12px; padding: 8px 12px; margin: 8px 0 4px; font-size: .92em; }
+/* 동이 말풍선 안의 'AI 답변' 꼬리표 */
+.via.via-msg { display: table; margin: 6px 0 0; }
+/* 첫 화면: 예시 코스로 바로 가기 */
+.hero-jump { display: inline-flex; align-items: center; min-height: 40px; margin-top: 14px; padding: 0 16px; border-radius: 999px; font-weight: 700; font-size: .92em;
+  color: #fff; background: rgba(4, 14, 28, .55); border: 1.5px solid rgba(255, 255, 255, .7); text-decoration: none; backdrop-filter: blur(4px); }
+.hero-jump:hover { background: rgba(4, 14, 28, .75); }
+.hero-plain .hero-jump { color: var(--sea-deep); background: var(--surface); border-color: var(--sea); }

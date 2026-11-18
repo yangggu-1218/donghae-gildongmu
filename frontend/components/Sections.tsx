@@ -52,12 +52,13 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
           <div className="tries" aria-label={L("이렇게 말해 보세요", "Try saying")}>
             {ex.map((x) => <button key={x} type="button" onClick={() => onAsk(x)} disabled={busy}>{x}</button>)}
           </div>
+          <a className="hero-jump" href="#courses">{L("예시 코스로 바로 시작하기 ↓", "Or start from a sample route ↓")}</a>
         </div>
         {spot && (
           <a className="hero-spot" href="#/place/chotdae">
             <span className="hero-spot-k">{L("사진 속 장소", "In this photo")}</span>
             <b>{L(spot.name_ko, spot.name_en || spot.name_ko)}</b>
-            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}</span></span>
+            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}{g && spot.access_source === "예시" && <small className="ex-in"> · {L("예시", "sample")}</small>}</span></span>
             <span className="hero-spot-m">{L("길·화장실·주차 보기", "Paths, toilets, parking")}</span>
           </a>
         )}
@@ -116,17 +117,26 @@ export function NowDonghae({ lang }: { lang: Lang }) {
 }
 
 /* ---------------- 숫자로 보는 확인 범위 (모두 서버 데이터에서 센 값) ---------------- */
+// 첫 화면 숫자와 코스 전 약도가 같은 기준을 쓰도록 한 곳에서 정한다
+export const isGradedSight = (p: any) => p.type === "관광지" && p.verified && !p.sample;
+
 export function HomeFacts({ lang }: { lang: Lang }) {
   const L = pick(lang);
-  const [n, setN] = useState<{ places: number; toilets: number; chargers: number; parking: number } | null>(null);
+  const [n, setN] = useState<{ places: number; example: number; toilets: number; chargers: number; parking: number } | null>(null);
   useEffect(() => {
     Promise.all([fetch("/api/places?mode=none").then((r) => r.json()), fetch("/api/facilities").then((r) => r.json())])
-      .then(([pl, f]) => setN({ places: (pl || []).filter((p: any) => p.verified && !p.sample).length, toilets: f.toilets?.length || 0, chargers: f.chargers?.length || 0, parking: f.parking?.length || 0 }))
+      .then(([pl, f]) => {
+        // 관광지 중 구간 판정이 있는 곳 (지도 안내 문구의 숫자와 같은 기준). 현장 실측 전 '예시' 판정은 따로 센다
+        const graded = (pl || []).filter(isGradedSight);
+        setN({ places: graded.length, example: graded.filter((p: any) => p.access_source === "예시").length, toilets: f.toilets?.length || 0, chargers: f.chargers?.length || 0, parking: f.parking?.length || 0 });
+      })
       .catch(() => {});
   }, []);
   if (!n) return null;
   const rows: [number, string, string, string][] = [
-    [n.places, L("길을 확인한 관광지", "places with checked paths"), "#/places", L("곳", "")],
+    [n.places, n.example >= n.places ? L("구간 판정 관광지 (예시 데이터)", "places with path grades (sample data)")
+      : n.example > 0 ? L(`구간 판정 관광지 (예시 ${n.example}곳 포함)`, `places with path grades (${n.example} sample)`)
+      : L("구간 판정 관광지", "places with path grades"), "#/places", L("곳", "")],
     [n.toilets, L("장애인 화장실", "accessible toilets"), "#/map", L("곳", "")],
     [n.chargers, L("전동휠체어 급속충전기", "wheelchair fast chargers"), "#/map", L("곳", "")],
     [n.parking, L("공영주차장", "public car parks"), "#/transport", L("곳", "")],
@@ -291,7 +301,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           return (
             <article key={p.id} className="pcard">
               <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
-                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
+                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}{g && p.access_source === "예시" && <small className="ex-in"> · {L("예시", "sample")}</small>}</span>}
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}

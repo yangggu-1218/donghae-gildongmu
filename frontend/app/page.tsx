@@ -6,8 +6,8 @@ import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap from "@/components/KakaoMap";
-import { Hero, HomeFacts, HowTo, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS } from "@/components/Sections";
-import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans } from "@/components/Pages";
+import { Hero, HomeFacts, HowTo, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS, isGradedSight } from "@/components/Sections";
+import { PlacePage, TransportPage, MapPage, MyPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, loadPlans, savePlans, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
 import { api, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays } from "@/lib/api";
@@ -426,7 +426,7 @@ export default function Page() {
       </div>
     );
   };
-  const overview = useMemo(() => Object.values(places).filter((p: any) => p.lat && !p.sample && p.type !== "숙박" && p.verified)
+  const overview = useMemo(() => Object.values(places).filter((p: any) => p.lat && isGradedSight(p))
     .map((p: any) => ({ lat: p.lat, lon: p.lon, label: lang === "ko" ? p.name_ko : p.name_en || p.name_ko, grade: null })), [places, lang]);
 
   return (
@@ -467,9 +467,7 @@ export default function Page() {
       {route[0] === "admin" && <AdminPage lang={lang} />}
       {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
-      <HomeFacts lang={lang} />
-      <HowTo lang={lang} />
-      <NowDonghae lang={lang} />
+      {/* 선택과 집중: 첫 화면은 '코스 짜기'가 바로 이어지고, 예시 코스 다음에 나머지 정보가 온다 (기능은 그대로) */}
       <section id="plan" className="sec wrap" aria-labelledby="plan-h">
       <div className="sec-head">
         <h2 id="plan-h">{t("plan.h")}</h2>
@@ -485,8 +483,9 @@ export default function Page() {
               ? <div key={i} className="me"><span>{m.img && <img className="me-img" src={m.img} alt={lang === "ko" ? "보낸 사진" : "Sent photo"} />}{m.text}</span></div>
               : <div key={i}><Dongi pose={m.pose} name={t("dongi")}>{m.text}
                   {m.got && m.got.length > 0 && <span className="got"><small>{lang === "ko" ? "이렇게 이해했어요" : "I understood"}</small>{m.got.map((g) => <span key={g} className="chip sm">{g}</span>)}</span>}
-                  {m.photo && <PhotoCard p={m.photo} t={t} lang={lang} />}</Dongi>
-                {m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} />)}</div>)}
+                  {m.photo && <PhotoCard p={m.photo} t={t} lang={lang} />}
+                  {m.via === "llm" && <span className="via via-llm via-msg">{m.photo ? (lang === "ko" ? "AI가 사진을 봤어요" : "AI read the photo") : (lang === "ko" ? "AI 답변" : "AI reply")}</span>}</Dongi>
+                {m.cards?.map((c, k) => <HelpCard key={k} c={c} t={t} onSafety={openSafety} lang={lang} />)}</div>)}
             {busy && <p className="typing" aria-live="polite">{lang === "ko" ? "동이가 생각하는 중…" : "Dongi is thinking…"}</p>}
           </div>
           <div className="chat-dock">
@@ -632,8 +631,11 @@ export default function Page() {
       </div>
 
       </section>
-      <ZoneTiles lang={lang} />
       <Courses lang={lang} busy={busy} onStart={startPreset} />
+      <NowDonghae lang={lang} />
+      <HomeFacts lang={lang} />
+      <ZoneTiles lang={lang} />
+      <HowTo lang={lang} />
       <MoreLinks lang={lang} />
       </>}
       </main>
@@ -705,7 +707,7 @@ function StopExtra({ x, wheel, t }: { x?: Extra; wheel: boolean; t: (k: string, 
 }
 
 // 동이가 찾아 준 정보 카드 (공공데이터)
-function HelpCard({ c, t, onSafety }: { c: { kind: string; data: any }; t: (k: string, v?: Record<string, string | number>) => string; onSafety: () => void }) {
+function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: any }; t: (k: string, v?: Record<string, string | number>) => string; onSafety: () => void; lang?: Lang }) {
   const d = c.data;
   const row = (a: string, b = "") => <div className="stop" key={a + b}><span>{a}</span><span className="muted">{b}</span></div>;
   let body: any = null;
@@ -716,6 +718,7 @@ function HelpCard({ c, t, onSafety }: { c: { kind: string; data: any }; t: (k: s
   else if (c.kind === "city_tour") body = row(`${d.name} · ${d.days}`, `${d.board} ${d.first}~${d.last} · ${d.fare}`);
   else if (c.kind === "events") body = d.map((x: any) => row(x.name, `${x.start}~${x.end} · ${x.venue}`));
   else if (c.kind === "restaurants" && d.items?.[0]?.dist_m != null) body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}${x.checked ? " ♿" : ""}`, `${x.dist_m}m${x.tel ? " · " + x.tel : ""}`))}<p className="muted">{t("card.eats", { n: d.total, r: d.radius / 1000 })}</p></>;
+  else if (c.kind === "lodging") body = <>{d.items.map((x: any) => <div key={x.name + x.address}>{row(`${x.name} · ${x.kind}`, x.tel || x.address)}<BookLinks name={x.name} lang={lang} /></div>)}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "lodging" || c.kind === "restaurants") body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}`, x.tel || x.address))}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "parking") body = d.map((x: any) => row(`${x.name} (${x.spaces})`, `${x.fee}${x.disabled_free ? " · " + t("x.parkingFree") : ""} · ${x.dist_m}m`));
   else if (c.kind === "taxi") body = (Array.isArray(d) ? d : [d]).map((x: any) => row(x.name, x.address || ""));

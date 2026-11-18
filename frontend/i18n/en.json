@@ -224,7 +224,7 @@
   "sum.link": "Open this link to see the same plan",
   "sum.loading": "Loading the shared plan…",
   "when.other": "Other time",
-  "map.overview": "Before you plan, the map shows {n} places with checked access.",
+  "map.overview": "Before you plan, the map shows {n} places with path grades. Some grades are samples, not yet surveyed.",
   "nav.transport": "Transport",
   "nav.map": "Facilities map",
   "nav.my": "My trips",
