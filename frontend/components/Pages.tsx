@@ -488,7 +488,7 @@ export function MapPage({ lang }: { lang: Lang }) {
         <button className="chip go" onClick={locate}>{L("내 주변부터 보기", "Nearest first")}</button>
       </div>
       {!d ? <Loading err={err} lang={lang} /> : (<>
-        <KakaoMap pins={pins} dots onPick={(i) => { setSel(items[i].id); document.getElementById(`f-${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
+        <KakaoMap pins={pins} dots onPick={(i) => setSel(items[i].id)}
           label={L("편의시설 지도. 아래 목록과 같은 내용입니다.", "Facilities map; same as the list below.")} />
         <ul className="fac-list">
           {items.map((x, i) => (
