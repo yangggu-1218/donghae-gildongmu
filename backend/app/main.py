@@ -28,7 +28,7 @@ def load_places() -> dict[str, Place]:
         f = DATA / "places_seed.json"
     places = {p["id"]: Place(**p) for p in json.loads(f.read_text(encoding="utf-8"))}
     places = public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
-    places = details.apply(places)        # 영업시간·어르신 접근성 상세, 예시 식당·카페
+    places = details.apply(places)        # 영업시간·어르신 접근성 상세, 식당·카페
     places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
     public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
     return places

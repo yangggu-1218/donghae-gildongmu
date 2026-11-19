@@ -29,7 +29,7 @@ for k in cases["courses"]:
 
 cand = {pid: p.name_ko for pid, p in PLACES.items()}
 for k in cases["chats"]:
-    out = llm.chat_edit(k["msg"], ["dokkaebi", "lunch_sample"], cand)
+    out = llm.chat_edit(k["msg"], ["dokkaebi", "food_boohung"], cand)
     ok = out.get("action") == k["expect"] and (not k.get("place") or out.get("place_id") == k["place"])
     fail += not ok
     print(("ok   " if ok else "FAIL ") + k["id"], k["msg"], "→", out.get("action"), out.get("place_id") or "")

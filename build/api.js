@@ -316,7 +316,7 @@ export function makeApi(DATA) {
       t = q15(arrive + wait);
       const stay = q15(t + p.stay_min) - t;
       stops.push({ id: p.id, arrive: hhmm(t), drive_min: dm, grade: gradePlace(p, mode, less), why: "", depart: hhmm(t + stay), kind,
-        open_state: st, hours_text: hoursText(p, c.lang), hours_sample: !["공공데이터", "상시 개방", "관리자 확인"].includes(p.hours_source), wait_min: wait,
+        open_state: st, hours_text: hoursText(p, c.lang), hours_sample: !!p.open && !["공공데이터", "상시 개방", "관리자 확인"].includes(p.hours_source), wait_min: wait,
         notice: (noticeOn(p, "warn", day) || {}).title || "" });
       t += stay; cur = [p.lat || cur[0], p.lon || cur[1]]; seen.add(p.id);
     };
@@ -699,7 +699,7 @@ export function makeApi(DATA) {
   }
 
   // ---------- talk.py 규칙 경로 ----------
-  const WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"], MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"], STYLE = ["바다 보기", "자연·산책", "카페", "맛집", "역사·문화"];
+  const WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"], MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"], STYLE = ["바다 보기", "자연·산책", "산·등산", "카페", "맛집", "역사·문화"];
   const HELP_KW = [["charger", /충전|charg/], ["mobility_van", /휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)/],
     ["info_center", /안내소|통역|외국어|interpret|info\w*\s*(center|centre|desk)|information/], ["city_tour", /시티\s*투어|버스|city tour|bus/],
     ["events", /행사|축제|공연|festival|event/], ["lodging", /숙소|숙박|호텔|펜션|게스트|hotel|stay/], ["restaurants", /식당|밥집|맛집|먹을|restaurant|짜장|짬뽕|중국집|횟집|국밥|냉면|칼국수|치킨/],
@@ -709,7 +709,8 @@ export function makeApi(DATA) {
   const MOVE_KW = [["휠체어", /휠체어|wheelchair/], ["유모차", /유모차|stroller|pram/], ["계단 어려움", /계단/],
     ["오래 걷기 어려움", /무릎|오래\s*못\s*걷|걷기\s*(힘|어려)|다리가?\s*(아프|불편)|지팡이|walk/]];
   const STYLE_KW = [["바다 보기", /바다|해변|sea|beach/], ["자연·산책", /자연|산책|계곡|숲|nature/], ["카페", /카페|커피|cafe/],
-    ["맛집", /맛집|회|먹|food/], ["역사·문화", /역사|문화|절|유적|history|culture/]];
+    ["맛집", /맛집|회|먹|food/], ["역사·문화", /역사|문화|절|유적|history|culture/],
+    ["산·등산", /등산|산행|하이킹|hiking|hike|mountain|봉우리|산에\s*(가|오르)|산\s*(가고|타고|오르)|(^|\s)산(이|을|으로)?(\s|$)/]];
   const NO_MOVE = /없어요|없음|괜찮|문제\s*없|다\s*잘\s*걸|no one|none|we're fine|no$/, GO = /코스|짜\s*줘|추천|만들어|plan|course|go$/;
   const ZONE_KW = [["mukho", /묵호|도째비/], ["chuam", /추암|촛대/], ["mureung", /무릉|삼화/], ["mangsang", /망상/], ["cheongok", /천곡|동굴/]];
   const SAY = {

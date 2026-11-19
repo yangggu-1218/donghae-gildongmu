@@ -20,6 +20,7 @@ CASES = [  # (시작 상태, 말, 확인할 것)
       "course_ids": ["dokkaebi", "mukho_port", "haerang", "mangsang"]}, "논골담길 넣어줘", lambda r: "논골담길" in r["reply"]),
     ({"conditions": {"lang": "ko", "who": "혼자", "move": []}, "state": {"who_known": True, "move_known": True},
       "course_ids": ["dokkaebi", "mukho_port", "haerang", "mangsang"]}, "비 온대요", lambda r: r["conditions"]["rain"] is True),
+    (KO, "친구랑 산에 가고 싶어요", lambda r: "산·등산" in r["conditions"]["style"] and "자연·산책" not in r["conditions"]["style"]),
 ]
 fail = 0
 for i, (st, msg, ok) in enumerate(CASES, 1):

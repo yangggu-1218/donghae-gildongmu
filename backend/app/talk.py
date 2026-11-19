@@ -17,7 +17,7 @@ TALK_TIMEOUT = float(os.getenv("TALK_TIMEOUT") or 20)
 
 WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"]
 MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"]
-STYLE = ["바다 보기", "자연·산책", "카페", "맛집", "역사·문화"]
+STYLE = ["바다 보기", "자연·산책", "산·등산", "카페", "맛집", "역사·문화"]
 HELP_KINDS = ["info_center", "charger", "mobility_van", "city_tour", "events", "lodging", "restaurants", "parking", "taxi", "hospital_pharmacy"]
 
 TOOLS = [
@@ -240,7 +240,8 @@ WHO_KW = [("부모님과", r"부모|엄마|아빠|어머니|아버지|할머니|
 MOVE_KW = [("휠체어", r"휠체어|wheelchair"), ("유모차", r"유모차|stroller|pram"), ("계단 어려움", r"계단"),
            ("오래 걷기 어려움", r"무릎|오래\s*못\s*걷|걷기\s*(힘|어려)|다리가?\s*(아프|불편)|지팡이|walk")]
 STYLE_KW = [("바다 보기", r"바다|해변|sea|beach"), ("자연·산책", r"자연|산책|계곡|숲|nature"), ("카페", r"카페|커피|cafe"),
-            ("맛집", r"맛집|회|먹|food"), ("역사·문화", r"역사|문화|절|유적|history|culture")]
+            ("맛집", r"맛집|회|먹|food"), ("역사·문화", r"역사|문화|절|유적|history|culture"),
+            ("산·등산", r"등산|산행|하이킹|hiking|hike|mountain|봉우리|산에\s*(가|오르)|산\s*(가고|타고|오르)|(^|\s)산(이|을|으로)?(\s|$)")]
 NO_MOVE = r"없어요|없음|괜찮|문제\s*없|다\s*잘\s*걸|no one|none|we're fine|no$"
 GO = r"코스|짜\s*줘|추천|만들어|plan|course|go$"
 ZONE_KW = [("mukho", "묵호|도째비"), ("chuam", "추암|촛대"), ("mureung", "무릉|삼화"), ("mangsang", "망상"), ("cheongok", "천곡|동굴")]

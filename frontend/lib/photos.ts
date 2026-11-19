@@ -331,6 +331,78 @@ export const PHOTOS: Record<string, Photo> = {
     "author": "팀 제공",
     "license": "출처 확인 중",
     "page": ""
+  },
+  "chuam_bridge": {
+    "src": "/photos/500px-chuam_bridge.webp",
+    "author": "동해시청",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "chuam_bridge_2": {
+    "src": "/photos/500px-chuam_bridge_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "nature_park": {
+    "src": "/photos/500px-nature_park.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "nature_park_2": {
+    "src": "/photos/500px-nature_park_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hanseom": {
+    "src": "/photos/500px-hanseom.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hanseom_2": {
+    "src": "/photos/500px-hanseom_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "hanseom_3": {
+    "src": "/photos/500px-hanseom_3.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bukpyeong_market": {
+    "src": "/photos/500px-bukpyeong_market.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bukpyeong_market_2": {
+    "src": "/photos/500px-bukpyeong_market_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mukho_park": {
+    "src": "/photos/500px-mukho_park.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mukho_park_2": {
+    "src": "/photos/500px-mukho_park_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "chorokbong": {
+    "src": "/photos/500px-chorokbong.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
   }
 };
 
@@ -339,6 +411,11 @@ export const photoAt = (id: string, w: 500 | 960 | 1920) => (PHOTOS[id] ? PHOTOS
 
 // 장소 상세에 더 보여 줄 사진과 설명
 export const GALLERY: Record<string, [string, string, string][]> = {
+  chuam_bridge: [["chuam_bridge_2", "바다 위 출렁다리와 촛대바위 쪽 해안", "The suspension bridge over the sea"]],
+  nature_park: [["nature_park_2", "조명이 켜진 동굴 안 관람로 (난간 있음)", "Lit walkway inside the cave, with handrails"]],
+  hanseom: [["hanseom_2", "바다를 향한 조타륜 전망 데크", "Ship-wheel lookout deck over the sea"], ["hanseom_3", "바다로 이어지는 옛 군사 터널", "Old military tunnel opening to the sea"]],
+  bukpyeong_market: [["bukpyeong_market_2", "북평민속시장 문화광장 (3·8일 장날)", "Market culture plaza (market days end in 3 and 8)"]],
+  mukho_park: [["mukho_park_2", "수변공원 표지석과 보행로", "Park sign stone and walkway"]],
   dokkaebi: [["dokkaebi_2", "스카이사이클과 자이언트 슬라이드", "Sky cycle and giant slide"]],
   mureung: [["mureung_lavender", "라벤더 정원과 무릉별열차", "Lavender garden and the park train"], ["mureung_dumir", "두미르 전망대", "Dumir Observatory"], ["mureung_night", "라벤더축제 야경", "Lavender festival at night"]],
   pencil_museum: [["pencil_museum_2", "천장 가득 매달린 연필과 입구 표지판", "Giant pencils on the ceiling and the entrance signs"]],

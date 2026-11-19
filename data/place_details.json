@@ -549,207 +549,6 @@
     }
    ]
   },
-  "cafe_sample": {
-   "open": "10:00",
-   "close": "21:00",
-   "break_time": null,
-   "closed_days": [
-    2
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "문턱이 없고 통로가 넓어요. 창가 소파 자리가 등받이가 있어 편해요.",
-   "access_source": "예시",
-   "stay_min": 40,
-   "soft_menu": true,
-   "parking_easy": true,
-   "type": "카페"
-  },
-  "lunch_sample": {
-   "open": "11:00",
-   "close": "21:00",
-   "break_time": [
-    "15:00",
-    "16:30"
-   ],
-   "closed_days": [
-    1
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "1층 입식 테이블이에요. 생선조림처럼 부드러운 메뉴가 있어요.",
-   "access_source": "예시",
-   "stay_min": 70,
-   "soft_menu": true,
-   "parking_easy": true
-  },
-  "food_mukho_b": {
-   "open": "11:00",
-   "close": "21:00",
-   "break_time": null,
-   "closed_days": [
-    3
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "불가",
-   "walk_load": "평지",
-   "entrance_step": true,
-   "table": "좌식",
-   "benches": false,
-   "carer_tip": "좌식이라 무릎이 불편한 분께는 어려워요.",
-   "access_source": "예시",
-   "soft_menu": false,
-   "parking_easy": false
-  },
-  "food_chuam": {
-   "open": "07:00",
-   "close": "19:00",
-   "break_time": null,
-   "closed_days": [
-    2
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "아침 일찍 해돋이를 보고 들르기 좋아요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": true
-  },
-  "food_mureung": {
-   "open": "09:00",
-   "close": "19:00",
-   "break_time": [
-    "15:00",
-    "17:00"
-   ],
-   "closed_days": [],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "혼합",
-   "benches": true,
-   "carer_tip": "입식 자리가 적어 예약하면 좋아요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": true
-  },
-  "food_mangsang": {
-   "open": "11:00",
-   "close": "20:00",
-   "break_time": [
-    "15:00",
-    "16:30"
-   ],
-   "closed_days": [
-    4
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "주차장에서 문까지 10m예요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": true
-  },
-  "food_cheongok": {
-   "open": "11:30",
-   "close": "21:00",
-   "break_time": [
-    "15:00",
-    "17:00"
-   ],
-   "closed_days": [
-    0
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "엘리베이터는 건물 뒤쪽에 있어요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": false
-  },
-  "cafe_mukho": {
-   "open": "10:00",
-   "close": "21:00",
-   "break_time": null,
-   "closed_days": [
-    3
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "창가 자리는 의자가 높으니 안쪽 소파 자리를 추천해요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": false
-  },
-  "cafe_mureung": {
-   "open": "10:00",
-   "close": "18:00",
-   "break_time": null,
-   "closed_days": [
-    1
-   ],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "계곡 다녀온 뒤 쉬기 좋아요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": true
-  },
-  "cafe_chuam": {
-   "open": "09:00",
-   "close": "20:00",
-   "break_time": null,
-   "closed_days": [],
-   "hours_source": "예시",
-   "last_entry": null,
-   "wheelchair": "가능",
-   "walk_load": "평지",
-   "entrance_step": false,
-   "table": "입식",
-   "benches": true,
-   "carer_tip": "해돋이 뒤 몸을 녹이기 좋아요.",
-   "access_source": "예시",
-   "soft_menu": true,
-   "parking_easy": true
-  },
   "mukho_lighthouse": {
    "intro_ko": "1963년부터 묵호항 앞바다를 비춰 온 등대예요. 해발 93m 언덕 위에 있어 동해 바다와 묵호항, 두타산 능선까지 한눈에 보여요.",
    "intro_en": "A lighthouse that has lit the sea off Mukho Port since 1963. From its hill 93 m above the sea you can take in the East Sea, the port and the Dutasan ridge.",
@@ -930,285 +729,17 @@
    "last_entry": "17:30",
    "closed_days": [],
    "hours_source": "팀 전화 확인 (2026-11-16)"
+  },
+  "food_boribat": {
+   "open": "08:00",
+   "close": "17:00",
+   "break_time": null,
+   "closed_days": [],
+   "hours_source": "한국관광공사 여행정보 (연중무휴)",
+   "last_entry": null
   }
  },
  "extra_places": [
-  {
-   "id": "food_mukho_b",
-   "name_ko": "묵호 좌식 횟집 (예시)",
-   "name_en": "Mukho floor-seat restaurant (sample)",
-   "zone": "mukho",
-   "type": "식당",
-   "lat": 37.5532,
-   "lon": 129.1172,
-   "stay_min": 60,
-   "styles": [
-    "맛집",
-    "바다 보기"
-   ],
-   "facilities": [
-    "테이블 없음(좌식)"
-   ],
-   "tip_ko": "신발을 벗고 앉는 좌식이에요.",
-   "tip_en": "Floor seating; shoes off.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "입구",
-     "grade": "Y",
-     "note": "턱 약 4cm",
-     "source": "예시",
-     "curb_cm": 4
-    }
-   ]
-  },
-  {
-   "id": "food_chuam",
-   "name_ko": "추암 순두부 식당 (예시)",
-   "name_en": "Chuam tofu restaurant (sample)",
-   "zone": "chuam",
-   "type": "식당",
-   "lat": 37.4775,
-   "lon": 129.1555,
-   "stay_min": 60,
-   "styles": [
-    "맛집"
-   ],
-   "facilities": [
-    "입식 테이블",
-    "장애인 주차"
-   ],
-   "tip_ko": "아침 일찍 열고 부드러운 순두부가 있어요.",
-   "tip_en": "Opens early; soft tofu dishes.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
-  {
-   "id": "food_mureung",
-   "name_ko": "무릉 산채 식당 (예시)",
-   "name_en": "Mureung herb restaurant (sample)",
-   "zone": "mureung",
-   "type": "식당",
-   "lat": 37.4652,
-   "lon": 129.0245,
-   "stay_min": 60,
-   "styles": [
-    "맛집"
-   ],
-   "facilities": [
-    "입식 테이블 일부",
-    "장애인 화장실"
-   ],
-   "tip_ko": "입식 자리는 창가 쪽 몇 개뿐이라 미리 말해 두세요.",
-   "tip_en": "Only a few table seats by the window; ask ahead.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
-  {
-   "id": "food_mangsang",
-   "name_ko": "망상 칼국수 식당 (예시)",
-   "name_en": "Mangsang noodle restaurant (sample)",
-   "zone": "mangsang",
-   "type": "식당",
-   "lat": 37.5905,
-   "lon": 129.088,
-   "stay_min": 60,
-   "styles": [
-    "맛집"
-   ],
-   "facilities": [
-    "입식 테이블",
-    "넓은 주차장"
-   ],
-   "tip_ko": "주차장에서 바로 들어가는 1층이에요.",
-   "tip_en": "Ground floor right off the parking lot.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
-  {
-   "id": "food_cheongok",
-   "name_ko": "천곡 한정식 (예시)",
-   "name_en": "Cheongok set-meal restaurant (sample)",
-   "zone": "cheongok",
-   "type": "식당",
-   "lat": 37.5205,
-   "lon": 129.112,
-   "stay_min": 60,
-   "styles": [
-    "맛집"
-   ],
-   "facilities": [
-    "입식 테이블",
-    "엘리베이터"
-   ],
-   "tip_ko": "엘리베이터가 있는 2층이에요. 반찬이 부드러운 편이에요.",
-   "tip_en": "Second floor with an elevator; soft side dishes.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
-  {
-   "id": "cafe_mukho",
-   "name_ko": "묵호 바다 카페 (예시)",
-   "name_en": "Mukho sea cafe (sample)",
-   "zone": "mukho",
-   "type": "카페",
-   "lat": 37.549,
-   "lon": 129.119,
-   "stay_min": 40,
-   "styles": [
-    "카페",
-    "바다 보기"
-   ],
-   "facilities": [
-    "경사로",
-    "장애인 화장실"
-   ],
-   "tip_ko": "1층 창가에서 바다가 보여요.",
-   "tip_en": "Sea view from the ground-floor window seats.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
-  {
-   "id": "cafe_mureung",
-   "name_ko": "무릉 계곡 카페 (예시)",
-   "name_en": "Mureung valley cafe (sample)",
-   "zone": "mureung",
-   "type": "카페",
-   "lat": 37.464,
-   "lon": 129.023,
-   "stay_min": 40,
-   "styles": [
-    "카페",
-    "자연·산책"
-   ],
-   "facilities": [
-    "경사로"
-   ],
-   "tip_ko": "주차장 옆 1층이라 이동이 짧아요.",
-   "tip_en": "Next to the parking lot, ground floor.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
-  {
-   "id": "cafe_chuam",
-   "name_ko": "추암 해변 카페 (예시)",
-   "name_en": "Chuam beach cafe (sample)",
-   "zone": "chuam",
-   "type": "카페",
-   "lat": 37.479,
-   "lon": 129.157,
-   "stay_min": 40,
-   "styles": [
-    "카페",
-    "바다 보기"
-   ],
-   "facilities": [
-    "경사로"
-   ],
-   "tip_ko": "해변 데크와 이어져 있어요.",
-   "tip_en": "Connected to the beach deck.",
-   "indoor": true,
-   "sample": true,
-   "segments": [
-    {
-     "name": "주차장 → 입구",
-     "grade": "G",
-     "note": "평지",
-     "source": "예시"
-    },
-    {
-     "name": "입구",
-     "grade": "G",
-     "note": "문턱 없음",
-     "source": "예시"
-    }
-   ]
-  },
   {
    "id": "chuam_bridge",
    "name_ko": "추암 촛대바위 출렁다리",
@@ -1601,7 +1132,8 @@
    "lon": 129.019387,
    "stay_min": 180,
    "styles": [
-    "자연·산책"
+    "자연·산책",
+    "산·등산"
    ],
    "facilities": [
     "주차장",
@@ -2101,7 +1633,8 @@
    "lon": 129.0711208,
    "stay_min": 90,
    "styles": [
-    "자연·산책"
+    "자연·산책",
+    "산·등산"
    ],
    "intro_ko": "천곡동 뒤편 산이에요. 기슭에 초록봉문화공원이 있고, 등산로를 따라 오르면 시내와 바다가 내려다보여요.",
    "intro_en": "The hill behind Cheongok, with Chorokbong Culture Park at its foot; trails lead up to views over town and sea.",
@@ -2299,12 +1832,259 @@
    "lon": 128.99831,
    "stay_min": 180,
    "styles": [
-    "자연·산책"
+    "자연·산책",
+    "산·등산"
    ],
    "intro_ko": "무릉계곡에서 베틀바위를 지나 오르는 두타산 협곡 전망 구간이에요. 깎아지른 절벽이 고층 빌딩처럼 늘어서 있어요.",
    "intro_en": "A Dutasan gorge viewpoint beyond Betel Rock from Mureung Valley, with skyscraper-like cliffs.",
    "intro_source": "팀 작성 · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 삼화동 산267"
+  },
+  {
+   "id": "food_boribat",
+   "name_ko": "보리밭",
+   "name_en": "Boribat (mountain-herb bibimbap)",
+   "zone": "mureung",
+   "type": "식당",
+   "lat": 37.46315,
+   "lon": 129.02052,
+   "stay_min": 60,
+   "styles": [
+    "맛집",
+    "자연·산책"
+   ],
+   "facilities": [],
+   "intro_ko": "무릉계곡 입구 상가의 산채비빔밥·백숙 식당이에요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 삼화로 527-7 (무릉계곡 안)",
+   "phone": "033-534-7051",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "산채비빔밥이 대표 메뉴예요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Known for mountain-herb bibimbap. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전",
+   "soft_menu": true
+  },
+  {
+   "id": "food_mureung_tofu",
+   "name_ko": "무릉순두부",
+   "name_en": "Mureung Sundubu (soft tofu)",
+   "zone": "mureung",
+   "type": "식당",
+   "lat": 37.4637,
+   "lon": 129.02146,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [],
+   "intro_ko": "무릉계곡 상가의 순두부 식당이에요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 삼화로 518-6 (무릉계곡 상가)",
+   "phone": "033-534-8394",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "부드러운 순두부라 어르신 식사로 좋아요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Soft tofu, easy to eat. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전",
+   "soft_menu": true
+  },
+  {
+   "id": "cafe_byeolyu",
+   "name_ko": "무릉별유천지 전망카페",
+   "name_en": "Mureung Byeolyucheonji View Cafe",
+   "zone": "mureung",
+   "type": "카페",
+   "lat": 37.47753,
+   "lon": 129.02915,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "자연·산책"
+   ],
+   "facilities": [],
+   "intro_ko": "무릉별유천지 안 전망 카페예요 (인허가 이름: 무릉별유천지별마루카페&파스타).",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 삼화동 786-1 (무릉별유천지 안)",
+   "phone": "",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "무릉별유천지 안에 있어 관람과 함께 들르기 좋아요. 운영시간은 무릉별유천지에 확인해 주세요.",
+   "tip_en": "Inside Mureung Byeolyucheonji; check hours with the park.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "food_mangsang_mak",
+   "name_ko": "망상해변막국수",
+   "name_en": "Mangsang Beach Makguksu (buckwheat noodles)",
+   "zone": "mangsang",
+   "type": "식당",
+   "lat": 37.58581,
+   "lon": 129.09789,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [],
+   "intro_ko": "망상해변 앞 막국수 식당이에요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 동해대로 6167, 1층",
+   "phone": "033-532-1772",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "1층 식당이에요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Ground-floor noodle restaurant. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "cafe_giguin",
+   "name_ko": "지구인커피",
+   "name_en": "Giguin Coffee",
+   "zone": "mangsang",
+   "type": "카페",
+   "lat": 37.59243,
+   "lon": 129.09107,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "바다 보기"
+   ],
+   "facilities": [],
+   "intro_ko": "망상해변 상가의 카페예요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 동해대로 6270-16, 1층 101호",
+   "phone": "",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "1층 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Ground-floor cafe by Mangsang Beach. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "food_chuam_hanki",
+   "name_ko": "추암한끼",
+   "name_en": "Chuam Hanki",
+   "zone": "chuam",
+   "type": "식당",
+   "lat": 37.47769,
+   "lon": 129.15887,
+   "stay_min": 60,
+   "styles": [
+    "맛집"
+   ],
+   "facilities": [],
+   "intro_ko": "추암해변 앞 한식당이에요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 촛대바위길 20, 1층",
+   "phone": "033-522-3046",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "추암해변 주차장 쪽 1층이에요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Ground floor near the Chuam Beach car park. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "cafe_harbor",
+   "name_ko": "카페 하버",
+   "name_en": "Cafe Harbor",
+   "zone": "mukho",
+   "type": "카페",
+   "lat": 37.55132,
+   "lon": 129.11156,
+   "stay_min": 40,
+   "styles": [
+    "카페",
+    "바다 보기"
+   ],
+   "facilities": [],
+   "intro_ko": "묵호항 쪽 일출로의 카페예요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 일출로 34, 1층",
+   "phone": "033-535-2111",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "1층 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Ground-floor cafe near Mukho Port. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
+  },
+  {
+   "id": "cafe_ddori",
+   "name_ko": "또리커피 동해점",
+   "name_en": "Ddori Coffee Donghae",
+   "zone": "cheongok",
+   "type": "카페",
+   "lat": 37.51992,
+   "lon": 129.11162,
+   "stay_min": 40,
+   "styles": [
+    "카페"
+   ],
+   "facilities": [],
+   "intro_ko": "천곡 시내 한섬로의 카페예요.",
+   "intro_en": "",
+   "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
+   "address": "강원특별자치도 동해시 한섬로 70-1, 1층",
+   "phone": "",
+   "indoor": true,
+   "sample": false,
+   "segments": [],
+   "coord_source": "주소 → 카카오 지도 주소 검색",
+   "table": null,
+   "parking_easy": null,
+   "access_source": "",
+   "tip_ko": "1층 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_en": "Ground-floor cafe in Cheongok. Accessibility not yet checked.",
+   "wheelchair": "확인 전",
+   "walk_load": "확인 전"
   }
  ]
 }

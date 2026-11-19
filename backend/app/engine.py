@@ -228,7 +228,7 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         stay = q15(t + p.stay_min) - t
         stops.append(Stop(id=p.id, arrive=hhmm(t), drive_min=dm, grade=grade_place(p, mode, less), kind=kind,
                           depart=hhmm(t + stay), open_state=st, hours_text=D.hours_text(p, c.lang),
-                          hours_sample=p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
+                          hours_sample=bool(p.open) and p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
                           notice=(notice_on(p, "warn") or {}).get("title", "")))
         t += stay
         cur, cur_id = (p.lat or cur[0], p.lon or cur[1]), p.id

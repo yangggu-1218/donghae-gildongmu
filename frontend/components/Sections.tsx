@@ -281,7 +281,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const ORDER: Record<string, number> = { G: 0, Y: 1, R: 3 };
   const NEED_TEST: Record<string, (p: any) => boolean> = {
     sea: (p) => (p.styles || []).includes("바다 보기"), nature: (p) => (p.styles || []).includes("자연·산책"),
-    culture: (p) => (p.styles || []).includes("역사·문화"), activity: (p) => (p.styles || []).includes("체험"),
+    mountain: (p) => (p.styles || []).includes("산·등산"), culture: (p) => (p.styles || []).includes("역사·문화"), activity: (p) => (p.styles || []).includes("체험"),
     indoor: (p) => !!p.indoor, flat: (p) => p.walk_load === "평지",
     toilet: (p) => (p.facilities || []).includes("장애인 화장실"), parking: (p) => (p.facilities || []).includes("장애인 주차"),
     quiet: (p) => { const r = rateToday(p.id); return r != null && r < 50; },
@@ -318,7 +318,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
       <div className="filter needs">
         <span id="need-l">{L("이런 곳을 찾아요", "I'm looking for")}</span>
         <div className="chips" role="group" aria-labelledby="need-l">
-          {([["sea", "바다 보기", "Sea views"], ["nature", "자연·산책", "Nature walks"], ["culture", "역사·문화", "History & culture"], ["activity", "체험", "Activities"],
+          {([["sea", "바다 보기", "Sea views"], ["nature", "자연·산책", "Nature walks"], ["mountain", "산·등산", "Mountains & hiking"], ["culture", "역사·문화", "History & culture"], ["activity", "체험", "Activities"],
             ["indoor", "비 와도 OK(실내)", "Indoor"], ["flat", "덜 걷는 곳(평지)", "Flat, little walking"], ["toilet", "장애인 화장실", "Accessible toilet"],
             ["parking", "장애인 주차", "Accessible parking"], ...(hasCrowd ? [["quiet", "오늘 한산한 곳", "Quiet today"]] : [])] as [string, string, string][])
             .map(([k, ko, en]) => <button key={k} className="chip" aria-pressed={need.includes(k)} onClick={() => toggle(k)}>{L(ko, en)}</button>)}
@@ -376,7 +376,6 @@ export function HowToStrip({ lang, onClose }: { lang: Lang; onClose: () => void 
   ];
   return (
     <aside className="howto-strip" aria-labelledby="howto-h">
-      <img className="howto-mascot" src="/dongi/full-help.webp" alt="" />
       <h3 id="howto-h">{L("처음이세요? 이렇게 하면 돼요", "New here? Three steps")}</h3>
       <ol>{steps.map(([ic, ko, en, d], i) => <li key={ko}><span className="n" aria-hidden="true">{i + 1}</span><Icon name={ic} /><span><b>{L(ko, en)}</b><small>{d}</small></span></li>)}</ol>
       <a className="howto-more" href="#/places">{L("먼저 관광지 둘러보기", "Browse places first")}</a>

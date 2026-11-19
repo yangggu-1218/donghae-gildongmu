@@ -38,7 +38,7 @@ class Place(BaseModel):
     lat: Optional[float] = None
     lon: Optional[float] = None
     stay_min: int = 60
-    styles: list[str] = Field(default_factory=list)   # 바다 보기, 자연·산책, 카페, 맛집, 역사·문화
+    styles: list[str] = Field(default_factory=list)   # 바다 보기, 자연·산책, 산·등산, 카페, 맛집, 역사·문화
     facilities: list[str] = Field(default_factory=list)
     intro_ko: str = ""
     intro_en: str = ""
