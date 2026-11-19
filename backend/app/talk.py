@@ -49,7 +49,7 @@ TOOLS = [
     {"name": "place_info", "description": "장소 하나의 정보(구간 판정, 시설, 주변 이야기, 택시, 주차, 행사, 관람시간)를 가져온다.",
      "input_schema": {"type": "object", "properties": {"place_id": {"type": "string"}}, "required": ["place_id"]}},
     {"name": "transit", "description": "차 없이 다닐 때: 출발역→코스 장소→출발역 구간마다 걸어갈 만한지, 대중교통 길찾기 링크(카카오맵, 실제 버스 노선·시간), 택시 승차대, 시티투어가 지나는 곳, 휠체어 차량을 알려 준다. "
-     "버스 번호·시간은 도구 결과에 없으니 지어내지 말고 '카드의 길찾기 링크에서 볼 수 있어요'라고 말한다.",
+     "버스 번호는 결과의 bus_2019(2019년 자료)에 있는 것만, 연도를 밝혀서 말한다. 시간표는 없으니 지어내지 말고 '카드의 길찾기 링크에서 볼 수 있어요'라고 말한다.",
      "input_schema": {"type": "object", "properties": {}}},
     {"name": "weather", "description": "동해시 날씨 예보(최대 16일). 여행 날짜와 앞뒤 며칠의 날씨·비 올 확률·기온.",
      "input_schema": {"type": "object", "properties": {}}},
@@ -149,7 +149,8 @@ class Session:
                for i in ids if i in self.places]
         data = public_data.transit(pts, self.c.start, self.c.move, self.c.lang)
         self.cards.append({"kind": "transit", "data": data})
-        return {"start": data["start"], "hops": [{k: h[k] for k in ("from", "to", "km", "how", "walk_min", "car_min")} for h in data["hops"]],
+        return {"start": data["start"], "hops": [{k: h[k] for k in ("from", "to", "km", "how", "walk_min", "car_min", "bus_2019")} for h in data["hops"]],
+                "bus_note": "bus_2019는 " + data["bus_src"] + "의 버스 번호. 말할 때는 '2019년 자료라 바뀌었을 수 있다'고 꼭 덧붙인다",
                 "city_tour": bool(data["city_tour"]), "taxi": data["taxi"], "wheelchair_van": bool(data["van"]), "note": data["note"],
                 "course_ready": bool(ids)}
 

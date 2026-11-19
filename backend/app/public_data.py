@@ -376,6 +376,12 @@ def rentals_near(lat, lon, radius: int = 1500, limit: int = 3) -> list[dict]:
 # ---- 차 없이 다니기: 코스 구간마다 걸어갈 만한지, 대중교통(카카오맵 길찾기)·택시·시티투어 안내 ----
 # 버스 노선·시간표 공공데이터가 없어 노선 번호를 지어내지 않는다. 구간마다 카카오맵 '대중교통 길찾기' 링크로 실제 노선을 보게 한다.
 TRANSIT_STARTS = {"동해역": (37.4995, 129.1240), "묵호역": (37.5480, 129.1160), "자가용": (37.4995, 129.1240)}
+# 동해종합버스터미널에서 가는 시내버스 (한국관광공사 열린관광 '떠나자, 감성 뿜뿜 동해로!' 2019년 자료). 노선이 바뀌었을 수 있어 화면에 연도를 밝힌다.
+_B_MUREUNG, _B_CAVE, _B_MANGSANG, _B_CHUAM, _B_MUKHO = ["12-4", "13-1"], ["21-1", "21-3", "32-1"], ["31-3", "51-1"], ["61"], ["12-4", "21-1", "21-3", "32-1"]
+BUS_2019 = {**{i: _B_MUREUNG for i in ("valley", "samhwasa", "yongchu", "forest", "food_kkotsan", "cafe_estmare", "food_boribat")},
+            "cave": _B_CAVE, **{i: _B_MANGSANG for i in ("mangsang", "mangsang_camp")},
+            **{i: _B_CHUAM for i in ("chotdae", "chuam_bridge", "haeamjeong", "food_chuam_hanki")},
+            **{i: _B_MUKHO for i in ("nongol", "mukho_lighthouse")}}
 
 
 def _km(a, b) -> float:
@@ -405,9 +411,11 @@ def transit(points: list[tuple[str, str, float, float]], start: str, move: list[
         car_min = round(km * 1.4 / 35 * 60) + 3
         walk = km <= walk_max
         hops.append({"from": a[1], "to": b[1], "km": round(km, 1), "how": "walk" if walk else "ride", "walk_min": walk_min, "car_min": car_min,
-                     "link": _kakao_by("walk" if walk else "traffic", (a[1], a[2], a[3]), (b[1], b[2], b[3]))})
+                     "link": _kakao_by("walk" if walk else "traffic", (a[1], a[2], a[3]), (b[1], b[2], b[3])),
+                     "bus_2019": [] if walk else BUS_2019.get(b[0], [])})
     ids = [p[0] for p in points]
     return {"start": st, "hops": hops, "city_tour": city_tour(ids), "taxi": taxi_at_start(st),
             "van": mobility_center() if "휠체어" in move else None,
+            "bus_src": "한국관광공사 열린관광 (2019년 자료, 동해종합버스터미널 출발 기준)",
             "note": ("버스 노선·시간은 링크를 누르면 카카오맵에서 바로 볼 수 있어요. 동해시에는 아직 저상버스가 없어 휠체어는 휠체어 차량이나 택시를 권해요."
                      if lang == "ko" else "Tap a link to see live bus routes in Kakao Map. Donghae has no low-floor buses yet, so wheelchair users should use the wheelchair van or a taxi.")}

@@ -238,10 +238,10 @@ export function makeApi(DATA) {
     if (lat == null) return {};
     const out = {};
     for (const kind of ["약국", "의원", "응급실"]) {
-      const cand = MED.filter((m) => m.kind === kind).map((m) => {
-        let isOpen = null;
-        if (wd != null && at != null) isOpen = !m.closed_days.includes(wd) && mins(m.open) <= at && at < mins(m.close);
-        return { name: m.name, kind: m.kind, tel: m.tel, open: m.open, close: m.close, dist_m: distM(lat, lon, m.lat, m.lon), open_then: isOpen, sample: true };
+      // details.medical_near 와 같은 규칙. 데모는 운영시간이 없어 응급실만 '24시간'
+      const cand = MED.filter((m) => m.kind === kind || (kind === "의원" && m.kind === "병의원" && ["의원", "종합병원", "보건소"].includes(m.div))).map((m) => {
+        const er = kind === "응급실";
+        return { name: m.name, kind, tel: m.tel, open: er ? "00:00" : null, close: er ? "24:00" : null, road: m.road, dist_m: distM(lat, lon, m.lat, m.lon), open_then: er ? true : null };
       }).map((x, i) => [x, i]).sort((a, b) => ((a[0].open_then === false) - (b[0].open_then === false)) || (a[0].dist_m - b[0].dist_m) || (a[1] - b[1])).map((x) => x[0]);
       if (cand.length) out[kind] = cand[0];
     }
@@ -671,6 +671,11 @@ export function makeApi(DATA) {
   }
   // ---------- 차 없이 다니기 (public_data.transit 과 같은 규칙) ----------
   const TRANSIT_STARTS = { "동해역": [37.4995, 129.1240], "묵호역": [37.5480, 129.1160], "자가용": [37.4995, 129.1240] };
+  const B_MUREUNG = ["12-4", "13-1"], B_CAVE = ["21-1", "21-3", "32-1"], B_MANGSANG = ["31-3", "51-1"], B_CHUAM = ["61"], B_MUKHO = ["12-4", "21-1", "21-3", "32-1"];
+  const BUS_2019 = { ...Object.fromEntries(["valley", "samhwasa", "yongchu", "forest", "food_kkotsan", "cafe_estmare", "food_boribat"].map((i) => [i, B_MUREUNG])),
+    cave: B_CAVE, ...Object.fromEntries(["mangsang", "mangsang_camp"].map((i) => [i, B_MANGSANG])),
+    ...Object.fromEntries(["chotdae", "chuam_bridge", "haeamjeong", "food_chuam_hanki"].map((i) => [i, B_CHUAM])),
+    ...Object.fromEntries(["nongol", "mukho_lighthouse"].map((i) => [i, B_MUKHO])) };
   const kmBetween = ([la1, lo1], [la2, lo2]) => { const r = Math.PI / 180;
     const h = Math.sin((la2 - la1) * r / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin((lo2 - lo1) * r / 2) ** 2;
     return 2 * 6371.0 * Math.asin(Math.sqrt(h)); };
@@ -683,8 +688,9 @@ export function makeApi(DATA) {
     for (let i = 0; i + 1 < seq.length; i++) { const a = seq[i], b = seq[i + 1]; const km = kmBetween([a[2], a[3]], [b[2], b[3]]);
       const walk = km <= walkMax;
       hops.push({ from: a[1], to: b[1], km: pyRound(km * 10) / 10, how: walk ? "walk" : "ride", walk_min: Math.max(1, pyRound(km * 1.3 / speed * 60)), car_min: pyRound(km * 1.4 / 35 * 60) + 3,
-        link: kakaoBy(walk ? "walk" : "traffic", [a[1], a[2], a[3]], [b[1], b[2], b[3]]) }); }
+        link: kakaoBy(walk ? "walk" : "traffic", [a[1], a[2], a[3]], [b[1], b[2], b[3]]), bus_2019: walk ? [] : (BUS_2019[b[0]] || []) }); }
     return { start: st, hops, city_tour: cityTour(points.map((p) => p[0])), taxi: taxiAtStart(st), van: move.includes("휠체어") ? mobilityCenter() : null,
+      bus_src: "한국관광공사 열린관광 (2019년 자료, 동해종합버스터미널 출발 기준)",
       note: lang === "ko" ? "버스 노선·시간은 링크를 누르면 카카오맵에서 바로 볼 수 있어요. 동해시에는 아직 저상버스가 없어 휠체어는 휠체어 차량이나 택시를 권해요."
         : "Tap a link to see live bus routes in Kakao Map. Donghae has no low-floor buses yet, so wheelchair users should use the wheelchair van or a taxi." };
   }
@@ -832,11 +838,10 @@ export function makeApi(DATA) {
     return result(L.none);
   }
 
-  function safety(lat, lon, lang) {
-    return { sample: true, places: [
-      { name: lang === "en" ? "○○ Pharmacy" : "○○약국", kind: "약국", until: "21:00", dist_m: 350, tel: "033-000-0000" },
-      { name: lang === "en" ? "△△ Clinic" : "△△의원", kind: "의원", until: "18:00", dist_m: 800, tel: "033-000-0000" },
-      { name: lang === "en" ? "Local ER" : "지역 응급실", kind: "응급실", until: "24시간", dist_m: 2100, tel: "033-000-0000" }],
+  function safety(lat, lon, lang) {   // 데모: 실제 약국·병원·응급실 이름, 운영시간은 서버(국립중앙의료원)에서만
+    const near = medicalNear(lat, lon);
+    return { sample: false, hours_unknown: true, places: ["약국", "의원", "응급실"].filter((k) => near[k]).map((k) => ({
+      name: near[k].name, kind: k, until: k === "응급실" ? "24시간" : (lang === "en" ? "Call to check hours" : "운영시간 확인"), dist_m: near[k].dist_m, tel: near[k].tel })),
       help: infoCenters(lat, lon, lang, 2), chargers: chargers(lat, lon, 2), mobility_center: mobilityCenter() };
   }
 
@@ -1122,7 +1127,7 @@ export function makeApi(DATA) {
       return { ok: true }; }
     if (path === "/api/transport") return ST.transport;
     if (path === "/api/facilities") return ST.facilities;
-    if (path === "/api/medical") return { sample: true, source: "예시", items: ST.facilities.medical };
+    if (path === "/api/medical") return { sample: false, source: "국립중앙의료원 약국·병의원 정보 (2026-11-20 저장본, 운영시간 없음)", items: ST.facilities.medical };
     if (path === "/api/sources") return { ...ST.sources, ai: { connected: false, demo: true } };
     if (path === "/api/events/all") return { events: events("0000-00-00").upcoming, as_of: ST.events_all.as_of };
     if (path === "/api/lodging") { const items = ST.lodging.items.filter((l) => !q.zone || l.zone === q.zone); return { count: items.length, zone: q.zone || "", accessibility: "확인 전", items: +q.limit ? items.slice(0, +q.limit) : items }; }

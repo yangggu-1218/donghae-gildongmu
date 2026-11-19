@@ -957,13 +957,15 @@ function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: an
       <ol className="tz-hops">{d.hops.map((h: any, i: number) => (
         <li key={i} className={`tz-hop ${h.how}`}>
           <span className="tz-path"><b>{h.from}</b> → <b>{h.to}</b> <small className="muted">{h.km}km</small></span>
-          <span className="tz-how">{h.how === "walk" ? (ko ? `걸어서 약 ${h.walk_min}분` : `~${h.walk_min} min walk`) : (ko ? `버스·택시 (차로 약 ${h.car_min}분)` : `Bus or taxi (~${h.car_min} min by car)`)}</span>
+          <span className="tz-how">{h.how === "walk" ? (ko ? `걸어서 약 ${h.walk_min}분` : `~${h.walk_min} min walk`) : (ko ? `버스·택시 (차로 약 ${h.car_min}분)` : `Bus or taxi (~${h.car_min} min by car)`)}
+            {h.bus_2019?.length > 0 && <small className="tz-bus">{ko ? ` · 시내버스 ${h.bus_2019.join("·")}번 (2019년 자료)` : ` · City bus ${h.bus_2019.join(", ")} (2019 data)`}</small>}</span>
           <a className="chip tz-link" href={h.link} target="_blank" rel="noreferrer">{h.how === "walk" ? (ko ? "걷는 길 보기" : "Walking route") : (ko ? "대중교통 길찾기" : "Transit route")}</a>
         </li>))}</ol>
       {d.city_tour && d.city_tour.covers?.length > 0 && <p className="muted small">{ko ? `동해 시티투어 버스가 코스 중 ${d.city_tour.covers.length}곳을 지나요 (${d.city_tour.board} ${d.city_tour.first}~${d.city_tour.last}).` : `The Donghae city tour bus stops at ${d.city_tour.covers.length} of these places.`}</p>}
       {d.taxi && <p className="muted small">{ko ? `택시: ${d.taxi.name} 택시 승차대 (${d.taxi.address})` : `Taxi stand: ${d.taxi.name} (${d.taxi.address})`}</p>}
       {d.van && <p className="muted small">{ko ? `휠체어 차량: ${d.van.name} ${d.van.tel} (이용 대상이 정해져 있어요)` : `Wheelchair van: ${d.van.name} ${d.van.tel} (eligibility applies)`}</p>}
       <p className="muted small">{d.note}</p>
+      {d.hops.some((h: any) => h.bus_2019?.length) && <p className="muted small">{ko ? `버스 번호 출처: ${d.bus_src}. 노선이 바뀌었을 수 있으니 길찾기 링크로 확인해 주세요.` : "Bus numbers: Korea Tourism Organization (2019). Routes may have changed; check the route link."}</p>}
     </>;
   }
   return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}<p className="muted small">{t("x.src")}</p></div>;

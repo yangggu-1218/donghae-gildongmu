@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import trip_days, Place, Conditions, ChatEdit
-from . import cms, edits, pages, engine, llm, public_apis, public_data, details, bigdata, talk as talk_mod
+from . import cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -29,6 +29,7 @@ def load_places() -> dict[str, Place]:
     places = {p["id"]: Place(**p) for p in json.loads(f.read_text(encoding="utf-8"))}
     places = public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
     places = details.apply(places)        # 영업시간·어르신 접근성 상세, 식당·카페
+    places = kto_access.apply(places)     # 한국관광공사 열린관광 무장애 편의정보 (분류 아이콘·편의시설·출입구)
     places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
     public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
     return places
@@ -156,7 +157,7 @@ def medical():
     live = public_apis.medical_list()
     if live:
         return {"sample": False, "source": "국립중앙의료원 약국·병의원 정보 (공공데이터포털)", "items": live}
-    return {"sample": True, "source": "예시", "items": pages.facilities()["medical"], "why": public_apis.MED_DIAG if public_apis.KEY else "서버에 DATA_GO_KR_KEY 없음"}
+    return {"sample": False, "source": "국립중앙의료원 약국·병의원 정보 (2026-11-20 저장본, 운영시간 없음)", "items": pages.facilities()["medical"], "why": public_apis.MED_DIAG if public_apis.KEY else "서버에 DATA_GO_KR_KEY 없음"}
 
 
 @app.get("/api/sources")

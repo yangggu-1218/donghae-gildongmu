@@ -34,11 +34,12 @@ def _dist_m(lat1, lon1, lat2, lon2) -> int:
 
 def nearby_open(lat: float, lon: float) -> dict:
     """지금 문 연 약국·병의원과 가까운 응급실. 키가 없으면 sample=True 예시를 돌려준다."""
-    if not KEY:
-        return {"sample": True, "places": [
-            {"name": "○○약국", "kind": "약국", "until": "21:00", "dist_m": 350, "tel": "033-000-0000"},
-            {"name": "△△의원", "kind": "의원", "until": "18:00", "dist_m": 800, "tel": "033-000-0000"},
-            {"name": "지역 응급실", "kind": "응급실", "until": "24시간", "dist_m": 2100, "tel": "033-000-0000"}]}
+    if not KEY:   # 키가 없으면 저장해 둔 실제 목록에서 가까운 곳 (운영시간은 모름)
+        from . import details
+        near = details.medical_near(lat, lon)
+        return {"sample": False, "hours_unknown": True, "places": [
+            {"name": near[k]["name"], "kind": k, "until": "24시간" if k == "응급실" else "운영시간 확인", "dist_m": near[k]["dist_m"], "tel": near[k]["tel"]}
+            for k in ("약국", "의원", "응급실") if k in near]}
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
     out = []
     common = {"serviceKey": KEY, "WGS84_LON": lon, "WGS84_LAT": lat, "pageNo": 1, "numOfRows": 20}

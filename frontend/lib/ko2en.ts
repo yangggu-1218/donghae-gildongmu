@@ -2,7 +2,11 @@
 // 장소·가게 이름과 주소는 현지 표지판과 같도록 한국어 그대로 둔다.
 const EN: Record<string, string> = {
   // 시설
-  "장애인 화장실": "Accessible toilet", "장애인 주차": "Accessible parking", "휠체어 대여": "Wheelchair rental", "엘리베이터": "Elevator",
+  "장애인 화장실": "Accessible toilet", "장애인 주차": "Accessible parking", "장애인 주차 (확대)": "Accessible parking (expanded)", "휠체어 안전 통로": "Marked wheelchair path",
+  "무장애 해안 산책로 (나무 데크 약 700m)": "Step-free seaside deck path (~700 m)", "화장실 앞 경사로": "Ramp at the toilets",
+  "촉지 음성 안내판": "Tactile audio guide board", "장애인 공용 샤워실 (제2캠핑장)": "Accessible shower (Camp 2)",
+  "음성 안내기 무료 대여 (신분증)": "Free audio guide (ID required)", "물품 보관함": "Lockers", "출입구 경사로": "Entrance ramp",
+  "자동심장충격기": "AED", "출입구 턱 없음": "Step-free entrance", "장애인 리프트": "Wheelchair lift", "장애인 공용 샤워실": "Accessible shower", "점자 안내": "Braille info", "보조견 동반 가능": "Guide dogs welcome", "수유실": "Nursing room", "기저귀 교환대": "Changing table", "주출입구 경사로": "Main entrance ramp", "점자 블록": "Tactile paving", "휠체어 대여": "Wheelchair rental", "엘리베이터": "Elevator",
   "경사로": "Ramp", "공중화장실": "Public toilet", "개방화장실": "Open toilet", "화장실": "Toilet", "주차장": "Parking", "넓은 주차장": "Large car park",
   "테이블석": "Table seating", "테이블 없음(좌식)": "Floor seating only", "입식 테이블": "Chairs & tables", "입식 테이블 일부": "Some chairs & tables",
   // 의료
