@@ -1,0 +1,475 @@
+[
+ {
+  "id": "mureung",
+  "name_ko": "무릉별유천지",
+  "name_en": "Mureung Byeolyucheonji",
+  "zone": "mureung",
+  "type": "관광지",
+  "lat": 37.4705,
+  "lon": 129.0752,
+  "stay_min": 90,
+  "styles": [
+   "자연·산책",
+   "체험"
+  ],
+  "facilities": [
+   "장애인 화장실",
+   "장애인 주차",
+   "휠체어 대여"
+  ],
+  "tip_ko": "방문자센터까지는 평지예요. 호수 전망 데크는 완만한 경사가 있어요.",
+  "tip_en": "Flat to the visitor center; the lake deck has a gentle slope.",
+  "segments": [
+   {
+    "name": "주차장 → 방문자센터",
+    "grade": "G",
+    "note": "평지 약 120m",
+    "source": "예시",
+    "distance_m": 120
+   },
+   {
+    "name": "방문자센터 → 장애인 화장실",
+    "grade": "G",
+    "note": "건물 1층",
+    "source": "예시"
+   },
+   {
+    "name": "방문자센터 → 호수 전망 데크",
+    "grade": "Y",
+    "note": "완만한 경사",
+    "source": "예시",
+    "distance_m": 350
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "forest",
+  "name_ko": "무릉건강숲",
+  "name_en": "Mureung Health Forest",
+  "zone": "mureung",
+  "type": "숙박",
+  "indoor": true,
+  "lat": 37.4628,
+  "lon": 129.0262,
+  "stay_min": 60,
+  "styles": [
+   "자연·산책",
+   "체험"
+  ],
+  "facilities": [
+   "장애인 화장실"
+  ],
+  "tip_ko": "휠체어 대여 정보가 기관마다 달라 방문 전 확인이 필요해요.",
+  "tip_en": "Wheelchair rental info differs by source; call ahead.",
+  "segments": [
+   {
+    "name": "주차장 → 본관",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "숲길",
+    "grade": "Y",
+    "note": "확인 필요",
+    "source": "예시"
+   }
+  ],
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "valley",
+  "name_ko": "무릉계곡·무릉반석",
+  "name_en": "Mureung Valley",
+  "zone": "mureung",
+  "type": "관광지",
+  "lat": 37.4612,
+  "lon": 129.0186,
+  "stay_min": 60,
+  "styles": [
+   "자연·산책"
+  ],
+  "facilities": [
+   "장애인 주차"
+  ],
+  "tip_ko": "입구 쪽 무릉반석까지만 추천해요.",
+  "tip_en": "Stay near the flat rocks at the entrance.",
+  "segments": [
+   {
+    "name": "주차장 → 매표소",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "매표소 → 무릉반석",
+    "grade": "Y",
+    "note": "흙길",
+    "source": "예시"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "yongchu",
+  "name_ko": "용추폭포·쌍폭포",
+  "name_en": "Yongchu & Ssang Falls",
+  "zone": "mureung",
+  "type": "관광지",
+  "lat": 37.45,
+  "lon": 129.005,
+  "stay_min": 90,
+  "styles": [
+   "자연·산책"
+  ],
+  "tip_ko": "계곡 안쪽 산길이에요.",
+  "tip_en": "A mountain trail deep in the valley.",
+  "segments": [
+   {
+    "name": "무릉반석 → 폭포",
+    "grade": "R",
+    "note": "산길",
+    "source": "예시",
+    "surface": "산길"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "dokkaebi",
+  "name_ko": "도째비골 스카이밸리",
+  "name_en": "Dokkaebigol Sky Valley",
+  "zone": "mukho",
+  "type": "관광지",
+  "lat": 37.5468,
+  "lon": 129.1176,
+  "stay_min": 60,
+  "styles": [
+   "바다 보기",
+   "체험"
+  ],
+  "facilities": [
+   "장애인 화장실",
+   "엘리베이터"
+  ],
+  "tip_ko": "엘리베이터로 전망 시설까지 갈 수 있어요.",
+  "tip_en": "Elevator to the viewing deck.",
+  "segments": [
+   {
+    "name": "주차장 → 매표소",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "매표소 → 전망 시설",
+    "grade": "G",
+    "note": "엘리베이터",
+    "source": "예시"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "haerang",
+  "name_ko": "도째비골 해랑전망대",
+  "name_en": "Haerang Observatory",
+  "zone": "mukho",
+  "type": "관광지",
+  "lat": 37.5452,
+  "lon": 129.1205,
+  "stay_min": 30,
+  "styles": [
+   "바다 보기"
+  ],
+  "tip_ko": "가는 길에 경사가 있어요.",
+  "tip_en": "Sloped path.",
+  "segments": [
+   {
+    "name": "스카이밸리 → 해랑전망대",
+    "grade": "Y",
+    "note": "경사 구간",
+    "source": "예시"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "nongol",
+  "name_ko": "논골담길",
+  "name_en": "Nongol-damgil Alley",
+  "zone": "mukho",
+  "type": "관광지",
+  "lat": 37.5502,
+  "lon": 129.1168,
+  "stay_min": 40,
+  "styles": [
+   "역사·문화",
+   "자연·산책"
+  ],
+  "tip_ko": "계단과 급경사 골목이에요.",
+  "tip_en": "Steep stairs and alleys.",
+  "segments": [
+   {
+    "name": "골목길",
+    "grade": "R",
+    "note": "계단",
+    "source": "예시",
+    "steps": 30
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "mukho_port",
+  "name_ko": "묵호항·활어회센터",
+  "name_en": "Mukho Port Fish Market",
+  "zone": "mukho",
+  "type": "식당",
+  "lat": 37.551,
+  "lon": 129.116,
+  "stay_min": 70,
+  "styles": [
+   "맛집",
+   "바다 보기"
+  ],
+  "facilities": [
+   "경사로"
+  ],
+  "tip_ko": "장애인 화장실 위치는 답사로 확인할 예정이에요.",
+  "tip_en": "Accessible restroom to be checked on site.",
+  "segments": [
+   {
+    "name": "주차장 → 입구",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "화장실",
+    "grade": "Y",
+    "note": "확인 필요",
+    "source": "예시"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "pencil_museum",
+  "name_ko": "연필뮤지엄",
+  "name_en": "Pencil Museum",
+  "zone": "mukho",
+  "type": "관광지",
+  "indoor": true,
+  "lat": 37.548,
+  "lon": 129.115,
+  "stay_min": 50,
+  "styles": [
+   "역사·문화",
+   "체험"
+  ],
+  "tip_ko": "비 오는 날 실내 후보예요. 내부 이동은 확인이 필요해요.",
+  "tip_en": "Rainy-day indoor option; inside access to be checked.",
+  "segments": [
+   {
+    "name": "입구",
+    "grade": "Y",
+    "note": "확인 필요",
+    "source": "예시"
+   }
+  ],
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "mangsang",
+  "name_ko": "망상해변",
+  "name_en": "Mangsang Beach",
+  "zone": "mangsang",
+  "type": "관광지",
+  "lat": 37.5905,
+  "lon": 129.0893,
+  "stay_min": 40,
+  "styles": [
+   "바다 보기",
+   "자연·산책"
+  ],
+  "facilities": [
+   "장애인 주차",
+   "공중화장실"
+  ],
+  "tip_ko": "모래사장 대신 해변 데크 전망 지점까지 추천해요.",
+  "tip_en": "Stay on the boardwalk viewpoint, not the sand.",
+  "segments": [
+   {
+    "name": "주차장 → 해변 입구",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "해변 데크 전망 지점",
+    "grade": "Y",
+    "note": "데크 이음새",
+    "source": "예시"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "chotdae",
+  "name_ko": "추암해변·촛대바위",
+  "name_en": "Chuam Beach & Candlestick Rock",
+  "zone": "chuam",
+  "type": "관광지",
+  "lat": 37.4772,
+  "lon": 129.1588,
+  "stay_min": 50,
+  "styles": [
+   "바다 보기"
+  ],
+  "facilities": [
+   "장애인 주차",
+   "공중화장실"
+  ],
+  "tip_ko": "전망 지점은 계단이라 해변 산책로에서 보는 걸 추천해요.",
+  "tip_en": "Viewpoint has steps; enjoy it from the beach path.",
+  "segments": [
+   {
+    "name": "주차장 → 해변 입구",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "해변 산책로",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   }
+  ],
+  "indoor": false,
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "cave",
+  "name_ko": "천곡황금박쥐동굴",
+  "name_en": "Cheongok Golden Bat Cave",
+  "zone": "cheongok",
+  "type": "관광지",
+  "indoor": true,
+  "lat": 37.5139,
+  "lon": 129.1103,
+  "stay_min": 40,
+  "styles": [
+   "체험",
+   "역사·문화"
+  ],
+  "tip_ko": "동굴 안 계단과 좁은 통로가 있어요.",
+  "tip_en": "Steps and narrow passages inside.",
+  "segments": [
+   {
+    "name": "동굴 내부",
+    "grade": "R",
+    "note": "계단·좁은 통로",
+    "source": "예시",
+    "steps": 10,
+    "width_m": 0.8
+   }
+  ],
+  "sample": false,
+  "approx_coords": true
+ },
+ {
+  "id": "cafe_sample",
+  "name_ko": "천곡 실내 카페 (예시)",
+  "name_en": "Cheongok Cafe (sample)",
+  "zone": "cheongok",
+  "type": "관광지",
+  "indoor": true,
+  "sample": true,
+  "lat": 37.508,
+  "lon": 129.115,
+  "stay_min": 50,
+  "styles": [
+   "카페"
+  ],
+  "facilities": [
+   "경사로",
+   "장애인 화장실"
+  ],
+  "tip_ko": "문턱 없고 통로가 넓어요.",
+  "tip_en": "No threshold, wide aisles.",
+  "segments": [
+   {
+    "name": "입구",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "좌석",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   }
+  ],
+  "approx_coords": true
+ },
+ {
+  "id": "lunch_sample",
+  "name_ko": "바다뷰 식당 (예시)",
+  "name_en": "Sea-view Restaurant (sample)",
+  "zone": "mukho",
+  "type": "식당",
+  "indoor": true,
+  "sample": true,
+  "lat": 37.5525,
+  "lon": 129.115,
+  "stay_min": 70,
+  "styles": [
+   "맛집",
+   "바다 보기"
+  ],
+  "facilities": [
+   "경사로",
+   "테이블석"
+  ],
+  "tip_ko": "1층 테이블석이에요.",
+  "tip_en": "Ground-floor tables.",
+  "segments": [
+   {
+    "name": "입구",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   },
+   {
+    "name": "좌석",
+    "grade": "G",
+    "note": "",
+    "source": "예시"
+   }
+  ],
+  "approx_coords": true
+ }
+]

@@ -1,0 +1,6 @@
+data.json
+dist/
+dist_server/
+node_modules/
+py.json
+js.json

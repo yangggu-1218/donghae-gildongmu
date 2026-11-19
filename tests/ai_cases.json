@@ -1,0 +1,221 @@
+{
+ "courses": [
+  {
+   "id": "C01",
+   "cond": {
+    "who": "부모님과",
+    "move": [
+     "휠체어"
+    ],
+    "style": [
+     "바다 보기"
+    ]
+   },
+   "expect": {
+    "no_R": true,
+    "max_stops": 4,
+    "has_lunch": true
+   }
+  },
+  {
+   "id": "C02",
+   "cond": {
+    "who": "아이와",
+    "move": [
+     "유모차"
+    ],
+    "style": [
+     "자연·산책"
+    ]
+   },
+   "expect": {
+    "no_R": true,
+    "max_stops": 4
+   }
+  },
+  {
+   "id": "C03",
+   "cond": {
+    "who": "혼자",
+    "move": [],
+    "style": [
+     "바다 보기"
+    ]
+   },
+   "expect": {
+    "overall_none": true
+   }
+  },
+  {
+   "id": "C04",
+   "cond": {
+    "who": "부모님과",
+    "move": [
+     "오래 걷기 어려움"
+    ],
+    "style": [
+     "역사·문화"
+    ]
+   },
+   "expect": {
+    "no_R": true,
+    "excluded": "nongol"
+   }
+  },
+  {
+   "id": "C05",
+   "cond": {
+    "who": "연인·친구",
+    "move": [
+     "계단 어려움"
+    ],
+    "style": [
+     "카페",
+     "맛집"
+    ]
+   },
+   "expect": {
+    "no_R": true
+   }
+  },
+  {
+   "id": "C06",
+   "cond": {
+    "who": "부모님과",
+    "move": [
+     "휠체어"
+    ],
+    "style": [
+     "바다 보기"
+    ],
+    "memo": "비가 올 것 같아요"
+   },
+   "expect": {
+    "no_R": true,
+    "first_indoor": true
+   }
+  },
+  {
+   "id": "C07",
+   "cond": {
+    "who": "단체",
+    "move": [],
+    "style": [
+     "맛집"
+    ],
+    "days": "1박 2일"
+   },
+   "expect": {
+    "max_stops": 6
+   }
+  },
+  {
+   "id": "C08",
+   "cond": {
+    "who": "부모님과",
+    "move": [
+     "휠체어"
+    ],
+    "style": [
+     "자연·산책"
+    ],
+    "wish": [
+     "nongol"
+    ]
+   },
+   "expect": {
+    "no_R": true,
+    "excluded": "nongol"
+   }
+  },
+  {
+   "id": "C09",
+   "cond": {
+    "who": "아이와",
+    "move": [
+     "유모차"
+    ],
+    "style": [
+     "바다 보기"
+    ],
+    "start": "묵호역"
+   },
+   "expect": {
+    "no_R": true
+   }
+  },
+  {
+   "id": "C10",
+   "cond": {
+    "who": "혼자",
+    "move": [
+     "휠체어"
+    ],
+    "style": [
+     "역사·문화"
+    ],
+    "wish": [
+     "cave"
+    ]
+   },
+   "expect": {
+    "excluded": "cave"
+   }
+  }
+ ],
+ "chats": [
+  {
+   "id": "T01",
+   "msg": "비가 와요",
+   "expect": "rain"
+  },
+  {
+   "id": "T02",
+   "msg": "덜 걷고 싶어요",
+   "expect": "less_walk"
+  },
+  {
+   "id": "T03",
+   "msg": "바다 보이는 망상해변 넣어줘",
+   "expect": "add",
+   "place": "mangsang"
+  },
+  {
+   "id": "T04",
+   "msg": "도째비골 스카이밸리 빼줘",
+   "expect": "remove",
+   "place": "dokkaebi"
+  },
+  {
+   "id": "T05",
+   "msg": "도째비골 가고 싶어",
+   "expect": "add",
+   "place": "dokkaebi"
+  },
+  {
+   "id": "T06",
+   "msg": "엄마가 힘들어하셔요",
+   "expect": "less_walk"
+  },
+  {
+   "id": "T07",
+   "msg": "It's raining",
+   "expect": "rain"
+  },
+  {
+   "id": "T08",
+   "msg": "오늘 날씨 좋네요",
+   "expect": "none"
+  },
+  {
+   "id": "T09",
+   "msg": "우산 챙겨야 할 것 같아요",
+   "expect": "rain"
+  },
+  {
+   "id": "T10",
+   "msg": "없는 장소인 강릉 경포대 넣어줘",
+   "expect": "none"
+  }
+ ]
+}

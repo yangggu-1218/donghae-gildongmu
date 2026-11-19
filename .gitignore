@@ -1,0 +1,13 @@
+.env
+frontend/.env.local
+node_modules/
+.next/
+__pycache__/
+data/raw/
+data/reports/
+data/places.json
+data/review_memos.csv
+data/cms/
+/data/cache/
+/audit-*.txt
+/audit-npm.json
