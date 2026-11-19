@@ -1,0 +1,246 @@
+"use client";
+// 커뮤니티 '다녀온 길': 다녀온 코스 후기 + 길 메모 + 도움 됐어요 + 댓글. 관광지 상세의 '다녀온 사람들 이야기'.
+// 시연판은 이 브라우저에만 저장한다 (lib/community.ts). 결정 배경: docs/16_COMMUNITY_PANEL.md
+import { useEffect, useMemo, useState } from "react";
+import { getJSON } from "@/lib/api";
+import { Head } from "@/components/Pages";
+import { Icon } from "@/components/Icon";
+import { fuzzyHit } from "@/lib/fuzzy";
+import { allPosts, load, save, today, type Post, type PlaceNote } from "@/lib/community";
+
+type Lang = "ko" | "en";
+const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
+const ZONE: Record<string, [string, string]> = { mukho: ["묵호", "Mukho"], mangsang: ["망상", "Mangsang"], chuam: ["추암", "Chuam"], mureung: ["무릉", "Mureung"], cheongok: ["천곡", "Cheongok"] };
+const MOVE: [string, string, string][] = [["휠체어", "휠체어", "Wheelchair"], ["유모차", "유모차", "Stroller"], ["오래 걷기 어려움", "어르신·무릎", "Limited walking"]];
+const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
+
+function usePlaces() {
+  const [m, setM] = useState<Record<string, any>>({});
+  useEffect(() => { getJSON("/api/places?mode=none").then((l: any[]) => setM(Object.fromEntries(l.map((p) => [p.id, p])))).catch(() => {}); }, []);
+  return m;
+}
+
+// 코스 띠: 장소를 점과 선으로 잇는 작은 노선도 (이 페이지의 단 하나의 눈에 띄는 요소)
+function Strip({ ids, places, lang }: { ids: string[]; places: Record<string, any>; lang: Lang }) {
+  const nm = (id: string) => (lang === "ko" ? places[id]?.name_ko : places[id]?.name_en || places[id]?.name_ko) || id;
+  return (
+    <ol className="cm-strip" aria-label={lang === "ko" ? "다녀온 순서" : "Route order"}>
+      {ids.map((id) => <li key={id} className={["식당", "카페"].includes(places[id]?.type) ? "eat" : ""}><span>{nm(id)}</span></li>)}
+    </ol>
+  );
+}
+
+export function CommunityPage({ lang, sub, onUse }: { lang: Lang; sub?: string; onUse: (ids: string[]) => void }) {
+  const L = pick(lang);
+  const places = usePlaces();
+  const [st, setSt] = useState(load);
+  const upd = (f: (s: ReturnType<typeof load>) => void) => { const s = load(); f(s); save(s); setSt(s); };
+  const posts = useMemo(() => allPosts(st), [st]);
+  if (sub === "new") return <Write lang={lang} places={places} onDone={(p) => { upd((s) => { s.posts.unshift(p); }); location.hash = `#/community/${p.id}`; }} />;
+  const one = sub ? posts.find((p) => p.id === sub) : null;
+  if (sub && one) return <Detail lang={lang} p={one} places={places} helped={!!st.helpful[one.id]} onUse={onUse}
+    onHelp={() => upd((s) => { s.helpful[one.id] = !s.helpful[one.id]; })}
+    onComment={(c) => upd((s) => { (s.comments[one.id] ||= []).push(c); })}
+    onHide={() => { upd((s) => { s.hidden[one.id] = true; }); location.hash = "#/community"; }} />;
+  return <List lang={lang} posts={posts} places={places} />;
+}
+
+function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Record<string, any> }) {
+  const L = pick(lang);
+  const [kind, setKind] = useState<"" | "easy" | "free">("");
+  const [move, setMove] = useState("");
+  const [zone, setZone] = useState("");
+  const [sort, setSort] = useState<"new" | "help">("new");
+  const [q, setQ] = useState("");
+  const key = q.trim().replace(/\s+/g, "");
+  const nm = (id: string) => places[id]?.name_ko || "";
+  const rows = posts.filter((p) => (!kind || p.kind === kind) && (!move || p.move.includes(move)) && (!zone || p.zone === zone)
+      && (!key || `${p.title}${p.body}${p.stops.map(nm).join("")}`.replace(/\s+/g, "").includes(key) || p.stops.some((id) => fuzzyHit(nm(id), key) >= 0)))
+    .sort((a, b) => (sort === "help" ? b.helpful - a.helpful : b.date.localeCompare(a.date)));
+  return (
+    <section className="sec wrap cm">
+      <Head lang={lang} mascot="full-cheer" title={L("다녀온 길", "Trips people took")} sub={L("다녀온 코스와 길 정보를 나누는 곳이에요. 마음에 드는 코스는 그대로 짜 볼 수 있어요.", "Routes and path notes from people who went. Plan any of them in one tap.")} />
+      <div className="cm-top">
+        <p className="muted small cm-note">{L("지금 보이는 글 대부분은 시연을 위해 만든 예시 글이에요. 내가 쓴 글·댓글은 이 기기에만 저장돼요.", "Most posts here are sample posts for the demo. Your posts and comments stay on this device.")}
+          {lang !== "ko" && <> {L("", "Posts are written in Korean.")}</>}</p>
+        <a className="btn-go cm-write" href="#/community/new"><Icon name="edit" />{L("내 코스 올리기", "Share my trip")}</a>
+      </div>
+      <div className="cm-filter" role="group" aria-label={L("골라 보기", "Filter")}>
+        <div className="chips">
+          {([["", "전체", "All"], ["easy", "무장애 여행", "Barrier-free"], ["free", "일반 여행", "Regular"]] as const).map(([k, ko, en]) =>
+            <button key={k} className="chip" aria-pressed={kind === k} onClick={() => setKind(k)}>{L(ko, en)}</button>)}
+        </div>
+        <div className="chips">
+          {MOVE.map(([v, ko, en]) => <button key={v} className="chip" aria-pressed={move === v} onClick={() => setMove(move === v ? "" : v)}>{L(ko, en)}</button>)}
+          <label className="cm-sel"><span className="sr-only">{L("권역", "Area")}</span>
+            <select value={zone} onChange={(e) => setZone(e.target.value)}>
+              <option value="">{L("모든 권역", "All areas")}</option>
+              {Object.entries(ZONE).map(([k, v]) => <option key={k} value={k}>{L(v[0], v[1])}</option>)}
+            </select></label>
+          <label className="cm-sel"><span className="sr-only">{L("정렬", "Sort")}</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value as any)}>
+              <option value="new">{L("최신순", "Newest")}</option><option value="help">{L("도움 많이 된 순", "Most helpful")}</option>
+            </select></label>
+        </div>
+        <label className="cm-search"><span className="sr-only">{L("장소·내용으로 찾기", "Search")}</span>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("장소나 내용으로 찾기 (예: 도째비골, 유모차)", "Search by place or word")} /></label>
+      </div>
+      <p className="muted small" role="status">{L(`${rows.length}개의 글`, `${rows.length} posts`)}</p>
+      {rows.length === 0 ? <p className="panel cm-empty">{L("조건에 맞는 글이 없어요. 골라 보기를 풀거나 첫 글을 올려 주세요.", "No posts match. Clear the filters or share the first one.")}</p> : (
+        <ul className="cm-list">
+          {rows.map((p) => (
+            <li key={p.id}>
+              <a className="cm-card" href={`#/community/${p.id}`}>
+                <span className={`cm-kind ${p.kind}`}>{p.kind === "easy" ? L("무장애 여행", "Barrier-free") : L("일반 여행", "Regular")}{p.move.length > 0 && ` · ${p.move.map((m) => L(MOVE.find((x) => x[0] === m)?.[1] || m, MOVE.find((x) => x[0] === m)?.[2] || m)).join(", ")}`}</span>
+                <b className="cm-title">{p.title}</b>
+                <Strip ids={p.stops} places={places} lang={lang} />
+                {p.tips[0] && <span className="cm-tip"><Icon name="info" />{p.tips[0]}</span>}
+                <span className="cm-meta"><span>{p.nick}{p.mine && <em className="cm-mine">{L("내 글", "Mine")}</em>}</span><span>{p.date.slice(5).replace("-", "/")}</span>
+                  <span aria-label={L(`만족도 ${p.rating}점`, `${p.rating} of 5`)} className="cm-stars">{stars(p.rating)}</span>
+                  <span>{L(`도움 됐어요 ${p.helpful}`, `Helpful ${p.helpful}`)}</span><span>{L(`댓글 ${p.comments.length}`, `${p.comments.length} comments`)}</span></span>
+              </a>
+            </li>))}
+        </ul>)}
+    </section>
+  );
+}
+
+function Detail({ lang, p, places, helped, onHelp, onComment, onHide, onUse }: { lang: Lang; p: Post; places: Record<string, any>; helped: boolean; onHelp: () => void; onComment: (c: { nick: string; date: string; text: string }) => void; onHide: () => void; onUse: (ids: string[]) => void }) {
+  const L = pick(lang);
+  const [nick, setNick] = useState(() => { try { return localStorage.getItem("gd-nick") || ""; } catch { return ""; } });
+  const [text, setText] = useState("");
+  const [err, setErr] = useState("");
+  const send = () => {
+    if (!nick.trim() || !text.trim()) { setErr(L("닉네임과 댓글을 모두 적어 주세요.", "Enter a nickname and a comment.")); return; }
+    try { localStorage.setItem("gd-nick", nick.trim()); } catch { /* */ }
+    onComment({ nick: nick.trim().slice(0, 20), date: today(), text: text.trim().slice(0, 500) }); setText(""); setErr("");
+  };
+  return (
+    <section className="sec wrap cm cm-detail">
+      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("다녀온 길", "Trips")}</a></p>
+      <article className="panel cm-post">
+        <span className={`cm-kind ${p.kind}`}>{p.kind === "easy" ? L("무장애 여행", "Barrier-free") : L("일반 여행", "Regular")} · {p.who} · {L(ZONE[p.zone]?.[0] || "", ZONE[p.zone]?.[1] || "")}</span>
+        <h1 className="cm-h">{p.title}</h1>
+        <p className="cm-meta"><span>{p.nick}</span><span>{p.date}</span><span className="cm-stars" aria-label={L(`만족도 ${p.rating}점`, `${p.rating} of 5`)}>{stars(p.rating)}</span></p>
+        <h2 className="h3">{L("다녀온 순서", "Route")}</h2>
+        <Strip ids={p.stops} places={places} lang={lang} />
+        <div className="cm-actions">
+          <button className="btn-go" onClick={() => onUse(p.stops)}><Icon name="route" />{L("이 코스로 짜 보기", "Plan this route")}</button>
+          <button className="chip" aria-pressed={helped} onClick={onHelp}>{L(`도움 됐어요 ${p.helpful}`, `Helpful ${p.helpful}`)}</button>
+        </div>
+        <p className="cm-body">{p.body}</p>
+        {p.tips.length > 0 && (<>
+          <h2 className="h3">{L("길 메모", "Path notes")}</h2>
+          <ul className="cm-tips">{p.tips.map((x) => <li key={x}><Icon name="info" />{x}</li>)}</ul></>)}
+        <h2 className="h3">{L("장소 바로 보기", "Places")}</h2>
+        <p className="chips">{p.stops.filter((id) => places[id]).map((id) => <a key={id} className="chip sm" href={`#/place/${id}`}>{lang === "ko" ? places[id].name_ko : places[id].name_en || places[id].name_ko}</a>)}</p>
+      </article>
+      <section className="panel cm-cmts" aria-labelledby="cm-c-h">
+        <h2 id="cm-c-h" className="h3">{L(`댓글 ${p.comments.length}`, `${p.comments.length} comments`)}</h2>
+        {p.comments.length === 0 ? <p className="muted">{L("아직 댓글이 없어요. 궁금한 길 정보를 물어보세요.", "No comments yet. Ask about the path.")}</p> :
+          <ul className="cm-clist">{p.comments.map((c, i) => <li key={i}><b>{c.nick}</b><small className="muted">{c.date}</small><p>{c.text}</p></li>)}</ul>}
+        <div className="cm-form">
+          <label><span>{L("닉네임", "Nickname")}</span><input value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} /></label>
+          <label className="wide"><span>{L("댓글", "Comment")}</span><textarea value={text} maxLength={500} rows={3} onChange={(e) => setText(e.target.value)} placeholder={L("연락처 같은 개인정보는 적지 말아 주세요.", "Please don't share personal contact details.")} /></label>
+          {err && <p className="err" role="alert">{err}</p>}
+          <button className="btn-go" onClick={send}>{L("댓글 남기기", "Post comment")}</button>
+        </div>
+        <button className="link-btn cm-report" onClick={() => { if (confirm(L("이 글을 이 기기에서 가릴까요?", "Hide this post on this device?"))) onHide(); }}>{L("신고·가리기", "Report / hide")}</button>
+      </section>
+    </section>
+  );
+}
+
+function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, any>; onDone: (p: Post) => void }) {
+  const L = pick(lang);
+  // 코스 결과·내 일정에서 [후기 올리기]로 오면 그 코스를 미리 채운다
+  const pre = useMemo(() => { try { return JSON.parse(sessionStorage.getItem("gd-share") || "null"); } catch { return null; } }, []);
+  const [stops, setStops] = useState<string[]>(pre?.stops || []);
+  const [kind, setKind] = useState<"easy" | "free">(pre?.kind || "easy");
+  const [move, setMove] = useState<string[]>(pre?.move || []);
+  const [who, setWho] = useState<string>(pre?.who || "연인·친구");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [tips, setTips] = useState("");
+  const [rating, setRating] = useState(5);
+  const [nick, setNick] = useState(() => { try { return localStorage.getItem("gd-nick") || ""; } catch { return ""; } });
+  const [q, setQ] = useState("");
+  const [err, setErr] = useState("");
+  const list = Object.values(places).filter((p: any) => p.type !== "숙박" && !stops.includes(p.id));
+  const key = q.trim().replace(/\s+/g, "");
+  const hits = key ? list.filter((p: any) => p.name_ko.replace(/\s+/g, "").includes(key) || fuzzyHit(p.name_ko, key) >= 0).slice(0, 6) : [];
+  const nm = (id: string) => (lang === "ko" ? places[id]?.name_ko : places[id]?.name_en || places[id]?.name_ko) || id;
+  const submit = () => {
+    if (!nick.trim() || !title.trim() || stops.length < 1 || !body.trim()) { setErr(L("닉네임, 제목, 다녀온 장소(1곳 이상), 후기를 적어 주세요.", "Add a nickname, title, at least one place and your review.")); return; }
+    try { localStorage.setItem("gd-nick", nick.trim()); sessionStorage.removeItem("gd-share"); } catch { /* */ }
+    const zone = places[stops[0]]?.zone || "mukho";
+    onDone({ id: `u${Date.now()}`, title: title.trim().slice(0, 60), nick: nick.trim().slice(0, 20), date: today(), kind, move: kind === "easy" ? move : [], who, zone, stops, rating,
+      body: body.trim().slice(0, 1500), tips: tips.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6), helpful: 0, comments: [], mine: true });
+  };
+  return (
+    <section className="sec wrap cm cm-write-page">
+      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("다녀온 길", "Trips")}</a></p>
+      <h1>{L("내 코스 올리기", "Share my trip")}</h1>
+      <p className="muted">{L("다녀온 순서와 길 정보를 남기면 다음 사람이 그대로 짜 볼 수 있어요. 이 기기에만 저장돼요.", "Your route and path notes help the next traveler. Saved on this device only.")}</p>
+      <div className="panel cm-form big">
+        <fieldset><legend>{L("어떤 여행이었나요?", "Trip type")}</legend>
+          <div className="chips">
+            <button type="button" className="chip" aria-pressed={kind === "easy"} onClick={() => setKind("easy")}>{L("무장애 여행", "Barrier-free")}</button>
+            <button type="button" className="chip" aria-pressed={kind === "free"} onClick={() => setKind("free")}>{L("일반 여행", "Regular")}</button>
+          </div>
+          {kind === "easy" && <div className="chips">{MOVE.map(([v, ko, en]) => <button type="button" key={v} className="chip" aria-pressed={move.includes(v)} onClick={() => setMove(move.includes(v) ? move.filter((x) => x !== v) : [...move, v])}>{L(ko, en)}</button>)}</div>}
+          <label><span>{L("누구와", "With")}</span><select value={who} onChange={(e) => setWho(e.target.value)}>{["혼자", "연인·친구", "부모님과", "아이와", "단체"].map((w) => <option key={w}>{w}</option>)}</select></label>
+        </fieldset>
+        <fieldset><legend>{L("다녀온 순서", "Places in order")}</legend>
+          {stops.length > 0 && <ol className="cm-pick">{stops.map((id, i) => <li key={id}><span>{nm(id)}</span>
+            <button type="button" className="chip sm" disabled={i === 0} onClick={() => { const a = [...stops]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; setStops(a); }} aria-label={L("앞으로", "Move up")}>↑</button>
+            <button type="button" className="chip sm" onClick={() => setStops(stops.filter((x) => x !== id))} aria-label={L(`${nm(id)} 빼기`, `Remove ${nm(id)}`)}>×</button></li>)}</ol>}
+          <label><span>{L("장소 찾아 넣기", "Add a place")}</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("예: 도째비골, 무릉계곡", "e.g. Dokkaebi")} /></label>
+          {hits.length > 0 && <p className="chips">{hits.map((p: any) => <button type="button" key={p.id} className="chip sm" onClick={() => { setStops([...stops, p.id]); setQ(""); }}>+ {nm(p.id)}</button>)}</p>}
+        </fieldset>
+        <label><span>{L("닉네임", "Nickname")}</span><input value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} /></label>
+        <label><span>{L("제목", "Title")}</span><input value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder={L("예: 휠체어로 묵호 반나절, 생각보다 수월했어요", "e.g. Mukho by wheelchair")} /></label>
+        <label><span>{L("만족도", "Rating")}</span>
+          <span className="cm-rate" role="radiogroup" aria-label={L("만족도", "Rating")}>{[1, 2, 3, 4, 5].map((n) => <button type="button" key={n} role="radio" aria-checked={rating === n} className={n <= rating ? "on" : ""} onClick={() => setRating(n)} aria-label={L(`${n}점`, `${n}`)}>★</button>)}</span></label>
+        <label><span>{L("후기", "Review")}</span><textarea rows={5} maxLength={1500} value={body} onChange={(e) => setBody(e.target.value)} /></label>
+        <label><span>{L("길 메모 (한 줄에 하나)", "Path notes (one per line)")}</span><textarea rows={3} value={tips} onChange={(e) => setTips(e.target.value)} placeholder={L("예: 입구 턱 3cm 정도\n장애인 화장실 2층", "e.g. 3 cm step at the entrance")} /></label>
+        {err && <p className="err" role="alert">{err}</p>}
+        <p className="muted small">{L("연락처·사진 같은 개인정보는 올리지 말아 주세요.", "Please don't post personal details.")}</p>
+        <button className="btn-go" onClick={submit}>{L("글 올리기", "Post")}</button>
+      </div>
+    </section>
+  );
+}
+
+// 관광지 상세: 다녀온 사람들 이야기 (그 장소가 들어간 글 + 한 줄 후기·길 메모)
+export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
+  const L = pick(lang);
+  const [st, setSt] = useState(load);
+  const posts = allPosts(st).filter((p) => p.stops.includes(id)).sort((a, b) => b.helpful - a.helpful).slice(0, 3);
+  const notes: PlaceNote[] = st.notes[id] || [];
+  const tips = allPosts(st).filter((p) => p.stops.includes(id)).flatMap((p) => p.tips.map((t) => ({ t, by: p.nick }))).slice(0, 4);
+  const [nick, setNick] = useState(() => { try { return localStorage.getItem("gd-nick") || ""; } catch { return ""; } });
+  const [text, setText] = useState("");
+  const [tip, setTip] = useState(false);
+  const add = () => {
+    if (!nick.trim() || !text.trim()) return;
+    try { localStorage.setItem("gd-nick", nick.trim()); } catch { /* */ }
+    const s = load(); (s.notes[id] ||= []).unshift({ nick: nick.trim().slice(0, 20), date: today(), text: text.trim().slice(0, 300), tip }); save(s); setSt(s); setText(""); setTip(false);
+  };
+  return (
+    <section className="panel cm-place" aria-labelledby="cm-pl-h">
+      <h2 id="cm-pl-h" className="h3">{L("다녀온 사람들 이야기", "From people who went")}</h2>
+      {tips.length > 0 && <ul className="cm-tips">{tips.map((x, i) => <li key={i}><Icon name="info" />{x.t} <small className="muted">— {x.by}</small></li>)}</ul>}
+      {notes.length > 0 && <ul className="cm-clist">{notes.map((n, i) => <li key={i}><b>{n.nick}</b><small className="muted">{n.date}{n.tip ? L(" · 길 메모", " · path note") : ""}</small><p>{n.text}</p></li>)}</ul>}
+      {posts.length > 0 && <p className="chips">{posts.map((p) => <a key={p.id} className="chip sm" href={`#/community/${p.id}`}>{p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title}</a>)}</p>}
+      {tips.length === 0 && notes.length === 0 && posts.length === 0 && <p className="muted">{L("아직 이야기가 없어요. 다녀오셨다면 첫 후기를 남겨 주세요.", "No notes yet. Leave the first one.")}</p>}
+      <div className="cm-form inline">
+        <input aria-label={L("닉네임", "Nickname")} placeholder={L("닉네임", "Nickname")} value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} />
+        <input aria-label={L("한 줄 후기", "Short note")} placeholder={L("한 줄 후기 (예: 입구 경사로 있어요)", "Short note")} value={text} maxLength={300} onChange={(e) => setText(e.target.value)} />
+        <label className="cm-chk"><input type="checkbox" checked={tip} onChange={(e) => setTip(e.target.checked)} />{L("길 정보예요", "Path info")}</label>
+        <button className="chip go" onClick={add} disabled={!nick.trim() || !text.trim()}>{L("남기기", "Post")}</button>
+      </div>
+      <a className="link-btn" href="#/community">{L("다녀온 길 전체 보기", "See all trips")}</a>
+    </section>
+  );
+}

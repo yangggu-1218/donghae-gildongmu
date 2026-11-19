@@ -63,9 +63,9 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           <div style={{ minWidth: 0, flex: 1 }}>
             <h4>{name}{s.kind !== "sight" && <small className="tl-kind">{t(s.kind === "lunch" ? "tl.lunch" : "tl.cafe")}</small>}
               {isNew && <small className="tl-kind new">{t("tl.new")}</small>}</h4>
-            <p className="muted tl-hours">{s.hours_text || t("tl.unknown")}{s.hours_sample && s.open_state !== "always" ? ` · ${t("tl.sample")}` : ""}</p>
+            <p className="muted tl-hours">{s.hours_text || t("tl.unknown")}</p>
           </div>
-          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}{x?.access_source === "예시" && <small className="ex-in"> · {lang === "ko" ? "예시" : "sample"}</small>}</span>}
+          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
         </div>
         <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
           {lv && <span className={`badge crowd-${lv}`} title={lang === "ko" ? "한국관광공사 관광지 집중률 예측" : "KTO crowd forecast"}>{crowdTxt} {Math.round(crowd!)}%</span>}</div>

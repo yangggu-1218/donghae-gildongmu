@@ -86,13 +86,13 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
           <div className="tries" role="group" aria-label={L("이렇게 말해 보세요", "Try saying")}>
             {ex.map((x) => <button key={x} type="button" onClick={() => onAsk(x)} disabled={busy}>{x}</button>)}
           </div>
-          <a className="hero-jump" href="#courses">{L("예시 코스로 바로 시작하기 ↓", "Or start from a sample route ↓")}</a>
+          <a className="hero-jump" href="#courses">{L("추천 코스로 바로 시작하기 ↓", "Or start from a suggested route ↓")}</a>
         </div>
         {spot && (
           <a className="hero-spot" href={`#/place/${slide.place}`}>
             <span className="hero-spot-k">{L("사진 속 장소", "In this photo")}</span>
             <b>{L(spot.name_ko, spot.name_en || spot.name_ko)}</b>
-            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}{g && spot.access_source === "예시" && <small className="ex-in"> · {L("예시", "sample")}</small>}</span></span>
+            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}</span></span>
             <span className="hero-spot-m">{L("길·화장실·주차 보기", "Paths, toilets, parking")}</span>
           </a>
         )}
@@ -172,8 +172,8 @@ export function HomeFacts({ lang }: { lang: Lang }) {
   }, []);
   if (!n) return null;
   const rows: [number, string, string, string][] = [
-    [n.places, n.example >= n.places ? L("구간 판정 관광지 (예시 데이터)", "places with path grades (sample data)")
-      : n.example > 0 ? L(`구간 판정 관광지 (예시 ${n.example}곳 포함)`, `places with path grades (${n.example} sample)`)
+    [n.places, n.example >= n.places ? L("구간 판정 관광지 (현장 확인 전 포함)", "places with path grades (some not yet surveyed)")
+      : n.example > 0 ? L(`구간 판정 관광지 (현장 확인 전 ${n.example}곳 포함)`, `places with path grades (${n.example} not yet surveyed)`)
       : L("구간 판정 관광지", "places with path grades"), "#/places", L("곳", "")],
     [n.toilets, L("장애인 화장실", "accessible toilets"), "#/map", L("곳", "")],
     [n.chargers, L("전동휠체어 급속충전기", "wheelchair fast chargers"), "#/map", L("곳", "")],
@@ -343,7 +343,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           return (
             <article key={p.id} className="pcard">
               <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
-                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}{g && p.access_source === "예시" && <small className="ex-in"> · {L("예시", "sample")}</small>}</span>}
+                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}
@@ -387,11 +387,11 @@ export function HowToStrip({ lang, onClose }: { lang: Lang; onClose: () => void 
 /* ---------------- 추천 코스 (예시) ---------------- */
 export const PRESETS = [
   { t: ["부모님 모시고 무릎 편한 묵호 바다", "Easy-walking Mukho seaside with parents"], who: "부모님과", move: ["오래 걷기 어려움"], style: ["바다 보기", "맛집"], start: "묵호역", photo: "zone_mukho",
-    tags: [["오래 걷기 어려움", "Limited walking"], ["부모님", "Parents"], ["기차", "By train"]], by: ["예시 코스 · 70대 부모님과", "Sample route · with parents in their 70s"] },
+    tags: [["오래 걷기 어려움", "Limited walking"], ["부모님", "Parents"], ["기차", "By train"]], by: ["추천 코스 · 70대 부모님과", "Suggested route · with parents in their 70s"] },
   { t: ["휠체어로 무릉 반나절", "Half day in Mureung by wheelchair"], who: "연인·친구", move: ["휠체어"], style: ["자연·산책", "역사·문화"], start: "자가용", photo: "valley",
-    tags: [["휠체어", "Wheelchair"], ["자연", "Nature"], ["자가용", "By car"]], by: ["예시 코스 · 휠체어 이용 2인", "Sample route · two travelers, one wheelchair"] },
+    tags: [["휠체어", "Wheelchair"], ["자연", "Nature"], ["자가용", "By car"]], by: ["추천 코스 · 휠체어 이용 2인", "Suggested route · two travelers, one wheelchair"] },
   { t: ["유모차로 비 오는 날", "Rainy day with a stroller"], who: "아이와", move: ["유모차"], style: ["역사·문화", "카페"], start: "동해역", rain: true, photo: "cave",
-    tags: [["유모차", "Stroller"], ["실내 위주", "Mostly indoors"], ["기차", "By train"]], by: ["예시 코스 · 아이 동반 가족", "Sample route · family with a toddler"] },
+    tags: [["유모차", "Stroller"], ["실내 위주", "Mostly indoors"], ["기차", "By train"]], by: ["추천 코스 · 아이 동반 가족", "Suggested route · family with a toddler"] },
 ] as const;
 export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: number) => void; busy: boolean }) {
   const L = pick(lang);
@@ -399,7 +399,7 @@ export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: numb
     <section id="courses" className="sec wrap" aria-labelledby="courses-h">
       <div className="sec-head">
         <h2 id="courses-h">{L("이렇게 다녀 보세요", "Routes to start from")}</h2>
-        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요. 예시 코스예요.", "Start from one that fits and adjust it by talking to Dongi. These are sample routes.")}</p>
+        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요.", "Start from one that fits and adjust it by talking to Dongi. These are sample routes.")}</p>
       </div>
       <div className="cgrid">
         {PRESETS.map((c, i) => (

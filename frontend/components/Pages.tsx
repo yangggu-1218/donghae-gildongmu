@@ -11,6 +11,7 @@ import { WHEEL_EN } from "@/components/Timeline";
 import { tr, dot, SOURCE_NOTES_EN, nm, ad } from "@/lib/ko2en";
 import { Icon } from "@/components/Icon";
 import { fuzzyHit } from "@/lib/fuzzy";
+import { PlaceTalk } from "@/components/Community";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -208,14 +209,14 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               {([["wheel", "휠체어", "Wheelchair"], ["stroller", "유모차", "Stroller"], ["walk", "오래 걷기 어려움", "Limited walking"]] as const).map(([k, ko, en]) =>
                 <button key={k} className="chip" aria-pressed={mode === k} onClick={() => setMode(k)}>{L(ko, en)}</button>)}
             </div>
-            {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 구간 판정은 현장 실측 전 예시예요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
+            {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 길 판정은 아직 팀이 현장에서 직접 재 보기 전이에요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
             <ol className="seglist">
               {(p.segments || []).map((s: any) => (
                 <li key={s.name}>
                   <div className="seg-top"><b>{s.name}</b><span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span></div>
                   {s.facts.length > 0 && <p>{s.facts.join(" · ")}</p>}
                   {s.note && <p className="muted">{s.note}</p>}
-                  <p className="muted seg-src">{s.source === "예시" ? L("예시 판정 · 현장 확인 전이에요", "Sample grade · not yet surveyed")
+                  <p className="muted seg-src">{s.source === "예시" ? L("현장 확인 전이에요", "Not yet surveyed")
                     : <>{s.measured ? L("측정값으로 판정", "Graded from measurements") : L("답사 기록 판정", "Graded from survey notes")} · {L("출처", "Source")}: {s.source || "-"}</>}</p>
                 </li>
               ))}
@@ -250,6 +251,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
             </div>
           )}
           <PlaceData id={id} lang={lang} />
+          {p.type !== "숙박" && <PlaceTalk id={id} lang={lang} />}
           {p.about?.length > 0 && (
             <div className="panel about">
               <h2 className="h3">{L("알고 가면 더 좋아요", "Good to know")}</h2>
@@ -293,7 +295,9 @@ export function TransportPage({ lang }: { lang: Lang }) {
     navigator.geolocation.getCurrentPosition((g) => { setNear(""); setOrigin({ lat: g.coords.latitude, lon: g.coords.longitude, label: L("내 위치", "my location") }); },
       () => setLocErr(L("위치를 가져오지 못했어요. 위치 권한을 허용하거나 관광지를 골라 주세요.", "Could not get your location. Allow it or pick a place.")), { timeout: 8000 });
   };
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // 버튼을 누르면 그 안내만 열고, 같은 버튼을 한 번 더 누르면 닫는다 (아래로 내려가지 않음)
+  const [open, setOpen] = useState<string | null>("tr-van");
+  const go = (id: string) => setOpen((o) => (o === id ? null : id));
   const won = (n?: number) => (n == null ? "" : `${Math.round(n).toLocaleString()}${L("원", "₩")}`);
   // 이 페이지를 쓰는 사람의 질문 순서: ① 휠체어로 탈 차가 있나 ② 역에서 어떻게 움직이나 ③ 시티투어 ④ 차를 가져가면 ⑤ 택시·렌터카
   const jumps: [string, string, string][] = [["tr-van", "wheel", L("휠체어 차량", "Wheelchair van")], ["tr-station", "train", L("기차역", "Stations")],
@@ -303,11 +307,12 @@ export function TransportPage({ lang }: { lang: Lang }) {
       <Head lang={lang} photo="city" mascot="full-captain" title={L("교통 안내", "Getting around")} sub={L("휠체어 차량부터 기차역, 시티투어, 주차장, 택시·렌터카까지 필요한 것만 골라 보세요.", "Wheelchair vans, stations, the city tour, parking, taxis and rentals.")} />
       {!d ? <Loading err={err} lang={lang} /> : (<>
         <nav className="tr-jump" aria-label={L("바로 가기", "Jump to")}>
-          {jumps.map(([id, ic, t]) => <button key={id} onClick={() => go(id)}><Icon name={ic} /><span>{t}</span></button>)}
+          {jumps.map(([id, ic, t]) => <button key={id} onClick={() => go(id)} aria-pressed={open === id} aria-controls={id}><Icon name={ic} /><span>{t}</span></button>)}
         </nav>
+        {!open && <p className="muted tr-none">{L("위 버튼을 누르면 그 안내가 열려요.", "Tap a button above to open that section.")}</p>}
 
         {d.mobility_center && (() => { const m = d.mobility_center; return (
-          <section className="panel tr-sec tr-van" id="tr-van" aria-labelledby="tr-van-h">
+          <section className="panel tr-sec tr-van" id="tr-van" hidden={open !== "tr-van"} aria-labelledby="tr-van-h">
             <div className="tr-head"><Icon name="wheel" /><div><h2 id="tr-van-h">{L("휠체어 탈 수 있는 차량", "Wheelchair-accessible vehicles")}</h2><p className="muted">{nm(lang, m.name)}</p></div></div>
             <a className="tr-call" href={`tel:${m.tel}`}><Icon name="phone" /><span><b>{m.tel}</b><small>{L("눌러서 예약 전화", "Tap to call and book")}</small></span></a>
             <dl className="tr-facts">
@@ -326,7 +331,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
             <p className="tr-note">{L("동해시에는 저상버스가 없어요. 휠체어로 시내를 다닐 때는 이 차량이나 택시를 이용하세요.", "Donghae has no low-floor buses. Use this service or a taxi in a wheelchair.")}</p>
           </section>); })()}
 
-        <section className="tr-sec" id="tr-station" aria-labelledby="tr-st-h">
+        <section className="tr-sec" id="tr-station" hidden={open !== "tr-station"} aria-labelledby="tr-st-h">
           <h2 id="tr-st-h" className="tr-h2"><Icon name="train" />{L("기차역에서", "From the stations")}</h2>
           <div className="cards2">
             {d.stations.map((s: any) => (
@@ -343,7 +348,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
         </section>
 
         {d.city_tour && (
-          <section className="panel tr-sec" id="tr-tour" aria-labelledby="tr-tour-h">
+          <section className="panel tr-sec" id="tr-tour" hidden={open !== "tr-tour"} aria-labelledby="tr-tour-h">
             <div className="tr-head"><Icon name="bus" /><div><h2 id="tr-tour-h">{L("동해 시티투어", "Donghae city tour")}</h2><p className="muted">{nm(lang, d.city_tour.name)} · {nm(lang, d.city_tour.mode || "")}</p></div></div>
             <dl className="tr-facts">
               <div><dt>{L("운행일", "Days")}</dt><dd>{L("토·일요일과 공휴일", "Sat, Sun & holidays")}</dd></div>
@@ -376,7 +381,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
           const pinsP = (origin ? rows.slice(0, 8) : rows).filter((r: any) => r.lat).map((r: any) => ({ lat: r.lat, lon: r.lon, label: nm(lang, r.name), grade: null, color: top.includes(r.name) ? "#A45400" : "#566275", icon: "P",
             sub: [r.dist != null ? km(r.dist) : "", r.spaces ? `${r.spaces}${L("면", " spaces")}` : "", r.disabled ? L("장애인 차량 요금 면제", "Free with disabled permit") : ""].filter(Boolean).join(" · "), addr: ad(lang, r.road || "") }));
           return (
-            <section className="panel tr-sec" id="tr-parking" aria-labelledby="tr-p-h">
+            <section className="panel tr-sec" id="tr-parking" hidden={open !== "tr-parking"} aria-labelledby="tr-p-h">
               <div className="tr-head"><Icon name="parking" /><div><h2 id="tr-p-h">{L("공영주차장", "Public parking")}</h2>
                 <p className="muted">{L(`${d.parking.length}곳 중 ${d.parking.filter((r: any) => r.disabled).length}곳은 장애인 차량 요금 면제 (2시간 넘으면 반값)`, `${d.parking.filter((r: any) => r.disabled).length} of ${d.parking.length} waive fees for disabled permits`)}</p></div></div>
               <div className="tr-near" role="group" aria-label={L("가까운 주차장 찾기", "Find nearby parking")}>
@@ -415,7 +420,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
             </section>);
         })()}
 
-        <section className="tr-sec" id="tr-taxi" aria-labelledby="tr-t-h">
+        <section className="tr-sec" id="tr-taxi" hidden={open !== "tr-taxi"} aria-labelledby="tr-t-h">
           <h2 id="tr-t-h" className="tr-h2"><Icon name="taxi" />{L("택시·렌터카", "Taxis & car rentals")}</h2>
           <div className="cards2">
             <div className="panel">
@@ -684,10 +689,10 @@ export function GuidePage({ lang }: { lang: Lang }) {
   ];
   const faq = [
     [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 그 기준으로 갈 수 있어요, 노랑은 도움이 있거나 조심하면 갈 수 있어요, 빨강은 어려워요. 판정 기준은 [출처·판정 기준] 페이지에 있어요.", "Green = accessible, yellow = with care, red = not accessible. See Sources & criteria.")],
-    [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("공공데이터가 있는 곳은 그 값을, 나머지는 '예시 시간'으로 표시했어요. 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
+    [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("공공데이터·관광공사 정보가 있는 곳은 그 값을 써요. 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
     [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
-    [L("'· 예시'라고 붙은 판정은 뭐예요?", "What does '· sample' mean?"), L("팀이 아직 현장에서 직접 재 보지 못한 곳이에요. 비슷한 자료로 미리 판정해 둔 값이라 가기 전에 전화로 한 번 더 확인해 주세요.", "Not yet measured on site by the team. Please call ahead.")],
+    [L("'현장 확인 전'은 무슨 뜻이에요?", "What does 'not yet surveyed' mean?"), L("팀이 아직 현장에서 직접 재 보지 못한 곳이에요. 비슷한 자료로 미리 판정해 둔 값이라 가기 전에 전화로 한 번 더 확인해 주세요.", "Not yet measured on site by the team. Please call ahead.")],
     [L("휠체어가 탈 수 있는 차는 어떻게 불러요?", "How do I book a wheelchair vehicle?"), L("동해시 교통약자이동지원센터 1577-2014로 전화하거나 강원 교통약자 광역이동지원센터 앱으로 예약해요. 다른 지역에 사는 등록 장애인도 이용할 수 있고, 시외로 갈 때는 7일 전까지 예약해요. [교통] 페이지에 자세히 있어요.", "Call 1577-2014 or use the Gangwon mobility app. Visitors from other regions can use it; book 7 days ahead for out-of-town trips.")],
     [L("장애인 차량은 주차비가 얼마예요?", "Is parking free with a disability permit?"), L("공영주차장 24곳 중 18곳은 장애인 차량이 무료예요(2시간이 넘으면 반값). [교통 → 주차장]에서 '장애인 차량 면제만'을 누르면 그곳만 보여요.", "18 of 24 public car parks are free with a permit (half price after 2 hours).")],
     [L("비가 오면 코스가 바뀌나요?", "What if it rains?"), L("그날 비 예보가 있으면 실내 장소를 먼저 넣어요. 직접 [실내 위주로 바꾸기]를 눌러도 돼요. 다만 휠체어·유모차로 갈 수 있는 실내 장소는 아직 많지 않아요.", "Indoor places go first on rainy days. Few indoor places are wheelchair-accessible yet.")],

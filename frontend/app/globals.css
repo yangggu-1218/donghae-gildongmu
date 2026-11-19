@@ -1220,3 +1220,84 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .fork-btn b, .fork-btn.main b { font-size: 1.55em; line-height: 1.3; color: var(--sea-deep); }
 .fork-btn small { font-size: max(15px, 1em); color: var(--muted); }
 @media (max-width: 640px) { .fork { grid-template-columns: 1fr; } .fork-btn, .fork-btn.main { min-height: 0; padding: 18px; } .fork-btn b, .fork-btn.main b { font-size: 1.3em; } }
+
+/* 지도 정보 카드: 점 아래로 뜰 때 */
+.map-pop.below { margin-top: 18px; }
+.map-pop:not(.sketch):not(.below) { margin-bottom: 18px; }
+/* 교통: 누른 안내만 열림 */
+.tr-jump button[aria-pressed="true"] { background: var(--sea); border-color: var(--sea); color: var(--sea-ink); }
+.tr-jump button[aria-pressed="true"] .ic { color: var(--sea-ink); }
+.tr-none { margin: 4px 0 18px; }
+/* 입구 카드 색 구분: 무장애 = 바다 파랑, 일반 = 햇살 주황 */
+.fork-btn:not(.main) { background: color-mix(in srgb, var(--sun) 12%, var(--surface)); border-color: color-mix(in srgb, var(--sun-deep) 55%, var(--line-strong)); }
+.fork-btn:not(.main):hover, .fork-btn:not(.main):focus-visible { background: color-mix(in srgb, var(--sun) 22%, var(--surface)); border-color: var(--sun-deep); }
+.fork-btn:not(.main) .fork-k .ic { color: var(--sun-deep); }
+.fork-btn:not(.main) b { color: color-mix(in srgb, var(--sun-deep) 70%, var(--ink)); }
+
+/* ==========================================================================
+   커뮤니티 '다녀온 길' — 눈에 띄는 요소는 코스 띠 하나, 나머지는 조용하게
+   ========================================================================== */
+.cm-top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; margin: 0 0 14px; }
+.cm-note { margin: 0; max-width: 60ch; }
+.cm-write { display: inline-flex; align-items: center; gap: 8px; }
+.cm-filter { display: grid; gap: 10px; margin: 0 0 12px; }
+.cm-sel select, .cm-search input, .cm-form input, .cm-form select, .cm-form textarea { min-height: 44px; border: 1.5px solid var(--line-strong); border-radius: var(--r-s); padding: 8px 12px; background: var(--surface); color: var(--ink); font: inherit; width: 100%; box-sizing: border-box; }
+.cm-sel { display: inline-flex; } .cm-sel select { width: auto; }
+.cm-search input { max-width: 520px; }
+.cm-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.cm-card { display: grid; gap: 10px; height: 100%; box-sizing: border-box; padding: 18px 18px 14px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); color: var(--ink); text-decoration: none; }
+.cm-card:hover, .cm-card:focus-visible { border-color: var(--sea); }
+.cm-kind { font-size: max(14px, .88em); font-weight: 700; color: var(--sea-deep); }
+.cm-kind.free { color: var(--sun-deep); }
+.cm-title { font-size: 1.12em; line-height: 1.4; }
+.cm-tip { display: flex; gap: 6px; align-items: flex-start; font-size: max(14px, .92em); color: var(--muted); }
+.cm-tip .ic { flex: none; margin-top: 3px; color: var(--sea); }
+.cm-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: max(14px, .88em); color: var(--muted); margin: 0; }
+.cm-stars { color: var(--sun-deep); letter-spacing: 1px; }
+.cm-mine { font-style: normal; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--sea-soft); color: var(--sea-deep); }
+/* 코스 띠: 점과 선으로 잇는 작은 노선도. 식당·카페는 속이 빈 점 */
+.cm-strip { list-style: none; margin: 0; padding: 4px 0 0; display: flex; flex-wrap: wrap; row-gap: 10px; }
+.cm-strip li { position: relative; display: flex; align-items: center; padding-left: 18px; margin-right: 22px; font-size: max(14px, .92em); font-weight: 600; color: var(--sea-deep); }
+.cm-strip li::before { content: ""; position: absolute; left: 0; width: 11px; height: 11px; border-radius: 50%; background: var(--sea); box-shadow: 0 0 0 3px var(--sea-soft); }
+.cm-strip li.eat::before { background: var(--surface); border: 2.5px solid var(--sun-deep); box-shadow: none; width: 7px; height: 7px; }
+.cm-strip li:not(:last-child)::after { content: ""; position: absolute; right: -18px; top: 50%; width: 14px; border-top: 2px dashed var(--line-strong); }
+.cm-detail .cm-post { display: grid; gap: 12px; }
+.cm-h { font-size: clamp(1.5em, 3vw, 2em); margin: 0; line-height: 1.3; }
+.cm-detail .cm-strip li { font-size: 1.02em; }
+.cm-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cm-actions .btn-go, .cm-form .btn-go { display: inline-flex; align-items: center; gap: 8px; justify-self: start; }
+.cm-body { white-space: pre-line; line-height: 1.8; max-width: 70ch; margin: 0; }
+.cm-tips { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cm-tips li { display: flex; gap: 8px; align-items: flex-start; background: var(--mist); border-radius: var(--r-s); padding: 10px 12px; }
+.cm-tips .ic { flex: none; margin-top: 4px; color: var(--sea); }
+.cm-clist { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.cm-clist li { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.cm-clist b { margin-right: 8px; } .cm-clist p { margin: 4px 0 0; }
+.cm-form { display: grid; gap: 12px; }
+.cm-form label { display: grid; gap: 6px; font-weight: 600; }
+.cm-form fieldset { border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; display: grid; gap: 10px; margin: 0; }
+.cm-form legend { font-weight: 700; padding: 0 6px; }
+.cm-form.inline { grid-template-columns: minmax(0, 160px) minmax(0, 1fr) auto auto; align-items: center; margin-top: 8px; }
+.cm-chk { display: inline-flex !important; grid-auto-flow: column; align-items: center; gap: 6px; font-weight: 500 !important; min-height: 44px; }
+.cm-chk input { width: 22px !important; min-height: 22px !important; }
+.cm-pick { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.cm-pick li span { margin-right: 8px; font-weight: 600; }
+.cm-rate { display: inline-flex; gap: 4px; }
+.cm-rate button { width: 44px; height: 44px; border: 0; background: none; font-size: 28px; color: var(--line-strong); cursor: pointer; border-radius: 50%; }
+.cm-rate button.on { color: var(--sun-deep); }
+.cm-report { margin-top: 8px; }
+.cm-place { display: grid; gap: 10px; }
+.cm-empty { text-align: left; }
+@media (max-width: 640px) { .cm-form.inline { grid-template-columns: 1fr; } }
+
+/* 코스 뒤 장소·숙소 더하기 */
+.add-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.add-row .chip { display: inline-flex; align-items: center; }
+.stay-on { background: color-mix(in srgb, #6B4FA0 12%, var(--surface)); border-color: #6B4FA0; color: #4A3478; font-weight: 600; }
+.stay-x { margin-left: 6px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; font-size: 20px; cursor: pointer; color: inherit; }
+.add-pane { display: grid; gap: 8px; padding: 12px; }
+.add-pane input { min-height: 44px; width: 100%; box-sizing: border-box; border: 1.5px solid var(--line-strong); border-radius: var(--r-s); padding: 0 12px; font: inherit; background: var(--surface); color: var(--ink); }
+.add-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 300px; overflow: auto; }
+.add-list button { width: 100%; text-align: left; display: grid; gap: 2px; padding: 10px 12px; min-height: 44px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.add-list button:hover, .add-list button:focus-visible { border-color: var(--sea); background: var(--mist); }
+.add-list small { color: var(--muted); }

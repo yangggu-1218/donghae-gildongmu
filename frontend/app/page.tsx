@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
-import KakaoMap from "@/components/KakaoMap";
+import KakaoMap, { geocode } from "@/components/KakaoMap";
+import { fuzzyHit as fz } from "@/lib/fuzzy";
 import { Hero, HomeFacts, HowToStrip, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
@@ -13,6 +14,7 @@ import { MicButton } from "@/components/Voice";
 import { buildQuestions, applyExtra, summarize, ExtraQ, ExtraAns } from "@/lib/followup";
 import { MyPage, loadPlans, savePlans } from "@/components/MyTrips";
 import { Icon } from "@/components/Icon";
+import { CommunityPage } from "@/components/Community";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
 import { api, getJSON, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays } from "@/lib/api";
 import { Brief, BRIEF_ICON, evidence, ruleBrief } from "@/lib/brief";
@@ -51,6 +53,12 @@ export default function Page() {
     date: iso(new Date()), start_time: "10:00", meal: [] });
   const [log, setLog] = useState<Msg[]>([]);
   const [qcMore, setQcMore] = useState(false);
+  // 코스 뒤: 장소 더 넣기 / 내 숙소 넣기 (숙소는 코스의 마지막 도착지로 지도·길찾기에 붙는다)
+  const [addOpen, setAddOpen] = useState<"" | "place" | "stay">("");
+  const [addQ, setAddQ] = useState("");
+  const [stays, setStays] = useState<any[]>([]);
+  const [stay, setStay] = useState<{ name: string; addr: string; lat: number; lon: number } | null>(null);
+  const [stayMsg, setStayMsg] = useState("");
   // 코스 지도: map = 우리 지도(점 누르면 정보), kakao = 카카오맵 길찾기(거리·시간·통행료)를 페이지 안에
   const [routeView, setRouteView] = useState<"map" | "kakao">("map");
   const openRoute = () => { setChatOpen(false); setRouteView("kakao"); setTimeout(() => document.querySelector(".res-map")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); };
@@ -432,14 +440,35 @@ export default function Page() {
     const pts: [string, number, number][] = (course?.stops || []).filter((s) => places[s.id]?.lat).map((s) => [name(s.id), places[s.id].lat, places[s.id].lon]);
     if (!pts.length) return "";
     const st = KAKAO_START[cond.start];
-    if (st) { const nm = lang === "ko" ? cond.start : cond.start === "동해역" ? "Donghae Station" : "Mukho Station"; pts.unshift([nm, st[0], st[1]]); if (pts.length < 7) pts.push([nm, st[0], st[1]]); }
+    if (st) { const nm = lang === "ko" ? cond.start : cond.start === "동해역" ? "Donghae Station" : "Mukho Station"; pts.unshift([nm, st[0], st[1]]); if (pts.length < 7 && !stay) pts.push([nm, st[0], st[1]]); }
+    if (stay) { if (pts.length >= 7) pts.length = 6; pts.push([stay.name, stay.lat, stay.lon]); }   // 숙소가 있으면 역으로 돌아가는 대신 숙소로
     if (pts.length < 2) return "";
     const seg = pts.slice(0, 7).map(([n, la, lo]) => `${encodeURIComponent(n.replace(/[,/]/g, " "))},${la},${lo}`).join("/");
     return `https://map.kakao.com/link/by/car/${seg}`;
-  }, [course, places, cond.start, lang]);
-  const pins = useMemo(() => (course?.stops || []).filter((s) => places[s.id]?.lat)
+  }, [course, places, cond.start, lang, stay]);
+  const pins0 = useMemo(() => (course?.stops || []).filter((s) => places[s.id]?.lat)
     .map((s, i) => ({ lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: s.grade,
       sub: `${i + 1}. ${s.arrive}~${s.depart}${s.grade ? ` · ${t(`grade.${s.grade}`)}` : ""}`, addr: (places[s.id].address || "").replace("강원특별자치도 ", "") })), [course, places, lang]);
+  // 마지막 장소 → 숙소 차로 걸리는 시간 (엔진과 같은 어림식: 직선거리 × 1.4, 시속 35km, +5분)
+  const stayMin = useMemo(() => {
+    const last = pins0[pins0.length - 1];
+    if (!stay || !last) return null;
+    const R = 6371, rad = (x: number) => (x * Math.PI) / 180;
+    const d = 2 * R * Math.asin(Math.sqrt(Math.sin(rad(stay.lat - last.lat) / 2) ** 2 + Math.cos(rad(last.lat)) * Math.cos(rad(stay.lat)) * Math.sin(rad(stay.lon - last.lon) / 2) ** 2));
+    return Math.round((d * 1.4) / 35 * 60) + 5;
+  }, [stay, pins0]);
+  const pins = useMemo(() => (stay ? [...pins0, { lat: stay.lat, lon: stay.lon, label: stay.name, grade: null, color: "#6B4FA0", icon: lang === "ko" ? "숙" : "H",
+    sub: lang === "ko" ? `내 숙소 · 마지막 장소에서 차로 약 ${stayMin}분` : `My stay · ~${stayMin} min by car from the last stop`, addr: stay.addr.replace("강원특별자치도 ", "") }] : pins0), [pins0, stay, stayMin, lang]);
+  const openStay = () => {
+    setAddOpen(addOpen === "stay" ? "" : "stay"); setAddQ(""); setStayMsg("");
+    if (!stays.length) api.get("/api/lodging?limit=0").then((d: any) => setStays(d.items || [])).catch(() => {});
+  };
+  const pickStay = async (r: any) => {
+    setStayMsg(lang === "ko" ? "위치를 찾는 중…" : "Finding the location…");
+    const pt = r.lat ? { lat: r.lat, lon: r.lon } : await geocode(r.road || "");
+    if (!pt) { setStayMsg(lang === "ko" ? "주소로 위치를 찾지 못했어요. 다른 숙소를 골라 주세요." : "Couldn't find that address. Try another place."); return; }
+    setStay({ name: r.name, addr: r.road || "", ...pt }); setAddOpen(""); setStayMsg(""); setRouteView("map");
+  };
   const q = Q[step];
   const shareUrl = typeof window !== "undefined" && course ? `${location.origin}${location.pathname}#plan=${encodePlan({ ...cond, lang }, course)}` : "";
   const startName = t(`opt.${cond.start}`);
@@ -524,7 +553,7 @@ export default function Page() {
         <div className="wrap bar">
           <a className="brand" href="#"><img src="/dongi/neutral.webp" alt="" />{t("brand")}</a>
           <nav className="nav" aria-label={t("nav.main")}>
-            {([["#plan", "nav.plan", ""], ["#/places", "nav.places", "places"], ["#/transport", "nav.transport", "transport"], ["#/map", "nav.map", "map"], ["#/my", "nav.my", "my"]] as const).map(([h, k, r]) =>
+            {([["#plan", "nav.plan", ""], ["#/places", "nav.places", "places"], ["#/transport", "nav.transport", "transport"], ["#/map", "nav.map", "map"], ["#/community", "nav.community", "community"], ["#/my", "nav.my", "my"]] as const).map(([h, k, r]) =>
               <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}>{t(k)}</a>)}
           </nav>
           <div className="tools">
@@ -553,6 +582,7 @@ export default function Page() {
       {route[0] === "guide" && <GuidePage lang={lang} />}
       {route[0] === "sources" && <SourcesPage lang={lang} />}
       {route[0] === "admin" && <AdminPage lang={lang} />}
+      {route[0] === "community" && <CommunityPage lang={lang} sub={route[1]} onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
       {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
       {/* 선택과 집중: 첫 화면은 '코스 짜기'가 바로 이어지고, 예시 코스 다음에 나머지 정보가 온다 (기능은 그대로) */}
@@ -692,6 +722,7 @@ export default function Page() {
                 <div className="chips">
                   <button className="chip go sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
                   <button className="chip" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
+                  <button className="chip" onClick={() => { try { sessionStorage.setItem("gd-share", JSON.stringify({ stops: course.stops.map((s) => s.id), kind: cond.move.length ? "easy" : "free", move: cond.move.filter((m) => ["휠체어", "유모차", "오래 걷기 어려움"].includes(m)), who: cond.who })); } catch { /* */ } location.hash = "#/community/new"; }}>{lang === "ko" ? "다녀와서 후기 올리기" : "Share after the trip"}</button>
                 </div>
               </div>
               {brief && (
@@ -708,6 +739,36 @@ export default function Page() {
                   </p>}
                 </section>)}
               <div className="res-map">
+                <div className="add-row" role="group" aria-label={lang === "ko" ? "코스에 더하기" : "Add to the route"}>
+                  <button className="chip" aria-expanded={addOpen === "place"} onClick={() => { setAddOpen(addOpen === "place" ? "" : "place"); setAddQ(""); }}><Icon name="pin" />&nbsp;{lang === "ko" ? "장소 더 넣기" : "Add a place"}</button>
+                  {stay ? <span className="chip stay-on"><Icon name="bed" />&nbsp;{stay.name}<button className="stay-x" onClick={() => setStay(null)} aria-label={lang === "ko" ? "숙소 빼기" : "Remove stay"}>×</button></span>
+                    : <button className="chip" aria-expanded={addOpen === "stay"} onClick={openStay}><Icon name="bed" />&nbsp;{lang === "ko" ? "내 숙소 넣기" : "Add my stay"}</button>}
+                </div>
+                {addOpen && (() => {
+                  const key = addQ.trim().replace(/\s+/g, "");
+                  const inCourse = new Set(course.stops.map((s) => s.id));
+                  const cands = addOpen === "place"
+                    ? Object.values(places).filter((p: any) => p.lat && p.type !== "숙박" && !inCourse.has(p.id))
+                        .filter((p: any) => !key || p.name_ko.replace(/\s+/g, "").includes(key) || fz(p.name_ko, key) >= 0).slice(0, 8)
+                    : [...Object.values(places).filter((p: any) => p.type === "숙박" && p.lat).map((p: any) => ({ name: p.name_ko, road: p.address || "", lat: p.lat, lon: p.lon })), ...stays]
+                        .filter((r: any, i: number, all: any[]) => all.findIndex((x: any) => x.name.replace(/\s+/g, "") === r.name.replace(/\s+/g, "")) === i)
+                        .filter((r: any) => !key || `${r.name}${r.road}`.replace(/\s+/g, "").includes(key) || fz(r.name, key) >= 0).slice(0, 8);
+                  return (
+                    <div className="add-pane panel">
+                      <label><span className="sr-only">{addOpen === "place" ? (lang === "ko" ? "넣을 장소 찾기" : "Find a place") : (lang === "ko" ? "숙소 찾기" : "Find your stay")}</span>
+                        <input type="search" autoFocus value={addQ} onChange={(e) => setAddQ(e.target.value)}
+                          placeholder={addOpen === "place" ? (lang === "ko" ? "넣을 장소 이름 (예: 논골담길, 카페)" : "Place name") : (lang === "ko" ? "숙소 이름이나 주소 (예: 망상, 호텔)" : "Stay name or address")} /></label>
+                      <ul className="add-list">
+                        {cands.map((p: any) => addOpen === "place"
+                          ? <li key={p.id}><button disabled={busy} onClick={() => { setAddOpen(""); edit("add", p.id, lang === "ko" ? `${p.name_ko} 넣어 줘` : `Add ${p.name_en || p.name_ko}`); }}>
+                              <b>{lang === "ko" ? p.name_ko : p.name_en || p.name_ko}</b><small>{t(`opt.${p.type}`) !== `opt.${p.type}` ? t(`opt.${p.type}`) : p.type}</small></button></li>
+                          : <li key={p.name + p.road}><button onClick={() => pickStay(p)}><b>{p.name}</b><small>{(p.road || "").replace("강원특별자치도 ", "")}</small></button></li>)}
+                        {cands.length === 0 && <li className="muted">{lang === "ko" ? "찾는 곳이 없어요. 이름을 조금 다르게 적어 보세요." : "Nothing found. Try another name."}</li>}
+                      </ul>
+                      {addOpen === "place" && <p className="muted small">{lang === "ko" ? "고르면 영업시간과 순서를 다시 맞춰서 넣어 드려요." : "We'll fit it in with opening hours and order."}</p>}
+                      {addOpen === "stay" && <p className="muted small" role="status">{stayMsg || (lang === "ko" ? "숙소는 코스의 마지막 도착지로 지도와 길찾기에 붙어요. 동해시 숙박 공공데이터예요." : "Your stay becomes the last stop on the map and directions.")}</p>}
+                    </div>);
+                })()}
                 {kakaoRoute && (
                   <div className="route-tabs" role="group" aria-label={lang === "ko" ? "지도 보기 방식" : "Map view"}>
                     <button className="chip" aria-pressed={routeView === "map"} onClick={() => setRouteView("map")}>{lang === "ko" ? "코스 지도" : "Course map"}</button>
@@ -777,7 +838,7 @@ export default function Page() {
       </>}
       </main>
       <nav className="tabbar" aria-label={t("nav.main")}>
-        {([["#plan", "nav.plan", "", "route"], ["#/places", "nav.places", "places", "pin"], ["#/transport", "nav.transport", "transport", "bus"], ["#/map", "nav.map", "map", "map"], ["#/my", "nav.my", "my", "cal"]] as const).map(([h, k, r, ic]) =>
+        {([["#plan", "nav.plan", "", "route"], ["#/places", "nav.places", "places", "pin"], ["#/transport", "nav.transport", "transport", "bus"], ["#/map", "nav.map", "map", "map"], ["#/community", "nav.community", "community", "story"], ["#/my", "nav.my", "my", "cal"]] as const).map(([h, k, r, ic]) =>
           <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><Icon name={ic} className="tab-ic" />{t(k)}</a>)}
       </nav>
       <nav className="quick" aria-label={lang === "ko" ? "빠른 메뉴" : "Quick menu"}>
