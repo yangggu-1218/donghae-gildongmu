@@ -1,7 +1,7 @@
 "use client";
 // v4 페이지: 장소 상세 · 교통 · 편의시설 지도 · 내 일정 · 행사 달력 · 숙소 · 여행 준비 · 출처·판정 기준 · 관리자
 // 주소는 #/place/<id> 처럼 '#/' 뒤에 붙는다 (정적 데모와 Next 서버에서 똑같이 동작).
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, getJSON } from "@/lib/api";
 import KakaoMap from "@/components/KakaoMap";
 import { NearbyEats } from "@/components/Eateries";
@@ -298,6 +298,9 @@ export function TransportPage({ lang }: { lang: Lang }) {
   // 버튼을 누르면 그 안내만 열고, 같은 버튼을 한 번 더 누르면 닫는다 (아래로 내려가지 않음)
   const [open, setOpen] = useState<string | null>("tr-van");
   const go = (id: string) => setOpen((o) => (o === id ? null : id));
+  // 주차장을 열면 처음 한 번 내 위치에서 가까운 순으로 자동 정렬 (위치를 못 쓰면 안내만)
+  const askedLoc = useRef(false);
+  useEffect(() => { if (open === "tr-parking" && !origin && !askedLoc.current) { askedLoc.current = true; myLoc(); } }, [open]);
   const won = (n?: number) => (n == null ? "" : `${Math.round(n).toLocaleString()}${L("원", "₩")}`);
   // 이 페이지를 쓰는 사람의 질문 순서: ① 휠체어로 탈 차가 있나 ② 역에서 어떻게 움직이나 ③ 시티투어 ④ 차를 가져가면 ⑤ 택시·렌터카
   const jumps: [string, string, string][] = [["tr-van", "wheel", L("휠체어 차량", "Wheelchair van")], ["tr-station", "train", L("기차역", "Stations")],
@@ -443,18 +446,26 @@ export function TransportPage({ lang }: { lang: Lang }) {
 }
 
 /* ---------------- 편의시설 지도 ---------------- */
+// 순서(사용자 요청): 숙소 → 약국·병원 → 공영주차장 → 관광안내소 → 장애인 화장실 → 전동휠체어 충전기
 const LAYERS = [
-  { k: "toilets", ko: "장애인 화장실", en: "Accessible toilets", color: "#2462B4", icon: "화" },
-  { k: "chargers", ko: "전동휠체어 충전기", en: "Wheelchair chargers", color: "#1E8A3C", icon: "충" },
+  { k: "lodging", ko: "숙소", en: "Places to stay", color: "#6B4FA0", icon: "숙" },
+  { k: "medical", ko: "약국·병원", en: "Pharmacy/clinic", color: "#C9302C", icon: "약" },
   { k: "parking", ko: "공영주차장", en: "Public parking", color: "#566275", icon: "P" },
   { k: "info_centers", ko: "관광안내소", en: "Tourist info", color: "#C46A12", icon: "i" },
-  { k: "medical", ko: "약국·병원 (예시)", en: "Pharmacy/clinic (sample)", color: "#C9302C", icon: "약" },
+  { k: "toilets", ko: "장애인 화장실", en: "Accessible toilets", color: "#2462B4", icon: "화" },
+  { k: "chargers", ko: "전동휠체어 충전기", en: "Wheelchair chargers", color: "#1E8A3C", icon: "충" },
 ] as const;
 
 export function MapPage({ lang }: { lang: Lang }) {
   const L = pick(lang);
-  const [d, err] = useLoad(() => api.get("/api/facilities"), []);
-  const [on, setOn] = useState<Record<string, boolean>>({ toilets: true, chargers: true, parking: false, info_centers: false, medical: false });
+  const [d0, err] = useLoad(() => api.get("/api/facilities"), []);
+  // 약국·병원은 긴급·도움과 같은 국립중앙의료원 실데이터 (서버에 키가 없으면 예시)
+  const [med, setMed] = useState<{ sample: boolean; items: any[] } | null>(null);
+  useEffect(() => { api.get("/api/medical").then(setMed).catch(() => {}); }, []);
+  const d = d0 ? { ...d0, medical: med?.items || d0.medical } : null;
+  const medSample = med ? med.sample : true;
+  const [on, setOn] = useState<Record<string, boolean>>({ lodging: false, medical: false, parking: false, info_centers: false, toilets: true, chargers: true });
+  const [focus, setFocus] = useState<number | null>(null);   // 목록을 누르면 지도에서 그 점을 500m 정도로 확대
   const [me, setMe] = useState<[number, number] | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const items = useMemo(() => {
@@ -470,13 +481,16 @@ export function MapPage({ lang }: { lang: Lang }) {
         seen.add(key);
         const desc = l.k === "toilets" ? `${tr(lang, r.kind)} · ${tr(lang, r.hours)}` : l.k === "chargers" ? `${nm(lang, r.spot || "")} · ${L("평일", "Wkdy")} ${r.wk_open}~${r.wk_close}`
           : l.k === "parking" ? `${r.spaces}${L("면", "")}${r.disabled ? L(" · 장애인 차량 요금 면제", " · free for disabled permit") : ""} · ${r.fee_type}`
-          : l.k === "info_centers" ? `${r.tel || ""} ${r.hours || ""}` : [tr(lang, r.kind), `${r.open}~${r.close}`, r.tel].filter(Boolean).join(" · ");
+          : l.k === "info_centers" ? `${r.tel || ""} ${r.hours || ""}`
+          : l.k === "lodging" ? [tr(lang, r.kind), r.tel].filter(Boolean).join(" · ")
+          : l.k === "medical" && r.open_now != null ? [tr(lang, r.kind), r.open_now ? L(`지금 진료·영업 중 (~${r.until})`, `Open now (until ${r.until})`) : L("지금은 문 닫음", "Closed now"), r.tel].filter(Boolean).join(" · ")
+          : [tr(lang, r.kind), r.open ? `${r.open}~${r.close}` : "", r.tel].filter(Boolean).join(" · ");
         const dm = me ? Math.round(Math.hypot((r.lat - me[0]) * 111000, (r.lon - me[1]) * 88000)) : null;
         out.push({ id: `${l.k}:${r.name}`, layer: l, name: nm(lang, r.name), lat: r.lat, lon: r.lon, desc, road: r.road ? ad(lang, r.road) : nm(lang, r.spot || ""), dm });
       }
     }
     return me ? out.sort((a, b) => a.dm - b.dm) : out;
-  }, [d, on, me, lang]);
+  }, [d0, med, on, me, lang]);
   const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon), sub: x.desc, addr: x.road }));
   const unmapped = (d?.toilets || []).filter((t: any) => !t.lat);
   function locate() {
@@ -488,18 +502,21 @@ export function MapPage({ lang }: { lang: Lang }) {
       <div className="layers chips" role="group" aria-label={L("지도에 보일 것", "Layers")}>
         {LAYERS.map((l) => (
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
-            <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
+            <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}{l.k === "medical" && medSample ? L(" (예시)", " (sample)") : ""}
           </button>))}
         <button className="chip go" onClick={locate}>{L("내 주변부터 보기", "Nearest first")}</button>
       </div>
       {!d ? <Loading err={err} lang={lang} /> : (<>
-        <KakaoMap pins={pins} dots onPick={(i) => setSel(items[i].id)}
+        <KakaoMap pins={pins} dots zoomOnPick focus={focus} center={me} onPick={(i) => { setSel(items[i].id); setFocus(null); }}
           label={L("편의시설 지도. 아래 목록과 같은 내용입니다.", "Facilities map; same as the list below.")} />
         <ul className="fac-list">
           {items.map((x, i) => (
             <li key={x.id} id={`f-${i}`} className={sel === x.id ? "sel" : ""}>
-              <span className="dot" style={{ background: x.layer.color }}>{dot(lang, x.layer.icon)}</span>
-              <div><b>{x.name}</b>{x.dm != null && <span className="muted"> · {dist(x.dm)}</span>}<br /><small className="muted">{x.desc}{x.road ? ` · ${x.road}` : ""}</small></div>
+              <button className="fac-item" onClick={() => { setSel(x.id); setFocus(i); document.querySelector(".sec .map")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
+                aria-label={L(`${x.name} 지도에서 보기`, `Show ${x.name} on the map`)}>
+                <span className="dot" style={{ background: x.layer.color }}>{dot(lang, x.layer.icon)}</span>
+                <div><b>{x.name}</b>{x.dm != null && <span className="muted"> · {dist(x.dm)}</span>}<br /><small className="muted">{x.desc}{x.road ? ` · ${x.road}` : ""}</small></div>
+              </button>
             </li>))}
         </ul>
         {on.toilets && unmapped.length > 0 && (
@@ -508,6 +525,7 @@ export function MapPage({ lang }: { lang: Lang }) {
             <ul className="plain">{unmapped.map((t: any) => <li key={t.name + t.road}>{nm(lang, t.name)} · {tr(lang, t.kind)} · {tr(lang, t.hours)} <small className="muted">{ad(lang, t.road)}</small></li>)}</ul>
           </details>
         )}
+        {on.lodging && <p className="muted small">{L("숙소 위치는 공공데이터 주소로 찾은 건물 위치예요. 장애인 객실은 확인 전이에요. ", "Stay locations come from public address data; accessible rooms not yet checked. ")}<a href="#/stay">{L("숙소 목록으로 보기", "See the list")}</a></p>}
       </>)}
     </section>
   );
@@ -677,7 +695,7 @@ export function StayPage({ lang }: { lang: Lang }) {
 }
 
 /* ---------------- 여행 준비·자주 묻는 질문 ---------------- */
-export function GuidePage({ lang }: { lang: Lang }) {
+export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: boolean }) {
   const L = pick(lang);
   const lists = [
     { t: L("휠체어", "Wheelchair"), i: [L("전동휠체어 충전기 위치 확인 (편의시설 지도)", "Check charger locations"), L("휠체어 차량은 이동지원센터에 미리 문의", "Call the mobility center ahead"), L("장애인 화장실 위치를 코스마다 확인", "Find accessible toilets on each stop"), L("주차할 땐 장애인 주차 구역이 있는 공영주차장으로", "Use lots with accessible bays")] },
@@ -688,7 +706,7 @@ export function GuidePage({ lang }: { lang: Lang }) {
     { t: L("겨울 바닷가 (11~2월)", "Winter by the sea (Nov–Feb)"), i: [L("바닷바람이 차요 — 모자·장갑·무릎 담요", "Sea wind is cold: hat, gloves, lap blanket"), L("해 지는 시각이 5시 반 무렵이라 실외는 오후 4시 전에", "Sunset ~5:30pm; finish outdoors by 4pm"), L("해맞이는 새벽이라 춥고 붐벼요. 출렁다리는 보통 오전 9시부터", "Sunrise is cold and crowded; the bridge usually opens at 9am"), L("눈·비 오는 날은 데크가 미끄러워요 — 실내 위주로", "Wet decks are slippery; go indoors")] },
   ];
   const faq = [
-    [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 그 기준으로 갈 수 있어요, 노랑은 도움이 있거나 조심하면 갈 수 있어요, 빨강은 어려워요. 판정 기준은 [출처·판정 기준] 페이지에 있어요.", "Green = accessible, yellow = with care, red = not accessible. See Sources & criteria.")],
+    [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 그 기준으로 갈 수 있어요, 노랑은 도움이 있거나 조심하면 갈 수 있어요, 빨강은 어려워요. 경사로 기울기·출입구 턱·통로 폭을 장애인등편의법 기준과 비교해 정해요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
     [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("공공데이터·관광공사 정보가 있는 곳은 그 값을 써요. 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
     [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
@@ -703,6 +721,18 @@ export function GuidePage({ lang }: { lang: Lang }) {
     [L("가족에게 일정을 보내고 싶어요.", "How do I share my plan?"), L("[큰 글씨 요약 일정표]에서 [가족에게 보내기]나 [인쇄]를 누르세요. [내 일정]에 저장한 코스도 보낼 수 있어요.", "Use the large-print summary or My trips → Share.")],
     [L("내 위치를 저장하나요?", "Is my location stored?"), L("가까운 안내소·주차장을 찾을 때 한 번만 쓰고 저장하지 않아요.", "Used once to find nearby help or parking; never stored.")],
   ];
+  if (embedded) return (
+    <div className="guide-in">
+      <h2 className="h3">{L("자주 묻는 질문", "Frequently asked")}</h2>
+      <div className="faq">{faq.map(([q, a]) => <details key={q} className="panel"><summary>{q}</summary><p>{a}</p></details>)}</div>
+      <details className="panel prep"><summary>{L("여행 준비물 체크리스트 (휠체어·유모차·어르신·외국인·겨울 바닷가)", "Trip checklists")}</summary>
+        <div className="cards2">{lists.map((x) => <div key={x.t}><h3 className="h3">{x.t}</h3><ul className="checks">{x.i.map((i) => <li key={i}>{i}</li>)}</ul></div>)}</div></details>
+      <div className="panel emer">
+        <h2 className="h3">{L("급할 때", "Emergency")}</h2>
+        <p><b>119</b> {L("응급·구조", "Emergency")} · <b>1330</b> {L("관광통역안내 (24시간)", "Tourist hotline (24h)")} · <b>112</b> {L("경찰", "Police")}</p>
+      </div>
+    </div>
+  );
   return (
     <section className="sec wrap">
       <Head mascot="full-help" lang={lang} photo="zone_mureung" title={L("여행 준비·자주 묻는 질문", "Trip prep & FAQ")} />

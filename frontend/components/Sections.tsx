@@ -252,7 +252,7 @@ export function MoreLinks({ lang }: { lang: Lang }) {
     ["#/map", L("편의시설 지도", "Facilities map"), L("장애인 화장실, 충전기, 안내소, 약국을 한 지도에서", "Accessible toilets, chargers, info centers and pharmacies")],
     ["#/events", L("행사 달력", "Events"), L("축제와 문화행사 날짜에 맞춰 코스 짜기", "Plan around festivals and cultural events")],
     ["#/stay", L("숙소", "Stay"), L("권역별 숙박업소와 확인된 정보", "Lodging by area and what has been checked")],
-    ["#/guide", L("여행 준비", "Before you go"), L("준비물, 자주 묻는 질문, 긴급 연락처", "Checklist, FAQ and emergency contacts")],
+    ["#/community/ask", L("자주 묻는 질문·문의", "FAQ & questions"), L("준비물, 자주 묻는 질문, 관리자에게 문의", "Checklist, FAQ and contact us")],
   ];
   return (
     <section className="sec wrap" aria-labelledby="more-h">

@@ -15,6 +15,8 @@ import { buildQuestions, applyExtra, summarize, ExtraQ, ExtraAns } from "@/lib/f
 import { MyPage, loadPlans, savePlans } from "@/components/MyTrips";
 import { Icon } from "@/components/Icon";
 import { CommunityPage } from "@/components/Community";
+import { SiteFooter } from "@/components/Footer";
+import { ProfileButton, LoginPage, ProfilePage } from "@/components/Profile";
 import { StopCard, Summary, encodePlan, decodePlan, dateLabel, wdName } from "@/components/Timeline";
 import { api, getJSON, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays } from "@/lib/api";
 import { Brief, BRIEF_ICON, evidence, ruleBrief } from "@/lib/brief";
@@ -563,6 +565,7 @@ export default function Page() {
             <select id="lang" className="box" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
               <option value="ko">한국어</option><option value="en">English</option>
             </select>
+            <ProfileButton lang={lang} />
           </div>
         </div>
       </header>
@@ -579,9 +582,11 @@ export default function Page() {
       {route[0] === "my" && <MyPage lang={lang} />}
       {route[0] === "events" && <EventsPage lang={lang} onPlanDate={planDate} />}
       {route[0] === "stay" && <StayPage lang={lang} />}
-      {route[0] === "guide" && <GuidePage lang={lang} />}
+      {route[0] === "guide" && <CommunityPage lang={lang} sub="ask" onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
       {route[0] === "sources" && <SourcesPage lang={lang} />}
       {route[0] === "admin" && <AdminPage lang={lang} />}
+      {route[0] === "login" && <LoginPage lang={lang} />}
+      {route[0] === "me" && <ProfilePage lang={lang} wish={cond.wish || []} places={places} onRemoveWish={removeWish} />}
       {route[0] === "community" && <CommunityPage lang={lang} sub={route[1]} onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
       {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
@@ -856,17 +861,7 @@ export default function Page() {
         </div>)}
       {(cond.wish || []).length > 0 && route[0] !== "" && !toast && (
         <a className="cart" href="#plan">{lang === "ko" ? `담은 곳 ${(cond.wish || []).length}곳 · 코스 짜기` : `${(cond.wish || []).length} saved · Plan`}</a>)}
-      <footer className="foot">
-        <div className="wrap">
-          <nav className="foot-nav" aria-label={t("nav.more")}>
-            <a href="#/events">{t("nav.events")}</a><a href="#/stay">{t("nav.stay")}</a><a href="#/guide">{t("nav.guide")}</a>
-            <a href="#/sources">{t("nav.sources")}</a><a href="#/admin">{t("nav.admin")}</a>
-          </nav>
-          <p><b>{t("brand")}</b> {t("foot.team")}</p>
-          <p>{t("foot.data")}</p>
-          <p>{t("foot.ai")}</p>
-        </div>
-      </footer>
+      <SiteFooter lang={lang} t={t} />
       {sumOpen && course && <Summary course={course} extras={extras} name={name} t={t} lang={lang} start={startName} url={shareUrl} onClose={() => setSumOpen(false)} />}
       {safety && (
         <section className="sheet" role="dialog" aria-modal="false" aria-labelledby="sheet-h" onKeyDown={(e) => { if (e.key === "Escape") setSafety(null); }}>

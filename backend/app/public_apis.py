@@ -1,5 +1,6 @@
 """공공 API 중계: 안심(병원·약국·응급실)과 날씨. 키는 서버에만 두고, 웹 화면은 이 서버만 부른다.
 엔드포인트 이름은 공공데이터포털 각 API의 활용가이드(참고문서)로 한 번 더 확인할 것."""
+from typing import Optional
 import math, os, sys, time, datetime as dt
 import xml.etree.ElementTree as ET
 import httpx
@@ -64,6 +65,41 @@ def nearby_open(lat: float, lon: float) -> dict:
         print("[nmc] er", e)
     out.sort(key=lambda x: (x["kind"] == "응급실", x["dist_m"]))
     return {"sample": False, "places": out[:5]}
+
+
+_MED_CACHE: dict = {}
+
+
+def medical_list(lat: float = 37.5245, lon: float = 129.1143, rows: int = 100) -> Optional[list]:
+    """편의시설 지도용 약국·병의원 목록 (긴급·도움의 nearby_open 과 같은 국립중앙의료원 API).
+    키가 없거나 실패하면 None → 화면은 예시 데이터를 쓴다."""
+    if not KEY:
+        return None
+    import time
+    hit = _MED_CACHE.get("v")
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+    common = {"serviceKey": KEY, "WGS84_LON": lon, "WGS84_LAT": lat, "pageNo": 1, "numOfRows": rows}
+    out = []
+    for kind, path in (("약국", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
+                       ("병의원", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")):
+        try:
+            items = _items(httpx.get(NMC + path, params=common, timeout=8).text)
+        except Exception as e:
+            print("[nmc list]", kind, e); items = []
+        for it in items:
+            try:
+                la, lo = float(it.get("latitude")), float(it.get("longitude"))
+            except (TypeError, ValueError):
+                continue
+            ok, until = _open_now(it, now)
+            out.append({"name": it.get("dutyName"), "kind": kind, "lat": la, "lon": lo, "tel": it.get("dutyTel1", ""),
+                        "road": it.get("dutyAddr", ""), "open_now": bool(ok), "until": until})
+    if not out:
+        return None
+    _MED_CACHE["v"] = (time.time(), out)
+    return out
 
 
 # ---- 기상청 격자 변환 (기상청 공식 LCC 변환식) ----

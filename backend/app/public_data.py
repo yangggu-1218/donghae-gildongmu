@@ -148,14 +148,19 @@ def events_near(lat, lon, radius: int = 800, today: Optional[str] = None) -> lis
     return [e for e in events(today)["upcoming"] if e.get("lat") and dist_m(lat, lon, e["lat"], e["lon"]) <= radius]
 
 
+# 숙박 좌표: 주소를 카카오 주소 검색으로 한 번 바꿔 둔 값 (data/public/lodging_coords.json)
+_LXY_F = Path(__file__).resolve().parents[2] / "data" / "public" / "lodging_coords.json"
+LODGE_XY = json.loads(_LXY_F.read_text(encoding="utf-8")).get("coords", {}) if _LXY_F.exists() else {}
+
+
 def lodging(zone: str = "", limit: int = 0) -> dict:
-    """숙박업소(공중위생업소 중 숙박업). 좌표가 없어 권역으로만 묶고, 접근성은 확인 전이다."""
+    """숙박업소(공중위생업소 중 숙박업). 좌표는 주소 검색으로 붙인 건물 좌표, 접근성은 확인 전이다."""
     seen, ls = set(), []
     for l in sorted(PUB.get("lodging", []), key=lambda l: not l.get("tourist")):   # 관광숙박업 등록 업소를 먼저
         if (not zone or l["zone"] == zone) and l["name"] not in seen:
             seen.add(l["name"]); ls.append(l)
     items = [{"name": l["name"], "kind": l["kind"], "address": l.get("road") or l.get("jibun", ""), "tel": l["tel"], "zone": l["zone"],
-              "tourist": bool(l.get("tourist"))} for l in ls]
+              "tourist": bool(l.get("tourist")), **({"lat": LODGE_XY[l["name"]][0], "lon": LODGE_XY[l["name"]][1]} if l["name"] in LODGE_XY else {})} for l in ls]
     return {"count": len(items), "zone": zone, "accessibility": "확인 전", "items": items[:limit] if limit else items}
 
 

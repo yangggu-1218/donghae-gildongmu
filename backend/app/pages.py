@@ -87,7 +87,7 @@ def transport(lang: str = "ko") -> dict:
 
 
 def facilities() -> dict:
-    """편의시설 지도 층: 장애인 화장실 · 충전기 · 공영주차장 · 관광안내소 · 약국/병원(예시)."""
+    """편의시설 지도 층: 숙소 · 약국/병원 · 공영주차장 · 관광안내소 · 장애인 화장실 · 충전기."""
     P = public_data.PUB
     return {
         "toilets": TOILETS, "toilet_meta": TOILET_META,
@@ -99,6 +99,8 @@ def facilities() -> dict:
                           "closed": c.get("closed")}
                          for c in P.get("info_centers", []) if c.get("lat") and public_data._good(c)],
         "medical": [{**m, "sample": True} for m in details.MED],
+        "lodging": [{"name": l["name"], "kind": l["kind"], "road": l["address"], "tel": l["tel"], "lat": l["lat"], "lon": l["lon"]}
+                    for l in public_data.lodging("", 0)["items"] if l.get("lat")],
     }
 
 

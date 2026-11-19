@@ -1301,3 +1301,99 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .add-list button { width: 100%; text-align: left; display: grid; gap: 2px; padding: 10px 12px; min-height: 44px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
 .add-list button:hover, .add-list button:focus-visible { border-color: var(--sea); background: var(--mist); }
 .add-list small { color: var(--muted); }
+
+/* 편의시설 목록: 누르면 지도에서 그 점으로 */
+.fac-list .fac-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+
+/* 커뮤니티 첫 화면: 두 문 */
+.cm-hub { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cm-door { display: grid; gap: 8px; align-content: start; padding: 26px; border-radius: var(--r-l); border: 2px solid var(--line-strong); text-decoration: none; color: var(--ink); min-height: 190px; }
+.cm-door.talk { background: color-mix(in srgb, var(--sea-soft) 60%, var(--surface)); border-color: var(--sea); }
+.cm-door.ask { background: color-mix(in srgb, var(--sun) 12%, var(--surface)); border-color: color-mix(in srgb, var(--sun-deep) 55%, var(--line-strong)); }
+.cm-door:hover, .cm-door:focus-visible { box-shadow: 0 0 0 3px var(--sea-soft); }
+.cm-door-k { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.cm-door-k .ic { width: 24px; height: 24px; color: var(--sea); }
+.cm-door.ask .cm-door-k .ic { color: var(--sun-deep); }
+.cm-door b { font-family: var(--f-display); font-weight: 400; font-size: 1.6em; color: var(--sea-deep); line-height: 1.3; }
+.cm-door.ask b { color: color-mix(in srgb, var(--sun-deep) 70%, var(--ink)); }
+.cm-door small { color: var(--muted); }
+.cm-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; color: var(--sea-deep); text-decoration: none; }
+.cm-back-ic { transform: rotate(90deg); }
+.cm-ask { display: grid; gap: 16px; }
+.cm-ask h1 { margin: 0; }
+.guide-in { display: grid; gap: 12px; }
+.guide-in .prep summary { font-weight: 700; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.cm-answer { background: var(--mist); border-radius: var(--r-s); padding: 10px 12px; }
+.ok-msg { color: var(--go, #1E7A45); font-weight: 600; }
+.inq-text { white-space: pre-line; }
+@media (max-width: 700px) { .cm-hub { grid-template-columns: 1fr; } }
+/* ==========================================================================
+   사이트 아래 (한국관광공사 누리집 아래쪽 구성 참고): 밝은 회색 바탕, 왼쪽 기관 로고, 오른쪽 공식 SNS
+   ========================================================================== */
+.site-foot { --foot-bg: #EEF1F5; background: var(--foot-bg); color: var(--ink); border-top: 1px solid var(--line); padding: 0 0 36px; margin-top: 48px; }
+.site-foot a { color: inherit; }
+.sf-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.sf-admin { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); font-size: 14px; font-weight: 600; text-decoration: none; color: var(--muted) !important; }
+.sf-admin:hover, .sf-admin:focus-visible { color: var(--sea-deep) !important; border-color: var(--sea); }
+.sf-links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.sf-links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; text-decoration: none; }
+.sf-links a:hover { text-decoration: underline; }
+.sf-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 40px; padding-top: 28px; align-items: start; }
+.sf-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; margin-bottom: 18px; }
+.sf-logos a { display: inline-flex; border-radius: 8px; }
+.sf-logos img { height: 52px; width: auto; display: block; }
+.sf-brand { margin: 0 0 8px; }
+.sf-note { margin: 0 0 6px; font-size: max(14px, .88em); color: var(--muted); max-width: 72ch; }
+.sf-sns-h { margin: 0 0 10px; font-weight: 700; text-align: right; }
+.sf-sns { list-style: none; margin: 0; padding: 0; display: flex; gap: 12px; }
+.sf-sns a { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--surface); color: #2B3442; border: 1px solid var(--line); }
+.sf-sns a:hover, .sf-sns a:focus-visible { color: var(--sea-deep); border-color: var(--sea); }
+@media (max-width: 760px) { .sf-main { grid-template-columns: 1fr; } .sf-sns-h { text-align: left; } .sf-logos img { height: 44px; } }
+@media (prefers-color-scheme: dark) { .site-foot { --foot-bg: #121D2B; } .sf-sns a { color: #E8EEF6; } }
+
+/* ==========================================================================
+   로그인 · 프로필 (이 기기)
+   ========================================================================== */
+.pf-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 6px; border: 1.5px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 600; white-space: nowrap; }
+.pf-btn.login { padding: 0 14px; }
+.pf-btn:hover, .pf-btn:focus-visible { border-color: var(--sea); }
+.pf-av { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: #fff; font-weight: 700; flex: none; }
+.pf-av.big { width: 84px; height: 84px; font-size: 36px; font-family: var(--f-display); font-weight: 400; }
+.pf-nick { max-width: 8em; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) { .pf-nick { display: none; } .pf-btn { padding: 0 6px; } .pf-btn.login { padding: 0 12px; } }
+@media (max-width: 600px) { .pf-btn.login .pf-ic { display: none; } }
+.pf-login .pf-card { max-width: 520px; display: grid; gap: 14px; }
+.pf-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+.pf-tabs button { min-height: 48px; border: 0; background: none; font: inherit; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; }
+.pf-tabs button[aria-selected="true"] { color: var(--sea-deep); border-bottom-color: var(--sun); }
+.pf { display: grid; gap: 16px; }
+.pf-hero { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: center; padding: 28px; border-radius: var(--r-l); background: linear-gradient(120deg, var(--sea-soft), var(--surface)); border: 1px solid var(--line); }
+.pf-who { flex: 1; min-width: 200px; }
+.pf-who h1 { margin: 0; }
+.pf-who p { margin: 4px 0 0; }
+.pf-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.pf-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.pf-stats button { display: grid; justify-items: center; gap: 2px; min-height: 76px; padding: 10px 6px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.pf-stats button b { font-size: 1.6em; color: var(--sea-deep); line-height: 1.1; }
+.pf-stats button[aria-selected="true"] { border-color: var(--sea); box-shadow: inset 0 -3px 0 var(--sun); }
+.pf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pf-list li { display: flex; gap: 10px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 8px 0; }
+.pf-list a { display: grid; gap: 2px; text-decoration: none; color: var(--ink); min-height: 44px; align-content: center; }
+.pf-set { display: grid; gap: 12px; }
+.pf-set fieldset { border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; }
+.link-btn.danger { color: var(--stop, #C9302C); justify-self: start; }
+@media (max-width: 700px) { .pf-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pf-hero { padding: 20px; } }
+
+/* 머리말 한 줄 유지: 로그인 버튼이 생겨 좁아진 만큼 도구를 줄인다 */
+@media (max-width: 1500px) {
+  .tools .bigt .long { display: none; } .tools .bigt .short { display: inline; }
+  .pf-btn.login .pf-txt, .pf-nick { display: none; }
+  .pf-btn, .pf-btn.login { width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .tools #lang { padding-right: 26px; }
+}
+@media (min-width: 761px) { .bar { flex-wrap: nowrap; } .nav { flex-wrap: nowrap; } .nav a { white-space: nowrap; padding: 8px 10px; } }
+/* 아래 탭 6개(커뮤니티 추가)도 한 줄로 */
+.tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; flex-wrap: nowrap !important; }
+.tabbar a { min-width: 0; font-size: 13px; padding-inline: 1px; }
+/* 휴대폰에서도 로그인 사람 아이콘은 보이게 */
+.pf-btn.login .pf-ic { display: block !important; }

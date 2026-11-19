@@ -5,11 +5,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Icon } from "@/components/Icon";
+import { SourcesPage } from "@/components/Pages";
 
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
-const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보 검수", "reports"],
-  ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["me", "내 계정", null]] as const;
+const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보 검수", "reports"], ["inquiries", "문의", "reports"],
+  ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
 type TabKey = (typeof TABS)[number][0];
 type User = { id: string; name: string; role: string; role_name: string; perms: string[]; must_change?: boolean; expires_at?: string };
 const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·백업·초기화", editor: "장소·알림·공지·행사·제보·현장 기록·되돌리기", surveyor: "현장 확인 기록 입력과 제보 검수만" };
@@ -110,6 +111,8 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
       {tab === "notice" && <Notices places={places} db={db} tok={tok} call={call} name={name} />}
       {tab === "site" && <SiteEditor db={db} tok={tok} call={call} />}
       {tab === "reports" && <Reports tok={tok} call={call} onExpired={onExpired} canNotice={can("notice")} />}
+      {tab === "inquiries" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
+      {tab === "sources" && <SourcesPage lang="ko" />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}
       {tab === "history" && <History db={db} tok={tok} call={call} name={name} canBackup={can("backup")} />}
       {tab === "data" && <Probe tok={tok} />}
@@ -279,6 +282,35 @@ function SiteEditor({ db, tok, call }: any) {
 }
 
 /* ---------- 제보 검수 (반영하면 알림으로 바로 올리기) ---------- */
+// 커뮤니티 > 문의하기로 들어온 문의: 읽고, 답변 쓰고, 상태 바꾸기 (답변은 문의한 사람 화면 [내 문의]에 보임)
+function Inquiries({ tok, call, onExpired }: any) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const load = () => api.get("/api/admin/inquiries", tok).then(setRows).catch((e: any) => { if (e.status === 401) onExpired(); setRows([]); });
+  useEffect(() => { load(); }, []);
+  return (
+    <ul className="rv-list">
+      {(rows || []).map((r) => <InquiryRow key={r.id} r={r} onSave={(body: any) => call(() => api.post(`/api/admin/inquiries/${r.id}`, body, tok), "문의 처리 결과를 저장했어요.").then(load)} />)}
+      {rows && !rows.length && <li className="muted">아직 들어온 문의가 없어요. 커뮤니티 &gt; 문의하기에서 들어와요.</li>}
+    </ul>
+  );
+}
+function InquiryRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
+  const [s, setS] = useState(r.status || "접수");
+  const [a, setA] = useState(r.answer || "");
+  return (
+    <li className="panel rv-row">
+      <p><b>[{r.category}]</b> {r.nick}{r.contact ? <small className="muted"> · {r.contact}</small> : null} <small className="muted">· {String(r.created_at).replace("T", " ").slice(0, 16)}</small></p>
+      <p className="inq-text">{r.text}</p>
+      <label>답변<textarea rows={3} value={a} onChange={(e) => setA(e.target.value)} placeholder="문의한 사람 화면 [내 문의]에 보여요" /></label>
+      <div className="chips">
+        {["접수", "확인 중", "답변 완료"].map((x) => <button key={x} className="chip sm" aria-pressed={s === x} onClick={() => setS(x)}>{x}</button>)}
+        <button className="chip go" onClick={() => onSave({ status: s === "접수" && a.trim() ? "답변 완료" : s, answer: a })}>저장</button>
+      </div>
+      {r.answered_by && <p className="muted small">마지막 처리: {r.answered_by} · {String(r.answered_at).replace("T", " ").slice(0, 16)}</p>}
+    </li>
+  );
+}
+
 function Reports({ tok, call, onExpired, canNotice }: any) {
   const [rows, setRows] = useState<any[] | null>(null);
   const load = () => api.get("/api/admin/reports", tok).then(setRows).catch((e: any) => { if (e.status === 401) onExpired(); setRows([]); });

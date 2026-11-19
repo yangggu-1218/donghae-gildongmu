@@ -18,7 +18,8 @@ function popHTML(p: Pin) {
 const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 
 // dots: 편의시설 지도용. 색 점 + 글자 하나, 누르면 onPick(i)
-export default function KakaoMap({ pins, overview = false, dots = false, onPick, label }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string }) {
+// zoomOnPick: 점을 누르면 그 주변 약 500m가 보이게 확대 · focus: 바깥(목록)에서 고른 점 · center: 내 위치 등 기준점
+export default function KakaoMap({ pins, overview = false, dots = false, onPick, label, zoomOnPick = false, focus = null, center = null }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string; zoomOnPick?: boolean; focus?: number | null; center?: [number, number] | null }) {
   const ref = useRef<HTMLDivElement>(null);
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
   const [failed, setFailed] = useState(false);   // 키가 틀렸거나 도메인이 등록되지 않으면 약도로 대신한다
@@ -26,6 +27,8 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
   const sig = pins.map((p) => `${p.lat},${p.lon},${p.label},${p.color || ""},${p.grade || ""},${p.sub || ""}`).join("|");
   const pinsRef = useRef(pins); pinsRef.current = pins;
   const pickRef = useRef(onPick); pickRef.current = onPick;
+  const zoomRef = useRef(zoomOnPick); zoomRef.current = zoomOnPick;
+  const apiRef = useRef<{ focus: (i: number) => void; center: (lat: number, lon: number) => void } | null>(null);
 
   useEffect(() => {
     const pins = pinsRef.current;
@@ -72,7 +75,12 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
       const hook = (el: HTMLElement, p: Pin, pos: any, i: number) => {
         el.onmouseenter = () => show(p, pos, false); el.onmouseleave = hideSoon;
         el.onfocus = () => show(p, pos, false); el.onblur = hideSoon;
-        el.onclick = (e) => { e.stopPropagation(); show(p, pos, true); pickRef.current?.(i); };
+        el.onclick = (e) => { e.stopPropagation(); pickRef.current?.(i); zoomTo(p, pos); };
+      };
+      // 레벨 4 ≈ 화면에 반경 500m 안팎. 이미 더 가까이 보고 있으면 그대로 두고 가운데로만 옮긴다
+      const zoomTo = (p: Pin, pos: any) => {
+        if (zoomRef.current && map.getLevel() > 4) { map.setLevel(4, { anchor: pos }); map.panTo(pos); window.setTimeout(() => show(p, pos, true), 380); }
+        else { if (zoomRef.current) map.panTo(pos); show(p, pos, true); }
       };
       const path = pins.map((p) => new maps.LatLng(p.lat, p.lon));
       pins.forEach((p, i) => {
@@ -101,10 +109,27 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
       });
       if (!overview && !dots) new maps.Polyline({ map, path, strokeWeight: 3, strokeColor: "#566275", strokeStyle: "shortdash" });
       if (pins.length > 1) map.setBounds(bounds); else map.setLevel(4);
+      apiRef.current = {
+        focus: (i: number) => { const p = pins[i]; if (p) { const z = zoomRef.current; zoomRef.current = true; zoomTo(p, path[i]); zoomRef.current = z; } },
+        center: (lat: number, lon: number) => { map.setLevel(4); map.setCenter(new maps.LatLng(lat, lon)); },
+      };
+      // 숨겨진 칸(교통 탭 등)에서 만들어진 지도는 크기가 0이라 회색으로 깨진다 → 보이게 되면 다시 그리기
+      let wasZero = box.clientWidth === 0;
+      const ro = new ResizeObserver(() => {
+        if (!box.clientWidth) { wasZero = true; return; }
+        map.relayout();
+        if (wasZero) { wasZero = false; if (pins.length > 1) map.setBounds(bounds); else map.setCenter(path[0]); }
+      });
+      ro.observe(box);
+      cleanup = () => ro.disconnect();
     };
+    let cleanup = () => {};
     const safeDraw = () => { try { draw(); } catch (e) { console.error(e); setFailed(true); } };
     loadKakao().then(safeDraw).catch(() => setFailed(true));
+    return () => cleanup();
   }, [key, sig, failed, overview, dots]);
+  useEffect(() => { if (focus != null) apiRef.current?.focus(focus); }, [focus]);
+  useEffect(() => { if (center) apiRef.current?.center(center[0], center[1]); }, [center?.[0], center?.[1]]);
 
   if (!key || failed || !pins.length) return <Sketch pins={pins} overview={overview} dots={dots} onPick={onPick} />;
   return <div className="map" ref={ref} style={{ display: "block" }} role={dots ? undefined : "img"} aria-label={label || (overview ? "동해 관광지 지도" : "코스 지도. 아래 목록과 같은 내용입니다.")} />;

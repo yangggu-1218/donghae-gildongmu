@@ -841,7 +841,7 @@ export function makeApi(DATA) {
     if (path.startsWith("/api/admin/history")) return "history";
     if (["/api/admin/backup", "/api/admin/restore", "/api/admin/reset"].includes(path)) return "backup";
     if (path.startsWith("/api/admin/accounts")) return "accounts";
-    if (path.startsWith("/api/admin/reports") || path === "/api/admin/report") return "reports";
+    if (path.startsWith("/api/admin/reports") || path === "/api/admin/report" || path.startsWith("/api/admin/inquiries")) return "reports";
     if (path.startsWith("/api/admin/visits")) return "visits";
     if (path === "/api/admin/probe") return "data";
     return null;
@@ -1059,8 +1059,23 @@ export function makeApi(DATA) {
       adminSet("reports", [...adminGet("reports"), rec]);
       return { ok: true, id: rec.id, ai: null, demo: true };
     }
+    if (path === "/api/inquiries" && method === "POST") {
+      const text = (body.text || "").trim();
+      if (text.length < 5) throw new Error("400:문의 내용을 5자 이상 적어 주세요");
+      const cats = ["이용 방법", "장소 정보", "접근성·길 정보", "오류 신고", "기타"];
+      const rec = { id: Math.random().toString(16).slice(2, 14), nick: (body.nick || "방문자").trim().slice(0, 20), contact: (body.contact || "").trim().slice(0, 60),
+        category: cats.includes(body.category) ? body.category : "기타", text: text.slice(0, 1000), status: "접수", answer: "", created_at: new Date().toISOString().slice(0, 19) };
+      adminSet("inquiries", [...adminGet("inquiries"), rec]);
+      return { ok: true, id: rec.id };
+    }
+    if (path === "/api/inquiries/mine") { const want = String(q.ids || "").split(","); return adminGet("inquiries").filter((r) => want.includes(r.id)); }
+    if (path === "/api/admin/inquiries" && method === "GET") return adminGet("inquiries").sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    if (path.startsWith("/api/admin/inquiries/")) { const id = path.split("/").pop();
+      adminSet("inquiries", adminGet("inquiries").map((r) => (r.id !== id ? r : { ...r, status: body.status || r.status, answer: (body.answer ?? r.answer ?? "").slice(0, 1000), answered_at: nowIso(), answered_by: ACTOR })));
+      return { ok: true }; }
     if (path === "/api/transport") return ST.transport;
     if (path === "/api/facilities") return ST.facilities;
+    if (path === "/api/medical") return { sample: true, source: "예시", items: ST.facilities.medical };
     if (path === "/api/sources") return { ...ST.sources, ai: { connected: false, demo: true } };
     if (path === "/api/events/all") return { events: events("0000-00-00").upcoming, as_of: ST.events_all.as_of };
     if (path === "/api/lodging") { const items = ST.lodging.items.filter((l) => !q.zone || l.zone === q.zone); return { count: items.length, zone: q.zone || "", accessibility: "확인 전", items: +q.limit ? items.slice(0, +q.limit) : items }; }

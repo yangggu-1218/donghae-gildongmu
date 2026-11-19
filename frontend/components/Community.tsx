@@ -3,7 +3,8 @@
 // 시연판은 이 브라우저에만 저장한다 (lib/community.ts). 결정 배경: docs/16_COMMUNITY_PANEL.md
 import { useEffect, useMemo, useState } from "react";
 import { getJSON } from "@/lib/api";
-import { Head } from "@/components/Pages";
+import { Head, GuidePage } from "@/components/Pages";
+import { api } from "@/lib/api";
 import { Icon } from "@/components/Icon";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { allPosts, load, save, today, type Post, type PlaceNote } from "@/lib/community";
@@ -41,8 +42,82 @@ export function CommunityPage({ lang, sub, onUse }: { lang: Lang; sub?: string; 
   if (sub && one) return <Detail lang={lang} p={one} places={places} helped={!!st.helpful[one.id]} onUse={onUse}
     onHelp={() => upd((s) => { s.helpful[one.id] = !s.helpful[one.id]; })}
     onComment={(c) => upd((s) => { (s.comments[one.id] ||= []).push(c); })}
-    onHide={() => { upd((s) => { s.hidden[one.id] = true; }); location.hash = "#/community"; }} />;
-  return <List lang={lang} posts={posts} places={places} />;
+    onHide={() => { upd((s) => { s.hidden[one.id] = true; }); location.hash = "#/community/talk"; }} />;
+  if (sub === "talk") return <List lang={lang} posts={posts} places={places} />;
+  if (sub === "ask") return <Ask lang={lang} />;
+  return <Hub lang={lang} n={posts.length} />;
+}
+
+// 커뮤니티 첫 화면: 이야기 나누기 / 문의하기 중 고르기
+function Hub({ lang, n }: { lang: Lang; n: number }) {
+  const L = pick(lang);
+  return (
+    <section className="sec wrap cm">
+      <Head lang={lang} mascot="full-cheer" title={L("커뮤니티", "Community")} sub={L("다녀온 사람들의 이야기를 보거나, 궁금한 점을 물어보세요.", "Read trips from other travelers or ask us a question.")} />
+      <div className="cm-hub">
+        <a className="cm-door talk" href="#/community/talk">
+          <span className="cm-door-k"><Icon name="story" />{L("이야기 나누기", "Trips & stories")}</span>
+          <b>{L("다녀온 길", "Trips people took")}</b>
+          <span>{L("다녀온 코스와 길 메모를 보고, 마음에 드는 코스는 그대로 짜 보세요.", "Routes and path notes. Plan any of them in one tap.")}</span>
+          <small>{L(`글 ${n}개`, `${n} posts`)}</small>
+        </a>
+        <a className="cm-door ask" href="#/community/ask">
+          <span className="cm-door-k"><Icon name="info" />{L("문의하기", "Questions")}</span>
+          <b>{L("자주 묻는 질문 · 문의하기", "FAQ & contact us")}</b>
+          <span>{L("자주 묻는 질문과 여행 준비물을 먼저 보고, 없으면 관리자에게 물어보세요.", "Check the FAQ and trip checklist, then ask our team.")}</span>
+          <small>{L("답변은 [내 문의]에서 확인", "Answers appear in My questions")}</small>
+        </a>
+      </div>
+    </section>
+  );
+}
+
+// 문의: 자주 묻는 질문(여행 준비 포함) → 내 문의 → 문의하기
+function Ask({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const CATS: [string, string][] = [["이용 방법", "Using the site"], ["장소 정보", "Place info"], ["접근성·길 정보", "Access & paths"], ["오류 신고", "Report a bug"], ["기타", "Other"]];
+  const [cat, setCat] = useState("이용 방법");
+  const [nick, setNick] = useState(() => { try { return localStorage.getItem("gd-nick") || ""; } catch { return ""; } });
+  const [contact, setContact] = useState("");
+  const [text, setText] = useState("");
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [mine, setMine] = useState<any[]>([]);
+  const ids = () => { try { return JSON.parse(localStorage.getItem("gd-inq") || "[]") as string[]; } catch { return []; } };
+  const loadMine = () => { const x = ids(); if (x.length) api.get(`/api/inquiries/mine?ids=${x.join(",")}`).then(setMine).catch(() => {}); };
+  useEffect(loadMine, []);
+  const send = async () => {
+    if (text.trim().length < 5) { setMsg({ ok: false, t: L("문의 내용을 5자 이상 적어 주세요.", "Write at least 5 characters.") }); return; }
+    try {
+      const r = await api.post("/api/inquiries", { nick, contact, category: cat, text });
+      try { localStorage.setItem("gd-inq", JSON.stringify([...ids(), r.id])); if (nick.trim()) localStorage.setItem("gd-nick", nick.trim()); } catch { /* */ }
+      setText(""); setMsg({ ok: true, t: L("문의를 보냈어요. 답변은 아래 [내 문의]에 보여요.", "Sent. The answer will appear under My questions.") }); loadMine();
+    } catch (e: any) { setMsg({ ok: false, t: e?.message || L("보내지 못했어요. 잠시 뒤 다시 시도해 주세요.", "Couldn't send. Try again shortly.") }); }
+  };
+  return (
+    <section className="sec wrap cm cm-ask">
+      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("커뮤니티", "Community")}</a> › {L("문의하기", "Questions")}</p>
+      <a className="cm-back" href="#/community"><Icon name="down" className="cm-back-ic" />{L("커뮤니티로 돌아가기", "Back to community")}</a>
+      <h1>{L("자주 묻는 질문 · 문의하기", "FAQ & contact us")}</h1>
+      <GuidePage lang={lang} embedded />
+      {mine.length > 0 && (
+        <section className="panel cm-mine-q" aria-labelledby="cm-mq-h">
+          <h2 id="cm-mq-h" className="h3">{L("내 문의", "My questions")}</h2>
+          <ul className="cm-clist">{mine.map((m) => <li key={m.id}><b>[{m.category}]</b> <span className={`badge ${m.status === "답변 완료" ? "b-open" : "b-unknown"}`}>{m.status}</span>
+            <small className="muted"> {String(m.created_at).slice(0, 10)}</small><p>{m.text}</p>{m.answer && <p className="cm-answer"><b>{L("답변", "Answer")}</b> {m.answer}</p>}</li>)}</ul>
+        </section>)}
+      <section className="panel cm-form" aria-labelledby="cm-q-h">
+        <h2 id="cm-q-h" className="h3">{L("관리자에게 문의하기", "Ask our team")}</h2>
+        <p className="muted small">{L("위에서 답을 찾지 못했다면 남겨 주세요. 동해 길동무 관리자가 읽고 답해요. 급한 일은 화면 위 [긴급·도움]을 눌러 주세요.", "If the FAQ didn't help, ask here. For emergencies use Help now at the top.")}</p>
+        <fieldset><legend>{L("무엇에 대한 문의인가요?", "Topic")}</legend>
+          <div className="chips">{CATS.map(([k, en]) => <button type="button" key={k} className="chip" aria-pressed={cat === k} onClick={() => setCat(k)}>{L(k, en)}</button>)}</div></fieldset>
+        <label><span>{L("닉네임", "Nickname")}</span><input value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} placeholder={L("비우면 '방문자'", "Optional")} /></label>
+        <label><span>{L("답변 받을 연락처 (선택)", "Contact for a reply (optional)")}</span><input value={contact} maxLength={60} onChange={(e) => setContact(e.target.value)} placeholder={L("이메일 등. 비워 두면 이 화면에서만 답변을 볼 수 있어요", "Email etc.")} /></label>
+        <label><span>{L("문의 내용", "Your question")}</span><textarea rows={5} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} /></label>
+        {msg && <p className={msg.ok ? "ok-msg" : "err"} role={msg.ok ? "status" : "alert"}>{msg.t}</p>}
+        <button className="btn-go" onClick={send}>{L("문의 보내기", "Send question")}</button>
+      </section>
+    </section>
+  );
 }
 
 function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Record<string, any> }) {
@@ -59,10 +134,9 @@ function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Reco
     .sort((a, b) => (sort === "help" ? b.helpful - a.helpful : b.date.localeCompare(a.date)));
   return (
     <section className="sec wrap cm">
-      <Head lang={lang} mascot="full-cheer" title={L("다녀온 길", "Trips people took")} sub={L("다녀온 코스와 길 정보를 나누는 곳이에요. 마음에 드는 코스는 그대로 짜 볼 수 있어요.", "Routes and path notes from people who went. Plan any of them in one tap.")} />
+      <Head lang={lang} mascot="full-cheer" crumb={[["#/community", L("커뮤니티", "Community")]]} title={L("다녀온 길", "Trips people took")} sub={L("다녀온 코스와 길 정보를 나누는 곳이에요. 마음에 드는 코스는 그대로 짜 볼 수 있어요.", "Routes and path notes from people who went. Plan any of them in one tap.")} />
       <div className="cm-top">
-        <p className="muted small cm-note">{L("지금 보이는 글 대부분은 시연을 위해 만든 예시 글이에요. 내가 쓴 글·댓글은 이 기기에만 저장돼요.", "Most posts here are sample posts for the demo. Your posts and comments stay on this device.")}
-          {lang !== "ko" && <> {L("", "Posts are written in Korean.")}</>}</p>
+        <a className="cm-back" href="#/community"><Icon name="down" className="cm-back-ic" />{L("커뮤니티로 돌아가기", "Back to community")}</a>
         <a className="btn-go cm-write" href="#/community/new"><Icon name="edit" />{L("내 코스 올리기", "Share my trip")}</a>
       </div>
       <div className="cm-filter" role="group" aria-label={L("골라 보기", "Filter")}>
@@ -117,7 +191,7 @@ function Detail({ lang, p, places, helped, onHelp, onComment, onHide, onUse }: {
   };
   return (
     <section className="sec wrap cm cm-detail">
-      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("다녀온 길", "Trips")}</a></p>
+      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("커뮤니티", "Community")}</a> › <a href="#/community/talk">{L("다녀온 길", "Trips")}</a></p>
       <article className="panel cm-post">
         <span className={`cm-kind ${p.kind}`}>{p.kind === "easy" ? L("무장애 여행", "Barrier-free") : L("일반 여행", "Regular")} · {p.who} · {L(ZONE[p.zone]?.[0] || "", ZONE[p.zone]?.[1] || "")}</span>
         <h1 className="cm-h">{p.title}</h1>
@@ -179,7 +253,7 @@ function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, an
   };
   return (
     <section className="sec wrap cm cm-write-page">
-      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("다녀온 길", "Trips")}</a></p>
+      <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("커뮤니티", "Community")}</a> › <a href="#/community/talk">{L("다녀온 길", "Trips")}</a></p>
       <h1>{L("내 코스 올리기", "Share my trip")}</h1>
       <p className="muted">{L("다녀온 순서와 길 정보를 남기면 다음 사람이 그대로 짜 볼 수 있어요. 이 기기에만 저장돼요.", "Your route and path notes help the next traveler. Saved on this device only.")}</p>
       <div className="panel cm-form big">

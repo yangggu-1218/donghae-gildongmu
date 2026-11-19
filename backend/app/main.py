@@ -150,6 +150,15 @@ def facilities():
     return pages.facilities()
 
 
+@app.get("/api/medical")
+def medical():
+    """편의시설 지도 '약국·병원': 긴급·도움과 같은 국립중앙의료원 실데이터. 키가 없으면 예시."""
+    live = public_apis.medical_list()
+    if live:
+        return {"sample": False, "source": "국립중앙의료원 약국·병의원 정보 (공공데이터포털)", "items": live}
+    return {"sample": True, "source": "예시", "items": pages.facilities()["medical"]}
+
+
 @app.get("/api/sources")
 def sources():
     return {**pages.sources(), "ai": llm.status()}
@@ -622,6 +631,49 @@ def admin_review(rid: str, body: dict, x_admin_token: str | None = Header(None))
                 rec = _guard(lambda: cms.add_notice({**n, "place_id": r["place_id"], "from_report": rid}, f"제보 {rid} 반영"))
                 r["notice_id"] = rec["id"]
     _save_jsonl("reports.jsonl", rows)
+    return {"ok": True}
+
+
+# ---------- 문의하기 (커뮤니티 > 문의) : 관리자 [문의] 탭에서 읽고 답한다 ----------
+INQ_CATS = {"이용 방법", "장소 정보", "접근성·길 정보", "오류 신고", "기타"}
+
+
+@app.post("/api/inquiries")
+def inquiry_new(body: dict):
+    text = (body.get("text") or "").strip()
+    if len(text) < 5:
+        raise HTTPException(400, "문의 내용을 5자 이상 적어 주세요")
+    rec = {"id": uuid.uuid4().hex[:12], "nick": (body.get("nick") or "방문자").strip()[:20], "contact": (body.get("contact") or "").strip()[:60],
+           "category": body.get("category") if body.get("category") in INQ_CATS else "기타", "text": text[:1000],
+           "status": "접수", "answer": "", "created_at": dt.datetime.now().isoformat(timespec="seconds")}
+    rows = _jsonl("inquiries.jsonl"); rows.append(rec); _save_jsonl("inquiries.jsonl", rows)
+    return {"ok": True, "id": rec["id"]}
+
+
+@app.get("/api/inquiries/mine")
+def inquiry_mine(ids: str = ""):
+    """내가 보낸 문의의 처리 상태·답변 (문의 id는 그 기기에만 저장)."""
+    want = set(ids.split(",")) - {""}
+    return [{k: r.get(k) for k in ("id", "category", "text", "status", "answer", "created_at", "answered_at")} for r in _jsonl("inquiries.jsonl") if r["id"] in want]
+
+
+@app.get("/api/admin/inquiries")
+def admin_inquiries(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "reports")
+    return sorted(_jsonl("inquiries.jsonl"), key=lambda r: r["created_at"], reverse=True)
+
+
+@app.post("/api/admin/inquiries/{iid}")
+def admin_inquiry(iid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """문의 처리: status = 접수 / 확인 중 / 답변 완료, answer = 답변."""
+    s = _admin(x_admin_token, "reports")
+    rows = _jsonl("inquiries.jsonl")
+    for r in rows:
+        if r["id"] == iid:
+            r["status"] = body.get("status", r["status"])
+            r["answer"] = (body.get("answer") if body.get("answer") is not None else r.get("answer", ""))[:1000]
+            r["answered_at"] = dt.datetime.now().isoformat(timespec="seconds"); r["answered_by"] = _who(s)
+    _save_jsonl("inquiries.jsonl", rows)
     return {"ok": True}
 
 
