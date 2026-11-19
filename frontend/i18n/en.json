@@ -252,8 +252,9 @@
   "day.making": "Planning day {n}…",
   "day.note": "Each day goes to different places. Tap a day to see it.",
   "q.kind": "What kind of trip should I plan?",
-  "kind.easy": "Easy-access trip",
-  "kind.easySub": "Wheelchair, stroller or sore knees",
+  "kind.easy": "Barrier-free trip",
+  "kind.easySub": "With a wheelchair, stroller or sore knees",
   "kind.free": "Regular trip",
-  "kind.freeSub": "Everyone walks fine"
+  "kind.freeSub": "Everyone walks fine",
+  "kind.easyMore": "We check paths, toilets and places to rest"
 }

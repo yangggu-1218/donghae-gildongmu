@@ -51,6 +51,9 @@ export default function Page() {
     date: iso(new Date()), start_time: "10:00", meal: [] });
   const [log, setLog] = useState<Msg[]>([]);
   const [qcMore, setQcMore] = useState(false);
+  // 코스 지도: map = 우리 지도(점 누르면 정보), kakao = 카카오맵 길찾기(거리·시간·통행료)를 페이지 안에
+  const [routeView, setRouteView] = useState<"map" | "kakao">("map");
+  const openRoute = () => { setChatOpen(false); setRouteView("kakao"); setTimeout(() => document.querySelector(".res-map")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); };
   // 입구 두 갈래: easy = 편하게 다니는 코스(걸음 질문 함), free = 일반 여행 코스(걸음 질문 건너뜀)
   const [kind, setKind] = useState<"easy" | "free" | null>(null);   // 빠른 수정: 자주 쓰는 것만 먼저, 나머지는 [더 고치기]
   const [course, setCourse] = useState<Course | null>(null);
@@ -435,7 +438,8 @@ export default function Page() {
     return `https://map.kakao.com/link/by/car/${seg}`;
   }, [course, places, cond.start, lang]);
   const pins = useMemo(() => (course?.stops || []).filter((s) => places[s.id]?.lat)
-    .map((s) => ({ lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: s.grade })), [course, places, lang]);
+    .map((s, i) => ({ lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: s.grade,
+      sub: `${i + 1}. ${s.arrive}~${s.depart}${s.grade ? ` · ${t(`grade.${s.grade}`)}` : ""}`, addr: (places[s.id].address || "").replace("강원특별자치도 ", "") })), [course, places, lang]);
   const q = Q[step];
   const shareUrl = typeof window !== "undefined" && course ? `${location.origin}${location.pathname}#plan=${encodePlan({ ...cond, lang }, course)}` : "";
   const startName = t(`opt.${cond.start}`);
@@ -567,6 +571,15 @@ export default function Page() {
           onKeyDown={(e) => { if (e.key === "Escape" && course) setChatOpen(false); }}>
           {course && <div className="widget-bar"><b>{lang === "ko" ? "동이와 대화" : "Chat with Dongi"}</b>
             <button className="chip sm" onClick={() => setChatOpen(false)} aria-controls="chat-panel" aria-expanded={true}>{lang === "ko" ? "접기" : "Hide"}</button></div>}
+          {forkOpen ? (
+            <div className="fork-stage">
+              <p className="fork-hi"><img src="/dongi/wave.webp" alt="" /><span><b>{t("dongi")}</b>{t("plan.greet")}</span></p>
+              <h3 className="fork-q">{t("q.kind")}</h3>
+              <div className="fork" role="group" aria-label={t("q.kind")}>
+                <button className="fork-btn main" onClick={() => chooseKind("easy")}><Icon name="wheel" /><span><b>{t("kind.easy")}</b><small>{t("kind.easySub")}</small><em>{t("kind.easyMore")}</em></span></button>
+                <button className="fork-btn" onClick={() => chooseKind("free")}><Icon name="route" /><span><b>{t("kind.free")}</b><small>{t("kind.freeSub")}</small></span></button>
+              </div>
+            </div>) : <>
           <ol className="steps" aria-label={lang === "ko" ? "진행 단계" : "Progress"}>
             {STEPS[lang].map((x, i) => <li key={x} className={i < step ? "done" : i === step ? "cur" : ""} aria-current={i === step ? "step" : undefined}>{x}</li>)}
           </ol>
@@ -583,11 +596,6 @@ export default function Page() {
           </div>
           <div className="chat-dock">
             <div className="dock-opts">
-            {forkOpen && (
-              <div className="fork" role="group" aria-label={t("q.kind")}>
-                <button className="fork-btn" onClick={() => chooseKind("easy")}><Icon name="wheel" /><span><b>{t("kind.easy")}</b><small>{t("kind.easySub")}</small></span></button>
-                <button className="fork-btn" onClick={() => chooseKind("free")}><Icon name="route" /><span><b>{t("kind.free")}</b><small>{t("kind.freeSub")}</small></span></button>
-              </div>)}
             {step === 0 && !forkOpen && whenPicker(finishWhen, t("plan.next"))}
             {step > 0 && step < Q.length && (
               <div className="chips big-chips">
@@ -624,6 +632,7 @@ export default function Page() {
             {step > Q.length && course && !whenOpen && (
               <div className="qc" role="group" aria-label={lang === "ko" ? "빠른 수정" : "Quick edits"}>
                 <button className="chip go see" onClick={() => { setChatOpen(false); document.getElementById("timeline")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{lang === "ko" ? "만든 코스 보기" : "See course"}</button>
+                {kakaoRoute && <button className="chip go see" onClick={openRoute}>{lang === "ko" ? "지도로 경로 보기" : "Route on map"}</button>}
                 <button className="chip alt" disabled={busy} onClick={() => remake("other")}>{lang === "ko" ? "다른 곳으로 새로 짜기" : "Try different places"}</button>
                 <button className="chip alt" disabled={busy} onClick={() => remake("slow")}>{lang === "ko" ? "더 느긋하게" : "More relaxed"}</button>
                 <button className="chip alt" disabled={busy} onClick={() => remake("full")}>{lang === "ko" ? "더 알차게" : "Fit in more"}</button>
@@ -657,6 +666,7 @@ export default function Page() {
               <button className="chip go" disabled={busy || !input.trim()}>{t("chat.send")}</button>
             </form>
           </div>
+          </>}
         </section>
 
         <section className={`panel${course ? " res" : ""}`} aria-live="polite" id="timeline">
@@ -698,8 +708,18 @@ export default function Page() {
                   </p>}
                 </section>)}
               <div className="res-map">
-                <KakaoMap pins={pins} />
-                {kakaoRoute && <a className="chip" href={kakaoRoute} target="_blank" rel="noreferrer">{t("route.kakao")}</a>}
+                {kakaoRoute && (
+                  <div className="route-tabs" role="group" aria-label={lang === "ko" ? "지도 보기 방식" : "Map view"}>
+                    <button className="chip" aria-pressed={routeView === "map"} onClick={() => setRouteView("map")}>{lang === "ko" ? "코스 지도" : "Course map"}</button>
+                    <button className="chip" aria-pressed={routeView === "kakao"} onClick={() => setRouteView("kakao")}>{lang === "ko" ? "카카오 길찾기 (거리·시간)" : "Kakao directions"}</button>
+                  </div>)}
+                {routeView === "kakao" && kakaoRoute
+                  ? <iframe className="map route-frame" src={kakaoRoute} title={lang === "ko" ? "카카오맵 길찾기: 출발역에서 코스 순서대로" : "Kakao Map directions in course order"} loading="lazy" />
+                  : <KakaoMap pins={pins} />}
+                <p className="muted small route-note">{routeView === "kakao"
+                  ? (lang === "ko" ? "카카오맵의 자동차 길찾기예요. 거리·시간·통행료·택시비는 카카오맵이 계산해요." : "Kakao Map car directions; distance, time and fares are Kakao's estimates.")
+                  : (lang === "ko" ? "번호를 누르거나 마우스를 올리면 장소 정보와 길찾기가 나와요." : "Tap or hover a number for details and directions.")}</p>
+                {kakaoRoute && <a className="chip" href={kakaoRoute} target="_blank" rel="noreferrer">{routeView === "kakao" ? (lang === "ko" ? "카카오맵 새 창으로 열기" : "Open Kakao Map in a new tab") : t("route.kakao")}</a>}
               </div>
               <div className="tl">
                 {course.stops.map((s, i) => (

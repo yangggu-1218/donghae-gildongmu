@@ -31,3 +31,70 @@ export const SOURCE_NOTES_EN = [
 // 지도 점 안의 글자 (화장실·충전기·약국)
 export const DOT_EN: Record<string, string> = { "화": "WC", "충": "⚡", "약": "Rx" };
 export const dot = (lang: string, s: string) => (lang === "ko" ? s : DOT_EN[s] ?? s);
+
+// ---------- 영어 화면의 고유명사: 뜻이 있는 말은 영어로, 나머지는 로마자(국어의 로마자 표기법 기본 규칙) ----------
+const CHO = ["g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj", "ch", "k", "t", "p", "h"];
+const JUNG = ["a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo", "u", "wo", "we", "wi", "yu", "eu", "ui", "i"];
+const JONG = ["", "k", "k", "k", "n", "n", "n", "t", "l", "k", "m", "l", "l", "l", "p", "l", "m", "p", "p", "t", "t", "ng", "t", "t", "k", "t", "p", "t"];
+// 받침 뒤에 모음(ㅇ)이 오면 받침 소리를 다음 글자 첫소리로 넘긴다 (예: 묵호 → Mukho, 음악 → eumak)
+const LINK = ["", "g", "kk", "ks", "n", "nj", "nh", "d", "r", "lg", "lm", "lb", "ls", "lt", "lp", "lh", "m", "b", "ps", "s", "ss", "ng", "j", "ch", "k", "t", "p", "h"];
+export function roma(s: string): string {
+  let out = "";
+  const cs = Array.from(s);
+  for (let i = 0; i < cs.length; i++) {
+    const c = cs[i].charCodeAt(0) - 0xac00;
+    if (c < 0 || c > 11171) { out += cs[i]; continue; }
+    const cho = Math.floor(c / 588), jung = Math.floor((c % 588) / 28), jong = c % 28;
+    const prev = i > 0 ? cs[i - 1].charCodeAt(0) - 0xac00 : -1;
+    const prevJong = prev >= 0 && prev <= 11171 ? prev % 28 : 0;
+    let head = CHO[cho];
+    if (cho === 11 && prevJong && prevJong !== 21) head = "";   // 넘겨받은 받침은 앞에서 이미 붙음
+    if (cho === 5 && (prevJong === 8 || prevJong === 4)) head = "l";   // ㄹㄹ·ㄴㄹ → ll
+    out += head + JUNG[jung];
+    if (jong) {
+      const n = i + 1 < cs.length ? cs[i + 1].charCodeAt(0) - 0xac00 : -1;
+      const nextIsVowel = n >= 0 && n <= 11171 && Math.floor(n / 588) === 11;
+      out += nextIsVowel && jong !== 21 ? LINK[jong] : JONG[jong];
+    }
+  }
+  return out;
+}
+const cap = (w: string) => w.replace(/(^|[\s(-])([a-z])/g, (_, a, b) => a + b.toUpperCase());
+// 긴 말부터 바꾼다
+const WORDS: [RegExp, string][] = ([
+  ["강원특별자치도", ""], ["동해시", "Donghae"], ["교통약자이동지원센터", " Mobility Support Center"], ["교통약자광역이동지원센터", " Regional Mobility Support Center"],
+  ["문화관광재단", " Culture & Tourism Foundation"], ["관광문화코스", "Tour & Culture Course"], ["순환형", "Loop"], ["종합버스터미널", " Bus Terminal"], ["시외버스터미널", " Intercity Bus Terminal"],
+  ["근로자종합복지회관", " Workers' Welfare Center"], ["상공회의소", " Chamber of Commerce"], ["관광안내소", " Tourist Information"], ["안내소", " Information Center"],
+  ["공영주차장", " Public Parking"], ["주차장", " Parking"], ["렌트카", " Rent-a-car"], ["렌터카", " Rent-a-car"], ["주사무소", " Head Office"], ["영업소", " Branch"], ["사무소", " Office"],
+  ["해수욕장", " Beach"], ["해변", " Beach"], ["계곡", " Valley"], ["공원", " Park"], ["시장", " Market"], ["터미널", " Terminal"], ["은행", " Bank"], ["시청", " City Hall"],
+  ["주민센터", " Community Center"], ["보건소", " Health Center"], ["병원", " Hospital"], ["약국", " Pharmacy"], ["체육관", " Gym"], ["복지관", " Welfare Center"], ["센터", " Center"],
+  ["이마트", "E-Mart"], ["우리은행", "Woori Bank"], ["역영업소", " Station Branch"], ["공영", "Public "], ["입구", " Entrance"], ["중앙", " Central"],
+  ["교육지원청", " Office of Education"], ["근로복지공단", "KCOMWEL "], ["동해시청", "Donghae City Hall"], ["본관", " Main Bldg"], ["별관", " Annex"], ["화장실", " Toilet"], ["행정복지센터", " Community Center"], ["도서관", " Library"], ["문화원", " Cultural Center"], ["경찰서", " Police Station"], ["소방서", " Fire Station"], ["우체국", " Post Office"], ["학교", " School"], ["어린이", " Children's"], ["놀이터", " Playground"], ["광장", " Plaza"], ["체험관", " Experience Center"], ["박물관", " Museum"], ["기념관", " Memorial Hall"], ["해안", " Coast"], ["강원도", "Gangwon "], ["습지", " Wetland"], ["생태", " Eco"], ["자연", " Nature"], ["바다", " Sea"], ["휴게소", " Rest Area"], ["전망대", " Observatory"], ["등대", " Lighthouse"], ["동굴", " Cave"],
+] as [string, string][]).sort((x, y) => y[0].length - x[0].length).map(([k, v]) => [new RegExp(k, "g"), `\u0001${v}\u0001`] as [RegExp, string]);
+export function enName(s: string): string {
+  if (!s || !/[가-힣]/.test(s)) return s;
+  let t = s.replace(/\(주\)|㈜/g, "").replace(/제\s*(\d+)/g, " No.$1 ");
+  t = t.replace(/(\d+)층/g, " $1F ");
+  let front = false;
+  if (/\s*앞$/.test(t)) { front = true; t = t.replace(/\s*앞$/, ""); }
+  t = t.replace(/(\S+)역(?=$|\s)/g, "$1\u0001 Station\u0001");
+  t = t.replace(/(\S{2,})항(?=$|\s)/g, "$1\u0001 Port\u0001");
+  for (const [re, v] of WORDS) t = t.replace(re, v);
+  const out = t.split("\u0001").map((part, i) => (i % 2 ? part : cap(roma(part)))).join("").replace(/\s+/g, " ").trim();
+  return front ? `In front of ${out}` : out;
+}
+// 도로명 주소: '동해시 동해대로 6270-16, 1층 (망상동)' → 'Donghaedae-ro 6270-16, 1F, Donghae'
+export function enAddr(s: string): string {
+  if (!s || !/[가-힣]/.test(s)) return s;
+  const t = s.replace("강원특별자치도 ", "").replace(/\s*\([^)]*\)\s*$/, "").replace(/(\d+)층/g, "$1F").replace(/(\d+)호/g, "#$1").replace(/(\d+)동(?=\s|,|$)/g, "Bldg $1");
+  const parts = t.split(/\s+/).filter((w) => w !== "동해시");
+  const conv = parts.map((w) => {
+    const m = w.match(/^([가-힣\d]+?)(대로|로|길)$/);
+    if (m) return cap(roma(m[1])) + (m[2] === "대로" ? "-daero" : m[2] === "로" ? "-ro" : "-gil");
+    return /[가-힣]/.test(w) ? cap(roma(w)) : w;
+  });
+  return `${conv.join(" ")}, Donghae`.replace(/\s+,/g, ",");
+}
+// 화면용: 한국어 화면은 그대로, 영어 화면은 영어 이름
+export const nm = (lang: string, s?: string | null) => (s == null ? "" : lang === "ko" ? s : enName(s));
+export const ad = (lang: string, s?: string | null) => (s == null ? "" : lang === "ko" ? s.replace("강원특별자치도 ", "") : enAddr(s));

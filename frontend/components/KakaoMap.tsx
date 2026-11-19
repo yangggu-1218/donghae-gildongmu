@@ -4,7 +4,17 @@
 import { useEffect, useRef, useState } from "react";
 
 declare global { interface Window { kakao: any } }
-type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string };
+type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string; sub?: string; addr?: string };
+const isEn = () => typeof document !== "undefined" && document.documentElement.lang === "en";
+const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+const kLink = (p: Pin, kind: "map" | "to") => `https://map.kakao.com/link/${kind}/${encodeURIComponent(p.label.replace(/[,/]/g, " "))},${p.lat},${p.lon}`;
+// 점을 누르거나 마우스를 올리면 뜨는 정보 카드 (이름·설명·주소·카카오맵 보기·길찾기)
+function popHTML(p: Pin) {
+  const en = isEn();
+  return `<div class="map-pop" role="dialog" aria-label="${esc(p.label)}"><button type="button" class="map-pop-x" aria-label="${en ? "Close" : "닫기"}">×</button>
+    <b>${esc(p.label)}</b>${p.sub ? `<span>${esc(p.sub)}</span>` : ""}${p.addr ? `<span>${esc(p.addr)}</span>` : ""}
+    <div class="map-pop-go"><a href="${kLink(p, "map")}" target="_blank" rel="noreferrer">${en ? "Open in Kakao Map" : "카카오맵에서 보기"}</a><a class="go" href="${kLink(p, "to")}" target="_blank" rel="noreferrer">${en ? "Directions" : "길찾기"}</a></div></div>`;
+}
 const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 
 // dots: 편의시설 지도용. 색 점 + 글자 하나, 누르면 onPick(i)
@@ -19,6 +29,22 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
       const { maps } = window.kakao;
       const map = new maps.Map(ref.current, { center: new maps.LatLng(pins[0].lat, pins[0].lon), level: 8 });
       const bounds = new maps.LatLngBounds();
+      const pop = new maps.CustomOverlay({ map: null, position: map.getCenter(), yAnchor: 1.18, zIndex: 10, clickable: true });
+      let pinned = false;
+      const show = (p: Pin, pos: any, keep: boolean) => {
+        if (pinned && !keep) return;
+        const w = document.createElement("div"); w.innerHTML = popHTML(p);
+        const el = w.firstElementChild as HTMLElement;
+        (el.querySelector(".map-pop-x") as HTMLElement).onclick = () => { pinned = false; pop.setMap(null); };
+        pop.setContent(el); pop.setPosition(pos); pop.setMap(map); pinned = keep;
+      };
+      const hide = () => { if (!pinned) pop.setMap(null); };
+      maps.event.addListener(map, "click", () => { pinned = false; pop.setMap(null); });
+      const hook = (el: HTMLElement, p: Pin, pos: any, i: number) => {
+        el.onmouseenter = () => show(p, pos, false); el.onmouseleave = hide;
+        el.onfocus = () => show(p, pos, false); el.onblur = hide;
+        el.onclick = (e) => { e.stopPropagation(); show(p, pos, true); onPick?.(i); };
+      };
       const path = pins.map((p) => new maps.LatLng(p.lat, p.lon));
       pins.forEach((p, i) => {
         const pos = path[i]; bounds.extend(pos);
@@ -28,8 +54,8 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
           el.type = "button"; el.title = p.label; el.setAttribute("aria-label", p.label);
           el.style.cssText = `width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;border:2px solid #fff;font:700 12px sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35)`;
           el.textContent = p.icon || "";
-          el.onclick = () => onPick?.(i);
-          new maps.CustomOverlay({ map, position: pos, content: el });
+          hook(el, p, pos, i);
+          new maps.CustomOverlay({ map, position: pos, content: el, clickable: true });
           return;
         }
         if (overview) {   // 갈 수 있는 관광지 전체 보기: 번호·경로 없이 이름만
@@ -37,8 +63,12 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
             `<div style="background:#fff;border:2px solid #2462B4;border-radius:999px;padding:2px 8px;font:600 12px sans-serif;color:#12355E;white-space:nowrap">${p.label}</div>` });
           return;
         }
-        new maps.CustomOverlay({ map, position: pos, content:
-          `<div style="width:28px;height:28px;border-radius:50%;background:${bg};color:${p.grade === "Y" ? "#1A2433" : "#fff"};display:grid;place-items:center;font-weight:700;border:3px solid #fff" title="${p.label}">${i + 1}</div>` });
+        const el = document.createElement("button");
+        el.type = "button"; el.setAttribute("aria-label", `${i + 1}. ${p.label}`);
+        el.style.cssText = `width:30px;height:30px;border-radius:50%;background:${bg};color:${p.grade === "Y" ? "#1A2433" : "#fff"};display:grid;place-items:center;font:700 14px sans-serif;border:3px solid #fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35)`;
+        el.textContent = String(i + 1);
+        hook(el, p, pos, i);
+        new maps.CustomOverlay({ map, position: pos, content: el, clickable: true });
       });
       if (!overview && !dots) new maps.Polyline({ map, path, strokeWeight: 3, strokeColor: "#566275", strokeStyle: "shortdash" });
       if (pins.length > 1) map.setBounds(bounds); else map.setLevel(4);
@@ -58,7 +88,12 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
 
 // 지도 키가 없을 때(데모·키 발급 전): 좌표로 그린 코스 약도. 실제 지도는 아니고 순서와 방향만 보여 준다.
 function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void }) {
-  const en = typeof document !== "undefined" && document.documentElement.lang === "en";   // 언어는 page.tsx가 <html lang>에 적어 둔다
+  const en = isEn();   // 언어는 page.tsx가 <html lang>에 적어 둔다
+  const [sel, setSel] = useState<number | null>(null);
+  const [keep, setKeep] = useState(false);
+  const enter = (i: number) => { if (!keep) setSel(i); };
+  const leave = () => { if (!keep) setSel(null); };
+  const tap = (i: number) => { setSel(i); setKeep(true); onPick?.(i); };
   if (!pins.length) return <div className="map muted">{en ? "Your route will be drawn here once you plan a course." : "코스를 만들면 여기에 경로가 그려져요."}</div>;
   const W = 520, H = 300, P = 40;
   const lats = pins.map((p) => p.lat), lons = pins.map((p) => p.lon);
@@ -81,14 +116,14 @@ function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[];
         <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ {en ? (dots ? "Facilities sketch" : overview ? "Places sketch" : "Route sketch") : dots ? "편의시설 약도" : overview ? "관광지 약도" : "코스 약도"}</text>
         {!overview && !dots && <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />}
         {dots && pts.map(([px, py], i) => (
-          <g key={i} onClick={() => onPick?.(i)} style={{ cursor: "pointer" }} role="button" aria-label={pins[i].label}>
+          <g key={i} onClick={() => tap(i)} onMouseEnter={() => enter(i)} onMouseLeave={leave} style={{ cursor: "pointer" }} role="button" aria-label={pins[i].label}>
             <circle cx={px} cy={py} r="9" fill={pins[i].color || "var(--sea)"} stroke="var(--surface)" strokeWidth="2" />
             <text x={px} y={py + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">{pins[i].icon || ""}</text>
           </g>))}
         {!dots && pts.map(([px, py], i) => {
           const g = pins[i].grade; const bg = g ? `var(--${g === "G" ? "go" : g === "Y" ? "warn-dot" : "stop"})` : "var(--sea)";
           return (
-            <g key={i}>
+            <g key={i} onClick={overview ? undefined : () => tap(i)} onMouseEnter={overview ? undefined : () => enter(i)} onMouseLeave={overview ? undefined : leave} style={overview ? undefined : { cursor: "pointer" }}>
               <circle cx={px} cy={py} r={overview ? 7 : 15} fill={bg} stroke="var(--surface)" strokeWidth="3" />
               {!overview && <text x={px} y={py + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill={g === "Y" ? "#1A2433" : "var(--on-signal)"}>{i + 1}</text>}
               {(overview ? showLabel[i] : !pts.slice(0, i).some(([qx, qy]) => Math.hypot(qx - px, qy - py) < 60)) && <text x={px > W * 0.6 ? px - 20 : px + 20} y={py + 5} textAnchor={px > W * 0.6 ? "end" : "start"} fontSize="13" fill="var(--ink)">{pins[i].label}</text>}
@@ -96,6 +131,13 @@ function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[];
           );
         })}
       </svg>
+      {sel != null && pins[sel] && (
+        <div className="map-pop sketch" role="dialog" aria-label={pins[sel].label}>
+          <button type="button" className="map-pop-x" aria-label={en ? "Close" : "닫기"} onClick={() => { setSel(null); setKeep(false); }}>×</button>
+          <b>{pins[sel].label}</b>{pins[sel].sub && <span>{pins[sel].sub}</span>}{pins[sel].addr && <span>{pins[sel].addr}</span>}
+          <div className="map-pop-go"><a href={kLink(pins[sel], "map")} target="_blank" rel="noreferrer">{en ? "Open in Kakao Map" : "카카오맵에서 보기"}</a>
+            <a className="go" href={kLink(pins[sel], "to")} target="_blank" rel="noreferrer">{en ? "Directions" : "길찾기"}</a></div>
+        </div>)}
     </div>
   );
 }

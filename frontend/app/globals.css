@@ -1154,11 +1154,58 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .grid:not(.has-course) > #timeline { display: none; }
 .trip-line { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--mist); }
 .tl-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 2px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: .9em; font-weight: 600; color: var(--sea-deep); }
-/* 입구 두 갈래: 크지 않게 */
-.fork { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.fork-btn { display: flex; align-items: center; gap: 10px; text-align: left; min-height: 56px; padding: 8px 14px; border: 1.5px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
-.fork-btn:hover { border-color: var(--sea); background: var(--sea-soft); }
-.fork-btn .ic { flex: none; color: var(--sea); width: 22px; height: 22px; }
-.fork-btn b { display: block; color: var(--sea-deep); }
-.fork-btn small { display: block; color: var(--muted); font-size: max(13px, .85em); line-height: 1.35; }
-@media (max-width: 520px) { .fork { grid-template-columns: 1fr; } }
+/* 입구 두 갈래: 고르기 전엔 카드만, 고르면 대화창. 무장애 카드를 더 크게(주 기능) */
+.fork-stage { padding: 28px 28px 32px; display: grid; gap: 18px; }
+.fork-hi { display: flex; gap: 12px; align-items: center; margin: 0; }
+.fork-hi img { width: 64px; height: 64px; object-fit: contain; flex: none; }
+.fork-hi span { background: var(--mist); border: 1px solid var(--line); border-radius: 20px 20px 20px 6px; padding: 10px 14px; }
+.fork-hi b { display: block; font-family: var(--f-display); font-weight: 400; color: var(--sea-deep); font-size: .9em; }
+.fork-q { margin: 4px 0 0; font-size: 1.35em; }
+.fork { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; align-items: stretch; }
+.fork-btn { display: flex; align-items: center; gap: 16px; text-align: left; padding: 20px 22px; border: 2px solid var(--line-strong); border-radius: var(--r-l); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; min-height: 120px; }
+.fork-btn:hover, .fork-btn:focus-visible { border-color: var(--sea); background: var(--sea-soft); }
+.fork-btn .ic { flex: none; color: var(--sea); width: 32px; height: 32px; }
+.fork-btn b { display: block; color: var(--sea-deep); font-size: 1.2em; font-family: var(--f-display); font-weight: 400; }
+.fork-btn small { display: block; color: var(--muted); font-size: max(14px, .92em); line-height: 1.45; margin-top: 2px; }
+.fork-btn em { display: block; font-style: normal; font-size: max(14px, .88em); color: var(--sea-deep); margin-top: 8px; font-weight: 600; }
+.fork-btn.main { border-color: var(--sea); background: color-mix(in srgb, var(--sea-soft) 60%, var(--surface)); min-height: 160px; padding: 26px 26px; }
+.fork-btn.main .ic { width: 44px; height: 44px; }
+.fork-btn.main b { font-size: 1.5em; }
+@media (max-width: 640px) { .fork { grid-template-columns: 1fr; } .fork-btn.main { min-height: 130px; } .fork-btn { min-height: 92px; } .fork-stage { padding: 20px 16px 22px; } }
+.grid:not(.has-course) > .panel.chat:has(.fork-stage) { height: auto; }
+
+/* 지도 점 정보 카드 (누르거나 마우스를 올리면) */
+.map-pop { position: relative; min-width: 220px; max-width: 300px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 6px 20px rgba(18, 53, 94, .22); padding: 14px 40px 12px 16px; display: grid; gap: 4px; font-family: var(--f-body); font-size: 15px; line-height: 1.45; text-align: left; white-space: normal; word-break: keep-all; }
+.map-pop b { font-size: 1.12em; color: var(--sea-deep); }
+.map-pop span { color: var(--muted); }
+.map-pop-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; border-radius: 50%; }
+.map-pop-x:hover { background: var(--mist); }
+.map-pop-go { display: flex; gap: 10px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; }
+.map-pop-go a { color: var(--sea-deep); font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; }
+.map-pop-go a.go { background: var(--sea); color: var(--sea-ink); padding: 0 14px; border-radius: 999px; text-decoration: none; }
+.map-pop.sketch { position: absolute; left: 12px; bottom: 12px; z-index: 2; }
+
+/* 코스 지도: 우리 지도 / 카카오 길찾기 */
+.route-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.route-frame { width: 100%; border: 1px solid var(--line); display: block; background: var(--mist); }
+#timeline.res > .res-map .route-frame { height: min(640px, calc(100dvh - var(--hdr, 64px) - 170px)); }
+.route-note { margin: 0; }
+@media (max-width: 900px) { #timeline.res > .res-map .route-frame { height: 520px; } }
+/* 글자 크게 보기 + 넓은 화면: 머리말을 두 줄로 정리 (로고·버튼 한 줄, 메뉴 한 줄) — 영어에서 버튼이 엉뚱하게 내려가던 줄바꿈 */
+@media (min-width: 761px) {
+  body.big .bar { display: grid; grid-template-columns: auto 1fr; align-items: center; row-gap: 4px; }
+  body.big .brand { grid-column: 1; grid-row: 1; }
+  body.big .tools { grid-column: 2; grid-row: 1; justify-self: end; }
+  body.big .nav { grid-column: 1 / -1; grid-row: 2; }
+}
+/* 글자 크게 보기 + 좁은 화면: 교통 정보 칸은 한 줄에 하나 (두 칸이면 단어마다 줄이 바뀜) */
+@media (max-width: 600px) { body.big .tr-facts { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { body.big .tr-facts { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { body.big .tr-facts { grid-template-columns: 1fr; } }
+.ko-name { font-family: var(--f-body); font-size: .7em; font-weight: 400; }
+/* 입구 카드: 좁은 화면에서는 아이콘을 글 위로 */
+@media (max-width: 640px) {
+  .fork-btn { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .fork-btn .ic, .fork-btn.main .ic { width: 30px; height: 30px; }
+  .fork-hi img { width: 44px; height: 44px; }
+}
