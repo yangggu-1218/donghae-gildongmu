@@ -36,25 +36,19 @@ def nearby_open(lat: float, lon: float) -> dict:
     """지금 문 연 약국·병의원과 가까운 응급실. 키가 없으면 sample=True 예시를 돌려준다."""
     if not KEY:
         return {"sample": True, "places": [
-            {"name": "○○약국 (예시)", "kind": "약국", "until": "21:00", "dist_m": 350, "tel": "033-000-0000"},
-            {"name": "△△의원 (예시)", "kind": "의원", "until": "18:00", "dist_m": 800, "tel": "033-000-0000"},
-            {"name": "지역 응급실 (예시)", "kind": "응급실", "until": "24시간", "dist_m": 2100, "tel": "033-000-0000"}]}
+            {"name": "○○약국", "kind": "약국", "until": "21:00", "dist_m": 350, "tel": "033-000-0000"},
+            {"name": "△△의원", "kind": "의원", "until": "18:00", "dist_m": 800, "tel": "033-000-0000"},
+            {"name": "지역 응급실", "kind": "응급실", "until": "24시간", "dist_m": 2100, "tel": "033-000-0000"}]}
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
     out = []
     common = {"serviceKey": KEY, "WGS84_LON": lon, "WGS84_LAT": lat, "pageNo": 1, "numOfRows": 20}
-    for kind, path in (("약국", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
-                       ("병의원", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")):
-        try:
-            items = _items(httpx.get(NMC + path, params=common, timeout=5).text)
-        except Exception as e:
-            print("[nmc]", kind, e); items = []
+    for kind, items in (_dh_all() or {}).items():
         for it in items:
-            # 위치기반 목록에는 운영시간이 없을 수 있다 → 기관코드(hpid)로 상세 조회가 필요하면 여기서 추가
+            # 지역 목록에는 요일별 운영시간이 있다. 위치 기반 결과처럼 운영시간이 없으면 '운영시간 확인'
             ok, until = _open_now(it, now)
             if ok or "dutyTime1s" not in it:
                 out.append({"name": it.get("dutyName"), "kind": kind, "until": until or "운영시간 확인",
-                            "dist_m": _dist_m(lat, lon, float(it.get("latitude", lat)), float(it.get("longitude", lon))),
-                            "tel": it.get("dutyTel1", "")})
+                            "dist_m": _dist_m(lat, lon, it["_lat"], it["_lon"]), "tel": it.get("dutyTel1", "")})
     try:
         er = _items(httpx.get(NMC + "/ErmctInfoInqireService/getEgytLcinfoInqire", params=common, timeout=5).text)
         for it in er[:1]:
@@ -83,41 +77,66 @@ def _items_diag(text: str) -> tuple[list[dict], str, str]:
     return [{c.tag: (c.text or "").strip() for c in it} for it in root.iter("item")], code, msg
 
 
-def medical_list(lat: float = 37.5245, lon: float = 129.1143, rows: int = 100) -> Optional[list]:
-    """편의시설 지도용 약국·병의원 목록 (긴급·도움의 nearby_open 과 같은 국립중앙의료원 API).
-    키가 없거나 실패하면 None → 화면은 예시 데이터를 쓴다."""
-    if not KEY:
-        return None
-    import time
-    hit = _MED_CACHE.get("v")
-    if hit and time.time() - hit[0] < 3600:
-        return hit[1]
-    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
-    common = {"serviceKey": KEY, "WGS84_LON": lon, "WGS84_LAT": lat, "pageNo": 1, "numOfRows": rows}
-    out = []
-    diag = []
-    for kind, path in (("약국", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
-                       ("병의원", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")):
+# 동해시 약국·병의원 전체 목록: 지역 목록 조회(시도·시군구)를 먼저 쓰고, 0곳이면 위치 기반 조회로 한 번 더 시도.
+# 위치 기반 조회는 키가 정상(00)이어도 0곳을 돌려준 적이 있어(2026-11-20 실서버) 지역 목록을 기본으로 둔다.
+LIST = {"약국": ("/ErmctInsttInfoInqireService/getParmacyListInfoInqire", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
+        "병의원": ("/HsptlAsembySearchService/getHsptlMdcncListInfoInqire", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")}
+DH_CENTER = (37.5245, 129.1143)
+
+
+def _fetch(kind: str, diag: list) -> list[dict]:
+    lst, loc = LIST[kind]
+    tries = [("목록", lst, {"Q0": q0, "Q1": "동해시", "pageNo": 1, "numOfRows": 500}) for q0 in ("강원특별자치도", "강원도")]
+    tries.append(("위치", loc, {"WGS84_LON": DH_CENTER[1], "WGS84_LAT": DH_CENTER[0], "pageNo": 1, "numOfRows": 100}))
+    for how, path, extra in tries:
         try:
-            r = httpx.get(NMC + path, params=common, timeout=12)
+            r = httpx.get(NMC + path, params={"serviceKey": KEY, **extra}, timeout=12)
             items, code, msg = _items_diag(r.text)
-            diag.append({"kind": kind, "http": r.status_code, "code": code, "msg": msg, "n": len(items)})
+            diag.append({"kind": kind, "how": how, "q0": extra.get("Q0", ""), "http": r.status_code, "code": code, "msg": msg, "n": len(items)})
         except Exception as e:
             items = []
-            diag.append({"kind": kind, "http": None, "code": "", "msg": type(e).__name__, "n": 0})
+            diag.append({"kind": kind, "how": how, "q0": extra.get("Q0", ""), "http": None, "code": "", "msg": type(e).__name__, "n": 0})
         print("[nmc list]", diag[-1], flush=True)
+        good = []
         for it in items:
             try:
-                la, lo = float(it.get("latitude")), float(it.get("longitude"))
+                la = float(it.get("wgs84Lat") or it.get("latitude")); lo = float(it.get("wgs84Lon") or it.get("longitude"))
             except (TypeError, ValueError):
                 continue
-            ok, until = _open_now(it, now)
-            out.append({"name": it.get("dutyName"), "kind": kind, "lat": la, "lon": lo, "tel": it.get("dutyTel1", ""),
-                        "road": it.get("dutyAddr", ""), "open_now": bool(ok), "until": until})
-    MED_DIAG[:] = diag
-    if not out:
+            good.append({**it, "_lat": la, "_lon": lo})
+        if good:
+            return good
+    return []
+
+
+def _dh_all() -> Optional[dict]:
+    """{'약국': [...], '병의원': [...]} 1시간 보관. 키가 없거나 둘 다 0곳이면 None."""
+    if not KEY:
         return None
-    _MED_CACHE["v"] = (time.time(), out)
+    hit = _MED_CACHE.get("raw")
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    diag: list = []
+    got = {k: _fetch(k, diag) for k in LIST}
+    MED_DIAG[:] = diag
+    if not any(got.values()):
+        return None
+    _MED_CACHE["raw"] = (time.time(), got)
+    return got
+
+
+def medical_list() -> Optional[list]:
+    """편의시설 지도용 약국·병의원 목록 (긴급·도움과 같은 국립중앙의료원 API). 실패하면 None → 화면은 예시 데이터."""
+    got = _dh_all()
+    if not got:
+        return None
+    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+    out = []
+    for kind, items in got.items():
+        for it in items:
+            ok, until = _open_now(it, now)
+            out.append({"name": it.get("dutyName"), "kind": kind, "lat": it["_lat"], "lon": it["_lon"], "tel": it.get("dutyTel1", ""),
+                        "road": it.get("dutyAddr", ""), "open_now": bool(ok), "until": until, "div": it.get("dutyDivNam", "")})
     return out
 
 

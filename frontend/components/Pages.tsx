@@ -463,7 +463,6 @@ export function MapPage({ lang }: { lang: Lang }) {
   const [med, setMed] = useState<{ sample: boolean; items: any[] } | null>(null);
   useEffect(() => { api.get("/api/medical").then(setMed).catch(() => {}); }, []);
   const d = d0 ? { ...d0, medical: med?.items || d0.medical } : null;
-  const medSample = med ? med.sample : true;
   const [on, setOn] = useState<Record<string, boolean>>({ lodging: false, medical: false, parking: false, info_centers: false, toilets: true, chargers: true });
   const [focus, setFocus] = useState<number | null>(null);   // 목록을 누르면 지도에서 그 점을 500m 정도로 확대
   const [me, setMe] = useState<[number, number] | null>(null);
@@ -502,7 +501,7 @@ export function MapPage({ lang }: { lang: Lang }) {
       <div className="layers chips" role="group" aria-label={L("지도에 보일 것", "Layers")}>
         {LAYERS.map((l) => (
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
-            <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}{l.k === "medical" && medSample ? L(" (예시)", " (sample)") : ""}
+            <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
           </button>))}
         <button className="chip go" onClick={locate}>{L("내 주변부터 보기", "Nearest first")}</button>
       </div>

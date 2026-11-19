@@ -787,9 +787,9 @@ export function makeApi(DATA) {
 
   function safety(lat, lon, lang) {
     return { sample: true, places: [
-      { name: lang === "en" ? "○○ Pharmacy (sample)" : "○○약국 (예시)", kind: "약국", until: "21:00", dist_m: 350, tel: "033-000-0000" },
-      { name: lang === "en" ? "△△ Clinic (sample)" : "△△의원 (예시)", kind: "의원", until: "18:00", dist_m: 800, tel: "033-000-0000" },
-      { name: lang === "en" ? "Local ER (sample)" : "지역 응급실 (예시)", kind: "응급실", until: "24시간", dist_m: 2100, tel: "033-000-0000" }],
+      { name: lang === "en" ? "○○ Pharmacy" : "○○약국", kind: "약국", until: "21:00", dist_m: 350, tel: "033-000-0000" },
+      { name: lang === "en" ? "△△ Clinic" : "△△의원", kind: "의원", until: "18:00", dist_m: 800, tel: "033-000-0000" },
+      { name: lang === "en" ? "Local ER" : "지역 응급실", kind: "응급실", until: "24시간", dist_m: 2100, tel: "033-000-0000" }],
       help: infoCenters(lat, lon, lang, 2), chargers: chargers(lat, lon, 2), mobility_center: mobilityCenter() };
   }
 
