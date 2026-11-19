@@ -156,7 +156,7 @@ def medical():
     live = public_apis.medical_list()
     if live:
         return {"sample": False, "source": "국립중앙의료원 약국·병의원 정보 (공공데이터포털)", "items": live}
-    return {"sample": True, "source": "예시", "items": pages.facilities()["medical"]}
+    return {"sample": True, "source": "예시", "items": pages.facilities()["medical"], "why": public_apis.MED_DIAG if public_apis.KEY else "서버에 DATA_GO_KR_KEY 없음"}
 
 
 @app.get("/api/sources")

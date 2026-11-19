@@ -68,6 +68,19 @@ def nearby_open(lat: float, lon: float) -> dict:
 
 
 _MED_CACHE: dict = {}
+MED_DIAG: list = []   # 마지막 호출의 결과 코드·메시지·개수 (키는 담지 않는다)
+
+
+def _items_diag(text: str) -> tuple[list[dict], str, str]:
+    """목록과 함께 공공데이터포털의 결과 코드·메시지를 돌려준다 (인증 오류는 OpenAPI_ServiceResponse 형식)."""
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return [], "", " ".join(text[:80].split())
+    g = lambda t: (root.findtext(f".//{t}") or "").strip()
+    code = g("resultCode") or g("returnReasonCode")
+    msg = g("resultMsg") or g("returnAuthMsg") or g("errMsg")
+    return [{c.tag: (c.text or "").strip() for c in it} for it in root.iter("item")], code, msg
 
 
 def medical_list(lat: float = 37.5245, lon: float = 129.1143, rows: int = 100) -> Optional[list]:
@@ -82,12 +95,17 @@ def medical_list(lat: float = 37.5245, lon: float = 129.1143, rows: int = 100) -
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
     common = {"serviceKey": KEY, "WGS84_LON": lon, "WGS84_LAT": lat, "pageNo": 1, "numOfRows": rows}
     out = []
+    diag = []
     for kind, path in (("약국", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
                        ("병의원", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")):
         try:
-            items = _items(httpx.get(NMC + path, params=common, timeout=8).text)
+            r = httpx.get(NMC + path, params=common, timeout=12)
+            items, code, msg = _items_diag(r.text)
+            diag.append({"kind": kind, "http": r.status_code, "code": code, "msg": msg, "n": len(items)})
         except Exception as e:
-            print("[nmc list]", kind, e); items = []
+            items = []
+            diag.append({"kind": kind, "http": None, "code": "", "msg": type(e).__name__, "n": 0})
+        print("[nmc list]", diag[-1], flush=True)
         for it in items:
             try:
                 la, lo = float(it.get("latitude")), float(it.get("longitude"))
@@ -96,6 +114,7 @@ def medical_list(lat: float = 37.5245, lon: float = 129.1143, rows: int = 100) -
             ok, until = _open_now(it, now)
             out.append({"name": it.get("dutyName"), "kind": kind, "lat": la, "lon": lo, "tel": it.get("dutyTel1", ""),
                         "road": it.get("dutyAddr", ""), "open_now": bool(ok), "until": until})
+    MED_DIAG[:] = diag
     if not out:
         return None
     _MED_CACHE["v"] = (time.time(), out)
