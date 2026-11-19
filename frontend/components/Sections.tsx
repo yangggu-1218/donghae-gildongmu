@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { PHOTOS, photoAt } from "@/lib/photos";
 import { MicButton } from "@/components/Voice";
 import { tr } from "@/lib/ko2en";
+import { fuzzyHit } from "@/lib/fuzzy";
 import { Icon } from "@/components/Icon";
 
 // 사진 출처는 사진 위에 쓰지 않고 따로 모아 보여 준다 (lib/photos.ts 에 저작자·라이선스 보관)
@@ -286,8 +287,12 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
     quiet: (p) => { const r = rateToday(p.id); return r != null && r < 50; },
   };
   const filtering = !!key || need.length > 0;
-  const items = list.filter((p) => p.type !== "숙박" && p.type !== "식당" && p.type !== "카페"
-      && (key ? `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}${(p.styles || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key) : true)
+  const exact = (p: any) => `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}${(p.styles || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key);
+  const sightish = (p: any) => p.type !== "숙박" && p.type !== "식당" && p.type !== "카페";
+  // 그대로 찾아서 하나도 없으면 오타를 고쳐 이름으로 다시 찾는다 ("촛데바위" → 촛대바위)
+  const typo = !!key && !list.some((p) => sightish(p) && exact(p)) && list.some((p) => sightish(p) && fuzzyHit(p.name_ko, key) >= 0);
+  const items = list.filter((p) => sightish(p)
+      && (key ? (typo ? fuzzyHit(p.name_ko, key) >= 0 : exact(p)) : true)
       && need.every((n) => NEED_TEST[n]?.(p))
       && (filtering || zone === "all" || p.zone === zone))
     .sort((a, b) => (mode === "none" ? 0 : (ORDER[a.grade] ?? 2) - (ORDER[b.grade] ?? 2)));
@@ -329,7 +334,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
         ))}
       </div>
       {filtering
-        ? <p className="zone-d" role="status">{L(`${key ? `'${q.trim()}' ` : ""}조건에 맞는 곳 ${items.length}곳 (모든 권역)`, `${items.length} place(s) match${key ? ` '${q.trim()}'` : ""} in all areas`)}</p>
+        ? <p className="zone-d" role="status">{typo && <><b className="typo-fix">{L(`'${q.trim()}'와 비슷한 이름으로 찾았어요`, `Showing names similar to '${q.trim()}'`)}</b> </>}{L(`${key ? `'${q.trim()}' ` : ""}조건에 맞는 곳 ${items.length}곳 (모든 권역)`, `${items.length} place(s) match${key ? ` '${q.trim()}'` : ""} in all areas`)}</p>
         : !Z ? <p className="zone-d"><b>{L("동해 전체", "All of Donghae")}</b> {L(`다섯 권역 ${items.length}곳을 한 번에 봐요. 권역 탭을 누르면 그 지역만 보여요.`, `${items.length} places across five areas.`)}</p>
         : <p className="zone-d"><b style={{ color: Z.c }}>{L(Z.ko, Z.en)}</b> {L(Z.d[0], Z.d[1])}</p>}
       <div className="pgrid">
@@ -371,6 +376,7 @@ export function HowToStrip({ lang, onClose }: { lang: Lang; onClose: () => void 
   ];
   return (
     <aside className="howto-strip" aria-labelledby="howto-h">
+      <img className="howto-mascot" src="/dongi/full-help.webp" alt="" />
       <h3 id="howto-h">{L("처음이세요? 이렇게 하면 돼요", "New here? Three steps")}</h3>
       <ol>{steps.map(([ic, ko, en, d], i) => <li key={ko}><span className="n" aria-hidden="true">{i + 1}</span><Icon name={ic} /><span><b>{L(ko, en)}</b><small>{d}</small></span></li>)}</ol>
       <a className="howto-more" href="#/places">{L("먼저 관광지 둘러보기", "Browse places first")}</a>
@@ -415,7 +421,7 @@ export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: numb
 const REVIEWS = [
   { p: ["무릉별유천지", "Mureung Byeolyucheonji"], tag: ["휠체어", "Wheelchair"], t: ["엄마 휠체어로 다녀왔어요. 주차장에서 방문자센터까지 평지라 편했고, 전망 데크는 살짝 경사가 있었어요.", "Went with my mom in a wheelchair. Flat from parking to the visitor center; the deck had a gentle slope."], r: ["알려 주셔서 고마워요! 전망 데크 경사 정보를 확인했어요.", "Thank you! I checked the deck slope info."] },
   { p: ["논골담길", "Nongol-damgil Alley"], tag: ["유모차", "Stroller"], t: ["벽화는 예쁜데 계단이 정말 많아서 유모차는 두고 안고 다녔어요. 사진으로 제보도 남겼어요.", "Lovely murals but so many steps; we left the stroller. I sent a photo report too."], r: ["제보 사진 덕분에 골목길 구간을 다시 확인하고 있어요.", "Thanks to your photo, we're re-checking the alley."] },
-  { p: ["도째비골 스카이밸리", "Dokkaebigol Sky Valley"], tag: ["English", "English"], t: ["영어 코스와 엘리베이터 안내 덕분에 시간을 아꼈어요. 안심 화면의 영어 안내소 정보도 유용했어요.", "The English route and the elevator tip saved us time. The English-speaking info center in Safety helped too."], r: ["도움이 되었다니 기뻐요! 즐거운 여행 되세요.", "Glad it helped! Enjoy Donghae."] },
+  { p: ["도째비골 스카이밸리", "Dokkaebigol Sky Valley"], tag: ["English", "English"], t: ["영어 코스와 엘리베이터 안내 덕분에 시간을 아꼈어요. 긴급·도움 화면의 영어 안내소 정보도 유용했어요.", "The English route and the elevator tip saved us time. The English-speaking info center in Help helped too."], r: ["도움이 되었다니 기뻐요! 즐거운 여행 되세요.", "Glad it helped! Enjoy Donghae."] },
 ];
 export function Reviews({ lang }: { lang: Lang }) {
   const L = pick(lang);

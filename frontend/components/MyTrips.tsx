@@ -7,6 +7,7 @@ import { api, getJSON } from "@/lib/api";
 import { Head } from "@/components/Pages";
 import { decodePlan } from "@/components/Timeline";
 import { Icon } from "@/components/Icon";
+import { fuzzyHit } from "@/lib/fuzzy";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -34,7 +35,9 @@ export function MyPage({ lang }: { lang: Lang }) {
   const upd = (id: string, patch: Partial<SavedPlan>) => put(plans.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   const del = (id: string) => put(plans.filter((p) => p.id !== id));
   const key = q.trim().replace(/\s+/g, "");
-  const shown = plans.filter((p) => !key || `${p.title}${p.stops.join("")}${p.start}${p.date}`.replace(/\s+/g, "").includes(key));
+  const hay = (p: SavedPlan) => `${p.title}${p.stops.join("")}${p.start}${p.date}`.replace(/\s+/g, "");
+  const exactHit = plans.some((p) => hay(p).includes(key));
+  const shown = plans.filter((p) => !key || (exactHit ? hay(p).includes(key) : [p.title, ...p.stops].some((n) => fuzzyHit(n, key) >= 0)));   // 오타면 비슷한 이름으로
   const today = todayIso();
   const byDate = (a: SavedPlan, b: SavedPlan) => (a.date + a.start_time).localeCompare(b.date + b.start_time);
   // 묶음: 즐겨찾기 → 다가오는 여행(달마다) → 지난 여행. '저장한 순'이면 즐겨찾기 → 나머지(최근 저장 먼저)
@@ -54,10 +57,10 @@ export function MyPage({ lang }: { lang: Lang }) {
   const nFav = plans.filter((p) => p.fav).length;
   return (
     <section className="sec wrap">
-      <Head lang={lang} photo="haerang" title={L("내 일정", "My trips")} sub={L("저장한 일정은 이 기기에만 남아요. 서버에는 아무것도 저장하지 않아요.", "Saved only on this device; nothing is stored on a server.")} />
+      <Head lang={lang} mascot="full-cheer" photo="haerang" title={L("내 일정", "My trips")} sub={L("저장한 일정은 이 기기에만 남아요. 서버에는 아무것도 저장하지 않아요.", "Saved only on this device; nothing is stored on a server.")} />
       {!plans.length ? (
         <div className="panel empty">
-          <img src="/dongi/ask.webp" alt="" />
+          <img src="/dongi/full-cheer.webp" alt="" />
           <div>
             <p><b>{L("아직 저장한 일정이 없어요", "No saved trips yet")}</b></p>
             <p className="muted">{L("코스를 짠 뒤 [내 일정에 저장]을 누르면 여기에 모여요. 저장한 일정은 다시 열어 고치거나 가족에게 보낼 수 있어요.", "Plan a route and tap [Save to my trips]. Saved trips can be reopened, edited and shared.")}</p>

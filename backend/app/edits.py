@@ -60,8 +60,55 @@ def find_place(text: str, places: dict[str, Place], ids: Optional[list[str]] = N
         names |= {re.sub(r"(해변|해수욕장)$", "", n) for n in names if re.search(r"(해변|해수욕장)$", n)}   # "망상해변" → "망상"
         for n in names:
             if len(n) >= 2 and (n in t or n in t.lower()):
-                cands.append((p.id in (ids or []), len(n), p.id))
-    return max(cands)[2] if cands else None
+                cands.append((p.id in (ids or []), len(n), -len(_norm(p.name_ko)), p.id))   # 같은 낱말이면 이름이 짧은(그 낱말이 중심인) 곳
+    return max(cands)[3] if cands else (fuzzy_place(t, places, ids) if len(t) >= 3 else None)
+
+
+# ---------------- 오타 알아듣기 ----------------
+# 어르신이 "촛데바위", "도깨비골", "무릉게곡"처럼 한두 글자 틀려도 장소를 찾는다.
+# 글자를 자모(ㅊ·ㅗ·ㅅ…)로 풀어서 비교하고, 3글자 이상 이름만, 3~4글자는 자모 1개·5글자 이상은 2개까지만 틀려도 된다.
+# 데모 엔진(build/api.js findPlace/fuzzyPlace)도 똑같은 규칙이다.
+def _jamo(s: str) -> str:
+    out = []
+    for ch in s:
+        o = ord(ch) - 0xAC00
+        if 0 <= o < 11172:
+            out += [chr(0x1100 + o // 588), chr(0x1161 + (o // 28) % 21)] + ([chr(0x11A7 + o % 28)] if o % 28 else [])
+        else:
+            out.append(ch.lower())
+    return "".join(out)
+
+
+def _lev(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def fuzzy_place(t: str, places: dict[str, Place], ids: Optional[list[str]] = None) -> Optional[str]:
+    best = None
+    for p in places.values():
+        names = {_norm(p.name_ko)} | {_norm(w) for w in re.split(r"[\s·]", p.name_ko) if len(_norm(w)) >= 3}
+        for n in names:
+            if len(n) < 3 or not re.fullmatch(r"[가-힣0-9]+", n):
+                continue
+            lim = 1 if len(n) <= 4 else 2
+            jn = _jamo(n)
+            for L in (len(n) - 1, len(n), len(n) + 1):
+                for i in range(0, max(0, len(t) - L) + 1):
+                    w = t[i:i + L]
+                    if len(w) != L:
+                        continue
+                    d = _lev(_jamo(w), jn)
+                    if d <= lim:
+                        k = (-d, p.id in (ids or []), len(n), -len(_norm(p.name_ko)), p.id)
+                        if best is None or k > best:
+                            best = k
+    return best[4] if best else None
 
 
 def find_index(text: str, n: int) -> Optional[int]:

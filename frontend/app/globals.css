@@ -1054,3 +1054,84 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .acc-tbl .chips { gap: 6px; }
 .who-filter { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; margin: 4px 0 10px; }
 .who-filter select { min-height: 44px; border: 1.5px solid var(--line-strong); border-radius: var(--r-s); padding: 0 10px; background: var(--surface); }
+
+/* ==========================================================================
+   동해시 마스코트 (CIP 디자인표준편람 BS-19~32) — 얼굴은 대화 칸, 전신·응용형은 페이지 곳곳
+   ========================================================================== */
+.says img, .reply img { object-fit: contain; }
+.says img { height: 60px; width: 60px; }
+.brand img { width: 44px; object-fit: contain; }
+.ask-dongi { object-fit: contain; }
+.page-head.has-photo { padding-right: 150px; }
+.page-head-mascot { position: absolute; right: 18px; bottom: -6px; height: 150px; width: auto; z-index: 0; filter: drop-shadow(0 6px 10px rgba(4, 14, 28, .35)); pointer-events: none; }
+.page-head:not(.has-photo) { position: relative; }
+@media (max-width: 700px) { .page-head.has-photo { padding-right: 104px; } .page-head-mascot { height: 104px; right: 6px; } }
+.pp-scene { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); display: grid; justify-items: center; gap: 4px; }
+.pp-scene img { max-height: 220px; width: auto; max-width: 100%; }
+.pp-scene figcaption { font-family: var(--f-display); color: var(--sea-deep); }
+.pp-notice { position: relative; }
+.pp-notice-mascot { float: right; height: 72px; width: auto; margin: -4px 0 4px 10px; }
+.sheet-hello { display: flex; gap: 10px; align-items: flex-end; margin: 6px 0 10px; }
+.sheet-hello img { height: 110px; width: auto; flex: none; }
+.sheet-hello .bubble { margin: 0; }
+.typing { display: flex; align-items: center; gap: 8px; }
+.typing img { width: 40px; height: 40px; object-fit: contain; }
+@media (prefers-reduced-motion: no-preference) { .typing img { animation: dongi-think 1.6s ease-in-out infinite; } @keyframes dongi-think { 50% { transform: rotate(-6deg); } } }
+.howto-strip { grid-template-columns: auto 1fr auto; }
+.howto-mascot { grid-row: 1 / span 2; height: 96px; width: auto; align-self: center; }
+.howto-strip h3 { grid-column: 2 / -1; }
+.howto-strip ol { grid-column: 2; }
+.howto-more { grid-column: 3; }
+@media (max-width: 900px) { .howto-strip { grid-template-columns: auto 1fr; } .howto-mascot { height: 72px; grid-row: 1; } .howto-strip h3 { grid-column: 2; align-self: center; } .howto-strip ol, .howto-more { grid-column: 1 / -1; } }
+.panel.empty img { width: 140px; height: auto; }
+
+/* ---------- 코스가 나온 뒤: 대화는 오른쪽 아래 위젯, 코스(왼쪽)·지도(오른쪽) ---------- */
+.grid.has-course { grid-template-columns: minmax(0, 1fr); }
+.grid.has-course > .panel.chat.widget { display: none; }
+.grid.has-course > .panel.chat.widget.open { display: flex; position: fixed; z-index: 65; right: 20px; bottom: 20px; top: auto; width: min(420px, calc(100vw - 40px));
+  height: min(680px, calc(100dvh - var(--hdr, 64px) - 40px)); box-shadow: 0 24px 60px -20px rgba(12, 35, 64, .5); border-color: var(--sea); }
+.widget-bar { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px 8px 16px; border-bottom: 1px solid var(--line); background: var(--sea-soft); border-radius: var(--r-l) var(--r-l) 0 0; }
+.widget-bar b { font-family: var(--f-display); font-weight: 400; color: var(--sea-deep); font-size: 1.1em; }
+.chat-fab { position: fixed; z-index: 65; right: 20px; bottom: 20px; display: flex; align-items: center; gap: 10px; padding: 8px 18px 8px 8px; min-height: 64px; border: 2px solid var(--sea); border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 16px 36px -16px rgba(12, 35, 64, .55); }
+.chat-fab img { width: 52px; height: 52px; object-fit: contain; border-radius: 50%; background: var(--sea-soft); }
+.chat-fab b { display: block; color: var(--sea-deep); line-height: 1.25; }
+.chat-fab small { display: block; color: var(--muted); font-size: 14px; }
+.chat-fab:hover { background: var(--mist); }
+#timeline.res { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); gap: 0 22px; align-items: start; }
+#timeline.res > * { grid-column: 1; }
+#timeline.res > .res-map { grid-column: 2; grid-row: 1 / span 30; position: sticky; top: calc(var(--hdr, 64px) + 12px); display: grid; gap: 10px; }
+#timeline.res > .res-map .map { height: min(560px, calc(100dvh - var(--hdr, 64px) - 120px)); }
+#timeline.res > .res-map .chip { justify-self: start; text-decoration: none; }
+@media (max-width: 900px) {
+  #timeline.res { grid-template-columns: minmax(0, 1fr); }
+  #timeline.res > .res-map { grid-column: 1; grid-row: auto; position: static; }
+  #timeline.res > .res-map .map { height: 280px; }
+  .chat-fab { right: 12px; bottom: calc(74px + env(safe-area-inset-bottom)); padding-right: 14px; }
+  .grid.has-course > .panel.chat.widget.open { left: 0; right: 0; bottom: 0; width: 100%; height: min(78dvh, 640px); border-radius: var(--r-l) var(--r-l) 0 0; z-index: 70; }
+}
+@media print { .chat-fab { display: none !important; } }
+/* 더 묻기 몇 번째인지, 다르게 짜 보기 버튼 */
+.xq-step { width: 100%; font-size: 14px; font-weight: 700; color: var(--muted); }
+.chip.alt { border-color: var(--sun-deep); color: var(--sea-deep); font-weight: 600; }
+.typo-fix { color: var(--sun-deep); }
+/* 공영주차장: 가까운 곳 추천·지도 */
+.tr-near { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+.tr-near-sel { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; }
+.tr-near-sel select { min-height: 44px; border: 1.5px solid var(--line-strong); border-radius: var(--r-s); padding: 0 10px; background: var(--surface); max-width: 220px; }
+.tr-rec { margin: 0 0 10px; padding: 8px 12px; border-radius: var(--r-s); background: var(--glow); }
+#tr-parking .map { height: 300px; margin-bottom: 12px; }
+.tr-list > li.rec { background: color-mix(in srgb, var(--glow) 60%, transparent); border-radius: var(--r-s); padding-inline: 8px; }
+.badge.rec-b { background: var(--sun-deep); color: #fff; }
+.badge.b-dist { background: var(--sea-soft); color: var(--sea-deep); }
+.tr-go { display: flex; gap: 6px; }
+.tr-go .chip { text-decoration: none; }
+/* 행사: 곧 열리는 것 · 해마다 열리는 축제 */
+.ev-next { margin-bottom: 12px; border-left: 5px solid var(--go); }
+.ev-next ul { margin-top: 6px; }
+.ev-yearly { margin-top: 18px; }
+.ev-y-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.ev-y-list li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ev-y-list li > div { display: grid; flex: 1; min-width: 0; }
+.ev-m { flex: none; width: 52px; height: 52px; border-radius: 14px; background: var(--sea-soft); color: var(--sea-deep); display: grid; place-items: center; font-family: var(--f-display); font-size: 1.15em; }
+.stay-kinds { margin: 0 0 12px; }

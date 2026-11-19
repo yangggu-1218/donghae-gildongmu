@@ -397,11 +397,51 @@ export function makeApi(DATA) {
       for (const w of p.name_ko.split(/[\s·]/)) if (norm(w).length >= 3) names.add(norm(w));
       for (const n of [...names]) if (/(해변|해수욕장)$/.test(n)) names.add(n.replace(/(해변|해수욕장)$/, ""));
       for (const n of names) if (n.length >= 2 && (tt.includes(n) || tt.toLowerCase().includes(n))) {
-        const k = [ids.includes(p.id) ? 1 : 0, n.length, p.id];
-        if (!best || k[0] > best[0] || (k[0] === best[0] && (k[1] > best[1] || (k[1] === best[1] && k[2] > best[2])))) best = k;
+        const k = [ids.includes(p.id) ? 1 : 0, n.length, -norm(p.name_ko).length, p.id];
+        if (!best || k[0] > best[0] || (k[0] === best[0] && (k[1] > best[1] || (k[1] === best[1] && (k[2] > best[2] || (k[2] === best[2] && k[3] > best[3])))))) best = k;
       }
     }
-    return best ? best[2] : null;
+    return best ? best[3] : (tt.length >= 3 ? fuzzyPlace(tt, ids) : null);
+  }
+  // 오타 알아듣기: 서버 edits.py fuzzy_place 와 같은 규칙 (자모로 풀어 비교, 3~4글자 1개·5글자 이상 2개까지)
+  function jamo(s) {
+    let out = "";
+    for (const ch of s) {
+      const o = ch.charCodeAt(0) - 0xAC00;
+      if (o >= 0 && o < 11172) out += String.fromCharCode(0x1100 + Math.floor(o / 588), 0x1161 + Math.floor(o / 28) % 21) + (o % 28 ? String.fromCharCode(0x11A7 + o % 28) : "");
+      else out += ch.toLowerCase();
+    }
+    return out;
+  }
+  function lev(a, b) {
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] !== b[j - 1] ? 1 : 0)));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function fuzzyPlace(t, ids = []) {
+    let best = null;
+    const better = (k) => { if (!best) return true; for (let i = 0; i < k.length; i++) { if (k[i] > best[i]) return true; if (k[i] < best[i]) return false; } return false; };
+    for (const p of Object.values(PLACES)) {
+      const names = new Set([norm(p.name_ko)]);
+      for (const w of p.name_ko.split(/[\s·]/)) if (norm(w).length >= 3) names.add(norm(w));
+      for (const n of names) {
+        if (n.length < 3 || !/^[가-힣0-9]+$/.test(n)) continue;
+        const lim = n.length <= 4 ? 1 : 2, jn = jamo(n);
+        for (const L of [n.length - 1, n.length, n.length + 1]) {
+          for (let i = 0; i <= Math.max(0, t.length - L); i++) {
+            const w = t.slice(i, i + L);
+            if (w.length !== L) continue;
+            const d = lev(jamo(w), jn);
+            if (d <= lim) { const k = [-d, ids.includes(p.id) ? 1 : 0, n.length, -norm(p.name_ko).length, p.id]; if (better(k)) best = k; }
+          }
+        }
+      }
+    }
+    return best ? best[4] : null;
   }
   function findIndex(text, n) {
     const m = text.match(/(\d)\s*번|(첫|두|세|네|다섯)\s*번째|(\d)(st|nd|rd|th)/);
