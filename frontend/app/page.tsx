@@ -51,6 +51,7 @@ export default function Page() {
     (D[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => String(v[x] ?? ""));
   const [step, setStep] = useState(0);
   const [ans, setAns] = useState<Record<string, string[]>>({});
+  const [pendingTalk, setPendingTalk] = useState<Conditions | null>(null);   // BUG-001: 날짜·출발 시각을 고른 뒤에 코스를 보여 주려고 잠시 보관
   const [cond, setCond] = useState<Conditions>({ who: "혼자", move: [], style: [], days: "당일", start: "동해역", memo: "", wish: [], lang: "ko",
     date: iso(new Date()), start_time: "10:00", meal: [] });
   const [log, setLog] = useState<Msg[]>([]);
@@ -216,8 +217,15 @@ export default function Page() {
   function finishWhen() {
     const d = cond.date || iso(new Date());
     const wd = new Date(d + "T00:00:00").getDay();
+    const wp = cond.weather_pref ? ` · ${cond.weather_pref === "실내" ? (lang === "ko" ? "실내 위주" : "indoor") : (lang === "ko" ? "바깥 위주" : "outdoor")}` : "";   // IMP-006: 고른 실내외도 말풍선에
+    if (pendingTalk) {   // BUG-001: 대화로 받은 조건 + 고른 날짜·시각으로 코스
+      const c = { ...pendingTalk, date: d, start_time: cond.start_time || "10:00", weather_pref: cond.weather_pref || pendingTalk.weather_pref || "", lang } as Conditions;
+      setPendingTalk(null); setAns((a) => ({ ...a, when: [d, c.start_time || "10:00"] }));
+      makeWith(c, `${dateLabel(d, lang)}(${wdName(wd, lang)}) ${c.start_time}${wp}`);
+      return;
+    }
     finishQ({ ...ans, when: [d, cond.start_time || "10:00"] }, []);
-    setLog((l) => { const c = [...l]; c[c.length - 2] = { me: true, text: `${dateLabel(d, lang)}(${wdName(wd, lang)}) ${cond.start_time}` }; return c; });
+    setLog((l) => { const c = [...l]; c[c.length - 2] = { me: true, text: `${dateLabel(d, lang)}(${wdName(wd, lang)}) ${cond.start_time}${wp}` }; return c; });
   }
   function chooseKind(k: "easy" | "free") {
     setKind(k);
@@ -286,6 +294,13 @@ export default function Page() {
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false);
   }
+  // 처음부터 새로 짜기: 지금 코스는 되돌리기로 남기고, 질문을 처음부터 (IMP-003)
+  function startOver() {
+    snapshot(); setCourse(null); setTrip({}); dayRef.current = 1; setDayNo(1); setPendingTalk(null);
+    setAns({}); setStep(0); setKind(null); setXq(null); setOffer(false); setTalkState({}); setFresh([]);
+    setCond((c) => ({ ...c, must: [], exclude: [], lunch: null, cap: null, rest: null, flat_only: false, weather_pref: "", rain: null }));
+    setLog([]); toPlan();
+  }
   async function make() {
     const c = baseCond();
     await makeWith(c, `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}`);
@@ -315,6 +330,16 @@ export default function Page() {
     else showToast(lang === "ko" ? `'${nm}' 담았어요 (담은 곳 ${n}곳). 코스를 만들 때 꼭 넣을게요.` : `Added '${nm}'. It will be in your course.`,
       { label: lang === "ko" ? "코스 만들러 가기" : "Plan now", fn: toPlan });
   }
+  // 화면 아래 '담은 곳 n곳 · 코스 짜기': 코스가 있으면 아직 안 들어간 담은 곳을 지금 코스에 넣는다 (BUG-006)
+  function goCart() {
+    toPlan();
+    if (!course || busy) return;
+    const inC = new Set(course.stops.map((s) => s.id));
+    const missing = (cond.wish || []).filter((id) => !inC.has(id));
+    if (missing.length === 1) edit("add", missing[0], lang === "ko" ? `${name(missing[0])} 넣어줘` : `add ${name(missing[0])}`);
+    else if (missing.length > 1) { snapshot(); makeWith({ ...cond, lang, must: Array.from(new Set([...(cond.must || []), ...missing])) }, lang === "ko" ? `담은 곳 ${missing.length}곳을 넣어서 다시 짜 줘` : `Re-plan with my ${missing.length} saved places`); }
+    else showToast(lang === "ko" ? "담은 곳이 모두 지금 코스에 들어 있어요." : "All saved places are already in your course.");
+  }
   function applyRes(r: CourseRes | any, before: string[] = []) {
     setSaved(false);
     if (r.conditions && trip[1] && r.conditions.days !== trip[1].cond.days) { dayRef.current = 1; setDayNo(1); setTrip({}); }   // 여행 기간이 바뀌면 새 여행
@@ -341,7 +366,9 @@ export default function Page() {
       const r = await api.course({ ...c, day_no: 1 });
       dayRef.current = 1; setDayNo(1); setTrip({ 1: { res: r, cond: { ...c, day_no: 1 } } });
       setHist([]); applyRes(r);
-      say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length, t: r.course.back_at }) });
+      if (!r.course.stops.length) say({ pose: "worry", text: lang === "ko" ? `${r.course.start_time} 출발이면 문을 연 곳이 거의 없어서 코스를 만들지 못했어요. 관광지는 대부분 오후 5~6시에 닫아요. 아래 [날짜·출발 바꾸기]에서 오전이나 이른 오후로 바꿔 보세요.`
+        : `Almost nothing is open after ${r.course.start_time}. Most places close around 5-6 pm; try a morning or early-afternoon start.` });
+      else say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length, t: r.course.back_at }) });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false); setStep(Q.length + 1);
   }
@@ -357,7 +384,7 @@ export default function Page() {
         if (cache[j]) continue;
         const used = Object.keys(cache).map(Number).filter((x) => x < j).flatMap((x) => cache[x].res.course.stops.map((s: any) => s.id));
         const dt = new Date(d0 + "T00:00:00"); dt.setDate(dt.getDate() + j - 1);
-        const c: Conditions = { ...base, day_no: j, date: iso(dt), exclude: Array.from(new Set([...(base.exclude || []), ...used])), wish: [], must: [], lunch: null };
+        const c: Conditions = { ...base, day_no: j, date: iso(dt), start_time: "10:00", exclude: Array.from(new Set([...(base.exclude || []), ...used])), wish: [], must: [], lunch: null };   // BUG-003: 둘째 날부터는 오전 10시 출발 (그날 [날짜·출발 바꾸기]로 바꿀 수 있음)
         say({ pose: "think", text: t("day.making", { n: j }) });
         cache[j] = { res: await api.course(c), cond: c };
         if (j === k) say({ pose: "happy", text: t("plan.done", { n: cache[j].res.course.stops.length, t: cache[j].res.course.back_at }) });
@@ -383,16 +410,24 @@ export default function Page() {
     setBusy(false);
   }
   // 자유 대화: 동이(LLM 또는 규칙)가 알아듣고, 코스는 서버 엔진이 계산한다
-  async function chat(msg: string) {
+  async function chat(msg: string, fresh = false) {
     say({ me: true, text: msg }); setBusy(true);
-    const before = course?.stops.map((s) => s.id) || [];
+    const before = fresh ? [] : course?.stops.map((s) => s.id) || [];
     const before0 = baseCond();
+    const c0 = fresh ? { ...before0, must: [], exclude: [], lunch: null, cap: null, rest: null, flat_only: false } : before0;
     try {
-      const r = await api.talk({ message: msg, history: log.slice(-10), conditions: baseCond(),
+      const r = await api.talk({ message: msg, history: fresh ? [] : log.slice(-10), conditions: c0,
         state: { who_known: !!ans.who || talkState.who_known, move_known: !!ans.move || talkState.move_known },
         course_ids: before });
       setTalkState(r.state);
       const got = r.conditions ? understood(before0, r.conditions) : [];
+      // BUG-001: 아직 날짜·출발 시각을 고르지 않았고 말에도 날짜가 없으면, 코스는 잠시 두고 날짜부터 묻는다
+      if (r.course && !course && !fresh && !ans.when && (r.conditions?.date || null) === (before0.date || null) && (r.conditions?.start_time || "") === (before0.start_time || "")) {
+        setPendingTalk(r.conditions); setCond(r.conditions); setStep(0);
+        say({ pose: "ask", text: lang === "ko" ? "말씀하신 대로 짤 준비가 됐어요. 그 전에 언제 가시는지 날짜와 출발 시각을 골라 주세요. 고르면 바로 코스를 보여 드릴게요."
+          : "Got it. First pick the date and start time, and I'll show your route right away.", got });
+        setBusy(false); return;
+      }
       if (r.course) { if (course) snapshot(); applyRes(r, before); setStep(Q.length + 1); }
       else { setCond(r.conditions); if (!course) setStep((n) => Math.max(n, r.state.move_known ? 3 : r.state.who_known ? 2 : n)); }
       if (/충전|주차|charger|parking/i.test(msg) && course) setShowNear(true);
@@ -589,7 +624,7 @@ export default function Page() {
       {route[0] === "me" && <ProfilePage lang={lang} wish={cond.wish || []} places={places} onRemoveWish={removeWish} />}
       {route[0] === "community" && <CommunityPage lang={lang} sub={route[1]} onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
       {route[0] === "" && <>
-      <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); chat(m); }} />
+      <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); if (course) snapshot(); chat(m, !!course); }} />
       {/* 선택과 집중: 첫 화면은 '코스 짜기'가 바로 이어지고, 예시 코스 다음에 나머지 정보가 온다 (기능은 그대로) */}
       <section id="plan" className="sec wrap" aria-labelledby="plan-h">
       <div className="sec-head">
@@ -726,22 +761,25 @@ export default function Page() {
                 </div>
                 <div className="chips">
                   <button className="chip go sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
+                  <button className="chip" onClick={startOver} disabled={busy}>{lang === "ko" ? "처음부터 새로 짜기" : "Start over"}</button>
                   <button className="chip" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
                   <button className="chip" onClick={() => { try { sessionStorage.setItem("gd-share", JSON.stringify({ stops: course.stops.map((s) => s.id), kind: cond.move.length ? "easy" : "free", move: cond.move.filter((m) => ["휠체어", "유모차", "오래 걷기 어려움"].includes(m)), who: cond.who })); } catch { /* */ } location.hash = "#/community/new"; }}>{lang === "ko" ? "다녀와서 후기 올리기" : "Share after the trip"}</button>
                 </div>
               </div>
               {brief && (
                 <section className={`brief${briefBusy && brief.by === "rule" ? " pending" : ""}`} aria-label={lang === "ko" ? "동이 브리핑" : "Dongi's briefing"}>
-                  <p className="brief-k"><img src="/dongi/happy.webp" alt="" />{lang === "ko" ? "동이 브리핑" : "Dongi's briefing"}
-                    {brief.by === "ai" ? <span className="via via-llm">{lang === "ko" ? "AI가 정리했어요" : "Summarized by AI"}</span>
-                      : briefBusy ? <span className="via via-rule">{lang === "ko" ? "AI가 정리하는 중…" : "AI is summarizing…"}</span> : null}</p>
+                  <div className="brief-top">
+                    <p className="brief-k"><img src="/dongi/happy.webp" alt="" />{lang === "ko" ? "동이 브리핑" : "Dongi's briefing"}
+                      {brief.by === "ai" ? <span className="via via-llm">{lang === "ko" ? "AI가 정리했어요" : "Summarized by AI"}</span>
+                        : briefBusy ? <span className="via via-rule">{lang === "ko" ? "AI가 정리하는 중…" : "AI is summarizing…"}</span> : null}</p>
+                    {/* 실내/바깥 바꾸기: 지금 코스 상태(cond)를 보고 반대쪽 버튼 하나만 (BUG-004) */}
+                    {(cond.weather_pref === "실내" || (cond.rain ?? wxOf(course.date)?.rain)) && cond.weather_pref !== "실외"
+                      ? <button className="brief-act" disabled={busy} onClick={() => { snapshot(); makeWith({ ...cond, lang, weather_pref: "실외", rain: false }, lang === "ko" ? "바깥 위주로 짜 줘" : "Outdoor please"); }}><Icon name="sun" />{lang === "ko" ? "바깥 위주로 바꾸기" : "Make it outdoor"}</button>
+                      : <button className="brief-act" disabled={busy} onClick={() => edit("indoor", null, t("qc.indoor"))}><Icon name="rain" />{lang === "ko" ? "실내로 바꾸기" : "Make it indoor"}</button>}
+                  </div>
                   <h3>{brief.headline}</h3>
                   {brief.fits.length > 0 && <ul className="fits">{brief.fits.map((f, i) => <li key={i}><span className="fit-ic"><Icon name={f.icon} /></span>{f.text}</li>)}</ul>}
                   {brief.bring.length > 0 && <p className="bring"><b>{lang === "ko" ? "챙기세요" : "Bring"}</b>{brief.bring.map((b) => <span key={b} className="chip sm">{b}</span>)}</p>}
-                  {wxOf(course.date) && <p className="brief-act">
-                    {!wxOf(course.date)!.rain && cond.weather_pref !== "실외" && cond.weather_pref !== "실내" && <button className="chip sm" onClick={() => { setCond({ ...cond, weather_pref: "실내" }); edit("indoor", null, t("qc.indoor")); }}>{lang === "ko" ? "실내로 바꾸기" : "Make it indoor"}</button>}
-                    {(wxOf(course.date)!.rain || cond.weather_pref === "실내") && cond.weather_pref !== "실외" && <button className="chip sm" onClick={() => { snapshot(); makeWith({ ...cond, lang, weather_pref: "실외", rain: false }, lang === "ko" ? "바깥 위주로 짜 줘" : "Outdoor please"); }}>{lang === "ko" ? "바깥 위주로 바꾸기" : "Make it outdoor"}</button>}
-                  </p>}
                 </section>)}
               <div className="res-map">
                 <div className="add-row" role="group" aria-label={lang === "ko" ? "코스에 더하기" : "Add to the route"}>
@@ -860,7 +898,7 @@ export default function Page() {
           <button className="x" aria-label={t("common.close")} onClick={() => setToast(null)}>×</button>
         </div>)}
       {(cond.wish || []).length > 0 && route[0] !== "" && !toast && (
-        <a className="cart" href="#plan">{lang === "ko" ? `담은 곳 ${(cond.wish || []).length}곳 · 코스 짜기` : `${(cond.wish || []).length} saved · Plan`}</a>)}
+        <a className="cart" href="#plan" onClick={(e) => { e.preventDefault(); goCart(); }}>{lang === "ko" ? `담은 곳 ${(cond.wish || []).length}곳 · 코스 짜기` : `${(cond.wish || []).length} saved · Plan`}</a>)}
       <SiteFooter lang={lang} t={t} />
       {sumOpen && course && <Summary course={course} extras={extras} name={name} t={t} lang={lang} start={startName} url={shareUrl} onClose={() => setSumOpen(false)} />}
       {safety && (
@@ -874,17 +912,17 @@ export default function Page() {
           <p className="sheet-call"><a className="chip go" href="tel:119"><b>119</b>&nbsp;{t("safety.119")}</a><a className="chip" href="tel:1330"><b>1330</b>&nbsp;{t("safety.1330")}</a></p>
           {safety.help?.length > 0 && <h3>{t("safety.help")}</h3>}
           {safety.help?.map((c: any) => <SheetRow key={c.name} title={[c.name, c.languages?.length ? t("safety.langs", { l: c.languages.join(", ") }) : ""]}
-            info={[c.status === "check" ? t("safety.check") : `${t(c.status === "open" ? "safety.open" : "safety.closed")} ${c.hours || ""}`, km(c.dist_m)]} tel={c.tel} />)}
+            info={[c.status === "check" ? "" : c.hours || "", km(c.dist_m)]} tel={c.tel} state={c.status === "check" ? "check" : c.status === "open" ? "open" : "closed"} lang={lang} />)}
           {safety.chargers?.length > 0 && <h3>{t("safety.chargers")}</h3>}
           {safety.chargers?.map((c: any) => <SheetRow key={c.name} title={[c.name, c.spot]}
-            info={[`${c.open_now ? t("safety.open") : t("safety.closed")} (${t("x.chargerWk", { h: c.weekday_hours })})`, km(c.dist_m)]} tel={c.tel} />)}
+            info={[t("x.chargerWk", { h: c.weekday_hours }), km(c.dist_m)]} tel={c.tel} state={c.open_now ? "open" : "closed"} lang={lang} />)}
           {safety.mobility_center && <>
             <h3>{t("safety.mobility")}</h3>
             <SheetRow title={[safety.mobility_center.name, safety.mobility_center.hours]} info={[safety.mobility_center.app]} tel={safety.mobility_center.tel} />
             <p className="muted">{t("x.mobilityWho")}</p>
           </>}
           {safety.places?.length > 0 && <h3>{lang === "ko" ? "병원·약국" : "Clinics & pharmacies"}</h3>}
-          {safety.places.map((p: any) => <SheetRow key={p.name} title={[p.name, p.kind]} info={[p.until, km(p.dist_m)]} tel={p.tel} />)}
+          {safety.places.map((p: any) => { const chk = !p.until || /확인|check/i.test(p.until); return <SheetRow key={p.name} title={[p.name, p.kind]} info={[chk ? "" : p.until === "24시간" ? p.until : (lang === "ko" ? `${p.until}까지` : `until ${p.until}`), km(p.dist_m)]} tel={p.tel} state={chk ? "check" : "open"} lang={lang} />; })}
           <button className="box sheet-close" onClick={() => setSafety(null)}>{t("common.close")}</button>
           </div>
         </section>
@@ -909,10 +947,12 @@ function noteText(n: string, lang: string): string {
 
 // 긴급·도움 창의 한 줄: 이름 · 정보 · 전화(누르면 걸림). 빈 값은 빼고 잇는다
 const km = (m?: number) => (m == null ? "" : m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
-function SheetRow({ title, info, tel }: { title: (string | undefined)[]; info: (string | undefined)[]; tel?: string }) {
+// 긴급·도움 목록 한 줄. state가 있으면 '지금 열림/닫힘/확인 필요'를 색 있는 알약으로 먼저 보여 준다 (PASS-018 의견)
+function SheetRow({ title, info, tel, state, lang = "ko" }: { title: (string | undefined)[]; info: (string | undefined)[]; tel?: string; state?: "open" | "closed" | "check"; lang?: Lang }) {
+  const lbl = state && { open: lang === "ko" ? "지금 열림" : "Open now", closed: lang === "ko" ? "지금 닫힘" : "Closed now", check: lang === "ko" ? "운영시간 확인" : "Check hours" }[state];
   return (
-    <div className="stop sheet-row">
-      <span>{title.filter(Boolean).join(" · ")}</span>
+    <div className={`stop sheet-row${state === "closed" ? " is-closed" : ""}`}>
+      <span>{lbl && <b className={`st-pill st-${state}`}>{lbl}</b>}{title.filter(Boolean).join(" · ")}</span>
       <span className="muted">{info.filter(Boolean).join(" · ")}{tel ? <> · <a href={`tel:${tel}`}>{tel}</a></> : null}</span>
     </div>
   );

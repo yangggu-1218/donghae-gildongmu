@@ -6,7 +6,7 @@ import { api, getJSON } from "@/lib/api";
 import KakaoMap from "@/components/KakaoMap";
 import { NearbyEats } from "@/components/Eateries";
 import { PlacePhoto, ZONES } from "@/components/Sections";
-import { AccessPanel, AccessBadges } from "@/components/AccessBadges";
+import { AccessPanel, AccessBadges, AccIcon } from "@/components/AccessBadges";
 import { PHOTOS, GALLERY, photoAt } from "@/lib/photos";
 import { WHEEL_EN } from "@/components/Timeline";
 import { tr, dot, SOURCE_NOTES_EN, nm, ad } from "@/lib/ko2en";
@@ -148,6 +148,15 @@ function PlaceData({ id, lang }: { id: string; lang: Lang }) {
       <p className="muted small">{L("출처: 한국관광공사 관광지 집중률 예측·연관 관광지·무장애 여행 정보·오디오 가이드 (공공데이터포털)", "Sources: Korea Tourism Organization open APIs via data.go.kr")}</p>
     </div>
   );
+}
+
+// 자주 묻는 질문 답의 [교통]·[편의시설 지도]·[내 일정]을 그 페이지 바로가기로 (IMP-010)
+const FAQ_LINK: Record<string, string> = { "교통": "#/transport", "편의시설 지도": "#/map", "내 일정": "#/my", "Transport": "#/transport" };
+function faqLinks(a: string) {
+  return a.split(/(\[[^\]]+\])/).map((part, i) => {
+    const m = part.match(/^\[(.+)\]$/);
+    return m && FAQ_LINK[m[1]] ? <a key={i} href={FAQ_LINK[m[1]]}>[{m[1]}] 바로가기</a> : part;
+  });
 }
 
 /* ---------------- 장소 상세 ---------------- */
@@ -536,6 +545,8 @@ export function MapPage({ lang }: { lang: Lang }) {
   function locate() {
     navigator.geolocation?.getCurrentPosition((p) => setMe([p.coords.latitude, p.coords.longitude]), () => setMe([37.5245, 129.1143]));
   }
+  // 처음 열 때 한 번 내 위치에서 가까운 순으로 (위치를 못 쓰면 그대로, PASS-015 의견)
+  useEffect(() => { navigator.geolocation?.getCurrentPosition((p) => setMe([p.coords.latitude, p.coords.longitude]), () => {}, { timeout: 8000 }); }, []);
   return (
     <section className="sec wrap">
       <Head mascot="full-basic" lang={lang} photo="dokkaebi" title={L("편의시설 지도", "Facilities map")} sub={L("보고 싶은 것만 켜세요. 점을 누르면 아래 목록에서 자세히 보여요.", "Turn layers on and tap a dot for details.")} />
@@ -544,7 +555,7 @@ export function MapPage({ lang }: { lang: Lang }) {
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
             <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
           </button>))}
-        <button className="chip go" onClick={locate}>{L("내 주변부터 보기", "Nearest first")}</button>
+        <button className="chip go" onClick={locate}>{me ? L("내 위치 다시 찾기", "Update my location") : L("내 주변부터 보기", "Nearest first")}</button>
       </div>
       {!d ? <Loading err={err} lang={lang} /> : (<>
         <KakaoMap pins={pins} dots zoomOnPick focus={focus} center={me} onPick={(i) => { setSel(items[i].id); setFocus(null); }}
@@ -659,30 +670,44 @@ export function BookLinks({ name, lang }: { name: string; lang: Lang }) {
   );
 }
 
-// 한국관광공사 무장애 여행 정보에 올라 있는 동해시 숙소·음식점 (객실·출입 정보가 실제로 있는 곳)
+// 한국관광공사 무장애 여행 정보에 올라 있는 동해시 숙소 (객실·출입 정보가 실제로 있는 곳)
+// 목록에서는 편의시설을 픽토그램으로만, 자세한 내용은 펼쳐서 (IMP-013). 같은 자료의 음식점은 아래에 따로 접어 둠
+const BF_PICTO: [string, string, string, string][] = [["parking", "P", "장애인 주차", "Accessible parking"], ["route", "wheel", "출입 접근로", "Step-free approach"], ["elevator", "elev", "엘리베이터", "Elevator"],
+  ["restroom", "toilet", "장애인 화장실", "Accessible toilet"], ["room", "bed", "장애인 객실", "Accessible room"], ["lactationroom", "family", "수유실", "Nursing room"], ["braileblock", "vision", "점자블록", "Tactile paving"]];
+function BfPicto({ facts, lang }: { facts: Record<string, string>; lang: Lang }) {
+  const L = pick(lang);
+  const has = BF_PICTO.filter(([k]) => facts[k] && !/없음/.test(facts[k]));
+  if (!has.length) return null;
+  return <ul className="pl2-ic bf-picto" aria-label={L("편의시설", "Facilities")}>{has.map(([k, ic, ko, en]) => <li key={k} title={L(ko, en)}>
+    {ic === "P" ? <b className="pl2-P" aria-hidden="true">P</b> : ic === "wheel" ? <AccIcon k="지체장애" size={18} /> : ic === "family" ? <AccIcon k="영유아가족" size={18} /> : ic === "vision" ? <AccIcon k="시각장애" size={18} />
+      : ic === "elev" ? <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M9 9l3-3 3 3M9 15l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> : <Icon name={ic} />}
+    <span className="sr-only">{L(ko, en)}</span></li>)}</ul>;
+}
 function BfStays({ lang }: { lang: Lang }) {
   const L = pick(lang);
-  const [rows, setRows] = useState<any[]>([]);
+  const [stays, setStays] = useState<any[]>([]);
+  const [foods, setFoods] = useState<any[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
   useEffect(() => {
     Promise.all(["stay", "food"].map((k) => api.get(`/api/bf?kind=${k}`).catch(() => ({ items: [] }))))
-      .then(([s, f]: any[]) => { setRows([...(s.items || []), ...(f.items || [])]); setLabels(s.labels || f.labels || {}); }).catch(() => {});
+      .then(([s, f]: any[]) => { setStays(s.items || []); setFoods(f.items || []); setLabels(s.labels || f.labels || {}); }).catch(() => {});
   }, []);
-  if (!rows.length) return null;
+  if (!stays.length && !foods.length) return null;
+  const row = (b: any) => (
+    <li key={b.id}>
+      <div className="bf-row"><b>{b.name}</b><BfPicto facts={b.facts || {}} lang={lang} /></div>
+      <span className="muted small">{b.addr}{b.tel ? ` · ${b.tel}` : ""}</span>
+      <details className="bf-more"><summary>{L("편의시설 자세히", "Facility details")}</summary>
+        <ul className="small">{Object.entries(b.facts as Record<string, string>).slice(0, 10).map(([k, v]) => <li key={k}><b>{labels[k] || k}</b> {v}</li>)}</ul></details>
+      {b.type !== "food" && <BookLinks name={b.name} lang={lang} />}
+    </li>);
   return (
     <div className="panel bigdata">
-      <h2 className="h3">{L("무장애 정보가 확인된 곳", "Places with verified access info")}</h2>
-      <p className="muted small">{L("한국관광공사 무장애 여행 정보에 등록된 동해시 숙소·음식점이에요. 등록된 항목만 보여 드려요.", "Donghae lodging and restaurants listed in the KTO barrier-free travel data.")}</p>
-      <ul className="plain bf-list">
-        {rows.map((b) => (
-          <li key={b.id}>
-            <b>{b.name}</b> <span className="badge b-plain">{b.type === "food" ? L("음식점", "Restaurant") : L("숙소", "Lodging")}</span>
-            <span className="muted small"> {b.addr}{b.tel ? ` · ${b.tel}` : ""}</span>
-            <ul className="small">{Object.entries(b.facts as Record<string, string>).slice(0, 8).map(([k, v]) => <li key={k}><b>{labels[k] || k}</b> {v}</li>)}</ul>
-            {b.type !== "food" && <BookLinks name={b.name} lang={lang} />}
-          </li>
-        ))}
-      </ul>
+      <h2 className="h3">{L(`무장애 정보가 확인된 숙소 ${stays.length}곳`, `${stays.length} stays with verified access info`)}</h2>
+      <p className="muted small">{L("한국관광공사 무장애 여행 정보에 객실·출입 정보가 등록된 숙소예요. 아래 '동해시 숙소 전체'와 달리 편의시설이 확인돼 있어요.", "Listed in KTO barrier-free data with room and entrance info, unlike the full list below.")}</p>
+      {stays.length > 0 && <ul className="plain bf-list">{stays.map(row)}</ul>}
+      {foods.length > 0 && <details className="bf-food"><summary>{L(`같은 자료의 무장애 음식점 ${foods.length}곳 보기`, `${foods.length} accessible restaurants in the same data`)}</summary>
+        <ul className="plain bf-list">{foods.map(row)}</ul></details>}
     </div>
   );
 }
@@ -712,6 +737,8 @@ export function StayPage({ lang }: { lang: Lang }) {
         <h2 className="h3">{L("예약 전에 물어볼 것", "Ask before booking")}</h2>
         <ul className="checks">{Q.map((q) => <li key={q}>{q}</li>)}</ul>
       </div>
+      <h2 className="h3 stay-all-h">{L("동해시 숙소 전체 (공공데이터)", "All lodging in Donghae (open data)")}</h2>
+      <p className="muted small">{L("동해시에 등록된 모든 숙소예요. 무장애 객실 여부는 아직 확인 전이라 예약 전에 위 질문을 물어보세요.", "Every registered stay. Accessible rooms are not verified yet; ask the questions above.")}</p>
       <div className="tabs" role="group" aria-label={L("권역", "Areas")}>
         {ZONES.map((z) => <button key={z.k} aria-pressed={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>)}
       </div>
@@ -721,12 +748,13 @@ export function StayPage({ lang }: { lang: Lang }) {
       </form>
       <div className="chips stay-kinds" role="group" aria-label={L("숙소 종류", "Type")}>
         <button className="chip" aria-pressed={!kind} onClick={() => setKind("")}>{L("모두", "All")} <small>{all.length}</small></button>
-        {KINDS.map(([k, ko, en, ks]) => { const n = all.filter((r: any) => ks.includes(r.kind)).length; return n ? <button key={k} className="chip" aria-pressed={kind === k} onClick={() => setKind(kind === k ? "" : k)}>{L(ko, en)} <small>{n}</small></button> : null; })}
+        {KINDS.map(([k, ko, en, ks]) => { const n = all.filter((r: any) => ks.includes(r.kind)).length; return <button key={k} className="chip" aria-pressed={kind === k} disabled={!n && kind !== k} onClick={() => setKind(kind === k ? "" : k)}>{L(ko, en)} <small>{n}</small></button>; })}
       </div>
       {!d ? <Loading err={err} lang={lang} /> : (
         <div className="tbl-wrap"><table className="tbl tbl-stack">
           <thead><tr><th>{L("이름", "Name")}</th><th>{L("종류", "Type")}</th><th>{L("주소", "Address")}</th><th>{L("전화", "Phone")}</th><th>{L("예약·지도", "Book · map")}</th></tr></thead>
-          <tbody>{rows.map((r: any) => <tr key={r.name + r.address}><td className="tbl-name">{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td data-label={L("종류", "Type")}>{tr(lang, r.kind)}</td><td data-label={L("주소", "Address")}><small>{r.address}</small></td><td data-label={L("전화", "Phone")}>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td data-label={L("예약", "Book")}><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
+          <tbody>{!rows.length && <tr><td colSpan={5} className="muted">{L(`이 권역에는 ${kind ? `'${KINDS.find((x) => x[0] === kind)?.[1]}'` : ""} 숙소가 없어요 (0곳). 다른 권역을 눌러 보세요.`, "No stays of this type in this area (0). Try another area.")}</td></tr>}
+            {rows.map((r: any) => <tr key={r.name + r.address}><td className="tbl-name">{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td data-label={L("종류", "Type")}>{tr(lang, r.kind)}</td><td data-label={L("주소", "Address")}><small>{r.address}</small></td><td data-label={L("전화", "Phone")}>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td data-label={L("예약", "Book")}><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
         </table></div>
       )}
       <p className="muted small">{L(`${rows.length}곳 · 무장애 객실 여부는 모두 '확인 전'이에요. 자료: 동해시 숙박업소(2026-09-28)·관광숙박업(2025-11-04) 공공데이터 — 지금 공개된 것 중 가장 최신이에요.`, `${rows.length} places. Accessible rooms: not verified. Source: Donghae lodging open data (Sep 2026).`)}</p>
@@ -747,7 +775,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
   ];
   const faq = [
     [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 그 기준으로 갈 수 있어요, 노랑은 도움이 있거나 조심하면 갈 수 있어요, 빨강은 어려워요. 경사로 기울기·출입구 턱·통로 폭을 장애인등편의법 기준과 비교해 정해요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
-    [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("공공데이터·관광공사 정보가 있는 곳은 그 값을 써요. 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
+    [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("공공데이터와 한국관광공사 정보를 바탕으로 보여 드려요. 운영시간은 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
     [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
     [L("'현장 확인 전'은 무슨 뜻이에요?", "What does 'not yet surveyed' mean?"), L("팀이 아직 현장에서 직접 재 보지 못한 곳이에요. 비슷한 자료로 미리 판정해 둔 값이라 가기 전에 전화로 한 번 더 확인해 주세요.", "Not yet measured on site by the team. Please call ahead.")],
@@ -764,7 +792,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
   if (embedded) return (
     <div className="guide-in">
       <h2 className="h3">{L("자주 묻는 질문", "Frequently asked")}</h2>
-      <div className="faq">{faq.map(([q, a]) => <details key={q} className="panel"><summary>{q}</summary><p>{a}</p></details>)}</div>
+      <div className="faq">{faq.map(([q, a]) => <details key={q} className="panel"><summary>{q}</summary><p>{faqLinks(a)}</p></details>)}</div>
       <details className="panel prep"><summary>{L("여행 준비물 체크리스트 (휠체어·유모차·어르신·외국인·겨울 바닷가)", "Trip checklists")}</summary>
         <div className="cards2">{lists.map((x) => <div key={x.t}><h3 className="h3">{x.t}</h3><ul className="checks">{x.i.map((i) => <li key={i}>{i}</li>)}</ul></div>)}</div></details>
       <div className="panel emer">

@@ -11,6 +11,7 @@ import KakaoMap from "@/components/KakaoMap";
 import { PHOTOS, photoAt } from "@/lib/photos";
 import { allPosts, load, save, today, type Post, type PlaceNote } from "@/lib/community";
 import { Avatar } from "@/components/Profile";
+import { loadPlans } from "@/components/MyTrips";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -213,7 +214,7 @@ function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Reco
         </div>
       </div>
       {rows.length === 0 ? <div className="panel cm-empty"><p>{L("조건에 맞는 글이 없어요. 골라 보기를 풀거나 첫 글을 올려 주세요.", "No posts match. Clear the filters or share the first one.")}</p>
-        <button className="chip" onClick={clear}>{L("골라 보기 모두 풀기", "Clear filters")}</button></div>
+        <button className="chip" onClick={clear}>{L("골라 보기 초기화", "Reset filters")}</button></div>
       : view === "map" ? (
         <div className="cm-mapview">
           <KakaoMap pins={pins} dots label={L("다녀온 길 지도: 각 글의 첫 장소", "Trips map: first stop of each post")} />
@@ -334,6 +335,7 @@ function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, an
   const [nick, setNick] = useState(() => { try { return localStorage.getItem("gd-nick") || ""; } catch { return ""; } });
   const [q, setQ] = useState("");
   const [err, setErr] = useState("");
+  const plans = useMemo(() => loadPlans(), []);   // IMP-008: [내 일정]에 저장한 코스를 불러와 다녀온 순서로
   const list = Object.values(places).filter((p: any) => p.type !== "숙박" && !stops.includes(p.id));
   const key = q.trim().replace(/\s+/g, "");
   const hits = key ? list.filter((p: any) => p.name_ko.replace(/\s+/g, "").includes(key) || fuzzyHit(p.name_ko, key) >= 0).slice(0, 6) : [];
@@ -350,6 +352,7 @@ function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, an
       <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("커뮤니티", "Community")}</a> › <a href="#/community/talk">{L("다녀온 길", "Trips")}</a></p>
       <h1>{L("내 코스 올리기", "Share my trip")}</h1>
       <p className="muted">{L("다녀온 순서와 길 정보를 남기면 다음 사람이 그대로 짜 볼 수 있어요. 이 기기에만 저장돼요.", "Your route and path notes help the next traveler. Saved on this device only.")}</p>
+      <p className="muted small"><span className="req">*</span> {L("표시는 꼭 적어야 하는 칸이에요.", "Required fields.")}</p>
       <div className="panel cm-form big">
         <fieldset><legend>{L("어떤 여행이었나요?", "Trip type")}</legend>
           <div className="chips">
@@ -359,18 +362,23 @@ function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, an
           {kind === "easy" && <div className="chips">{MOVE.map(([v, ko, en]) => <button type="button" key={v} className="chip" aria-pressed={move.includes(v)} onClick={() => setMove(move.includes(v) ? move.filter((x) => x !== v) : [...move, v])}>{L(ko, en)}</button>)}</div>}
           <label><span>{L("누구와", "With")}</span><select value={who} onChange={(e) => setWho(e.target.value)}>{["혼자", "연인·친구", "부모님과", "아이와", "단체"].map((w) => <option key={w}>{w}</option>)}</select></label>
         </fieldset>
-        <fieldset><legend>{L("다녀온 순서", "Places in order")}</legend>
+        <fieldset><legend>{L("다녀온 순서", "Places in order")} <span className="req" aria-hidden="true">*</span></legend>
+          {plans.length > 0 && <label className="cm-load"><span>{L("내 일정에서 불러오기", "Load from My trips")}</span>
+            <select defaultValue="" onChange={(e) => { const pl = plans.find((x) => x.id === e.target.value); if (pl) { setStops(pl.stops.filter((id) => places[id]?.type !== "숙박")); if (!title.trim()) setTitle(pl.title); } }}>
+              <option value="">{L("저장한 코스 고르기", "Pick a saved trip")}</option>
+              {plans.map((x) => <option key={x.id} value={x.id}>{x.title} · {x.date}</option>)}
+            </select></label>}
           {stops.length > 0 && <ol className="cm-pick">{stops.map((id, i) => <li key={id}><span>{nm(id)}</span>
             <button type="button" className="chip sm" disabled={i === 0} onClick={() => { const a = [...stops]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; setStops(a); }} aria-label={L("앞으로", "Move up")}>↑</button>
             <button type="button" className="chip sm" onClick={() => setStops(stops.filter((x) => x !== id))} aria-label={L(`${nm(id)} 빼기`, `Remove ${nm(id)}`)}>×</button></li>)}</ol>}
           <label><span>{L("장소 찾아 넣기", "Add a place")}</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("예: 도째비골, 무릉계곡", "e.g. Dokkaebi")} /></label>
           {hits.length > 0 && <p className="chips">{hits.map((p: any) => <button type="button" key={p.id} className="chip sm" onClick={() => { setStops([...stops, p.id]); setQ(""); }}>+ {nm(p.id)}</button>)}</p>}
         </fieldset>
-        <label><span>{L("닉네임", "Nickname")}</span><input value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} /></label>
-        <label><span>{L("제목", "Title")}</span><input value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder={L("예: 휠체어로 묵호 반나절, 생각보다 수월했어요", "e.g. Mukho by wheelchair")} /></label>
+        <label><span>{L("닉네임", "Nickname")} <span className="req" aria-hidden="true">*</span></span><input value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} required /></label>
+        <label><span>{L("제목", "Title")} <span className="req" aria-hidden="true">*</span></span><input value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder={L("예: 휠체어로 묵호 반나절, 생각보다 수월했어요", "e.g. Mukho by wheelchair")} /></label>
         <label><span>{L("만족도", "Rating")}</span>
           <span className="cm-rate" role="radiogroup" aria-label={L("만족도", "Rating")}>{[1, 2, 3, 4, 5].map((n) => <button type="button" key={n} role="radio" aria-checked={rating === n} className={n <= rating ? "on" : ""} onClick={() => setRating(n)} aria-label={L(`${n}점`, `${n}`)}>★</button>)}</span></label>
-        <label><span>{L("후기", "Review")}</span><textarea rows={5} maxLength={1500} value={body} onChange={(e) => setBody(e.target.value)} /></label>
+        <label><span>{L("후기", "Review")} <span className="req" aria-hidden="true">*</span></span><textarea rows={5} maxLength={1500} value={body} onChange={(e) => setBody(e.target.value)} /></label>
         <label><span>{L("길 메모 (한 줄에 하나)", "Path notes (one per line)")}</span><textarea rows={3} value={tips} onChange={(e) => setTips(e.target.value)} placeholder={L("예: 입구 턱 3cm 정도\n장애인 화장실 2층", "e.g. 3 cm step at the entrance")} /></label>
         {err && <p className="err" role="alert">{err}</p>}
         <p className="muted small">{L("연락처·사진 같은 개인정보는 올리지 말아 주세요.", "Please don't post personal details.")}</p>

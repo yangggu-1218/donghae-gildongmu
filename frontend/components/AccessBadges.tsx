@@ -2,6 +2,12 @@
 // 무장애 편의정보 아이콘 (한국관광공사 '열린관광 모두의 여행'의 분류를 따름): 지체장애 · 시각장애 · 영유아가족 · 고령자
 // 그 분류에 '없음'이 아닌 항목이 하나라도 있을 때만 아이콘을 보인다 (backend/app/kto_access.py).
 type Lang = "ko" | "en";
+// 아이콘 모양: 한국관광공사 열린관광의 무장애 픽토그램을 오려 모양 틀(mask)로 쓰고, 색은 사이트 색(currentColor)을 입힌다
+export const ACC_IMG: Record<string, string> = { "지체장애": "mobility", "시각장애": "vision", "청각장애": "hearing", "영유아가족": "family", "고령자": "senior" };
+export function AccIcon({ k, size = 20 }: { k: string; size?: number }) {
+  const u = `url(/icons/acc-${ACC_IMG[k] || "mobility"}.png)`;
+  return <span className="acc-ic" aria-hidden="true" style={{ width: size, height: size, WebkitMaskImage: u, maskImage: u }} />;
+}
 export const ACCESS_CATS: Record<string, { ko: string; en: string; d: JSX.Element }> = {
   "지체장애": { ko: "휠체어·지체장애 편의", en: "Wheelchair access",
     d: <><circle cx="10.5" cy="4" r="2" fill="currentColor" /><path d="M10.5 7v6h5l2.5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 10.2A5.5 5.5 0 1 0 15.2 17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></> },
@@ -21,7 +27,7 @@ export function AccessBadges({ a, lang, big = false }: { a?: { cats?: string[] }
     <ul className={`acc-badges${big ? " big" : ""}`} aria-label={L("무장애 편의정보", "Accessibility info")}>
       {cats.map((c) => (
         <li key={c} title={L(ACCESS_CATS[c].ko, ACCESS_CATS[c].en)}>
-          <svg viewBox="0 0 24 24" width={big ? 26 : 20} height={big ? 26 : 20} aria-hidden="true">{ACCESS_CATS[c].d}</svg>
+          <AccIcon k={c} size={big ? 26 : 20} />
           <span className={big ? "" : "sr-only"}>{L(ACCESS_CATS[c].ko, ACCESS_CATS[c].en)}</span>
         </li>))}
     </ul>

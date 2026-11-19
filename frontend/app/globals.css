@@ -328,8 +328,13 @@ body.big .chip { min-height: 54px; }
 .sum-act { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .sum-act .chip { min-height: 56px; font-size: .85em; padding: 0 22px; }
 @media print {
-  body:has(.sum) > *:not(.sum), body:has(.sum) main, body:has(.sum) header, body:has(.sum) footer { display: none !important; }
-  .sum { position: static; background: #fff; color: #000; }
+  /* 일정표는 main 안에 있어서 main을 숨기면 백지가 됨 → 나머지는 보이지만 않게 하고 일정표만 맨 위에 */
+  body:has(.sum) *:not(:has(.sum)):not(.sum):not(.sum *) { display: none !important; }   /* 일정표가 아닌 것은 자리도 차지하지 않게 (빈 쪽 방지) */
+  body:has(.sum) * { visibility: hidden !important; }
+  body:has(.sum) .sum, body:has(.sum) .sum * { visibility: visible !important; }
+  body:has(.sum) { background: #fff !important; }
+  .sum { position: static !important; width: 100% !important; height: auto !important; overflow: visible !important; background: #fff !important; color: #000 !important; box-shadow: none !important; }
+  .sum * { color: #000 !important; }
   .sum-act, .toast { display: none !important; }
   .sum-in { font-size: 18pt; }
 }
@@ -871,8 +876,8 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .chip .ic { margin-right: 2px; }
 .now-c b .ic { margin-right: 4px; color: var(--sea); }
 
-/* 태블릿(768~960px): 머리글이 두 줄로 꺾이지 않게 위 메뉴 대신 아래 탭 */
-@media (max-width: 960px) {
+/* 태블릿·좁은 창(~1100px): 머리글이 두 줄로 꺾이지 않게 위 메뉴 대신 아래 탭 (961~1090px에서 꺾이던 것, IMP-002) */
+@media (max-width: 1100px) {
   .nav { display: none; }
   .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
   .tabbar a { display: grid; justify-items: center; gap: 3px; padding: 7px 2px 8px; min-height: 58px; text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; line-height: 1.15; }
@@ -1646,3 +1651,59 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 }
 .pl2-tool { white-space: nowrap; }
 @media (max-width: 620px) { .pl2-tool { padding: 0 12px; font-size: .95rem; gap: 6px; } .pl2-tools { padding: 6px; } }
+
+/* 무장애 픽토그램 (열린관광 아이콘을 모양 틀로, 색은 글자색) */
+.acc-ic { display: inline-block; flex: none; background: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+
+/* 카드 이름 오른쪽 끝의 '오늘 여유/보통/붐빔' 작은 알약 */
+.pl2-name { display: flex; align-items: center; gap: 8px; }
+.pl2-name .plink { min-width: 0; }
+.pl2 .pl2-crowd { position: static; margin-left: auto; flex: none; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; line-height: 1.6; white-space: nowrap; border: 1px solid transparent; }
+.pl2-crowd.crowd-low { background: #E3F4EA; color: #1E6B3E; border-color: #BFE3CD; }
+.pl2-crowd.crowd-mid { background: #FFF3DC; color: #8A5A00; border-color: #F2DDB0; }
+.pl2-crowd.crowd-high { background: #FDE7E7; color: #A3262A; border-color: #F3C4C4; }
+:root[data-theme="dark"] .pl2-crowd.crowd-low { background: #173A27; color: #9BE0B6; border-color: #2A5A3E; }
+:root[data-theme="dark"] .pl2-crowd.crowd-mid { background: #3A2E12; color: #F5CB7A; border-color: #5A4718; }
+:root[data-theme="dark"] .pl2-crowd.crowd-high { background: #3E1A1C; color: #F4A3A6; border-color: #642A2E; }
+
+/* 동이 브리핑: 실내/바깥 바꾸기를 오른쪽 위로 ('챙기세요' 칩과 헷갈리지 않게, BUG-004) */
+.brief-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.brief-top .brief-k { margin: 0; }
+.brief .brief-act { margin: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1.5px solid var(--sea); border-radius: 999px; background: var(--surface); color: var(--sea-deep); font: inherit; font-weight: 700; cursor: pointer; }
+.brief .brief-act:hover { background: var(--sea); color: var(--sea-ink); }
+.brief .brief-act .ic { width: 18px; height: 18px; }
+
+/* IMP-005: 무장애 여행 버튼도 마우스를 올리면 색이 바뀌게 (일반 여행과 같게) */
+.fork-btn.main:hover, .fork-btn.main:focus-visible { background: var(--sea-soft); border-color: var(--sea-deep); box-shadow: 0 4px 14px rgba(18,53,94,.14); }
+.fork-btn:not(.main):hover, .fork-btn:not(.main):focus-visible { box-shadow: 0 4px 14px rgba(18,53,94,.14); }
+
+/* IMP-012: 글자 크게 보기에서 빠른 메뉴 글자가 칸을 넘지 않게 */
+.quick a, .quick button { text-align: center; word-break: keep-all; line-height: 1.25; }
+body.big .quick a, body.big .quick button { width: 88px; font-size: 14px; }
+
+.req { color: #C9302C; font-weight: 700; }
+.cm-load { display: grid; gap: 4px; margin: 0 0 10px; }
+.cm-load select { min-height: 44px; border: 1.5px solid var(--line-strong); border-radius: var(--r-s); padding: 0 10px; background: var(--surface); color: var(--ink); }
+
+/* 긴급·도움: 지금 열림/닫힘을 색으로 바로 구분 */
+.st-pill { display: inline-block; margin-right: 8px; padding: 1px 10px; border-radius: 999px; font-size: .85em; font-weight: 800; vertical-align: 1px; }
+.st-open { background: #E3F4EA; color: #1E6B3E; }
+.st-closed { background: #FDE7E7; color: #A3262A; }
+.st-check { background: var(--mist); color: var(--muted); }
+.sheet-row.is-closed > span:first-child { color: var(--muted); }
+
+/* 숙소: 무장애 확인 숙소는 픽토그램, 자세히는 펼쳐서 / 전체 목록 제목 (IMP-013·014) */
+.bf-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bf-picto { margin: 0; }
+.bf-more > summary, .bf-food > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; color: var(--sea-deep); font-weight: 600; }
+.bf-food { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.stay-all-h { margin: 18px 0 2px; }
+.stay-kinds .chip:disabled { opacity: .45; cursor: default; }
+
+/* IMP-011: 열어 본 일정은 넓은 화면에서 왼쪽 요약·오른쪽 시간표로 (오른쪽이 텅 비지 않게) */
+@media (min-width: 900px) {
+  .my-list > .trip:has(.trip-detail) { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); column-gap: 28px; align-items: start; }
+  .my-list > .trip:has(.trip-detail) > *:not(.trip-detail) { grid-column: 1; }
+  .my-list > .trip:has(.trip-detail) > .trip-detail { grid-column: 2; grid-row: 1 / span 20; border-top: 0; border-left: 1px solid var(--line); padding: 0 0 0 24px; }
+}
+

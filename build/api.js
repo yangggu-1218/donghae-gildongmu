@@ -555,7 +555,7 @@ export function makeApi(DATA) {
       reply = ko ? (hilly.length ? "덜 걷도록 평지 코스로 바꿨어요." : "지금 코스는 이미 평지 위주예요. 앞으로도 평지만 고를게요.") : "Switched to flat, shorter walks.";
     } else if (act === "indoor") {
       const out = ids.filter((i) => k[i] === "sight" && !PLACES[i].indoor);
-      keep(c, ids, new Set(out)); c.rain = true;
+      keep(c, ids, new Set(out)); c.rain = true; c.weather_pref = "실내";
       reply = ko ? "비가 와도 괜찮게 실내 위주로 바꿨어요." : "Switched to indoor stops for the rain.";
     } else if (act === "relax") {
       const sights = ids.filter((i) => k[i] === "sight");

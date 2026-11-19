@@ -7,7 +7,7 @@ import { MicButton } from "@/components/Voice";
 import { tr } from "@/lib/ko2en";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { Icon } from "@/components/Icon";
-import { AccessBadges, ACCESS_CATS } from "@/components/AccessBadges";
+import { AccessBadges, ACCESS_CATS, AccIcon } from "@/components/AccessBadges";
 
 // 사진 출처는 사진 위에 쓰지 않고 따로 모아 보여 준다 (lib/photos.ts 에 저작자·라이선스 보관)
 export const licName = (l: string, lang: "ko" | "en") => (l === "KOGL Type 1" ? (lang === "ko" ? "공공누리 제1유형" : "KOGL Type 1") : l);
@@ -373,7 +373,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
       {/* 무장애 검색: 접힌 띠 → 분류 상자 5개 → 고른 분류의 세부 항목 */}
       <div className={`bf2${open === "bf" ? " on" : ""}`}>
         <button className="bf2-bar" aria-expanded={open === "bf"} aria-controls="bf2-body" onClick={() => setOpen(open === "bf" ? "" : "bf")}>
-          <span className="bf2-bar-t"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">{ACCESS_CATS["지체장애"].d}</svg>{L("무장애 검색", "Accessibility search")}</span>
+          <span className="bf2-bar-t"><AccIcon k="지체장애" size={24} />{L("무장애 검색", "Accessibility search")}</span>
           {bf && <span className="bf2-bar-sel">{L(bf.ko, bf.en)}{bfOpts.length ? ` · ${bfOpts.length}` : ""}</span>}
           <Icon name="down" className={`bf2-chev${open === "bf" ? " up" : ""}`} />
         </button>
@@ -382,7 +382,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
             <div className="bf2-cats" role="group" aria-label={L("무장애 분류", "Access categories")}>
               {BF.map((b) => (
                 <button key={b.k} className="bf2-cat" aria-pressed={bfCat === b.k} onClick={() => pickCat(b.k)}>
-                  <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">{catIcon(b.k)}</svg>
+                  <AccIcon k={b.k} size={44} />
                   <span>{L(b.ko, b.en)}</span>
                 </button>))}
             </div>
@@ -396,7 +396,6 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
                 {bf.mode !== "none" && <p className="muted small bf2-note">{L(`카드에 ${({ wheel: "휠체어", stroller: "유모차", walk: "오래 걷기 어려움" } as any)[bf.mode]} 기준 신호등이 보여요. 세부 항목을 고르면 그 시설이 있는 곳만 남아요.`, "Cards show an access signal for this need. Tick details to keep only places with them.")}</p>}
               </fieldset>
             ) : <p className="muted small bf2-hint">{L("누구와 가는지 상자를 하나 골라 주세요. 다시 누르면 풀려요.", "Pick a box. Tap again to clear.")}</p>}
-            <p className="muted small">{L("항목 이름과 내용은 한국관광공사 '열린관광 모두의 여행' 무장애 관광정보를 따라요.", "Item names follow the Korea Tourism Organization's accessible tourism info.")}</p>
           </div>)}
       </div>
 
@@ -433,7 +432,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
       {chipsOn.length > 0 && (
         <div className="pl2-on" aria-label={L("고른 조건", "Active filters")}>
           {chipsOn.map(([t, off]) => <button key={t} className="pl2-onchip" onClick={off} aria-label={L(`${t} 풀기`, `Remove ${t}`)}>{t}<span aria-hidden="true">×</span></button>)}
-          <button className="link-btn" onClick={clearAll}>{L("모두 풀기", "Clear all")}</button>
+          <button className="link-btn" onClick={clearAll}>{L("초기화", "Reset")}</button>
         </div>)}
 
       {/* 지역 탭 (전체 + 다섯 권역) */}
@@ -451,22 +450,22 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
         {shown.map((p) => {
           const g = p.grade as string | null, inW = wish.includes(p.id), tag = tagOf(p), r = rateToday(p.id);
           const ic: [string, JSX.Element, string, string][] = [];
-          if ((p.access_kto?.cats || []).includes("지체장애") || ["가능", "일부"].includes(p.wheelchair)) ic.push(["w", <svg key="w" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{ACCESS_CATS["지체장애"].d}</svg>, "휠체어 접근 정보 있음", "Wheelchair info"]);
+          if ((p.access_kto?.cats || []).includes("지체장애") || ["가능", "일부"].includes(p.wheelchair)) ic.push(["w", <AccIcon key="w" k="지체장애" size={18} />, "휠체어 접근 정보 있음", "Wheelchair info"]);
           if (hasF(p, ["장애인 주차"])) ic.push(["p", <b key="p" className="pl2-P" aria-hidden="true">P</b>, "장애인 주차", "Accessible parking"]);
           if (hasF(p, ["장애인 화장실"])) ic.push(["t", <Icon key="t" name="toilet" />, "장애인 화장실", "Accessible toilet"]);
-          if ((p.access_kto?.cats || []).includes("영유아가족")) ic.push(["s", <svg key="s" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h2l2.2 8.5h9.3L20 7H7.2" /><path d="M12 7V3.5a5 5 0 0 1 5 3.5" /><circle cx="9" cy="18.5" r="1.8" /><circle cx="17" cy="18.5" r="1.8" /></svg>, "영유아 가족 편의", "Family facilities"]);
-          if ((p.access_kto?.cats || []).includes("시각장애")) ic.push(["v", <svg key="v" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{ACCESS_CATS["시각장애"].d}</svg>, "시각장애 편의", "Low-vision support"]);
-          if ((p.access_kto?.cats || []).includes("고령자")) ic.push(["o", <svg key="o" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{ACCESS_CATS["고령자"].d}</svg>, "어르신 편의", "Senior support"]);
+          if ((p.access_kto?.cats || []).includes("영유아가족")) ic.push(["s", <AccIcon key="s" k="영유아가족" size={18} />, "영유아 가족 편의", "Family facilities"]);
+          if ((p.access_kto?.cats || []).includes("시각장애")) ic.push(["v", <AccIcon key="v" k="시각장애" size={18} />, "시각장애 편의", "Low-vision support"]);
+          if ((p.access_kto?.cats || []).includes("고령자")) ic.push(["o", <AccIcon key="o" k="고령자" size={18} />, "어르신 편의", "Senior support"]);
           return (
             <article key={p.id} className="pcard pl2-card">
               <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
                 {tag && <span className="pl2-tag">{L(tag[1], tag[2])}</span>}
                 {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
-                {r != null && <span className={`pl2-crowd badge crowd-${r >= 70 ? "high" : r >= 40 ? "mid" : "low"}`}>{L("오늘", "Today")} {r >= 70 ? L("붐빔", "busy") : r >= 40 ? L("보통", "moderate") : L("여유", "quiet")}</span>}
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}
-                <h3><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}</h3>
+                <h3 className="pl2-name"><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}
+                  {r != null && <span className={`pl2-crowd crowd-${r >= 70 ? "high" : r >= 40 ? "mid" : "low"}`} title={L(`오늘 붐빔 예상 ${Math.round(r)}%`, `Today ${Math.round(r)}%`)}>{L("오늘", "Today")} {r >= 70 ? L("붐빔", "busy") : r >= 40 ? L("보통", "moderate") : L("여유", "quiet")}</span>}</h3>
                 <p className="pl2-desc">{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.intro_en || p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
                 {ic.length > 0 && <ul className="pl2-ic" aria-label={L("편의시설", "Facilities")}>{ic.map(([k, el, ko, en]) => <li key={k} title={L(ko, en)}>{el}<span className="sr-only">{L(ko, en)}</span></li>)}</ul>}
                 {p.facilities?.length > 0 && <p className="sr-only">{p.facilities.map((f: string) => tr(lang, f)).join(", ")}</p>}
@@ -481,7 +480,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           );
         })}
         {!items.length && <div className="muted pl2-empty"><p>{filtering ? L("조건에 맞는 장소가 없어요. 조건을 하나씩 풀어 보세요.", "No places match. Try removing a filter.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>
-          {filtering && <button className="chip" onClick={clearAll}>{L("모두 풀기", "Clear all")}</button>}</div>}
+          {filtering && <button className="chip" onClick={clearAll}>{L("조건 초기화", "Reset filters")}</button>}</div>}
       </div>
       {pages > 1 && (
         <nav className="cm-pager" aria-label={L("쪽 넘기기", "Pages")}>

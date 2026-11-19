@@ -279,6 +279,7 @@ def apply(places: dict[str, Place], c: Conditions, ids: list[str], text: str = "
         out = {i for i in ids if k.get(i) == "sight" and not places[i].indoor}
         _keep(c, ids, places, out)
         c.rain = True
+        c.weather_pref = "실내"   # 화면의 '실내로 바꾸기'가 바뀐 상태를 알 수 있게 (BUG-004)
         reply = "비가 와도 괜찮게 실내 위주로 바꿨어요." if ko else "Switched to indoor stops for the rain."
     elif act == "relax":
         sights = [i for i in ids if k.get(i) == "sight"]
