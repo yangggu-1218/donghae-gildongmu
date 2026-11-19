@@ -5,12 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Head } from "@/components/Pages";
 import { Icon } from "@/components/Icon";
 import { loadPlans } from "@/components/MyTrips";
-import { allPosts, load as loadCm } from "@/lib/community";
+import { allPosts, load as loadCm, AVATAR, TEST_NICK } from "@/lib/community";
 import { api } from "@/lib/api";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
-export type User = { id: string; nick: string; salt: string; hash: string; created: string; color: string; move: string[]; style: string[]; bio: string };
+export type User = { id: string; nick: string; salt: string; hash: string; created: string; color: string; move: string[]; style: string[]; bio: string; photo?: string };
 const UKEY = "gd-users", MKEY = "gd-me";
 const COLORS = ["#2462B4", "#1E8A3C", "#A45400", "#6B4FA0", "#C9302C", "#12355E"];
 const users = (): User[] => { try { return JSON.parse(localStorage.getItem(UKEY) || "[]"); } catch { return []; } };
@@ -20,6 +20,23 @@ const emit = () => window.dispatchEvent(new Event("gd-user"));
 async function sha(salt: string, pw: string) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${pw}`));
   return Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+// 프로필 동그라미: 사진이 있으면 사진, 없으면 닉네임 첫 글자
+export function Avatar({ nick, color, photo, big }: { nick: string; color?: string; photo?: string; big?: boolean }) {
+  const src = photo || AVATAR[nick];
+  return src ? <span className={`pf-av photo${big ? " big" : ""}`} aria-hidden="true"><img src={src} alt="" /></span>
+    : <span className={`pf-av${big ? " big" : ""}`} style={{ background: color || "#2462B4" }} aria-hidden="true">{nick.slice(0, 1)}</span>;
+}
+// 시연용 임시 로그인: 비밀번호 없이 [Test] 계정으로 들어간다 (이 기기에만 저장)
+export function testLogin() {
+  const all = users();
+  let u = all.find((x) => x.nick === TEST_NICK);
+  if (!u) {
+    u = { id: "u-test", nick: TEST_NICK, salt: "test", hash: "-", created: "2026-11-10", color: COLORS[0], move: ["오래 걷기 어려움"], style: ["바다 보기", "카페"], bio: "", photo: AVATAR[TEST_NICK] };
+    saveUsers([...all, u]);
+  }
+  try { localStorage.setItem(MKEY, u.id); localStorage.setItem("gd-nick", u.nick); } catch { /* */ }
+  emit(); location.hash = "#/me";
 }
 export function useUser() {
   const [u, setU] = useState<User | null>(null);
@@ -32,7 +49,7 @@ export function ProfileButton({ lang }: { lang: Lang }) {
   const L = pick(lang);
   const u = useUser();
   return u
-    ? <a className="pf-btn" href="#/me" aria-label={L(`${u.nick}님 프로필`, `${u.nick}'s profile`)}><span className="pf-av" style={{ background: u.color }} aria-hidden="true">{u.nick.slice(0, 1)}</span><span className="pf-nick">{u.nick}</span></a>
+    ? <a className="pf-btn" href="#/me" aria-label={L(`${u.nick}님 프로필`, `${u.nick}'s profile`)}><Avatar nick={u.nick} color={u.color} photo={u.photo} /><span className="pf-nick">{u.nick}</span></a>
     : <a className="pf-btn login" href="#/login" aria-label={L("로그인", "Log in")}>
         <svg className="pf-ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M4.5 20c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
         <span className="pf-txt">{L("로그인", "Log in")}</span></a>;
@@ -80,6 +97,10 @@ export function LoginPage({ lang }: { lang: Lang }) {
           {err && <p className="err" role="alert">{err}</p>}
           <button className="btn-go">{mode === "in" ? L("로그인", "Log in") : L("가입하고 시작하기", "Create account")}</button>
         </form>
+        <div className="pf-test">
+          <button type="button" className="chip pf-test-btn" onClick={testLogin}><Avatar nick={TEST_NICK} />{L("임시 로그인 (Test)", "Quick demo login (Test)")}</button>
+          <small className="muted">{L("비밀번호 없이 시연용 [Test] 계정으로 둘러봐요.", "Look around with the demo account, no password.")}</small>
+        </div>
         <p className="muted small">{L("계정은 이 기기(브라우저)에만 저장돼요. 다른 기기에서는 다시 가입해야 해요. 이메일·전화번호는 받지 않아요.", "Your account is stored on this device only. We don't collect email or phone numbers.")}</p>
       </div>
     </section>
@@ -98,7 +119,7 @@ export function ProfilePage({ lang, wish, places, onRemoveWish }: { lang: Lang; 
   const plans = useMemo(() => (typeof window === "undefined" ? [] : loadPlans()), [u]);
   const cm = useMemo(() => (typeof window === "undefined" ? null : loadCm()), [u]);
   const myPosts = cm ? allPosts(cm).filter((p) => p.mine || (u && p.nick === u.nick)) : [];
-  const myCmts = cm && u ? Object.entries(cm.comments).flatMap(([pid, cs]) => cs.filter((c) => c.nick === u.nick).map((c) => ({ ...c, pid }))) : [];
+  const myCmts = cm && u ? allPosts(cm).flatMap((p) => p.comments.filter((c) => c.nick === u.nick).map((c) => ({ ...c, pid: p.id }))) : [];
   const nm = (id: string) => (lang === "ko" ? places[id]?.name_ko : places[id]?.name_en || places[id]?.name_ko) || id;
   if (!u) return (
     <section className="sec wrap"><Head lang={lang} title={L("내 프로필", "My profile")} sub={L("로그인하면 볼 수 있어요.", "Log in to see your profile.")} />
@@ -109,7 +130,7 @@ export function ProfilePage({ lang, wish, places, onRemoveWish }: { lang: Lang; 
   return (
     <section className="sec wrap pf">
       <div className="pf-hero">
-        <span className="pf-av big" style={{ background: u.color }} aria-hidden="true">{u.nick.slice(0, 1)}</span>
+        <Avatar nick={u.nick} color={u.color} photo={u.photo} big />
         <div className="pf-who">
           <h1>{L(`${u.nick}님`, u.nick)}</h1>
           <p className="muted">{L(`${u.created} 가입`, `Joined ${u.created}`)}</p>

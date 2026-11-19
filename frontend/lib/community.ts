@@ -11,12 +11,25 @@ export type Post = {
 };
 export type PlaceNote = { nick: string; date: string; text: string; tip?: boolean };
 
+// 시연용 임시 계정 [Test]의 프로필 사진 (댓글·글쓴이·프로필에 같이 보임)
+export const TEST_NICK = "Test";
+export const AVATAR: Record<string, string> = { [TEST_NICK]: "/photos/test-avatar.webp" };
 export const SEED: Post[] = [
+  { id: "t01", title: "Test의 첫 동해 여행, 추암 해돋이부터 촛대바위까지", nick: "Test", date: "2026-11-18", kind: "easy", move: ["오래 걷기 어려움"], who: "부모님과", zone: "chuam",
+    stops: ["chuam_bridge", "chotdae", "haeamjeong", "food_chuam_hanki"], rating: 5,
+    body: "부모님과 새벽에 추암에 갔어요. 출렁다리는 바닥이 평평해서 천천히 걸으셨고, 촛대바위 앞 데크는 넓어서 쉬어 가기 좋았어요. 아침은 근처 식당에서 따뜻하게 먹었습니다.",
+    tips: ["해돋이 보려면 해 뜨기 30분 전 도착", "촛대바위 데크 중간에 벤치 있어요", "추암 공영주차장에서 출렁다리까지 평지"], helpful: 7,
+    comments: [{ nick: "부모님효도여행", date: "2026-11-19", text: "저희도 다음 달에 부모님이랑 가 보려고요. 벤치 정보 고마워요!" }, { nick: "Test", date: "2026-11-19", text: "네, 데크에서 쉬면서 사진 찍기 좋았어요." }] },
+  { id: "t02", title: "묵호 바다 한 바퀴, 도째비골 스카이밸리와 등대", nick: "Test", date: "2026-11-12", kind: "free", move: [], who: "연인·친구", zone: "mukho",
+    stops: ["dokkaebi", "mukho_lighthouse", "nongol", "cafe_harbor"], rating: 4,
+    body: "친구랑 묵호를 한 바퀴 돌았어요. 스카이밸리에서 바다 내려다보는 게 제일 좋았고, 논골담길은 오르막이 꽤 있어서 천천히 올라갔어요. 마지막은 항구 앞 카페에서 쉬었습니다.",
+    tips: ["논골담길은 오르막이 있어 편한 신발 추천", "스카이밸리는 주말 오후에 줄이 길어요"], helpful: 3, comments: [] },
+
   { id: "p01", title: "휠체어로 도째비골부터 묵호항까지, 생각보다 수월했어요", nick: "휠체어로동해", date: "2026-11-16", kind: "easy", move: ["휠체어"], who: "연인·친구", zone: "mukho",
     stops: ["dokkaebi", "haerang", "food_boohung", "mukho_park"], rating: 5,
     body: "수동 휠체어로 친구랑 다녀왔어요. 스카이밸리는 매표소 옆 엘리베이터로 전망대까지 바로 올라가요. 해랑전망대는 데크가 넓어서 둘이 나란히 가도 됐어요. 점심은 부흥횟집, 입구 턱이 없어 편했습니다.",
     tips: ["스카이밸리 엘리베이터는 매표소 오른쪽", "해랑전망대 데크 끝부분은 살짝 경사", "부흥횟집 장애인 주차 2칸, 점심때는 금방 차요"], helpful: 41,
-    comments: [{ nick: "전동휠체어로세상구경", date: "2026-11-17", text: "전동도 엘리베이터 들어가나요?" }, { nick: "휠체어로동해", date: "2026-11-17", text: "네, 일반 전동 크기는 들어가요. 안이 넓은 편이에요." }] },
+    comments: [{ nick: "전동휠체어로세상구경", date: "2026-11-17", text: "전동도 엘리베이터 들어가나요?" }, { nick: "휠체어로동해", date: "2026-11-17", text: "네, 일반 전동 크기는 들어가요. 안이 넓은 편이에요." }, { nick: "Test", date: "2026-11-18", text: "엘리베이터 위치 정보 덕분에 헤매지 않았어요. 고마워요!" }] },
   { id: "p02", title: "70대 부모님 모시고 묵호 반나절, 무릎 편한 순서", nick: "부모님효도여행", date: "2026-11-14", kind: "easy", move: ["오래 걷기 어려움"], who: "부모님과", zone: "mukho",
     stops: ["mukho_lighthouse", "nongol", "cafe_harbor", "food_geodong"], rating: 4,
     body: "등대는 차로 바로 위 주차장까지 가서 내리시게 했어요. 논골담길은 내려오는 방향으로만 걸어서 무릎 부담이 덜했어요. 계단이 있는 골목은 미리 길동무에서 확인하고 피했습니다.",
@@ -25,7 +38,7 @@ export const SEED: Post[] = [
   { id: "p03", title: "돌 지난 아기랑 유모차로 망상해변 산책", nick: "아기랑첫바다", date: "2026-11-10", kind: "easy", move: ["유모차"], who: "아이와", zone: "mangsang",
     stops: ["mangsang", "cafe_clam", "nobong"], rating: 4,
     body: "망상해변 산책로는 포장이 잘 돼 있어서 유모차 밀기 좋았어요. 클램은 유아 의자가 있고 수유할 자리도 물어보니 안내해 주셨어요. 노봉해변은 모래라 유모차는 입구까지만.",
-    tips: ["망상 산책로 바닥 평평", "클램 유아 의자 있음", "노봉해변 모래사장은 유모차 어려움"], helpful: 28, comments: [] },
+    tips: ["망상 산책로 바닥 평평", "클램 유아 의자 있음", "노봉해변 모래사장은 유모차 어려움"], helpful: 28, comments: [{ nick: "Test", date: "2026-11-11", text: "유모차로 가기 좋은 바다 찾고 있었는데 딱이네요." }] },
   { id: "p04", title: "비 오는 날 천곡동굴, 실내 위주로 바꾸니 좋았어요", nick: "비오는날동굴", date: "2026-11-08", kind: "free", move: [], who: "연인·친구", zone: "cheongok",
     stops: ["cave", "nature_park", "cafe_ddori", "food_imgye"], rating: 4,
     body: "비 예보 보고 동이한테 실내 위주로 바꿔 달라고 했어요. 동굴 안은 계단이 꽤 있어서 걷기 편한 분께만 추천해요. 끝나고 한우 먹고 커피까지 시내에서 해결.",
