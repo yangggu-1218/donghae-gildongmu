@@ -57,8 +57,15 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         pop.setMap(null);
         const o = below ? popDown : popUp;
         o.setContent(el); o.setPosition(pos); o.setMap(map); pinned = keep;
-        const W = box.clientWidth, half = 160;
-        if (pt.x < half) map.panBy(pt.x - half, 0); else if (pt.x > W - half) map.panBy(pt.x - (W - half), 0);
+        // 카드가 지도 밖으로 나가면(낮은 지도·가장자리 점) 그만큼 지도를 옮겨 카드 전체가 보이게
+        requestAnimationFrame(() => {
+          const b = box.getBoundingClientRect(), c = el.getBoundingClientRect(), pad = 8;
+          let dx = 0, dy = 0;
+          if (c.left < b.left + pad) dx = c.left - b.left - pad; else if (c.right > b.right - pad) dx = c.right - b.right + pad;
+          if (c.height > b.height - 2 * pad) dy = c.top - b.top - pad;
+          else if (c.bottom > b.bottom - pad) dy = c.bottom - b.bottom + pad; else if (c.top < b.top + pad) dy = c.top - b.top - pad;
+          if (dx || dy) map.panBy(Math.round(dx), Math.round(dy));
+        });
       };
       const hideSoon = () => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!pinned) pop.setMap(null); }, 350); };
       maps.event.addListener(map, "click", () => { pinned = false; pop.setMap(null); });
