@@ -461,7 +461,7 @@ export default function Page() {
     sub: lang === "ko" ? `내 숙소 · 마지막 장소에서 차로 약 ${stayMin}분` : `My stay · ~${stayMin} min by car from the last stop`, addr: stay.addr.replace("강원특별자치도 ", "") }] : pins0), [pins0, stay, stayMin, lang]);
   const openStay = () => {
     setAddOpen(addOpen === "stay" ? "" : "stay"); setAddQ(""); setStayMsg("");
-    if (!stays.length) api.get("/api/lodging?limit=0").then((d: any) => setStays(d.items || [])).catch(() => {});
+    if (!stays.length) api.get("/api/lodging?limit=0").then((d: any) => setStays((d.items || []).map((x: any) => ({ ...x, road: x.road || x.address || "" })))).catch(() => {});
   };
   const pickStay = async (r: any) => {
     setStayMsg(lang === "ko" ? "위치를 찾는 중…" : "Finding the location…");
