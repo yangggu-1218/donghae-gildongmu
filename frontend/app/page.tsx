@@ -576,8 +576,8 @@ export default function Page() {
               <p className="fork-hi"><img src="/dongi/wave.webp" alt="" /><span><b>{t("dongi")}</b>{t("plan.greet")}</span></p>
               <h3 className="fork-q">{t("q.kind")}</h3>
               <div className="fork" role="group" aria-label={t("q.kind")}>
-                <button className="fork-btn main" onClick={() => chooseKind("easy")}><Icon name="wheel" /><span><b>{t("kind.easy")}</b><small>{t("kind.easySub")}</small><em>{t("kind.easyMore")}</em></span></button>
-                <button className="fork-btn" onClick={() => chooseKind("free")}><Icon name="route" /><span><b>{t("kind.free")}</b><small>{t("kind.freeSub")}</small></span></button>
+                <button className="fork-btn main" onClick={() => chooseKind("easy")}><span className="fork-k"><Icon name="wheel" />{t("kind.easy")}</span><b>{t("kind.easyTitle")}</b><small>{t("kind.easyDesc")}</small></button>
+                <button className="fork-btn" onClick={() => chooseKind("free")}><span className="fork-k"><Icon name="route" />{t("kind.free")}</span><b>{t("kind.freeTitle")}</b><small>{t("kind.freeDesc")}</small></button>
               </div>
             </div>) : <>
           <ol className="steps" aria-label={lang === "ko" ? "진행 단계" : "Progress"}>

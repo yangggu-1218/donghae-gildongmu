@@ -256,5 +256,9 @@
   "kind.easySub": "With a wheelchair, stroller or sore knees",
   "kind.free": "Regular trip",
   "kind.freeSub": "Everyone walks fine",
-  "kind.easyMore": "We check paths, toilets and places to rest"
+  "kind.easyMore": "We check paths, toilets and places to rest",
+  "kind.easyTitle": "A trip that thinks about getting around",
+  "kind.easyDesc": "We check ramps, stairs, toilets and places to rest.",
+  "kind.freeTitle": "A trip through Donghae's highlights",
+  "kind.freeDesc": "Built around the main sights and things to see."
 }

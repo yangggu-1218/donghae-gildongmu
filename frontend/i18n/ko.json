@@ -256,5 +256,9 @@
   "kind.easySub": "휠체어·유모차·무릎이 불편한 분과 함께",
   "kind.free": "일반 여행 코스",
   "kind.freeSub": "모두 잘 걸어요",
-  "kind.easyMore": "갈 수 있는 길·화장실·쉬는 곳까지 확인해요"
+  "kind.easyMore": "갈 수 있는 길·화장실·쉬는 곳까지 확인해요",
+  "kind.easyTitle": "이동의 불편함까지 고려한 여행",
+  "kind.easyDesc": "경사로·계단·화장실·쉴 곳 같은 이동 편의 정보를 함께 따져요.",
+  "kind.freeTitle": "동해의 명소를 따라 즐기는 여행",
+  "kind.freeDesc": "주요 관광지와 다양한 볼거리를 중심으로 코스를 짜요."
 }

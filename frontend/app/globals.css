@@ -1209,3 +1209,14 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
   .fork-btn .ic, .fork-btn.main .ic { width: 30px; height: 30px; }
   .fork-hi img { width: 44px; height: 44px; }
 }
+
+/* 입구 카드 v2 (사용자 의견): 사용법 상자와 같은 폭, 두 카드 반반, 작은 이름표 + 큰 제목 + 설명 */
+.grid:not(.has-course) { max-width: none; }
+.fork { grid-template-columns: 1fr 1fr; gap: 16px; }
+.fork-btn, .fork-btn.main { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; min-height: 170px; padding: 24px 26px; }
+.fork-btn.main { background: color-mix(in srgb, var(--sea-soft) 60%, var(--surface)); }
+.fork-k { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); font-size: 1.02em; }
+.fork-btn .fork-k .ic, .fork-btn.main .fork-k .ic { width: 26px; height: 26px; color: var(--sea); }
+.fork-btn b, .fork-btn.main b { font-size: 1.55em; line-height: 1.3; color: var(--sea-deep); }
+.fork-btn small { font-size: max(15px, 1em); color: var(--muted); }
+@media (max-width: 640px) { .fork { grid-template-columns: 1fr; } .fork-btn, .fork-btn.main { min-height: 0; padding: 18px; } .fork-btn b, .fork-btn.main b { font-size: 1.3em; } }
