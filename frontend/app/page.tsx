@@ -951,6 +951,21 @@ function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: an
   else if (c.kind === "parking") body = d.map((x: any) => row(`${x.name} (${x.spaces})`, `${x.fee}${x.disabled_free ? " · " + t("x.parkingFree") : ""} · ${x.dist_m}m`));
   else if (c.kind === "taxi") body = (Array.isArray(d) ? d : [d]).map((x: any) => row(x.name, x.address || ""));
   else if (c.kind === "hospital_pharmacy") body = <button className="sos" onClick={onSafety}>{t("tool.safety")}</button>;
+  else if (c.kind === "transit") {
+    const ko = lang === "ko";
+    body = <>
+      <ol className="tz-hops">{d.hops.map((h: any, i: number) => (
+        <li key={i} className={`tz-hop ${h.how}`}>
+          <span className="tz-path"><b>{h.from}</b> → <b>{h.to}</b> <small className="muted">{h.km}km</small></span>
+          <span className="tz-how">{h.how === "walk" ? (ko ? `걸어서 약 ${h.walk_min}분` : `~${h.walk_min} min walk`) : (ko ? `버스·택시 (차로 약 ${h.car_min}분)` : `Bus or taxi (~${h.car_min} min by car)`)}</span>
+          <a className="chip tz-link" href={h.link} target="_blank" rel="noreferrer">{h.how === "walk" ? (ko ? "걷는 길 보기" : "Walking route") : (ko ? "대중교통 길찾기" : "Transit route")}</a>
+        </li>))}</ol>
+      {d.city_tour && d.city_tour.covers?.length > 0 && <p className="muted small">{ko ? `동해 시티투어 버스가 코스 중 ${d.city_tour.covers.length}곳을 지나요 (${d.city_tour.board} ${d.city_tour.first}~${d.city_tour.last}).` : `The Donghae city tour bus stops at ${d.city_tour.covers.length} of these places.`}</p>}
+      {d.taxi && <p className="muted small">{ko ? `택시: ${d.taxi.name} 택시 승차대 (${d.taxi.address})` : `Taxi stand: ${d.taxi.name} (${d.taxi.address})`}</p>}
+      {d.van && <p className="muted small">{ko ? `휠체어 차량: ${d.van.name} ${d.van.tel} (이용 대상이 정해져 있어요)` : `Wheelchair van: ${d.van.name} ${d.van.tel} (eligibility applies)`}</p>}
+      <p className="muted small">{d.note}</p>
+    </>;
+  }
   return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}<p className="muted small">{t("x.src")}</p></div>;
 }
 

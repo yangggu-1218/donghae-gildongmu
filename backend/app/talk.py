@@ -31,8 +31,13 @@ TOOLS = [
          "start_time": {"type": "string", "description": "출발 시각 HH:MM"},
          "meal": {"type": "array", "items": {"type": "string", "enum": ["입식", "부드러운 메뉴", "주차 편한 곳"]}, "description": "식당 바람. 의자·입식 테이블=입식"},
          "weather_pref": {"type": "string", "enum": ["", "실내", "실외"]}}}},
-    {"name": "make_course", "description": "저장된 조건으로 코스를 계산한다. 누구와·이동 조건을 알면 부른다. 결과의 판정(G 가능/Y 주의/R 불가)과 시각만 말할 것.",
-     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "make_course", "description": "저장된 조건으로 코스를 계산한다. 누구와·이동 조건을 알면 부른다. 결과의 판정(G 가능/Y 주의/R 불가)과 시각만 말할 것. "
+     "대화에서 드러난 바람(분위기·먹고 싶은 것·보고 싶은 것)에 맞는 장소를 [장소 목록]에서 골라 prefer에 넣으면 그곳을 먼저 넣는다(관광지 최대 3곳, 식당 1곳). "
+     "'다른 코스', '별로예요', '새로'면 fresh=true로 지금 코스의 관광지를 빼고 새로 짠다. 싫다는 곳은 avoid에.",
+     "input_schema": {"type": "object", "properties": {
+         "prefer": {"type": "array", "items": {"type": "string"}, "description": "먼저 넣을 장소 id ([장소 목록]의 id만)"},
+         "avoid": {"type": "array", "items": {"type": "string"}, "description": "빼 달라는 장소 id"},
+         "fresh": {"type": "boolean", "description": "지금 코스와 다른 곳으로 새로 짜기"}}}},
     {"name": "edit_course", "description": "현재 코스를 고친다. 엔진이 이동·체류 시간과 요일 휴무·브레이크타임을 다시 검사한다. "
      "remove/replace/add=장소 빼기·다른 곳으로 바꾸기·넣기(place_id 필요), replace_lunch=점심 식당 바꾸기, remove_uphill=오르막 있는 곳 빼기, "
      "relax=여유 있게 한 곳 줄이기, indoor=비 와서 실내로, flat=덜 걷는 평지로, add_cafe=중간에 쉴 카페, set_when=날짜·출발 시각 바꾸기(when 필요).",
@@ -43,6 +48,11 @@ TOOLS = [
                       "required": ["action"]}},
     {"name": "place_info", "description": "장소 하나의 정보(구간 판정, 시설, 주변 이야기, 택시, 주차, 행사, 관람시간)를 가져온다.",
      "input_schema": {"type": "object", "properties": {"place_id": {"type": "string"}}, "required": ["place_id"]}},
+    {"name": "transit", "description": "차 없이 다닐 때: 출발역→코스 장소→출발역 구간마다 걸어갈 만한지, 대중교통 길찾기 링크(카카오맵, 실제 버스 노선·시간), 택시 승차대, 시티투어가 지나는 곳, 휠체어 차량을 알려 준다. "
+     "버스 번호·시간은 도구 결과에 없으니 지어내지 말고 '카드의 길찾기 링크에서 볼 수 있어요'라고 말한다.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "weather", "description": "동해시 날씨 예보(최대 16일). 여행 날짜와 앞뒤 며칠의 날씨·비 올 확률·기온.",
+     "input_schema": {"type": "object", "properties": {}}},
     {"name": "find_help", "description": "여행 도움 정보: info_center(관광안내소·외국어), charger(전동휠체어 충전기), mobility_van(휠체어 차량 예약), city_tour, events(행사·축제), lodging(숙박, zone 필요), restaurants(근처 식당: 동해시 일반음식점 1,400여 곳에서 거리순, 코스 점심 장소나 zone 기준. 음식 종류를 말하면 food에 넣는다), parking, taxi, hospital_pharmacy.",
      "input_schema": {"type": "object", "properties": {"kind": {"type": "string", "enum": HELP_KINDS},
                                                        "zone": {"type": "string", "enum": ["chuam", "mureung", "cheongok", "mukho", "mangsang", "station"]},
@@ -51,8 +61,24 @@ TOOLS = [
 ]
 
 
-# 프롬프트 캐싱: 매번 똑같은 시스템 프롬프트·도구 설명은 캐시해서 두 번째 호출부터 입력 비용을 크게 줄인다
+# 프롬프트 캐싱: 매번 똑같은 시스템 프롬프트·장소 목록·도구 설명은 캐시해서 두 번째 호출부터 입력 비용을 크게 줄인다
 SYSTEM = [{"type": "text", "text": PROMPT, "cache_control": {"type": "ephemeral"}}]
+ZONE_KO = {"mukho": "묵호", "mangsang": "망상", "chuam": "추암", "mureung": "무릉", "cheongok": "천곡", "station": "동해역"}
+_CAT: dict = {}
+
+
+def catalog(places: dict[str, Place]) -> str:
+    """동이가 대화에 맞춰 고를 수 있게 넘기는 장소 목록 (관광지·식당·카페). 바뀔 때만 다시 만든다."""
+    key = tuple(sorted(places))
+    if _CAT.get("key") != key:
+        rows = [f"{p.id}|{p.name_ko}|{p.type}|{ZONE_KO.get(p.zone, p.zone)}|{','.join(p.styles)}|{'실내' if p.indoor else '실외'}|{(p.tip_ko or '').replace(chr(10), ' ')[:50]}"
+                for p in places.values() if p.type != "숙박" and p.lat is not None]
+        _CAT.update(key=key, text="[장소 목록] id|이름|종류|권역|특징|실내외|한 줄 설명\n" + "\n".join(rows))
+    return _CAT["text"]
+
+
+def system_for(places: dict[str, Place]) -> list:
+    return [{"type": "text", "text": PROMPT}, {"type": "text", "text": catalog(places), "cache_control": {"type": "ephemeral"}}]
 CACHED_TOOLS = TOOLS[:-1] + [{**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
 
 
@@ -91,10 +117,49 @@ class Session:
         if weather_pref in ("", "실내", "실외"): self.c.weather_pref = weather_pref
         return {"saved": self.c.model_dump(include={"who", "move", "style", "days", "start", "rain", "date", "start_time", "meal", "weather_pref"})}
 
-    def make_course(self):
+    def make_course(self, prefer=None, avoid=None, fresh=False):
+        P = self.places
+        if fresh and self.course_ids:   # 지금 코스의 관광지를 빼고 새로 (점심·카페는 다시 고른다)
+            sights = [i for i in self.course_ids if i in P and P[i].type not in ("식당", "카페")]
+            self.c.exclude = sorted(set(self.c.exclude) | set(sights))
+            self.c.must = [m for m in self.c.must if m not in sights]
+            self.c.lunch = None
+        if avoid:
+            self.c.exclude = sorted(set(self.c.exclude) | {i for i in avoid if i in P})
+        if prefer:
+            ok = [i for i in prefer if i in P and i not in self.c.exclude and P[i].type != "숙박"]
+            sights = [i for i in ok if P[i].type not in ("식당", "카페")][:3]
+            if sights:
+                self.c.must = sights
+            food = next((i for i in ok if P[i].type == "식당"), None)
+            if food:
+                self.c.lunch = food
         rain = engine.rain_for(self.c)
-        res = engine.plan(self.places, self.c, rain)
+        res = engine.plan(P, self.c, rain)
+        if fresh and sum(1 for s in res.stops if s.kind == "sight") < 2 and self.course_ids:
+            # 조건이 까다로워 갈 곳이 모자라면 앞 코스의 절반만 빼고 다시
+            back = [i for i in self.course_ids if i in P and P[i].type not in ("식당", "카페")][1::2]
+            self.c.exclude = [x for x in self.c.exclude if x not in back]
+            res = engine.plan(P, self.c, rain)
         return self._course_result(res)
+
+    def transit(self):
+        ids = self.course_ids or []
+        pts = [(i, self.places[i].name_ko if self.c.lang == "ko" else (self.places[i].name_en or self.places[i].name_ko), self.places[i].lat, self.places[i].lon)
+               for i in ids if i in self.places]
+        data = public_data.transit(pts, self.c.start, self.c.move, self.c.lang)
+        self.cards.append({"kind": "transit", "data": data})
+        return {"start": data["start"], "hops": [{k: h[k] for k in ("from", "to", "km", "how", "walk_min", "car_min")} for h in data["hops"]],
+                "city_tour": bool(data["city_tour"]), "taxi": data["taxi"], "wheelchair_van": bool(data["van"]), "note": data["note"],
+                "course_ready": bool(ids)}
+
+    def weather(self):
+        from . import public_apis
+        fc = public_apis.forecast() or {}
+        day = self.c.date or engine.trip_date(self.c).isoformat()
+        days = fc.get("days") or []
+        i = next((k for k, d in enumerate(days) if d.get("date") == day), 0)
+        return {"trip_date": day, "days": days[max(0, i - 1): i + 3]} if days else {"error": "지금은 예보를 불러오지 못했어요"}
 
     def edit_course(self, action, place_id=None, when=None, text=""):
         """작업3: 규칙 편집기(edits.apply)와 같은 길로 고친다 — AI가 있든 없든 결과가 같다."""
@@ -200,7 +265,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
     today = engine.trip_date(Conditions())
     ctx = {"today": f"{today.isoformat()} ({'월화수목금토일'[today.weekday()]})",
            "conditions": s.c.model_dump(include={"who", "move", "style", "days", "start", "rain", "lang", "date", "start_time", "meal", "weather_pref"}),
-           "state": s.state, "course": s.course_ids, "places": {k: v.name_ko for k, v in s.places.items()}}
+           "state": s.state, "course": s.course_ids}
     user = f"[현재 상태]{json.dumps(ctx, ensure_ascii=False)}\n[사용자]{message}"
     if merged and merged[-1]["role"] == "user":
         merged[-1]["content"] += "\n" + user
@@ -210,19 +275,20 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
         for _ in range(5):   # 도구 호출은 최대 5번
             r = httpx.post("https://api.anthropic.com/v1/messages",
                            headers=llm.headers(),
-                           json={"model": TALK_MODEL, "max_tokens": 1500, "system": SYSTEM, "tools": CACHED_TOOLS, "messages": merged},
+                           json={"model": TALK_MODEL, "max_tokens": 1500, "system": system_for(s.places), "tools": CACHED_TOOLS, "messages": merged},
                            timeout=TALK_TIMEOUT)
             r.raise_for_status()
             out = r.json()
             llm.count("talk", True, sum((out.get("usage") or {}).get(k, 0) for k in ("input_tokens", "output_tokens")))
             merged.append({"role": "assistant", "content": out["content"]})
             uses = [b for b in out["content"] if b.get("type") == "tool_use"]
+            text = "".join(b.get("text", "") for b in out["content"] if b.get("type") == "text").strip()
             if not uses:
-                text = "".join(b.get("text", "") for b in out["content"] if b.get("type") == "text").strip()
-                return s.result(text, "llm") if text else None
+                return s.result(text or _after(s), "llm")
             merged.append({"role": "user", "content": [
                 {"type": "tool_result", "tool_use_id": u["id"], "content": json.dumps(s.call(u["name"], u.get("input") or {}), ensure_ascii=False)}
                 for u in uses]})
+        return s.result(_after(s), "llm")   # 도구를 다섯 번 써도 말이 없으면 지금 상태로 마무리
     except Exception as e:
         llm.count("talk", False)
         print("[talk] llm fallback:", e, getattr(getattr(e, "response", None), "text", "")[:300])
@@ -244,6 +310,9 @@ STYLE_KW = [("바다 보기", r"바다|해변|sea|beach"), ("자연·산책", r"
             ("산·등산", r"등산|산행|하이킹|hiking|hike|mountain|봉우리|산에\s*(가|오르)|산\s*(가고|타고|오르)|(^|\s)산(이|을|으로)?(\s|$)")]
 NO_MOVE = r"없어요|없음|괜찮|문제\s*없|다\s*잘\s*걸|no one|none|we're fine|no$"
 GO = r"코스|짜\s*줘|추천|만들어|plan|course|go$"
+OTHER = r"다른\s*(코스|곳|데)|딴\s*(데|곳)|별로|새로\s*(짜|만들)|another|different"
+TRANSIT = r"대중교통|차\s*(가|는|도)?\s*없|뚜벅|버스\s*(타|로|노선)|어떻게\s*가|가는\s*(길|법)|by bus|public transport|no car|without a car"
+WEATHER = r"날씨|기온|더워|추워|weather"
 ZONE_KW = [("mukho", "묵호|도째비"), ("chuam", "추암|촛대"), ("mureung", "무릉|삼화"), ("mangsang", "망상"), ("cheongok", "천곡|동굴")]
 
 SAY = {
@@ -253,14 +322,20 @@ SAY = {
            "remade": "말씀하신 대로 코스를 다시 짰어요.{caution}",
            "caution": " 주의할 곳이 {k}곳 있으니 카드를 확인해 주세요.",
            "help": "찾아봤어요. 아래 카드를 확인해 주세요.",
-           "none": "비, 덜 걷기, 장소 넣기·빼기를 말씀해 주시거나 충전기·안내소·숙소 같은 걸 물어봐 주세요."},
+           "none": "비, 덜 걷기, 장소 넣기·빼기를 말씀해 주시거나 충전기·안내소·숙소 같은 걸 물어봐 주세요.",
+           "transit": "차 없이 가는 방법을 구간마다 정리했어요. 카드의 길찾기를 누르면 카카오맵에서 버스 노선과 시간을 바로 볼 수 있어요.",
+           "weather": "그날 동해는 {tmin}~{tmax}도, 비 올 확률 {pop}%예요. 비가 오면 '실내로 바꿔 줘'라고 말씀해 주세요.",
+           "weather_none": "지금은 날씨 예보를 불러오지 못했어요. 잠시 뒤 다시 물어봐 주세요."},
     "en": {"ask_who": "Who are you travelling with?",
            "ask_move": "Does anyone use a wheelchair or stroller, or find long walks hard? If not, just say 'none'.",
            "made": "I planned {n} stops for you.{caution} Tell me if you'd like any changes.",
            "remade": "Done — I re-planned the course.{caution}",
            "caution": " {k} of them need care — please check the cards.",
            "help": "Here's what I found — see the cards below.",
-           "none": "Tell me about rain, less walking, or a place to add or remove — or ask about chargers, info centers or places to stay."},
+           "none": "Tell me about rain, less walking, or a place to add or remove — or ask about chargers, info centers or places to stay.",
+           "transit": "Here's how to get around without a car, leg by leg. Tap a route link to see live bus routes in Kakao Map.",
+           "weather": "Donghae that day: {tmin}–{tmax}°C, {pop}% chance of rain. If it rains, say 'switch to indoor'.",
+           "weather_none": "I couldn't load the forecast right now. Please ask again shortly."},
 }
 
 
@@ -272,12 +347,24 @@ def _rule(s: Session, message: str) -> dict:
         s.find_help("hospital_pharmacy")
         return s.result("많이 놀라셨죠. 위급하면 바로 119에 전화해 주세요. 화면 위 '안심' 버튼에서 가까운 병원·약국을 보여 드려요." if s.c.lang == "ko"
                         else "If it's an emergency, call 119 now. Tap 'Safety' at the top for nearby hospitals and pharmacies.", "rule")
+    if re.search(TRANSIT, low):
+        if re.search(r"차\s*(가|는|도)?\s*없|뚜벅|no car|without a car", low) and s.c.start == "자가용":
+            s.c.start = "동해역"
+        s.transit()
+        return s.result(L["transit"], "rule")
+    if re.search(WEATHER, low) and not re.search(r"비\s*(와|오|가)", message):
+        w = s.weather()
+        d = next((x for x in w.get("days", []) if x.get("date") == w.get("trip_date")), None)
+        return s.result(L["weather"].format(**d) if d and all(d.get(k) is not None for k in ("tmin", "tmax", "pop")) else L["weather_none"], "rule")
     for kind, pat in HELP_KW:
         if re.search(pat, low):
             zone = next((z for z, pz in ZONE_KW if re.search(pz, message)), None)
             s.find_help(kind, zone, public_data.eat_group(message) if kind == "restaurants" else None)
             return s.result(L["help"], "rule")
-    # 2) 코스가 있으면 수정
+    # 2) 코스가 있으면 수정 ('다른 코스'는 지금 관광지를 빼고 새로)
+    if s.course_ids and re.search(OTHER, low):
+        s.make_course(fresh=True)
+        return s.result(_made(s, L, again=True), "rule")
     if s.course_ids:
         r = edits.apply(s.places, s.c, s.course_ids, message)
         if r["action"] == "nearby":
@@ -303,6 +390,16 @@ def _rule(s: Session, message: str) -> dict:
         s.make_course()
         return s.result(_made(s, L), "rule")
     return s.result(L["none"], "rule")
+
+
+def _after(s: Session) -> str:
+    """LLM이 말 없이 끝났을 때의 마무리 한마디 (대화가 끊기지 않게)."""
+    L = SAY[s.c.lang]
+    if s.course:
+        return _made(s, L)
+    if s.cards:
+        return L["help"]
+    return L["none"]
 
 
 def _made(s: Session, L: dict, again: bool = False) -> str:

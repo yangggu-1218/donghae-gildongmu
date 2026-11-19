@@ -201,12 +201,14 @@ def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
         j = body["daily"]
         days = []
         for i, d in enumerate(j["time"]):
+            if j["temperature_2m_max"][i] is None or j["temperature_2m_min"][i] is None:
+                continue   # 예보 끝자락에 값이 빈 날이 있으면 그날만 건너뛴다 (전체를 버리지 않게)
             code, pop, mm = int(j["weather_code"][i] or 0), int(j["precipitation_probability_max"][i] or 0), float(j["precipitation_sum"][i] or 0)
             ko, en, icon = _kind(code)
             wet = code in RAIN_CODES or code in SNOW_CODES
             days.append({"date": d, "code": code, "ko": ko, "en": en, "icon": icon, "pop": pop, "mm": round(mm, 1),
                          "tmax": round(j["temperature_2m_max"][i]), "tmin": round(j["temperature_2m_min"][i]),
-                         "wind": round(j["wind_speed_10m_max"][i] / 3.6, 1),          # m/s
+                         "wind": round((j["wind_speed_10m_max"][i] or 0) / 3.6, 1),          # m/s
                          "rain": pop >= 60 or mm >= 5 or (wet and pop >= 40)})
         data = {"source": "Open-Meteo 일별 예보 (기상청 등 수치예보 모델 종합)", "updated": dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).isoformat(timespec="minutes"), "days": days}
         _FC.update(t=now, data=data)
