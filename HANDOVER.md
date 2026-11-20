@@ -17,6 +17,9 @@
 - 2026-11-21 추가(커밋, push·배포 전): 이동 난이도 5단계(`docs/22_ACCESS_GRADING.md`), ODsay 대중교통·TAGO 정류장 연결, OSM 노면, 불편 알리기 이동 유형 고르기, 날짜 카드 — CHANGELOG 맨 끝
 - **키 설정 필요**: Render 환경변수에 `ODSAY_API_KEY` 추가(ODsay 콘솔에서 서버 키 등록 방식 확인 — Render는 나가는 IP가 바뀔 수 있음). TAGO는 `DATA_GO_KR_KEY`로 부름(버스정류소정보 활용신청 확인). 브이월드 키는 아직 쓰는 곳 없음
 
+- 2026-11-21 배포(Render live **14cf3f1**): 위 개선 1~5단계 + 이동 난이도 5단계 + ODsay·정류장 + 관리자 가상 데이터 + 버그 수정 모두 반영. `ODSAY_API_KEY`·`VWORLD_API_KEY` Render에 저장됨(브이월드는 아직 쓰는 곳 없음). ODsay는 Referer(사이트 주소)로 인증됨. TAGO는 동해시 정류장을 주지 않아 ODsay 정류장 검색으로 대신. 외부 API 상태는 `/api/health`의 `routes`(키 값 없음). Render 나가는 IP: 74.220.52.0/24, 74.220.60.0/24
+- 점검 10가지(새 `test_grading`·`test_transit`·`test_regressions`) 모두 실패 0건
+
 ## ★ 다음에 할 일
 
 1. 팀장이 "올려 줘" 하면 `git push origin main` → Render Manual Deploy → Clear build cache & deploy → 실제 사이트 확인(관광지 상세·코스 대화·관리자 공지·알림/받은 글/AI 간단 작업)
