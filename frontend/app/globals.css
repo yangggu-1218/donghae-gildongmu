@@ -3749,3 +3749,33 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
   .my-page .trip2-photo { grid-row: 1 / span 3; align-self: start; }
   .my-page .trip2-act { grid-column: 1 / -1; }
 }
+
+/* ===== 반응형 점검 (2026-11-21): 휴대폰·태블릿 ===== */
+/* 누르는 곳: 처음›… 경로와 전화번호는 글자 줄은 그대로 두고 누르는 범위만 넓힘 */
+.crumb a, .pp4-crumb a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 2px; }
+main a[href^="tel:"] { padding-block: 6px; }
+/* 관광지 상세 '정보' 칸: 입장료 칸이 한 줄을 다 쓰면 다음 칸 앞의 세로선을 뺌 */
+@media (max-width: 600px) {
+  .pp4-info > div:has(.pp4-fee), .pp4-info > div:has(.pp4-fee) + div { border-left: 0; padding-left: 0; }
+}
+/* 코스 결과(휴대폰): 버튼은 두 줄 격자, 정보 알약은 한 덩어리, 카드 여백은 줄여 내용 폭 확보 */
+@media (max-width: 600px) {
+  .pb-info { width: 100%; box-sizing: border-box; border-radius: 16px; padding: 8px 14px; gap: 2px 10px; }
+  .pb-info .pb-sep { display: none; }
+  .planner-shell .planner-actions[data-open="true"] { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .planner-shell .planner-actions .pb-main { grid-column: 1 / -1; justify-content: center; }
+  .planner-shell .planner-actions .chip { justify-content: center; padding: 0 10px; min-height: 44px; font-size: .92em; }
+  .planner-shell .course-layout > .course-schedule { padding: 14px 12px 12px !important; border-radius: 18px; }
+  .rc-head h3 { font-size: 1.15em; }
+  .rc-card { padding: 8px; gap: 8px 12px; }
+  .course-schedule .tl-all .stop-overview { padding: 10px 10px 10px 28px; }
+  .course-schedule .tl-all .stop-identity { gap: 10px; }
+  .course-schedule .tl-all .stop-identity h4 { font-size: 1.05em; }
+  .course-schedule .add-row > .chip { font-size: .92em; }
+  .map-ctl > :is(button, a) { padding: 0 12px; min-height: 40px; }
+  .map-round { width: 44px; height: 44px; }
+}
+/* 관리자 제보 요약 상자(휴대폰): 항목 이름을 위에, 글은 전체 폭 */
+@media (max-width: 600px) {
+  .ca2-ai p { grid-template-columns: 1fr; gap: 2px; }
+}

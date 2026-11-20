@@ -452,7 +452,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           <form className="pl2-search" role="search" onSubmit={(e) => e.preventDefault()}>
             <label htmlFor="psearch" className="sr-only">{L("장소 찾기", "Find a place")}</label>
             <Icon name="pin" />
-            <input id="psearch" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("장소 찾기: 이름이나 시설 (예: 등대, 엘리베이터)", "Find a place: name or facility (e.g. lighthouse, elevator)")} />
+            <input id="psearch" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("장소·시설 이름으로 찾기", "Find a place or facility")} />
             {q && <button type="button" className="chip" onClick={() => setQ("")}>{L("지우기", "Clear")}</button>}
           </form>
         </div>
