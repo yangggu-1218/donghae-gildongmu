@@ -3211,3 +3211,150 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .adm-more { position: relative; }
 .adm-more ul { top: 100%; left: 0; }
 @media (max-width: 600px) { .adm-more ul { left: auto; right: 0; } }
+
+/* ===================== 휴대폰(600px 이하) 촘촘하게 (2026-11-21 팀장 요청: 박스 작게·스크롤 줄이기) =====================
+   글자 15px, 여백·박스 안쪽 여백을 줄이고, 큰 카드는 한 줄형으로. 누르는 곳은 44px 이상 유지 */
+@media (max-width: 600px) {
+  body { font-size: 15px; line-height: 1.55; }
+  .wrap { padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); }
+  .sec { padding-block: 22px 4px; }
+  .panel { padding: 14px; border-radius: 14px; }
+  .sec .panel + .panel, .sec .cards2 + .panel, .sec .panel + .cards2 { margin-top: 10px; }
+  .sec-head { margin-bottom: 10px; }
+  .sec-head h2, .hm-head h2 { font-size: 21px; }
+  .sec-head p, .hm-head p { font-size: .9em; }
+  h2.h3, .h3 { font-size: 1.05em; }
+  /* 페이지 머리(사진 배너): 낮게 */
+  .page-head { margin-bottom: 12px; }
+  .page-head h1 { font-size: 1.55em; }
+  .page-head.has-photo { min-height: 118px; padding: 12px 92px 12px 14px; border-radius: 16px; }
+  .page-head.has-photo .muted { font-size: .88em; line-height: 1.45; }
+  .page-head-mascot { height: 84px; right: 4px; bottom: -4px; }
+  /* 첫 화면 */
+  .hero h1 { font-size: 27px; margin-bottom: 10px; }
+  .hero-eyebrow { font-size: .9em; margin-bottom: 6px; }
+  .hero-in { padding-bottom: 56px; gap: 12px; }
+  .hero-chips { gap: 6px; }
+  .hero-chips button { min-height: 40px; padding: 0 12px; font-size: .9em; }
+  .quickbar { margin-top: -30px; }
+  .quickbar a { min-height: 62px; gap: 2px; font-size: .82em; }
+  .quickbar .qb-ic { width: 24px; height: 24px; }
+  .hm-sec { padding-top: 22px; }
+  .hm-head { margin-bottom: 10px; }
+  .hm-more { min-height: 34px; padding: 0 10px; font-size: .85em; }
+  .rec-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; margin: 0 -14px; padding: 0 14px 4px; scrollbar-width: none; }
+  .rec-grid::-webkit-scrollbar { display: none; }
+  .rec-grid > li { flex: 0 0 80%; scroll-snap-align: start; }
+  .rec-card { border-radius: 16px; }
+  .rec-txt b { font-size: 1.02em; }
+  .rec-go { width: 36px; height: 36px; }
+  .hp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .hp-tile { aspect-ratio: 3 / 4; border-radius: 12px; }
+  .hp-tile b { font-size: .78em; left: 6px; bottom: 6px; }
+  .hi-list a { padding: 10px 12px; gap: 10px; border-radius: 14px; }
+  .hi-ic { width: 40px; height: 40px; border-radius: 12px; }
+  /* 코스 찾기: 종류 고르기 카드 작게 */
+  .fork-stage { padding: 14px 12px 16px !important; gap: 12px !important; }
+  .fork-hi img { width: 44px; height: 44px; }
+  .fork-hi span { padding: 8px 12px; font-size: .92em; }
+  .fork-q { font-size: 1.1em; }
+  .fork { gap: 10px !important; }
+  .fork-btn, .fork-btn.main { min-height: 0 !important; padding: 14px 16px !important; gap: 4px !important; border-radius: 16px; }
+  .fork-btn b, .fork-btn.main b { font-size: 1.12em !important; }
+  .fork-btn small { font-size: .86em; }
+  .plan-page { padding-top: 14px; }
+  /* 관광지 목록: 사진 왼쪽·글 오른쪽 한 줄형 카드 */
+  .pl2-hero { min-height: 0; border-radius: 18px; }
+  .pl2-hero-txt { padding: 16px; }
+  .pl2-hero h2 { font-size: 1.45rem; }
+  .pl2-hero p { font-size: .9rem; margin-bottom: 10px; }
+  .pl2-tools { padding: 6px; }
+  .pl2-tool { min-height: 40px; padding: 0 12px; }
+  .pl2-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .pl2-card { flex-direction: row; border-radius: 14px; }
+  .pl2-card .art { flex: 0 0 104px; aspect-ratio: auto; min-height: 112px; }
+  .pl2-card .art .ph, .pl2-card .art .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pl2-card .art .badge { position: absolute; left: 4px; top: 4px; font-size: .7em; padding: 1px 6px; }
+  .pl2-tag { display: none; }
+  .pl2-card .pb { padding: 10px 12px; gap: 4px; min-width: 0; }
+  .pl2-card h3 { font-size: 1em; }
+  .pl2-desc { -webkit-line-clamp: 1; font-size: .86em; }
+  .pl2-ic li { width: 26px; height: 26px; }
+  .pl2-ic .ic { width: 14px; height: 14px; }
+  .pl2-foot { padding-top: 4px; }
+  .pl2-foot .add { min-height: 36px; padding: 0 12px; font-size: .85em; }
+  .pl2-card .more { display: none; }
+  .pl2-crowd { position: static; margin-left: 6px; font-size: .75em; }
+  /* 관광지 상세 */
+  .pp4-acts { gap: 6px; }
+  .pp4-btn { min-height: 44px; font-size: .92em; }
+  .pp4-tags li { font-size: .85em; }
+  .pm-sq { width: 48px; height: 48px; }
+  .pp4-ig { padding: 10px 12px; }
+  /* 커뮤니티 */
+  .cm-door { min-height: 0 !important; padding: 16px !important; gap: 4px !important; border-radius: 16px !important; }
+  .cm-door b { font-size: 1.25em; }
+  .cm-door > span:last-child { font-size: .9em; }
+  .cm-hub { gap: 10px; }
+  .cm-card { padding: 12px 14px 10px; gap: 6px; }
+  .cm-list { gap: 10px; }
+  /* 행사·교통·숙소·편의시설 */
+  .cal { padding: 8px; }
+  .cal-day { min-height: 38px; }
+  .ev-list > li { padding: 12px; }
+  .fac-list { gap: 6px; }
+  .fac-item { padding: 8px 10px; }
+  .tr-list li, .tbl td, .tbl th { padding: 6px 8px; }
+  /* 바닥 */
+  .site-foot { padding-block: 16px 90px; }
+}
+@media (max-width: 600px) {
+  /* 관광지 목록 설명 두 줄까지 */
+  .pl2-card .pl2-desc { display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2 !important; overflow: hidden; }
+  /* 사진 없는 페이지 머리: 동이 그림이 설명 글을 가리지 않게 */
+  .page-head:not(.has-photo) { padding-right: 84px; position: relative; }
+  .page-head:not(.has-photo) .page-head-mascot { height: 76px; }
+  /* 소통하기(다녀온 길): 필터 칩은 한 줄로 밀어서, 카드 사진은 낮게 */
+  .cm-chiprow { flex-wrap: nowrap; overflow-x: auto; margin: 0 -14px; padding: 2px 14px 4px; scrollbar-width: none; }
+  .cm-chiprow::-webkit-scrollbar { display: none; }
+  .cm-fchip { flex: none; min-height: 40px; padding: 0 12px; font-size: .9em; }
+  .cm-sels .cm-sel select { min-height: 42px; }
+  .cm-search2 input { min-height: 42px; }
+  .cm-grid { gap: 10px; }
+  .cm-pimg, .cm-pimg img, .cm-pimg-none { height: 140px !important; aspect-ratio: auto !important; }
+  .cm-pbody { padding: 10px 12px !important; gap: 4px !important; }
+  /* 숙소 표: 한 곳씩 카드, 안쪽 여백 줄이고 라벨 좁게 */
+  .tbl-stack tr { padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; }
+  .tbl-stack td { padding: 2px 0; font-size: .92em; }
+  .tbl-stack td[data-label]::before { min-width: 2.8em; margin-right: 6px; font-size: .85em; }
+  .tbl-stack td .chip, .tbl-stack td .book { min-height: 36px; padding: 0 12px; font-size: .88em; }
+  /* 관광지 상세 이동약자 이용 정보 알림 칸 */
+  .pp4-pills li { padding: 8px 10px; font-size: .92em; gap: 8px; }
+}
+@media (max-width: 600px) {
+  /* 소통하기 필터: 한 줄 밀기 대신 작게 여러 줄(지역·정렬 칸이 숨지 않게) */
+  .cm-chiprow { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; gap: 6px; }
+  .cm-fchip { min-height: 36px; padding: 0 10px; font-size: .85em; }
+  .cm-fchip .ic { width: 16px; height: 16px; }
+  /* 불편 알리기: 종류 고르기 3칸, 낮게 */
+  .cr-cats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; }
+  .cr-cat { min-height: 62px !important; padding: 6px 2px !important; font-size: .8em !important; }
+  .cr-step legend { font-size: .98em; }
+}
+@media (max-width: 600px) {
+  /* 자주 묻는 질문: 칸 낮게 */
+  .faq { gap: 6px; margin-top: 10px; }
+  .faq > details.panel { padding: 4px 12px; border-radius: 12px; }
+  .faq summary { min-height: 44px; font-size: .95em; }
+  /* 빈 화면(내 일정 등) 그림 작게 */
+  .panel.empty { padding: 16px; gap: 8px; }
+  .panel.empty img { height: 96px !important; width: auto; }
+}
+/* 관리자 홈 카드 머리 '더보기'·'알림 관리': 누르기 쉬운 크기 */
+.adm-list-card > header button, .adm-notice-strip p button { min-height: 40px; padding: 0 6px; }
+@media (max-width: 600px) {
+  /* 코스가 나오면 위 제목·설명은 접고 결과에 집중 */
+  .plan-page:has(.planner-shell) > .sec-head { display: none; }
+  .planner-bar { gap: 6px; }
+  .res-map .map-size { min-height: 38px; }
+}
