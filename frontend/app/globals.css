@@ -1306,13 +1306,13 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .cm-hub { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .cm-door { display: grid; gap: 8px; align-content: start; padding: 26px; border-radius: var(--r-l); border: 2px solid var(--line-strong); text-decoration: none; color: var(--ink); min-height: 190px; }
 .cm-door.talk { background: color-mix(in srgb, var(--sea-soft) 60%, var(--surface)); border-color: var(--sea); }
-.cm-door.ask { background: color-mix(in srgb, var(--sun) 12%, var(--surface)); border-color: color-mix(in srgb, var(--sun-deep) 55%, var(--line-strong)); }
+.cm-door.inq { background: color-mix(in srgb, var(--sun) 12%, var(--surface)); border-color: color-mix(in srgb, var(--sun-deep) 55%, var(--line-strong)); }
 .cm-door:hover, .cm-door:focus-visible { box-shadow: 0 0 0 3px var(--sea-soft); }
 .cm-door-k { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
 .cm-door-k .ic { width: 24px; height: 24px; color: var(--sea); }
-.cm-door.ask .cm-door-k .ic { color: var(--sun-deep); }
+.cm-door.inq .cm-door-k .ic { color: var(--sun-deep); }
 .cm-door b { font-family: var(--f-display); font-weight: 400; font-size: 1.6em; color: var(--sea-deep); line-height: 1.3; }
-.cm-door.ask b { color: color-mix(in srgb, var(--sun-deep) 70%, var(--ink)); }
+.cm-door.inq b { color: color-mix(in srgb, var(--sun-deep) 70%, var(--ink)); }
 .cm-door small { color: var(--muted); }
 .cm-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; color: var(--sea-deep); text-decoration: none; }
 .cm-back-ic { transform: rotate(90deg); }
@@ -3206,3 +3206,8 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
   .pp4-info2-grid:not(.wide-fee) > .pp4-ig { grid-area: auto !important; grid-row: auto !important; align-self: stretch !important; }
   .pp4-info2-grid.wide-fee:not(:has(.ig-park)) { grid-template-areas: "closed fee"; grid-template-rows: auto; }
 }
+/* 관리자 [더 보기] 메뉴가 탭 줄에 가려지지 않게: 탭 줄은 넘치면 다음 줄로, 메뉴는 버튼 아래에 */
+.adm-tabs { overflow: visible !important; flex-wrap: wrap; }
+.adm-more { position: relative; }
+.adm-more ul { top: 100%; left: 0; }
+@media (max-width: 600px) { .adm-more ul { left: auto; right: 0; } }

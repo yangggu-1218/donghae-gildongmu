@@ -24,7 +24,6 @@ export function SiteFooter({ lang, t }: { lang: Lang; t: (k: string) => string }
       <div className="wrap">
         <div className="sf-top">
           <a className="sf-admin" href="#/admin">{L("관리자", "Admin")}</a>
-          <a className="sf-src" href="#/sources">{L("사진·자료 출처", "Photo & data credits")}</a>
         </div>
         <div className="sf-main">
           <div className="sf-left">

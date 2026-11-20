@@ -64,7 +64,7 @@ function Hub({ lang, n }: { lang: Lang; n: number }) {
           <b>{L("다녀온 길", "Trips people took")}</b>
           <span>{L("다녀온 코스와 길 메모를 보고, 마음에 드는 코스는 그대로 짜 보세요.", "Routes and path notes. Plan any of them in one tap.")}</span>
         </a>
-        <a className="cm-door ask" href="#/community/ask">
+        <a className="cm-door inq" href="#/community/ask">
           <span className="cm-door-k"><Icon name="info" />{L("문의하기", "Questions")}</span>
           <b>{L("자주 묻는 질문 · 문의하기", "FAQ & contact us")}</b>
           <span>{L("자주 묻는 질문과 여행 준비물을 먼저 보고, 없으면 관리자에게 물어보세요.", "Check the FAQ and trip checklist, then ask our team.")}</span>
