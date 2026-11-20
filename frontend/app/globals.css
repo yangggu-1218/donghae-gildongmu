@@ -1886,6 +1886,10 @@ details.pp2-know > summary h2 { margin: 0; }
 .cr-code { display: flex; align-items: baseline; gap: 10px; margin: 0; }
 .cr-code b { font-size: 1.8em; letter-spacing: .04em; color: var(--sea-deep); font-variant-numeric: tabular-nums; }
 .cr-saw, .cr-same { margin: 0; }
+/* AI 요약 한 줄: 배지 옆 글이 왼쪽 정렬로, 줄이 바뀌어도 글 첫머리에 맞춰 (가운데 정렬 부모 안에서도) */
+.cr-saw, .ca-ai { display: flex; align-items: baseline; justify-content: flex-start; gap: 8px; text-align: left; }
+.cr-saw > .via, .ca-ai > .via { flex: none; }
+.cr-saw > span:last-child, .ca-ai > span:last-child { flex: 1; min-width: 0; }
 .cr-same { font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .cr-steps { list-style: none; display: flex; gap: 4px; margin: 6px 0; padding: 0; font-size: .82em; font-weight: 700; }
 .cr-steps li { flex: 1; text-align: center; padding: 6px 2px; border-radius: 999px; background: var(--mist); color: var(--muted); }
@@ -1946,6 +1950,20 @@ details.pp2-know > summary h2 { margin: 0; }
 .ca-photos img { width: 96px; height: 72px; object-fit: cover; border-radius: 8px; }
 .ca-priv { display: inline-flex; gap: 4px; align-items: center; color: var(--stop); font-weight: 700; }
 .ca-edit { margin: 6px 0 0; }
+/* 제보 묶음 읽기 쉽게: 가상 표시는 제목 앞 작은 글자, 지연은 날짜 옆, 제보는 한 줄씩 */
+.ca-row.sample { border-style: dashed; }
+.ca-sample-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; background: var(--warn-bg); color: var(--warn); font-size: .75em; vertical-align: 2px; }
+.ca-late { color: var(--stop); }
+.ca-do { margin: 8px 0 0; font-weight: 600; }
+.ca-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.ca-more-sum summary, .ca-more summary { cursor: pointer; color: var(--sea-deep); font-weight: 700; }
+.ca-more { border-top: 1px dashed var(--line); padding-top: 8px; }
+.ca-more > .visit-form { margin-top: 8px; }
+.ca-reports > li { padding: 6px 10px; }
+.ca-r-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; }
+.ca-r-q { flex: 1 1 220px; min-width: 0; }
+.ca-r-line .link-btn { margin-left: auto; }
+.ca-reports .ca-ai { margin: 2px 0 0; color: var(--muted); }
 .ca-merge { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ca-legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: .9em; margin-bottom: 8px; }
 .ca-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
@@ -2622,9 +2640,24 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .steps-reset { display: block; margin: -4px 0 8px auto; }
 
 /* 관리자 개선 4단계: 장소 정보 + AI 간단 작업, 공지·알림, 받은 글 */
-.pe-grid { display: grid; gap: 16px; }
-@media (min-width: 1100px) { .pe-grid { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; } .pe-grid .aiq { position: sticky; top: 84px; } }
-.aiq { display: grid; gap: 10px; }
+/* 장소 정보: 고칠 장소 옆 [수동 변경]·[AI 자동 변경] 버튼, 누르면 그 창으로 바뀜 */
+.pe-top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
+.pe-top .pick-place { flex: 1 1 280px; }
+.pe-mode { display: flex; flex-wrap: wrap; gap: 8px; }
+.pe-mode-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 16px; border: 1.5px solid var(--line); border-radius: var(--r-s);
+  background: var(--surface); color: var(--sea-deep); font: inherit; cursor: pointer; text-align: left; }
+.pe-mode-btn span { display: grid; line-height: 1.2; }
+.pe-mode-btn small { color: var(--muted); font-size: .78em; font-weight: 500; }
+.pe-mode-btn:hover:not(:disabled) { border-color: var(--sea); }
+.pe-mode-btn.on { background: var(--sea-deep); border-color: var(--sea-deep); color: #fff; }
+.pe-mode-btn.on small { color: rgba(255,255,255,.85); }
+.pe-mode-btn.ai:not(.on) { background: var(--sea-soft); }
+.pe-mode-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pe-hint { margin: 10px 0 0; }
+.pe-pane { margin-top: 16px; scroll-margin-top: 84px; display: grid; gap: 12px; }
+.pe-pane [hidden] { display: none !important; }
+.pe-filled { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.aiq { display: grid; gap: 10px; max-width: 760px; }
 .aiq-h { font-size: 16px; margin: 6px 0 0; }
 .aiq-in { display: grid; gap: 8px; }
 .aiq-in input[type="url"] { min-height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-s); }

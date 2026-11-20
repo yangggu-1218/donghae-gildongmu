@@ -2,7 +2,7 @@
 // 관리자: 계정마다 로그인 → 역할(총괄 관리자·편집자·현장 조사원)에 맞는 탭만 보인다.
 // 장소 정보(+AI 간단 작업)·공지·알림을 고치면 사이트에 바로 반영. 문의와 불편 제보는 '받은 글' 한 탭에서. 모든 변경은 '누가' 바꿨는지와 함께 이력에 남고 되돌릴 수 있다.
 // 팀 현장 확인 기록과 이용자 제보 검수, 관리자 계정 관리도 여기서 한다. (관리 화면은 팀용이라 한국어만)
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Icon } from "@/components/Icon";
 import { SourcesPage } from "@/components/Pages";
@@ -163,13 +163,32 @@ function PlaceEditor({ places, db, tok, call }: any) {
   const changed = Object.keys(d.fields).length + (d.segments ? 1 : 0);
   const access = ["walk_load", "wheelchair", "entrance_step", "table", "indoor", "benches"].some((k) => k in d.fields) || !!d.segments;
   const ov = db?.overrides?.[pid] || {};
+  // 고치는 방법 두 가지: 수동 변경(칸을 직접) / AI 자동 변경(자료·글 다듬기). 버튼을 누르면 그 창으로 바뀌고 그 자리로 이동.
+  const [mode, setMode] = useState<"manual" | "ai">("manual");
+  const [filled, setFilled] = useState("");
+  const paneRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { setFilled(""); }, [pid]);
+  function go(m: "manual" | "ai") {
+    setMode(m);
+    requestAnimationFrame(() => paneRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
   return (
     <div className="panel">
-      <label className="pick-place">고칠 장소
-        <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
-          {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
-      {pid && orig && <div className="pe-grid">
-      <form className="visit-form" onSubmit={(e) => { e.preventDefault();
+      <div className="pe-top">
+        <label className="pick-place">고칠 장소
+          <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
+            {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
+        <div className="pe-mode" role="tablist" aria-label="고치는 방법">
+          <button type="button" role="tab" aria-selected={mode === "manual"} className={`pe-mode-btn${mode === "manual" ? " on" : ""}`} disabled={!pid} onClick={() => go("manual")}>
+            <Icon name="edit" /><span><b>수동 변경</b><small>칸을 직접 고치기</small></span></button>
+          <button type="button" role="tab" aria-selected={mode === "ai"} className={`pe-mode-btn ai${mode === "ai" ? " on" : ""}`} disabled={!pid} onClick={() => go("ai")}>
+            <Icon name="story" /><span><b>AI 자동 변경</b><small>자료 읽기·글 다듬기</small></span></button>
+        </div>
+      </div>
+      {!pid && <p className="muted small pe-hint">장소를 고른 뒤 [수동 변경] 또는 [AI 자동 변경]을 누르세요.</p>}
+      {pid && orig && <div className="pe-pane" ref={paneRef}>
+      {filled && mode === "manual" && <p className="ok pe-filled" role="status">{filled} <button type="button" className="link-btn" onClick={() => go("ai")}>AI 자동 변경으로 돌아가기</button></p>}
+      <form className="visit-form" hidden={mode !== "manual"} onSubmit={(e) => { e.preventDefault();
         call(() => api.post(`/api/admin/places/${pid}`, { fields: d.fields, segments: d.segments, reason }, tok), `${orig.name_ko} 정보를 바꿨어요. 코스 추천과 장소 페이지에 바로 반영됐어요.`, `#/place/${pid}`); }}>
         <h2 className="h3">운영시간 {Object.keys(ov).some((k) => ["open", "close", "break_time", "closed_day_nums"].includes(k)) && <span className="badge b-plain">관리자 확인</span>}</h2>
         <Field label="여는 시각"><input type="time" value={f.open} onChange={(e) => set("open", e.target.value)} /></Field>
@@ -217,7 +236,10 @@ function PlaceEditor({ places, db, tok, call }: any) {
           <a className="chip" href={`#/place/${pid}`}>장소 페이지 보기</a>
         </div>
       </form>
-      <AiQuick pid={pid} name={orig.name_ko} feeDone={Object.keys(orig.fee_detail || {}).length > 0} f={f} tok={tok} onFill={(patch: any) => setF({ ...f, ...patch })} />
+      <div hidden={mode !== "ai"}>
+        <AiQuick pid={pid} name={orig.name_ko} feeDone={Object.keys(orig.fee_detail || {}).length > 0} f={f} tok={tok}
+          onFill={(patch: any, msg: string) => { setF({ ...f, ...patch }); setFilled(msg); go("manual"); }} />
+      </div>
       </div>}
     </div>
   );
@@ -262,8 +284,8 @@ function AiQuick({ pid, name, f, tok, onFill, feeDone }: any) {
   const ready = !!file || /^https?:\/\/\S+/.test(url.trim());
   return (
     <aside className="panel aiq" aria-label="AI 간단 작업">
-      <h2 className="h3"><Icon name="story" />AI 간단 작업 <span className="via via-llm">AI</span></h2>
-      <p className="muted small">결과는 미리 보기예요. [폼에 넣기]는 왼쪽 칸만 바꾸고, 사이트 반영은 [저장하고 바로 반영]을 눌러야 돼요.</p>
+      <h2 className="h3"><Icon name="story" />AI 자동 변경 · {name} <span className="via via-llm">AI</span></h2>
+      <p className="muted small">AI 결과는 미리 보기예요. [폼에 넣기]를 누르면 수동 변경 화면에 채워지고, 사이트 반영은 거기서 [저장하고 바로 반영]을 눌러야 돼요.</p>
 
       <h3 className="aiq-h">빠진 칸 확인 <small className="muted">(AI 없이)</small></h3>
       {missing.length ? <p className="aiq-miss">{missing.map((m) => <span key={m} className="badge b-unknown">{m}</span>)}</p> : <p className="muted small">비어 있는 주요 칸이 없어요.</p>}
@@ -284,7 +306,7 @@ function AiQuick({ pid, name, f, tok, onFill, feeDone }: any) {
             <span className="muted small">지금: {c.now}</span><span className="small">자료: <b>{c.new}</b></span></li>))}</ul>}
         {r.evidence?.length > 0 && <details><summary className="small">근거 문장 {r.evidence.length}개</summary><ul className="ai-list">{r.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
         {r.changes?.length > 0 && <button type="button" className="chip go" disabled={!chosen.length}
-          onClick={() => { onFill(Object.assign({}, ...chosen.map(toForm))); setDone(`${chosen.length}칸을 폼에 넣었어요. 확인하고 저장해 주세요.`); setPick({}); }}>고른 {chosen.length}칸 폼에 넣기</button>}
+          onClick={() => { const m = `AI가 고른 ${chosen.length}칸을 넣었어요. 아래에서 확인하고 [저장하고 바로 반영]을 눌러 주세요.`; onFill(Object.assign({}, ...chosen.map(toForm)), m); setDone(m); setPick({}); }}>고른 {chosen.length}칸 폼에 넣기</button>}
       </div>}
 
       <h3 className="aiq-h">글 다듬기</h3>
@@ -293,7 +315,7 @@ function AiQuick({ pid, name, f, tok, onFill, feeDone }: any) {
         <p className="small muted">{td.label} · 지금</p><p className="aiq-before">{td.before}</p>
         <p className="small muted">AI 제안</p><p className="aiq-after">{td.text}</p>
         {td.removed?.length > 0 && <p className="muted small">뺀 내용: {td.removed.join(" · ")}</p>}
-        <button type="button" className="chip go" onClick={() => { onFill({ [td.field]: td.text }); setDone(`${td.label}을 폼에 넣었어요. 확인하고 저장해 주세요.`); setTd(null); }}>폼에 넣기</button>
+        <button type="button" className="chip go" onClick={() => { const m = `AI가 다듬은 ${td.label}을 넣었어요. 아래에서 확인하고 [저장하고 바로 반영]을 눌러 주세요.`; onFill({ [td.field]: td.text }, m); setDone(m); setTd(null); }}>폼에 넣기</button>
       </div>}
       {err && <p className="err" role="alert">{err}</p>}
       {done && <p className="ok" role="status">{done}</p>}

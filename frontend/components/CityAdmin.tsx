@@ -74,56 +74,68 @@ function ClusterRow({ c, d, tok, call, can, open, onToggle, reload }: Any) {
     call(() => api.post(`/api/admin/city/${c.id}`, body, tok), `묶음 ${c.count}건을 저장했어요.`).then(reload).catch(() => {});
   };
   const others = d.clusters.filter((x: Any) => x.id !== c.id && x.category === c.category && x.sample === c.sample);
+  // 읽기 쉽게(2026-11-21 팀장 요청): 접힌 줄은 제목·부서·기간·상태 칩만, 펼치면 할 일 → 제보 한 줄씩 → 자주 쓰는 처리 칸. 나머지는 [더보기]에 접음(기능은 그대로).
+  const late = c.stale || c.overdue;
+  const age = Math.round(c.age_days);
+  const dept = String(c.dept_name || "").replace(/\s*\(.*\)\s*$/, "");
+  const md = (s: string) => String(s).slice(5, 16).replace("-", "/").replace("T", " ");
+  const extra = (r: Any) => (r.triage?.obstacles || []).map((o: Any) => o.detail || o.type).filter(Boolean).join(", ");
   return (
-    <li id={`ca-${c.id}`} className={`ca-row panel${c.stale || c.overdue ? " stale" : ""}${open ? " open" : ""}`}>
+    <li id={`ca-${c.id}`} className={`ca-row panel${late ? " stale" : ""}${c.sample ? " sample" : ""}${open ? " open" : ""}`}>
       <button className="ca-head" aria-expanded={open} onClick={onToggle}>
-        <span className="ca-count" style={{ background: SEVC[c.severity] }} title={c.severity_name}>{c.count}</span>
-        <span className="ca-main"><b>{c.title}</b>
-          <small className="muted">{c.category_name} · {c.dept_name} · {c.first_at.slice(5, 10).replace("-", "/")}~ · {Math.round(c.age_days)}일째</small></span>
+        <span className="ca-count" style={{ background: SEVC[c.severity] }} title={`${c.severity_name} · 제보 ${c.count}건`}>{c.count}</span>
+        <span className="ca-main"><b>{c.sample && <span className="ca-sample-tag">가상</span>}{c.title}</b>
+          <small className="muted">{dept} · {c.first_at.slice(5, 10).replace("-", "/")}~ {late ? <b className="ca-late">{age}일째 지연</b> : `${age}일째`}</small></span>
         <span className="ca-tags">
-          {c.sample && <span className="badge b-unknown">가상</span>}
-          <span className={`badge ${PRIC[c.priority]}`}>{c.priority_name}</span>
+          {(c.priority === "urgent" || c.priority === "high") && <span className={`badge ${PRIC[c.priority]}`}>{c.priority_name}</span>}
           <span className={`badge st-${c.status.replace(" ", "")}`}>{c.status}</span>
-          {(c.stale || c.overdue) && <span className="badge g-R" title={`목표 ${c.sla_days}일`}>밀림</span>}
           {c.privacy && <span title="사진에 얼굴·번호판이 보일 수 있어요 (공개 금지)"><Picto name="warn" size={18} label="개인정보 포함" /></span>}
-          <span className={`via ${c.by === "ai" ? "via-llm" : "via-rule"}`}>{c.edited ? "담당자" : c.by === "ai" ? "AI" : "규칙"}</span>
         </span>
       </button>
       {open && <div className="ca-body">
-        <p className="ca-sum">{c.summary} {c.count > 1 && <small className={`via ${c.sum_by === "ai" ? "via-llm" : "via-rule"}`}>{c.sum_by === "ai" ? "AI 묶음 요약" : "묶음 요약(규칙)"}</small>}</p>
-        {c.action && <p className="small"><b>할 일</b> {c.action}</p>}
-        {c.who.length > 0 && <p className="small muted">누가 불편: {c.who.join(", ")}{c.near ? ` · 가까운 관광지 ${c.near.name}(${c.near.dist_m}m)` : ""}</p>}
-        {c.lat && <p className="small"><a href={`https://map.kakao.com/link/map/${encodeURIComponent(c.title)},${c.lat},${c.lon}`} target="_blank" rel="noreferrer">카카오맵에서 위치 보기</a> · <a href={`https://map.kakao.com/link/roadview/${c.lat},${c.lon}`} target="_blank" rel="noreferrer">로드뷰</a></p>}
+        {c.action ? <p className="ca-do"><b>할 일</b> {c.action}</p> : <p className="ca-do">{c.summary}</p>}
+        <p className="ca-meta small">
+          {c.who.length > 0 && <span>대상 {c.who.join("·")}</span>}
+          {c.near && <span>{c.near.name} {c.near.dist_m}m</span>}
+          {c.lat && <span><a href={`https://map.kakao.com/link/map/${encodeURIComponent(c.title)},${c.lat},${c.lon}`} target="_blank" rel="noreferrer">지도</a> · <a href={`https://map.kakao.com/link/roadview/${c.lat},${c.lon}`} target="_blank" rel="noreferrer">로드뷰</a></span>}
+          <span className="muted">분류 {c.edited ? "담당자" : c.by === "ai" ? "AI" : "규칙"}</span>
+        </p>
+        {c.action && c.count > 1 && c.summary && <details className="ca-more-sum"><summary className="small">묶음 요약</summary><p className="small">{c.summary}</p></details>}
         <ul className="ca-reports">{c.reports.map((r: Any) => (
           <li key={r.id}>
-            <div className="ca-r-top"><b>{r.code}</b><small className="muted">{String(r.created_at).slice(0, 16).replace("T", " ")} · {r.source} · {r.category_name}{r.loc_how === "exif" ? " · 사진 위치" : ""}</small>
-              {c.count > 1 && <button className="link-btn small" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { split: r.id }, tok), "이 제보를 따로 떼었어요.").then(reload).catch(() => {})}>떼어 내기</button>}</div>
-            {r.note && <p className="small">“{r.note}”</p>}
-            {r.triage && <p className="small ca-ai"><span className={`via ${r.triage.by === "ai" ? "via-llm" : "via-rule"}`}>{r.triage.by === "ai" ? "AI" : "규칙"}</span>{" "}
-              {r.triage.summary}{r.triage.obstacles?.length ? ` · ${r.triage.obstacles.map((o: Any) => `${o.type}${o.detail ? `(${o.detail})` : ""}`).join(", ")}` : ""}
-              {r.final && <small className="muted"> · 담당자 수정: {r.final.by}</small>}</p>}
-            {(r.photos || []).length > 0 && <div className="ca-photos">{r.photos.map((p: string) => <a key={p} href={`/api/admin/city-photo/${p}?t=${tok}`} target="_blank" rel="noreferrer"><img src={`/api/admin/city-photo/${p}?t=${tok}`} alt="제보 사진" loading="lazy" /></a>)}
-              {(r.triage?.faces || r.triage?.plates) && <small className="ca-priv"><Picto name="warn" size={16} />{r.triage.plates ? "번호판" : ""}{r.triage.faces && r.triage.plates ? "·" : ""}{r.triage.faces ? "얼굴" : ""} 보임 — 공개·공유 금지</small>}</div>}
-            {r.has_contact && <p className="small">{contact[r.id] ? <>연락처: <b>{contact[r.id]}</b> <small className="muted">(완료 90일 뒤 자동 삭제)</small></> :
-              <button className="link-btn" onClick={() => api.get(`/api/admin/city-contact/${r.id}`, tok).then((x: Any) => setContact({ ...contact, [r.id]: x.contact || "(없음)" }))}>제보자 연락처 보기 (기록에 남아요)</button>}</p>}
+            <p className="ca-r-line"><b>{r.code}</b><small className="muted">{md(r.created_at)}</small>
+              <span className="ca-r-q">{r.note ? `“${r.note}”` : r.triage?.summary || ""}</span>
+              {c.count > 1 && <button className="link-btn small" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { split: r.id }, tok), "이 제보를 따로 떼었어요.").then(reload).catch(() => {})}>떼어 내기</button>}</p>
+            {extra(r) && <p className="small ca-ai"><span className={`via ${r.triage.by === "ai" ? "via-llm" : "via-rule"}`}>{r.triage.by === "ai" ? "AI" : "규칙"}</span><span>{extra(r)}</span></p>}
+            {((r.photos || []).length > 0 || r.has_contact) && <div className="ca-photos">
+              {(r.photos || []).map((p: string) => <a key={p} href={`/api/admin/city-photo/${p}?t=${tok}`} target="_blank" rel="noreferrer"><img src={`/api/admin/city-photo/${p}?t=${tok}`} alt="제보 사진" loading="lazy" /></a>)}
+              {(r.triage?.faces || r.triage?.plates) && <small className="ca-priv" title="공개·공유 금지"><Picto name="warn" size={16} />{[r.triage.plates && "번호판", r.triage.faces && "얼굴"].filter(Boolean).join("·")} 보임</small>}
+              {r.has_contact && (contact[r.id] ? <small>연락처 <b>{contact[r.id]}</b></small>
+                : <button className="link-btn small" title="본 기록이 남아요 · 완료 90일 뒤 자동 삭제" onClick={() => api.get(`/api/admin/city-contact/${r.id}`, tok).then((x: Any) => setContact({ ...contact, [r.id]: x.contact || "(없음)" }))}>연락처 보기</button>)}
+            </div>}
           </li>))}</ul>
         <div className="visit-form ca-edit">
           <label>상태<select value={e.status} onChange={(x) => setE({ ...e, status: x.target.value })}>{d.statuses.map((s: string) => <option key={s}>{s}</option>)}</select></label>
-          <label>분류<select value={e.category} onChange={(x) => setE({ ...e, category: x.target.value })}>{Object.entries(d.cats).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label>심각도<select value={e.severity} onChange={(x) => setE({ ...e, severity: x.target.value })}>{Object.entries(d.sev).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
           <label>담당 부서<select value={e.dept} onChange={(x) => setE({ ...e, dept: x.target.value })}>{Object.entries(d.depts).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label>우선순위 <small className="muted">(규칙 제안: {d.pri[c.priority_rule]})</small><select value={e.priority} onChange={(x) => setE({ ...e, priority: x.target.value })}>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label className="wide">이용자에게 보일 답변 <small className="muted">([내 제보]에 보여요)</small><textarea rows={2} value={e.reply} onChange={(x) => setE({ ...e, reply: x.target.value })} placeholder="예: 현장 확인했어요. 12월 첫 주에 보도블록을 바꿔요." /></label>
-          <label className="wide">내부 메모 {e.status === "반려" && <b className="err">(반려 사유 필수)</b>}<input value={e.memo} onChange={(x) => setE({ ...e, memo: x.target.value })} /></label>
-          <div className="wide save-row">
-            <button className="chip go" onClick={save}>저장 (묶음 {c.count}건 모두)</button>
-            <label className="chip"><input type="file" accept="image/*" hidden onChange={(x) => { const fl = x.target.files?.[0]; if (!fl) return; const fd = new FormData(); fd.append("photo", fl);
-              call(() => api.form(`/api/admin/city/${c.id}/after-photo`, fd, tok), "고친 뒤 사진을 올렸어요. 이용자 [내 제보]에 보여요.").then(reload).catch(() => {}); }} />고친 뒤 사진 올리기</label>
-            {c.place_id && !c.sample && can("notice") && <button className="chip" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/notice`, { title: c.title, body: c.summary, level: e.severity === "block" ? "warn" : "info" }, tok), "관광지 임시 알림으로 올렸어요. [임시 알림]에서 내릴 수 있어요.", `#/place/${c.place_id}`).then(reload).catch(() => {})}>여행 정보에 알리기</button>}
-            {others.length > 0 && <span className="ca-merge"><select className="box sm" value={into} onChange={(x) => setInto(x.target.value)} aria-label="합칠 묶음"><option value="">같은 종류 묶음과 합치기…</option>
-              {others.map((o: Any) => <option key={o.id} value={o.id}>{o.title} ({o.count}건)</option>)}</select>
-              {into && <button className="chip sm" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { into }, tok), "묶음을 합쳤어요.").then(reload).catch(() => {})}>합치기</button>}</span>}
-          </div>
+          <label>우선순위{c.priority_rule && c.priority_rule !== e.priority && <small className="muted"> 제안 {d.pri[c.priority_rule]}</small>}<select value={e.priority} onChange={(x) => setE({ ...e, priority: x.target.value })}>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+          <label className="wide">공개 답변<textarea rows={2} value={e.reply} onChange={(x) => setE({ ...e, reply: x.target.value })} placeholder="이용자 [내 제보]에 보임 · 예: 12월 첫 주 보도블록 교체" /></label>
+          <details className="wide ca-more" open={e.status === "반려" || undefined}>
+            <summary>더보기 <small className="muted">분류·심각도·내부 메모·사진·알림·합치기</small></summary>
+            <div className="visit-form">
+              <label>분류<select value={e.category} onChange={(x) => setE({ ...e, category: x.target.value })}>{Object.entries(d.cats).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+              <label>심각도<select value={e.severity} onChange={(x) => setE({ ...e, severity: x.target.value })}>{Object.entries(d.sev).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+              <label className="wide">내부 메모 {e.status === "반려" && <b className="err">(반려 사유 필수)</b>}<input value={e.memo} onChange={(x) => setE({ ...e, memo: x.target.value })} /></label>
+              <div className="wide save-row">
+                <label className="chip"><input type="file" accept="image/*" hidden onChange={(x) => { const fl = x.target.files?.[0]; if (!fl) return; const fd = new FormData(); fd.append("photo", fl);
+                  call(() => api.form(`/api/admin/city/${c.id}/after-photo`, fd, tok), "고친 뒤 사진을 올렸어요. 이용자 [내 제보]에 보여요.").then(reload).catch(() => {}); }} />고친 뒤 사진</label>
+                {c.place_id && !c.sample && can("notice") && <button className="chip" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/notice`, { title: c.title, body: c.summary, level: e.severity === "block" ? "warn" : "info" }, tok), "관광지 임시 알림으로 올렸어요. [임시 알림]에서 내릴 수 있어요.", `#/place/${c.place_id}`).then(reload).catch(() => {})}>여행 정보에 알리기</button>}
+                {others.length > 0 && <span className="ca-merge"><select className="box sm" value={into} onChange={(x) => setInto(x.target.value)} aria-label="합칠 묶음"><option value="">합치기…</option>
+                  {others.map((o: Any) => <option key={o.id} value={o.id}>{o.title} ({o.count}건)</option>)}</select>
+                  {into && <button className="chip sm" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { into }, tok), "묶음을 합쳤어요.").then(reload).catch(() => {})}>합치기</button>}</span>}
+              </div>
+            </div>
+          </details>
+          <div className="wide save-row"><button className="chip go" onClick={save}>저장 ({c.count}건)</button></div>
         </div>
       </div>}
     </li>

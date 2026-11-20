@@ -72,7 +72,7 @@ export function ReportForm({ t, lang, places, placeId = "", source = "불편 알
       <p className="cr-done-h"><Picto name="ok" size={28} /><b>{t("cr.done")}</b></p>
       <p className="cr-code"><small>{t("cr.code")}</small><b>{done.code}</b></p>
       <p className="muted small">{t("cr.codeHint")}</p>
-      {done.triage?.by === "ai" ? <p className="cr-saw"><span className="via via-llm">AI</span> {done.triage.summary}</p>
+      {done.triage?.by === "ai" ? <p className="cr-saw"><span className="via via-llm">AI</span><span>{done.triage.summary}</span></p>
         : <p className="muted small">{t("cr.ruleSaw")}</p>}
       {done.same > 1 && <p className="cr-same"><Icon name="crowd" /> {t("cr.same", { n: done.same })}</p>}
       <StepBar status={done.status} t={t} />
