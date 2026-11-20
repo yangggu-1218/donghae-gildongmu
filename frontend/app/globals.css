@@ -3094,3 +3094,75 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
   .adm-tabs { flex-wrap: wrap; overflow: visible; row-gap: 0; }
   .adm-date { font-size: 1em; }
 }
+
+/* ===================== 새 첫 화면 (2026-11-21 레퍼런스) ===================== */
+.hero-cue { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 2; display: grid; justify-items: center; gap: 6px;
+  font-size: .82em; font-weight: 600; color: var(--muted); text-decoration: none; }
+.hero-mouse { width: 18px; height: 28px; border: 2px solid currentColor; border-radius: 10px; position: relative; }
+.hero-mouse::after { content: ""; position: absolute; left: 50%; top: 5px; width: 2px; height: 6px; margin-left: -1px; border-radius: 2px; background: currentColor; animation: cue 1.6s ease-in-out infinite; }
+@keyframes cue { 0% { opacity: 0; transform: translateY(0); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .hero-mouse::after { animation: none; } }
+@media (max-width: 760px) { .hero-cue { display: none; } }
+.hm-sec { padding-top: 34px; }
+.hm-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 16px; position: relative; }
+.hm-head h2 { margin: 0; font-size: clamp(22px, 2.4vw, 28px); position: relative; padding-left: 12px; }
+.hm-head h2::before { content: ""; position: absolute; left: 0; top: 4px; width: 4px; height: 1.1em; border-radius: 2px; background: var(--sun); transform: skewX(-12deg); }
+.hm-head p { margin: 0; color: var(--muted); font-size: .92em; }
+.hm-more { margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 2px; min-height: 38px; padding: 0 14px; border: 1.5px solid var(--line-strong); border-radius: 999px;
+  font-weight: 700; font-size: .9em; color: var(--sea-deep); text-decoration: none; background: var(--surface); }
+.hm-more:hover { border-color: var(--sea); }
+/* 추천 코스 카드 */
+.rec-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.rec-card { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: 20px; overflow: hidden; aspect-ratio: 16 / 9; background: var(--mist);
+  font: inherit; color: #fff; text-align: left; cursor: pointer; box-shadow: 0 14px 30px -18px rgba(18, 53, 94, .55); }
+.rec-card .ph { position: absolute; inset: 0; margin: 0; }
+.rec-card .ph img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.rec-card:hover .ph img { transform: scale(1.05); }
+.rec-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 20, 40, 0) 35%, rgba(5, 20, 40, .72) 100%); }
+.rec-badge { position: absolute; z-index: 1; left: 14px; top: 14px; padding: 4px 12px; border-radius: 999px; background: #fff; color: var(--sea-deep); font-weight: 800; font-size: .85em; }
+.rec-txt { position: absolute; z-index: 1; left: 18px; right: 70px; bottom: 16px; display: grid; gap: 6px; }
+.rec-txt b { font-size: 1.15em; line-height: 1.3; text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
+.rec-txt small { display: flex; gap: 14px; font-weight: 600; opacity: .95; }
+.rec-txt small span { display: inline-flex; align-items: center; gap: 4px; }
+.rec-txt small .ic { width: 16px; height: 16px; }
+.rec-go { position: absolute; z-index: 1; right: 16px; bottom: 16px; width: 42px; height: 42px; border-radius: 50%; background: #fff; color: var(--sea-deep); display: grid; place-items: center; }
+.rec-card:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+/* 동해 관광지 + 여행 정보 */
+.hm-split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 0 28px; align-items: start; padding-bottom: 20px; }
+.hm-split > .hm-sec + .hm-sec { border-left: 1px solid var(--line); padding-left: 28px; }
+.hp-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.hp-tile { position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 3 / 4; background: var(--mist); color: #fff; text-decoration: none; }
+.hp-tile .ph { position: absolute; inset: 0; margin: 0; }
+.hp-tile .ph img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.hp-tile:hover .ph img { transform: scale(1.06); }
+.hp-tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 20, 40, 0) 50%, rgba(5, 20, 40, .7) 100%); }
+.hp-tile b { position: absolute; z-index: 1; left: 12px; right: 8px; bottom: 12px; font-size: 1em; line-height: 1.3; text-shadow: 0 1px 6px rgba(0, 0, 0, .4); }
+.hi-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.hi-list a { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.hi-list a:hover { border-color: var(--sea); background: #F7FAFE; }
+.hi-ic { flex: none; width: 48px; height: 48px; border-radius: 14px; background: var(--sea-soft); color: var(--sea); display: grid; place-items: center; }
+.hi-ic .ic { width: 24px; height: 24px; }
+.hi-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.hi-txt small { color: var(--sea); font-weight: 700; font-size: .82em; }
+.hi-txt b { font-size: 1.02em; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hi-txt em { font-style: normal; color: var(--muted); font-size: .85em; }
+.hi-list a > svg { flex: none; color: var(--muted); }
+/* 코스 찾기 독립 탭: 맨 위 여백 */
+.plan-page { padding-top: 28px; }
+@media (max-width: 1000px) {
+  .rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hm-split { grid-template-columns: minmax(0, 1fr); }
+  .hm-split > .hm-sec + .hm-sec { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 640px) {
+  .rec-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .hp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hp-tile { aspect-ratio: 4 / 3; }
+  .hm-sec { padding-top: 26px; }
+  .hm-head p { flex-basis: 100%; order: 3; }
+}
+/* 두 칸(관광지 | 여행 정보) 머리: 제목 아래 설명, 더보기는 오른쪽 위 */
+.hm-split .hm-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; }
+.hm-split .hm-head h2 { grid-column: 1; }
+.hm-split .hm-head p { grid-column: 1; }
+.hm-split .hm-head .hm-more { grid-column: 2; grid-row: 1 / span 2; margin-left: 0; }

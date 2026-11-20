@@ -7,7 +7,7 @@ import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap, { geocode } from "@/components/KakaoMap";
 import { fuzzyHit as fz } from "@/lib/fuzzy";
-import { Hero, HowToStrip, ZoneTiles, MoreLinks, Places, QuickBar, PlanAside } from "@/components/Sections";
+import { Hero, HowToStrip, Places, QuickBar, PlanAside, RecCourses, HomePlacesInfo } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
@@ -213,11 +213,12 @@ export default function Page() {
     try { on = localStorage.getItem("gd-big") === "1"; } catch { /* 저장소를 못 쓰는 브라우저 */ }
     setBig(on); document.body.classList.toggle("big", on);
   }, []);
-  // 페이지 이동: '#/교통' 같은 주소. '#plan' 같은 건 처음 화면 안의 위치. '#plan=...'은 공유받은 일정표.
+  // 페이지 이동: '#/교통' 같은 주소. '#plan'(·'#/plan')은 독립 탭 [코스 찾기] (2026-11-21, 예전엔 첫 화면 안). '#plan=...'은 공유받은 일정표. '#rec' 같은 건 첫 화면 안의 위치.
   useEffect(() => {
     const onHash = () => {
       const h = location.hash;
-      setRoute(h.startsWith("#/") ? h.slice(2).split("/") : [""]);
+      const isPlan = h === "#plan" || h.startsWith("#plan=") || h === "#/plan";
+      setRoute(isPlan ? ["plan"] : h.startsWith("#/") ? h.slice(2).split("/") : [""]);
       const m = h.match(/^#plan=(.+)$/);
       const c = m && decodePlan(m[1]);
       if (c) {
@@ -226,9 +227,9 @@ export default function Page() {
         return;
       }
       setSumOpen(false);
-      if (h.startsWith("#/")) window.scrollTo(0, 0);
+      if (h.startsWith("#/") || isPlan) window.scrollTo(0, 0);
       else if (h.length > 1) {
-        const go = () => (h === "#plan" ? document.querySelector("#plan .grid") : document.getElementById(h.slice(1)))?.scrollIntoView({ block: "start" });
+        const go = () => document.getElementById(h.slice(1))?.scrollIntoView({ block: "start" });
         setTimeout(go, 50); setTimeout(go, 450);   // 사진이 늦게 뜨며 위치가 밀리는 것까지 맞춘다
       }
     };
@@ -384,7 +385,7 @@ export default function Page() {
     const c = baseCond();
     await makeWith(c, `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}`);
   }
-  const toPlan = () => { if (location.hash.startsWith("#/")) location.hash = "#plan"; else { const el = document.querySelector("#plan .grid"); el?.scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => el?.scrollIntoView({ block: "start" }), 600); } };
+  const toPlan = () => { if (location.hash !== "#plan") location.hash = "#plan"; else window.scrollTo({ top: 0, behavior: "smooth" }); };
   // 관광지 카드의 '코스에 담기': 코스가 있으면 동이에게 넣어 달라고 하고, 없으면 담아 두었다가 코스를 만들 때 넣는다
   // 담기는 언제나 '담은 곳' 목록에 들어가고(다시 누르면 빠짐), 화면 아래 알림으로 바로 알려 준다.
   // 이미 만든 코스가 있으면 알림의 버튼으로 지금 코스에 넣을 수 있다.
@@ -745,7 +746,7 @@ export default function Page() {
         <div className="wrap bar">
           <a className="brand" href="#"><img src="/dongi/neutral.webp" alt="" />{t("brand")}</a>
           <nav className="nav" aria-label={t("nav.main")}>
-            {([["#plan", "nav.plan", ""], ["#/places", "nav.places", "places"], ["#/map", "nav.map", "map"], ["#/community", "nav.community", "community"], ["#/my", "nav.my", "my"]] as const).map(([h, k, r]) =>
+            {([["#plan", "nav.plan", "plan"], ["#/places", "nav.places", "places"], ["#/map", "nav.map", "map"], ["#/community", "nav.community", "community"], ["#/my", "nav.my", "my"]] as const).map(([h, k, r]) =>
               <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}>{t(k)}</a>)}
           </nav>
           <div className="tools">
@@ -787,8 +788,12 @@ export default function Page() {
       {route[0] === "" && <>
       <Hero lang={lang} busy={busy} onAsk={(m) => { toPlan(); if (course) snapshot(); chat(m, !!course); }} />
       <QuickBar lang={lang} />
-      {/* 선택과 집중: 첫 화면은 '코스 짜기'가 바로 이어지고, 예시 코스 다음에 나머지 정보가 온다 (기능은 그대로) */}
-      <section id="plan" className="sec wrap" aria-labelledby="plan-h">
+      <RecCourses lang={lang} onUse={(ids, style) => { setCond((c) => ({ ...c, wish: Array.from(new Set([...(c.wish || []), ...ids])) })); setAns((a) => (a.style ? a : { ...a, style: [style] })); location.hash = "#plan"; }} />
+      <HomePlacesInfo lang={lang} site={site} />
+      </>}
+      {/* 코스 찾기: 우리 서비스의 핵심이라 독립 탭으로 (2026-11-21 팀장 요청) */}
+      {route[0] === "plan" && <>
+      <section id="plan" className="sec wrap plan-page" aria-labelledby="plan-h">
       <div className="sec-head">
         <h2 id="plan-h">{t("plan.h")}</h2>
         <p>{t("plan.sub")}{(cond.wish || []).length > 0 && !course ? " " + t("plan.wished", { n: (cond.wish || []).length }) : ""}
@@ -1061,15 +1066,10 @@ export default function Page() {
       </div>
 
       </section>
-      {/* 코스를 만들면 아래 둘러보기 섹션은 접고 결과에 집중 (1번 사진: 추천 코스·동이 안내 띠는 코스 짜기와 겹쳐 뺌) */}
-      {!course && <>
-        <ZoneTiles lang={lang} />
-        <MoreLinks lang={lang} />
-      </>}
       </>}
       </main>
       <nav className="tabbar" aria-label={t("nav.main")}>
-        {([["#plan", "nav.plan", "", "route"], ["#/places", "nav.places", "places", "pin"], ["#/map", "nav.map", "map", "map"], ["#/community", "nav.community", "community", "story"], ["#/my", "nav.my", "my", "cal"]] as const).map(([h, k, r, ic]) =>
+        {([["#plan", "nav.plan", "plan", "route"], ["#/places", "nav.places", "places", "pin"], ["#/map", "nav.map", "map", "map"], ["#/community", "nav.community", "community", "story"], ["#/my", "nav.my", "my", "cal"]] as const).map(([h, k, r, ic]) =>
           <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><Icon name={ic} className="tab-ic" />{t(k)}</a>)}
       </nav>
       {/* 동이 메뉴: 서 있는 동이 하나. 마우스를 대거나(포커스) 누르면 메뉴가 펼쳐지고, 밖으로 나가거나 Esc면 접힌다.
@@ -1098,7 +1098,7 @@ export default function Page() {
           {toast.act && <button className="chip go" onClick={() => { toast.act!.fn(); setToast(null); }}>{toast.act.label}</button>}
           <button className="x" aria-label={t("common.close")} onClick={() => setToast(null)}>×</button>
         </div>)}
-      {(cond.wish || []).length > 0 && route[0] !== "" && !toast && (
+      {(cond.wish || []).length > 0 && route[0] !== "plan" && !toast && (
         <a className="cart" href="#plan" onClick={(e) => { e.preventDefault(); goCart(); }}>{lang === "ko" ? `담은 곳 ${(cond.wish || []).length}곳 · 코스 짜기` : `${(cond.wish || []).length} saved · Plan`}</a>)}
       <SiteFooter lang={lang} t={t} />
       {sumOpen && course && <Summary course={course} extras={extras} name={name} t={t} lang={lang} start={startName} url={shareUrl} onClose={() => setSumOpen(false)} />}

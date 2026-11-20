@@ -81,6 +81,7 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
           </ul>
         </div>
       </div>
+      <a className="hero-cue" href="#rec" aria-label={L("아래로 스크롤하세요", "Scroll down")}><span className="hero-mouse" aria-hidden="true" />{L("아래로 스크롤하세요", "Scroll down")}</a>
       {slides.length > 1 && !still && (
         <button type="button" className="hero-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>
           {paused ? L("사진 다시 넘기기", "Play photos") : L("사진 멈추기", "Pause photos")}</button>
@@ -120,9 +121,9 @@ export function QuickBar({ lang }: { lang: Lang }) {
   const L = pick(lang);
   // 그림: Microsoft Fluent Emoji 3D (MIT, public/icons3d/LICENSE-fluentui-emoji.txt)
   const rows: [string, string, string, string, string][] = [
-    ["#plan", "pin", "코스 짜기", "Plan a route", "c1"],
-    ["#/places", "camera", "관광지", "Places", "c2"],
-    ["#/map", "map", "편의시설 지도", "Facilities map", "c3"],
+    ["#plan", "pin", "코스 찾기", "Plan a route", "c1"],
+    ["#/places", "camera", "주요 관광지", "Places", "c2"],
+    ["#rec", "star", "추천 코스", "Suggested routes", "c3"],
     ["#/community/ask", "info", "이용 안내", "Help", "c4"],
   ];
   return (
@@ -266,6 +267,77 @@ export function ZoneTiles({ lang }: { lang: Lang }) {
         ))}
       </div>
     </section>
+  );
+}
+
+
+/* ---------------- 새 첫 화면 (2026-11-21 레퍼런스): 추천 코스 · 동해 관광지 · 여행 정보 ----------------
+   코스 찾기는 독립 탭(#plan)으로 옮기고, 첫 화면은 둘러보기와 바로가기만 */
+// 추천 코스: 누르면 그 장소들을 담은 채 [코스 찾기]로 넘어가 날짜·걸음에 맞춰 짠다 (판정·영업시간은 엔진이 다시 확인)
+export const REC_COURSES: { k: string; photo: string; ko: string; en: string; ids: string[]; style: string }[] = [
+  { k: "sea", photo: "zone_mukho", ko: "바다와 함께하는 동해 여행", en: "Donghae by the sea", ids: ["chotdae", "chuam_bridge", "dokkaebi"], style: "바다 보기" },
+  { k: "green", photo: "valley", ko: "푸른 자연 속 힐링 코스", en: "Green healing course", ids: ["valley", "mureung", "gawon", "mangsang"], style: "자연·산책" },
+  { k: "cave", photo: "cave", ko: "동굴 속 신비로운 여행", en: "Into the caves", ids: ["cave", "nature_park"], style: "역사·문화" },
+];
+const ArrowR = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
+const ChevR = () => <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>;
+function SecHead({ id, title, sub, more }: { id: string; title: string; sub: string; more?: [string, string] }) {
+  return <div className="hm-head"><h2 id={id}>{title}</h2><p>{sub}</p>{more && <a className="hm-more" href={more[0]}>{more[1]}<ChevR /></a>}</div>;
+}
+export function RecCourses({ lang, onUse }: { lang: Lang; onUse: (ids: string[], style: string) => void }) {
+  const L = pick(lang);
+  return (
+    <section id="rec" className="sec wrap hm-sec" aria-labelledby="rec-h">
+      <SecHead id="rec-h" title={L("추천 코스", "Suggested routes")} sub={L("동해의 매력을 가장 편리한 경로로 만나보세요!", "Donghae's best, on the easiest routes")} more={["#plan", L("전체 보기", "Plan your own")]} />
+      <ul className="rec-grid">
+        {REC_COURSES.map((c) => (
+          <li key={c.k}><button className="rec-card" onClick={() => onUse(c.ids, c.style)} aria-label={L(`${c.ko}: 이 장소들로 코스 찾기`, `${c.en}: plan with these places`)}>
+            <PlacePhoto id={c.photo} lang={lang} />
+            <span className="rec-badge">{L("추천", "Pick")}</span>
+            <span className="rec-txt"><b>{L(c.ko, c.en)}</b>
+              <small><span><Icon name="time" />{L("1일", "1 day")}</span><span><Icon name="pin" />{L(`${c.ids.length}곳`, `${c.ids.length} places`)}</span></small></span>
+            <span className="rec-go"><ArrowR /></span>
+          </button></li>))}
+      </ul>
+    </section>
+  );
+}
+const HOME_PLACES: [string, string, string][] = [["chotdae", "추암 촛대바위", "Chotdae Rock"], ["mukho_port", "묵호항", "Mukho Port"], ["cave", "천곡동굴", "Cheongok Cave"], ["valley", "무릉계곡", "Mureung Valley"]];
+export function HomePlacesInfo({ lang, site }: { lang: Lang; site: { banner: any; notices: any[] } | null }) {
+  const L = pick(lang);
+  const [ev, setEv] = useState<any[]>([]);
+  useEffect(() => { getJSON("/api/events").then((j) => setEv(j.upcoming || [])).catch(() => {}); }, []);
+  const now = new Date(Date.now() + 9 * 3600e3);
+  const today = now.toISOString().slice(0, 10);
+  const wd = ["일", "월", "화", "수", "목", "금", "토"];
+  const md = (d: string) => { const x = new Date(d + "T00:00:00"); return lang === "ko" ? `${x.getMonth() + 1}.${x.getDate()}(${wd[x.getDay()]})` : `${x.getMonth() + 1}/${x.getDate()}`; };
+  const e0 = ev.find((e) => (e.end || e.start) >= today);
+  const onNow = e0 && e0.start <= today;
+  const notice = site?.banner?.text || site?.notices?.[0]?.title || "";
+  return (
+    <div className="wrap hm-split">
+      <section className="hm-sec" aria-labelledby="hp-h">
+        <SecHead id="hp-h" title={L("동해 관광지", "Places in Donghae")} sub={L("동해의 아름다운 명소를 만나보세요!", "Meet Donghae's best spots")} more={["#/places", L("더보기", "More")]} />
+        <ul className="hp-grid">
+          {HOME_PLACES.map(([id, ko, en]) => (
+            <li key={id}><a className="hp-tile" href={`#/place/${id}`}><PlacePhoto id={id} lang={lang} /><b>{L(ko, en)}</b></a></li>))}
+        </ul>
+      </section>
+      <section className="hm-sec" aria-labelledby="hi-h">
+        <SecHead id="hi-h" title={L("여행 정보", "Travel info")} sub={L("다양한 소식과 유용한 정보를 확인하세요!", "News and useful info")} more={["#/events", L("더보기", "More")]} />
+        <ul className="hi-list">
+          <li><a href="#/events"><span className="hi-ic"><Icon name="cal" /></span>
+            <span className="hi-txt"><small>{onNow ? L("오늘의 행사", "On today") : L("다가오는 행사", "Coming up")}</small>
+              <b>{e0 ? e0.name : L("예정된 행사가 없어요", "No upcoming events")}</b>
+              {e0 && <em>{md(e0.start)}{e0.end && e0.end !== e0.start ? ` ~ ${md(e0.end)}` : ""}{e0.venue ? ` · ${e0.venue}` : ""}</em>}</span><ChevR /></a></li>
+          <li><a href={notice ? "#/" : "#/community/ask"} onClick={(e) => { if (notice) { e.preventDefault(); document.querySelector(".site-notes")?.scrollIntoView({ behavior: "smooth", block: "center" }); } }}>
+            <span className="hi-ic"><Icon name="warn" /></span>
+            <span className="hi-txt"><small>{L("공지사항", "Notice")}</small><b>{notice || L("동해 길동무 이용 안내", "How to use Donghae Gildongmu")}</b></span><ChevR /></a></li>
+          <li><a href="#/map"><span className="hi-ic"><Icon name="toilet" /></span>
+            <span className="hi-txt"><small>{L("편의시설", "Facilities")}</small><b>{L("장애인 화장실·충전기·주차장 지도", "Accessible toilets, chargers, parking")}</b></span><ChevR /></a></li>
+        </ul>
+      </section>
+    </div>
   );
 }
 
