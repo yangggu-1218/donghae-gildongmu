@@ -195,7 +195,8 @@ export function makeApi(DATA) {
     let segs = req.length ? req : p.segments;
     if (lessWalk) { const f = segs.filter((s) => !((s.distance_m || 0) > 300 || s.name.includes("전망 데크"))); segs = f.length ? f : segs; }
     const g = worst(segs.map((s) => gradeSegment(s, mode))) || "Y";
-    return ["입구까지", "관람 불가"].includes(((p.access_scope || {})[mode] || {}).level) ? "R" : g;
+    if (["입구까지", "관람 불가"].includes(((p.access_scope || {})[mode] || {}).level)) return "R";
+    return g === "G" && p.access_source === "예시" ? "Y" : g;   // engine.grade_place 와 같게: 확인 전 자료로는 '가능' 없음
   }
   function whyNot(p, mode) {   // engine.why_not 과 같게
     const sc = ((p.access_scope || {})[mode] || {}).note;
@@ -826,7 +827,7 @@ export function makeApi(DATA) {
       if (!(d || tm)) { changed = false; reply = ko ? "날짜나 시간을 알아듣지 못했어요. 예: '토요일 오전 10시'" : "I couldn't read the date or time."; }
       else {
         const day = c.date || kstNow().date, [, mo, dd] = day.split("-").map(Number);
-        reply = ko ? `${mo}월 ${dd}일(${WD_KO[weekdayOf(day)]}) ${c.start_time} 출발로 바꿨어요. 쉬는 날·브레이크타임을 다시 확인했어요.` : `Moved to ${day} ${c.start_time}. Closed spots were replaced.`;
+        reply = ko ? `${mo}월 ${dd}일(${WD_KO[weekdayOf(day)]}) ${c.start_time} 출발로 바꿨어요. 쉬는 날·쉬는 시간을 다시 확인했어요.` : `Moved to ${day} ${c.start_time}. Closed spots were replaced.`;
       }
     } else if (act === "nearby") {
       changed = false; reply = ko ? "코스 카드마다 가장 가까운 공영주차장·전동휠체어 충전기를 펼쳐 놨어요." : "I opened the nearest parking and chargers on each card.";
@@ -1027,13 +1028,13 @@ export function makeApi(DATA) {
         city_tour: () => cityTour(courseIds), events: () => events().upcoming.slice(0, 3), lodging: () => lodging(zone, 5),
         restaurants: () => { const e = eateries(elat, elon, food || "", 1000, 5); return e.count ? e : eateries(elat, elon, food || "", 3000, 5); }, parking: () => parkingNear(lat, lon, 3000, 2),
         taxi: () => { const x = courseIds.flatMap((pid) => taxiFor(pid)).slice(0, 2); return x.length ? x : taxiAtStart(c.start); },
-        hospital_pharmacy: () => ({ say: "화면 위 '안심' 버튼에서 지금 문 연 약국·병원과 응급실을 보여 드려요. 위급하면 119." }) }[kind];
+        hospital_pharmacy: () => ({ say: "오른쪽 아래 동이를 누른 뒤 [긴급·도움]에서 지금 문 연 약국·병원과 응급실을 보여 드려요. 위급하면 119." }) }[kind];
       cards.push({ kind, data: f ? f() : { error: "모르는 종류" } });
     }
     if (/아파|다쳤|응급|쓰러/.test(message)) {
       findHelp("hospital_pharmacy");
-      return result(c.lang === "ko" ? "많이 놀라셨죠. 위급하면 바로 119에 전화해 주세요. 화면 위 '안심' 버튼에서 가까운 병원·약국을 보여 드려요."
-        : "If it's an emergency, call 119 now. Tap 'Safety' at the top for nearby hospitals and pharmacies.");
+      return result(c.lang === "ko" ? "많이 놀라셨죠. 위급하면 바로 119에 전화해 주세요. 오른쪽 아래 동이를 누른 뒤 [긴급·도움]에서 가까운 병원·약국을 보여 드려요."
+        : "If it's an emergency, call 119 now. tap Dongi at the bottom right, then Help now for nearby hospitals and pharmacies.");
     }
     if (TRANSIT_RE.test(low)) {
       if (NO_CAR.test(low) && c.start === "자가용") c.start = "동해역";
@@ -1243,7 +1244,8 @@ export function makeApi(DATA) {
     h.reverted = true; cmsLog(db, "revert", id, null, null, `${a} 되돌림`); cmsSave(db); return h;
   }
   function cmsAdmin(method, path, q, body) {
-    if (path === "/api/admin/login-info") return { demo: true, id: DEMO_ID, password: DEMO_PW };
+    if (path === "/api/admin/login-info") return { demo: true };
+    if (path === "/api/admin/demo-login") return demoLogin(DEMO_ID, DEMO_PW);   // 데모(이 브라우저 안)에서는 데모 계정으로
     if (path === "/api/admin/login") return demoLogin(body.id, body.password);
     if (path === "/api/admin/logout") { delete SESS[q.__token || ""]; sessSave(); return { ok: true }; }
     const me = demoCheck(q.__token, permOf(path));

@@ -24,7 +24,7 @@ export function TripSettings({ conditions, busy, t, onApply, onCancel }: Props) 
   return <form className="trip-settings" onSubmit={e => { e.preventDefault(); if (!busy) void onApply(draft); }}>
     <fieldset disabled={busy} className="prefs-fields">
       <div className="settings-groups" role="group" aria-label={tr("설정 항목","Settings group")}>
-        {[["time",tr("출발·동행","Departure")],["move",tr("보행","Mobility")],["meal",tr("식사","Meals")],["style",tr("취향","Interests")]].map(([id,label]) =>
+        {[["time",tr("출발·동행","Departure")],["move",tr("걸음","Mobility")],["meal",tr("식사","Meals")],["style",tr("취향","Interests")]].map(([id,label]) =>
           <button type="button" className="chip" key={id} aria-pressed={group === id} onClick={() => setGroup(id)}>{label}</button>)}
       </div>
       <div hidden={group !== "time"}><div className="prefs-pair">

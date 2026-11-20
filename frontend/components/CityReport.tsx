@@ -104,7 +104,7 @@ export function ReportForm({ t, lang, places, placeId = "", source = "불편 알
           {CR_CATS.map(([k, ic]) => <button type="button" key={k} className="cr-cat" aria-pressed={cat === k} onClick={() => setCat(cat === k ? "" : k)}><Icon name={ic} /><span>{t(`cr.c.${k}`)}</span></button>)}
         </div>
         <label className="cr-type">
-          <span className="cr-type-k">{lang === "ko" ? "이동 유형" : "Travel type"}{lang === "ko" && <small>Travel Type</small>}</span>
+          <span className="cr-type-k">{lang === "ko" ? "이동 유형" : "Travel type"}</span>
           <span className="cr-type-box">
             <span className="cr-type-ic" aria-hidden="true">{who[0] ? <AccIcon k={TYPE_IC[who[0]]} size={22} /> : <Icon name="walk" />}</span>
             <select value={who[0] || ""} onChange={(e) => setWho(e.target.value ? [e.target.value] : [])}>

@@ -116,10 +116,16 @@ function TripCard({ p, lang, places, onFav, onRename, onDelete }: { p: SavedPlan
   const [name, setName] = useState(p.title);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const gearRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {   // 메뉴·확인 칸이 열리면 첫 버튼으로 포커스 (확인 칸은 [취소]로)
+    if (!menu) return;
+    const id = window.setTimeout(() => { const bs = menuRef.current?.querySelectorAll<HTMLButtonElement>(".trip2-menu button"); (sure ? bs?.[bs.length - 1] : bs?.[0])?.focus(); }, 50);
+    return () => window.clearTimeout(id);
+  }, [menu, sure]);
   useEffect(() => {
     if (!menu) return;
     const off = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) { setMenu(false); setSure(false); } };
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { setMenu(false); setSure(false); } };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { setMenu(false); setSure(false); gearRef.current?.focus(); } };
     document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("mousedown", off); document.removeEventListener("keydown", esc); };
   }, [menu]);
@@ -162,16 +168,16 @@ function TripCard({ p, lang, places, onFav, onRename, onDelete }: { p: SavedPlan
       <div className="trip2-tools" ref={menuRef}>
         <button type="button" className="trip2-ic" aria-pressed={!!p.fav} onClick={onFav} aria-label={p.fav ? L("즐겨찾기에서 빼기", "Remove from favorites") : L("즐겨찾기", "Add to favorites")}
           title={L("즐겨찾기", "Favorite")}><Icon name="star" className={p.fav ? "star-on" : ""} /></button>
-        <button type="button" className="trip2-ic" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSure(false); }} aria-label={L("설정", "Settings")} title={L("설정", "Settings")}>
+        <button ref={gearRef} type="button" className="trip2-ic" aria-expanded={menu} onClick={() => { setMenu(!menu); setSure(false); }} aria-label={L("설정", "Settings")} title={L("설정", "Settings")}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg></button>
-        {menu && <div className="trip2-menu" role="menu">
+        {menu && <div className="trip2-menu">
           {!sure ? <>
-            <button type="button" role="menuitem" onClick={() => { setMenu(false); setName(p.title); setEdit(true); }}><Icon name="edit" />{L("이름 변경", "Rename")}</button>
-            <button type="button" role="menuitem" className="danger" onClick={() => setSure(true)}><Icon name="trash" />{L("삭제", "Delete")}</button>
+            <button type="button" onClick={() => { setMenu(false); setName(p.title); setEdit(true); }}><Icon name="edit" />{L("이름 변경", "Rename")}</button>
+            <button type="button" className="danger" onClick={() => setSure(true)}><Icon name="trash" />{L("삭제", "Delete")}</button>
           </> : <div className="trip2-sure" role="alert"><p>{L("이 일정을 지울까요?", "Delete this trip?")}</p>
             <button type="button" className="chip danger" onClick={() => { setMenu(false); onDelete(); }}>{L("지우기", "Delete")}</button>
-            <button type="button" className="chip" onClick={() => setSure(false)}>{L("취소", "Cancel")}</button></div>}
+            <button type="button" className="chip" onClick={() => { setSure(false); setMenu(false); gearRef.current?.focus(); }}>{L("취소", "Cancel")}</button></div>}
         </div>}
       </div>
     </li>

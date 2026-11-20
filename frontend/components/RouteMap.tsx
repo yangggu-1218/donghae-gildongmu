@@ -200,7 +200,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, facilit
         }
         if (overview) {   // 갈 수 있는 관광지 전체 보기: 번호·경로 없이 이름만
           new maps.CustomOverlay({ map, position: pos, yAnchor: 1.1, content:
-            `<div style="background:#fff;border:2px solid #2462B4;border-radius:999px;padding:2px 8px;font:600 12px sans-serif;color:#12355E;white-space:nowrap">${p.label}</div>` });
+            `<div style="background:#fff;border:2px solid #2462B4;border-radius:999px;padding:2px 8px;font:600 12px sans-serif;color:#12355E;white-space:nowrap">${p.label.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)}</div>` });
           return;
         }
         const anchor = document.createElement("div");

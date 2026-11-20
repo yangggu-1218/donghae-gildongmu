@@ -51,7 +51,6 @@ export function OptimizeCompare({ opt, before, name, lang, onApply, onKeep }: Pr
             <td className={opt.after.closed.length ? "bad" : "good"}>{opt.after.closed.length ? (ko ? `${opt.after.closed.length}곳 안 맞음` : `${opt.after.closed.length} conflict(s)`) : (ko ? "모두 맞음" : "All OK")}</td><td></td></tr>
         </tbody>
       </table>
-      <p className="muted small">{ko ? "기준: " : "Source: "}{SRC[opt.after.source][ko ? 0 : 1]}{opt.before.source !== opt.after.source ? ` · ${ko ? "기존" : "current"}: ${SRC[opt.before.source][ko ? 0 : 1]}` : ""}</p>
 
       <div className="opt-cols">
         <section aria-label={ko ? "기존 일정" : "Current"}><h3>{ko ? "기존 일정" : "Current"}</h3>

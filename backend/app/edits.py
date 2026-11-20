@@ -325,7 +325,7 @@ def apply(places: dict[str, Place], c: Conditions, ids: list[str], text: str = "
         else:
             day = _dt.date.fromisoformat(c.date) if c.date else today()
             wd = "일월화수목금토"[day.isoweekday() % 7]
-            reply = (f"{day.month}월 {day.day}일({wd}) {c.start_time} 출발로 바꿨어요. 쉬는 날·브레이크타임을 다시 확인했어요."
+            reply = (f"{day.month}월 {day.day}일({wd}) {c.start_time} 출발로 바꿨어요. 쉬는 날·쉬는 시간을 다시 확인했어요."
                      if ko else f"Moved to {day.isoformat()} {c.start_time}. Closed spots were replaced.")
     elif act == "nearby":
         changed = False

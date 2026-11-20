@@ -92,7 +92,9 @@ def fixed_schedule(places: dict[str, Place], c: Conditions, items: list[tuple[st
                        and (not n.get("end") or day_s <= n["end"])), None)
         if notice and notice.get("level") == "closed":
             problems.append(f"{p.name_ko}({pid}): 임시 휴무 — {notice.get('title')}")
-        st = "always" if why == "always" else "unknown" if why == "unknown" else "open"
+        # 그 시각에 못 들어가거나 임시 휴무면 '영업 중'으로 보이지 않게 (QA 2026-11-21, engine.order_stops 와 같은 기준)
+        st = ("closed" if (not okk or (notice and notice.get("level") == "closed"))
+              else "always" if why == "always" else "unknown" if why == "unknown" else "open")
         t = engine.q15(arrive + (wait if okk else 0))
         stay = engine.q15(t + p.stay_min) - t
         stops.append(Stop(id=pid, arrive=engine.hhmm(t), drive_min=dm, grade=engine.grade_place(p, mode, less), kind=kind,

@@ -17,7 +17,7 @@ type Judge = {
 };
 const VERDICT: Record<string, [string, string]> = {
   G: ["이동 가능", "Easy to visit"], Y: ["주의 구간 있음 · 보조 권장", "OK with some help"],
-  R: ["이동 어려움", "Difficult"], U: ["판단 불가 (접근 정보 부족)", "Not sure yet"],
+  R: ["이동 어려움", "Difficult"], U: ["확인 전", "Not checked yet"],
 };
 const CONF: Record<string, [string, string]> = { high: ["확신 높음", "High confidence"], medium: ["확신 보통", "Medium confidence"], low: ["확신 낮음", "Low confidence"] };
 
@@ -45,7 +45,7 @@ export function AiJudge({ j, lang, chips = [], carerTip = "" }: { j: { d: Judge 
   if (j.state === "fail") return null;
   if (j.state === "load" || !d) return (
     <div className="ai-card ai-judge loading" aria-live="polite">
-      <p className="ai-by"><Icon name="info" />{L("AI 판정관이 길 정보와 최근 제보를 읽는 중이에요…", "The AI is reading the path data and recent reports…")}</p>
+      <p className="ai-by"><Icon name="info" />{L("길 정보를 확인하는 중이에요…", "The AI is reading the path data and recent reports…")}</p>
     </div>);
   const v = d.verdict in VERDICT ? d.verdict : "U";
   const ai = d.by === "ai";

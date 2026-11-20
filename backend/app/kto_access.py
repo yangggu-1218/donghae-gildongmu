@@ -107,7 +107,8 @@ def _facilities(items: dict) -> list[str]:
     f = []
     body = items.get("지체장애", [])
     val = {k: v for k, v in body}
-    if "화장실" in val: f.append("장애인 화장실")
+    if "화장실" in val:   # '(OO 내)'처럼 다른 곳에 있으면 '인근'으로 (QA 2026-11-21)
+        f.append("장애인 화장실(인근)" if "내)" in val["화장실"] or "위치" in val["화장실"] else "장애인 화장실")
     if "주차여부" in val: f.append("장애인 주차")
     if "휠체어대여" in val or any(k == "휠체어 대여" for k, _ in items.get("고령자", [])): f.append("휠체어 대여")
     if "엘리베이터" in val: f.append("엘리베이터")

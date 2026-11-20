@@ -26,7 +26,7 @@ def count(task: str, ok: bool, tokens: int = 0):
 
 
 def status() -> dict:
-    return {"connected": bool(API_KEY), "model": ai.model_for("etc"), "models": ai.settings(), "usage": ai.USAGE, "last": ai.LAST, "provider": "Anthropic Claude API", "tasks": USAGE, "last_fail": LAST_FAIL,
+    return {"connected": bool(API_KEY), "model": ai.model_for("etc"), "models": ai.settings(), "usage": ai.USAGE, "last": ai.LAST, "provider": "Anthropic Claude API", "tasks": USAGE,
             "runtime_features": ["대화형 동이(도구 호출)", "자유 입력 조건 해석", "말로 코스 수정", "추천 이유 생성",
                                  "제보 사진 분석(비전)", "이동약자 메모 구조화"]}
 

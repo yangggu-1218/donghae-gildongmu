@@ -33,7 +33,7 @@ function Field({ label, children, wide }: { label: string; children: React.React
 export function AdminPage({ lang }: { lang: Lang }) {
   const [tok, setTok] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [info, setInfo] = useState<{ demo: boolean; id?: string; password?: string } | null>(null);
+  const [info, setInfo] = useState<{ demo: boolean } | null>(null);
   const [id, setId] = useState(""); const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   useEffect(() => {
@@ -48,9 +48,12 @@ export function AdminPage({ lang }: { lang: Lang }) {
       setTok(r.token); setUser(r.user); try { sessionStorage.setItem("gd-admin-tok", r.token); } catch { /* 무시 */ }
     } catch (e: any) { setErr(e.message || "로그인하지 못했어요."); }
   }
-  function demoLogin() {   // [임시 로그인]: 대표 계정을 자동으로 채우고 바로 로그인
-    if (!info?.id || !info.password) return;
-    setId(info.id); setPw(info.password); login(info.id, info.password);
+  async function demoLogin() {   // [임시 로그인]: 서버가 시연 계정으로 바로 로그인 (비밀번호는 오가지 않음)
+    setErr("");
+    try {
+      const r = await api.post("/api/admin/demo-login", {});
+      setTok(r.token); setUser(r.user); try { sessionStorage.setItem("gd-admin-tok", r.token); } catch { /* 무시 */ }
+    } catch (e: any) { setErr(e.message || "로그인하지 못했어요."); }
   }
   function logout() { api.post("/api/admin/logout", {}, tok).catch(() => {}); setTok(""); setUser(null); try { sessionStorage.removeItem("gd-admin-tok"); } catch { /* 무시 */ } }
 
@@ -65,7 +68,7 @@ export function AdminPage({ lang }: { lang: Lang }) {
           <button className="chip go">로그인</button>
           {info?.demo && <button type="button" className="chip demo" onClick={demoLogin}>임시 로그인</button>}
         </div>
-        {info?.demo && <p className="muted small">[임시 로그인]은 본선 시연용이에요. 누르면 총괄 관리자 계정이 자동으로 들어가요. 대회가 끝나면 서버 설정(DEMO_LOGIN)에서 꺼 주세요.</p>}
+        {info?.demo && <p className="muted small">[임시 로그인]은 시연 계정으로 들어가요.</p>}
         <p className="muted small">비밀번호를 5번 틀리면 10분 동안 잠겨요. 계정이 없으면 총괄 관리자에게 만들어 달라고 하세요.</p>
         {err && <p role="alert" className="err">{err}</p>}
       </form>

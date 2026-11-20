@@ -312,7 +312,7 @@ function Detail({ lang, p, places, helped, onHelp, onComment, onHide, onUse }: {
           {err && <p className="err" role="alert">{err}</p>}
           <button className="btn-go" onClick={send}>{L("댓글 남기기", "Post comment")}</button>
         </div>
-        <button className="link-btn cm-report" onClick={() => { if (confirm(L("이 글을 이 기기에서 가릴까요?", "Hide this post on this device?"))) onHide(); }}>{L("신고·가리기", "Report / hide")}</button>
+        <button className="link-btn cm-report" onClick={() => { if (confirm(L("이 글을 이 기기에서 가릴까요?", "Hide this post on this device?"))) onHide(); }}>{L("이 글 가리기", "Report / hide")}</button>
       </section>
     </section>
   );

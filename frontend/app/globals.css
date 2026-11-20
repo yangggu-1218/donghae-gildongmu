@@ -3779,3 +3779,13 @@ main a[href^="tel:"] { padding-block: 6px; }
 @media (max-width: 600px) {
   .ca2-ai p { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* 접근성 점검 (2026-11-21) */
+.tl-all > li:focus-within .stop-actions { display: flex; }   /* 키보드로 카드 안에 들어오면 [상세·지도·빼기·교체하기]도 보임 */
+.my-page .my-search:focus-within { outline: 3px solid var(--sun); outline-offset: 2px; }
+.tsel-list button:focus-visible { outline: 3px solid var(--sun) !important; outline-offset: -3px; }
+.drag-h[aria-disabled="true"] { opacity: .4; cursor: default; }
+.course-schedule .tl-all .stop-overview { padding-left: 40px; }
+.drag-h { width: 34px; }
+@media (max-width: 600px) { .course-schedule .tl-all .stop-overview { padding-left: 36px; } .drag-h { width: 32px; } }
+.sum:focus { outline: none; }

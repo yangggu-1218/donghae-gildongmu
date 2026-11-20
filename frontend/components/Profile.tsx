@@ -144,7 +144,7 @@ export function ProfilePage({ lang, wish, places, onRemoveWish }: { lang: Lang; 
       </div>
       <div className="panel pf-body" role="tabpanel">
         {tab === "trips" && (plans.length ? <ul className="pf-list">{plans.slice(0, 8).map((p) => <li key={p.id}><a href={`#plan=${p.hash}`} onClick={(e) => { e.preventDefault(); openSavedPlan(p); }}><b>{planName(p)}</b><small className="muted">{p.date} {p.start_time} · {p.stops.map(nm).join(" → ")}</small></a></li>)}</ul>
-          : <p className="muted">{L("저장한 코스가 없어요. 코스를 짠 뒤 [내 일정에 저장]을 눌러 보세요.", "No saved trips yet.")} <a href="#plan">{L("코스 짜러 가기", "Plan a trip")}</a></p>)}
+          : <p className="muted">{L("저장한 코스가 없어요. 코스를 짠 뒤 [내 일정에 저장]을 눌러 보세요.", "No saved trips yet.")} <a href="#plan">{L("코스 찾으러 가기", "Plan a trip")}</a></p>)}
         {tab === "trips" && plans.length > 0 && <a className="link-btn" href="#/my">{L("내 일정 전체 보기", "See all trips")}</a>}
         {tab === "wish" && (wish.length ? <ul className="pf-list">{wish.map((id) => <li key={id}><a href={`#/place/${id}`}><b>{nm(id)}</b></a><button className="chip sm" onClick={() => onRemoveWish(id)}>{L("빼기", "Remove")}</button></li>)}</ul>
           : <p className="muted">{L("담은 장소가 없어요. 관광지에서 [코스에 담기]를 눌러 보세요.", "No saved places.")} <a href="#/places">{L("관광지 보러 가기", "Browse places")}</a></p>)}

@@ -63,11 +63,12 @@ def save(db: dict):
 # - 그 밖의 계정은 총괄 관리자가 화면에서 만든다. 비밀번호는 그대로 저장하지 않고 PBKDF2-SHA256(+솔트)로 바꿔 저장한다.
 # - 같은 아이디로 5번 틀리면 10분 동안 잠근다.
 # - 누가 무엇을 바꿨는지 변경 이력에 이름이 남는다.
-ROLES = {"owner": "총괄 관리자", "editor": "편집자", "surveyor": "현장 조사원"}
+ROLES = {"owner": "총괄 관리자", "editor": "편집자", "surveyor": "현장 조사원", "demo": "시연 계정"}
 PERMS = {
     "owner": {"place", "notice", "site", "reports", "visits", "history", "data", "accounts", "backup"},
     "editor": {"place", "notice", "site", "reports", "visits", "history", "data"},
     "surveyor": {"reports", "visits"},
+    "demo": {"place", "notice", "site", "reports", "visits", "history", "data"},   # [임시 로그인]: 계정·백업·초기화·제보자 연락처는 못 봄
 }
 SESSIONS: dict[str, dict] = {}
 SESSION_HOURS = 12
@@ -123,7 +124,7 @@ def login(uid: str, pw: str) -> dict:
         raise ValueError(f"비밀번호를 여러 번 틀려서 잠겼어요. {int((f[1] - now) // 60) + 1}분 뒤에 다시 해 주세요.")
     owner_id, owner_pw = account()
     user = None
-    if owner_pw and secrets.compare_digest(uid, owner_id) and secrets.compare_digest(pw or "", owner_pw):
+    if owner_pw and secrets.compare_digest(uid.encode(), owner_id.encode()) and secrets.compare_digest((pw or "").encode(), owner_pw.encode()):
         user = {"id": owner_id, "name": os.getenv("ADMIN_NAME") or "총괄 관리자", "role": "owner", "must_change": False}
         with _lock:
             db = load(); db["owner_last_login"] = _now(); save(db)
@@ -161,6 +162,17 @@ def check(tok: str | None) -> dict | None:
 
 def can(s: dict, perm: str | None) -> bool:
     return perm is None or perm in PERMS.get(s.get("role"), set())
+
+
+def demo_login() -> dict:
+    """[임시 로그인] (DEMO_LOGIN=1 일 때만). 비밀번호를 화면에 보내지 않고, 권한을 줄인 시연 계정으로 바로 들어간다 (QA 2026-11-21)."""
+    if not demo_login_enabled():
+        raise ValueError("임시 로그인을 쓸 수 없어요.")
+    now = dt.datetime.now().timestamp()
+    user = {"id": "demo", "name": "시연 계정", "role": "demo", "must_change": False}
+    tok = secrets.token_urlsafe(24)
+    SESSIONS[tok] = {**user, "exp": now + SESSION_HOURS * 3600}
+    return {"token": tok, "user": user | {"role_name": ROLES["demo"], "perms": sorted(PERMS["demo"])}}
 
 
 def logout(tok: str | None):

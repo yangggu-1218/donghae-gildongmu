@@ -51,6 +51,7 @@ export function useDragSort(ids: string[], onDrop: (next: string[]) => void, dis
   };
 
   const onPointerDown = (e: React.PointerEvent, id: string, handle: boolean) => {
+    dragged.current = false;   // 앞서 끈 표시는 새로 누를 때 지운다 (터치에서 첫 탭이 무시되던 것)
     if (disabled || e.button > 0 || ids.length < 2) return;
     if (!handle) {
       if (e.pointerType !== "mouse") return;

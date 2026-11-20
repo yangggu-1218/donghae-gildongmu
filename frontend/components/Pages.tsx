@@ -229,7 +229,8 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const hours = (p.hours_text || "").split(" · ").filter((x: string) => !/휴무|closed/i.test(x)).join(" · ");
   const DAY_EN: Record<string, string> = { "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat", "일": "Sun" };
   const daysEn = String(p.closed_days || "").replace(/([월화수목금토일])요일/g, (_: string, d: string) => DAY_EN[d]).replace(/·|,\s*/g, ", ");
-  const closedTxt = p.closed_days ? L(`${p.closed_days} 휴무`, `Closed ${daysEn}`) : p.hours_text?.includes("휴무") ? "" : L("정기 휴무 없음", "No regular closing day");
+  // 운영시간 자료가 없으면 '정기 휴무 없음'이라고 하지 않는다 (QA 2026-11-21)
+  const closedTxt = p.closed_days ? L(`${p.closed_days} 휴무`, `Closed ${daysEn}`) : p.hours_text?.includes("휴무") ? "" : !p.hours_text ? L("휴무일 확인 필요", "Check closing days") : L("정기 휴무 없음", "No regular closing day");
   const feeMain = feeRows.find(([k]) => k === "입장료") || feeRows[0];
   const fee = feeMain ? (feeMain[0] === "입장료" ? feeMain[1] : `${feeMain[0]} ${feeMain[1]}`) : p.fee ? tr(lang, p.fee) : "";
   const intro = (lang === "ko" ? p.intro_ko || p.tip_ko : p.intro_en || p.tip_en || p.intro_ko) || "";
@@ -276,7 +277,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   if (feeRows.length > 1) feeRows.forEach(([k, v]) => before.push(["ticket", `${k}: ${v}`]));
   else if (fee) before.push(["ticket", /입장료|무료|요금/.test(fee) ? fee : L(`입장료 ${fee}`, `Admission ${fee}`)]);
   ((j.state === "ok" && j.d?.ask_before) || []).slice(0, 2).forEach((x: string) => before.push(["wheel", x]));
-  if (noPath) before.push(["phone", L("이동약자 접근 정보: 판단 불가 · 방문 전 전화 확인 권장", "No path info yet — please call ahead")]);
+  if (noPath) before.push(["phone", L("이동약자 접근 정보: 확인 전 · 가기 전에 전화로 물어보세요", "No path info yet — please call ahead")]);
   const tipsAll = Array.from(new Set([lang === "ko" ? p.carer_tip : "", j.state === "ok" ? j.d?.tip : "", lang === "ko" ? p.tip_ko : p.tip_en].filter((x) => x && x !== tipLine))).slice(0, 3) as string[];   // 파란 칸에 이미 보인 팁은 빼기
   const shown = mainPh || p.id;
   const near: [string, string, string, number | undefined][] = [
@@ -284,7 +285,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
     ...(n.parking ? [["parking", L("주차장", "Parking"), `${n.parking.name}${n.parking.spaces ? ` (${n.parking.spaces}${L("면", "")})` : ""}`, n.parking.dist_m] as [string, string, string, number | undefined]] : []),
     ...(n.medical?.["응급실"] ? [["shield", L("응급실", "ER"), n.medical["응급실"].name, n.medical["응급실"].dist_m] as [string, string, string, number | undefined]] : []),
     ...((p.bus_stops || []).slice(0, 1).map((b: any) => ["bus", L("버스 정류장", "Bus stop"),
-      `${b.name} · ${L(`걸어서 약 ${Math.max(1, Math.ceil(b.dist_m * 1.3 / 0.7 / 60))}분 (0.7m/s 기준)`, `~${Math.max(1, Math.ceil(b.dist_m * 1.3 / 0.7 / 60))} min walk`)}`, b.dist_m] as [string, string, string, number | undefined])),
+      `${b.name} · ${L(`걸어서 약 ${Math.max(1, Math.ceil(b.dist_m * 1.3 / 0.7 / 60))}분 `, `~${Math.max(1, Math.ceil(b.dist_m * 1.3 / 0.7 / 60))} min walk`)}`, b.dist_m] as [string, string, string, number | undefined])),
   ];
 
   const moreBtn = !stay && !noPath ? <button className="pp4-more" aria-expanded={routeOpen} aria-controls="pp4-route-more" onClick={() => setRouteOpen(!routeOpen)}>
@@ -321,7 +322,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           </div>
           <p className={`pp3-verdict pp4-verdict v-${noPath ? "U" : jv}`} aria-live="polite">
             <Picto name={noPath ? "ask" : VERDICT_PICTO[jv] || "ask"} size={22} />
-            <span><b>{modeName}:</b> {noPath ? L("판단 불가 (접근 정보 부족) · 방문 전 전화 확인 권장", "No path info yet · please call ahead")
+            <span><b>{modeName}:</b> {noPath ? L("확인 전 · 가기 전에 전화로 물어보세요", "No path info yet · please call ahead")
               : j.state === "load" && !worst ? L("확인하는 중…", "Checking…") : verdictText(jv, lang)}{!noPath && extra ? ` · ${extra}` : ""}</span>
           </p>
           {(hours || fee || p.phone) && <dl className="pp4-info">
@@ -363,7 +364,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
         </div>
         {pills.length > 0 ? <ul className="pp4-pills">{pills.map(([tone, t]) => (
           <li key={t} className={`p-${tone}`}><Picto name={tone === "ok" ? "ok" : tone === "bad" ? "stop" : tone === "warn" ? "warn" : "tip"} size={22} /><span>{t}</span></li>))}</ul>
-          : <p className="muted">{L("이동약자 이용 정보: 판단 불가 (자료 없음) · 방문 전 전화 확인 권장", "No access info yet. Please call ahead.")}</p>}
+          : <p className="muted">{L("이동약자 이용 정보: 확인 전 · 가기 전에 전화로 물어보세요", "No access info yet. Please call ahead.")}</p>}
         {segs.length > 0 && <div className="pp4-route">
           <ol aria-label={L("도착부터 구간별", "Path, step by step")}>
             {segs.map((s: any) => {
@@ -399,7 +400,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
             {infoClosed && <div className="pp4-ig ig-closed"><h3><Icon name="cal" />{L("휴무", "Closed")}</h3><p>{infoClosed}</p></div>}
             {infoFee.length > 0 && <div className="pp4-ig ig-fee"><h3><Icon name="ticket" />{L("입장료", "Admission")}</h3>
               <dl>{infoFee.map(([k, v]) => <div key={k}>{!/^(입장료|Admission)$/.test(k) && <dt>{k}</dt>}<dd>{lines2(v)}</dd></div>)}</dl></div>}
-            {infoPark.length > 0 && <div className="pp4-ig ig-park"><h3><Icon name="parking" />{L("주차비용", "Parking")}</h3>
+            {infoPark.length > 0 && <div className="pp4-ig ig-park"><h3><Icon name="parking" />{L("주차 요금", "Parking")}</h3>
               <dl>{infoPark.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd>{lines2(v)}</dd></div>)}</dl></div>}
             {!infoClosed && !infoFee.length && !infoPark.length && <p className="muted">{L("운영시간·요금은 바뀔 수 있어요. 출발 전에 한 번 더 확인해 주세요.", "Hours and fees can change. Please check before you go.")}</p>}
           </div>
@@ -492,7 +493,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
               <div><dt>{L("예약", "Booking")}</dt><dd>{L(`시외로 갈 때는 ${String(m.advance || "").replace(/\(.*\)/, "")} 전까지`, `Book ${String(m.advance || "").replace(/일.*$/, "")} days ahead for trips out of town`)}</dd></div>
               <div><dt>{L("요금", "Fare")}</dt><dd>{L("4km까지 1,100원, 넘으면 1km마다 100원", "₩1,100 up to 4 km, then ₩100/km")}</dd></div>
             </dl>
-            <p>{L("다른 지역에 사는 등록 장애인 관광객도 이용할 수 있어요(동해시 확인). 앱·누리집으로도 예약돼요.", "Registered disabled visitors from other regions can use it too (confirmed by Donghae City). You can also book in the app or online.")}
+            <p>{L("다른 지역에 사는 등록 장애인 관광객도 이용할 수 있어요. 앱·누리집으로도 예약돼요.", "Registered disabled visitors from other regions can use it too (confirmed by Donghae City). You can also book in the app or online.")}
 </p>
             <details className="tr-more"><summary>{L("이용할 수 있는 사람·자세한 요금", "Who can use it, full fares (in Korean)")}</summary>
               {m.who && <ol className="tr-who">{String(m.who).split(/\d\.\s*/).filter(Boolean).map((w: string) => <li key={w}>{w.trim()}</li>)}</ol>}
@@ -904,7 +905,7 @@ export function StayPage({ lang }: { lang: Lang }) {
       {!d ? <Loading err={err} lang={lang} /> : (
         <div className="tbl-wrap"><table className="tbl tbl-stack">
           <thead><tr><th>{L("이름", "Name")}</th><th>{L("종류", "Type")}</th><th>{L("주소", "Address")}</th><th>{L("전화", "Phone")}</th><th>{L("예약·지도", "Book · map")}</th></tr></thead>
-          <tbody>{!rows.length && <tr><td colSpan={5} className="muted">{L(`이 권역에는 ${kind ? `'${KINDS.find((x) => x[0] === kind)?.[1]}'` : ""} 숙소가 없어요 (0곳). 다른 권역을 눌러 보세요.`, "No stays of this type in this area (0). Try another area.")}</td></tr>}
+          <tbody>{!rows.length && <tr><td colSpan={5} className="muted">{L(`이 권역에는 ${kind ? `'${KINDS.find((x) => x[0] === kind)?.[1]}'` : ""} 숙소가 없어요. 다른 권역을 눌러 보세요.`, "No stays of this type in this area (0). Try another area.")}</td></tr>}
             {rows.map((r: any) => <tr key={r.name + r.address}><td className="tbl-name">{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td data-label={L("종류", "Type")}>{tr(lang, r.kind)}</td><td data-label={L("주소", "Address")}><small>{r.address}</small></td><td data-label={L("전화", "Phone")}>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td data-label={L("예약", "Book")}><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
         </table></div>
       )}
@@ -919,16 +920,16 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
   const lists = [
     { t: L("휠체어", "Wheelchair"), i: [L("전동휠체어 충전기 위치 확인 (편의시설 지도)", "Check charger locations"), L("휠체어 차량은 이동지원센터에 미리 문의", "Call the mobility center ahead"), L("장애인 화장실 위치를 코스마다 확인", "Find accessible toilets on each stop"), L("주차할 땐 장애인 주차 구역이 있는 공영주차장으로", "Use lots with accessible bays")] },
     { t: L("유모차·아이", "Stroller & kids"), i: [L("모래 해변은 유모차가 빠져요 — 데크길 위주로", "Beaches are sandy; use boardwalks"), L("기저귀 교환대는 공중화장실 정보에서 확인", "Check baby-changing tables"), L("실내 코스(연필뮤지엄·천곡동굴)를 비 올 때 대비로", "Keep indoor backups for rain")] },
-    { t: L("어르신", "Older adults"), i: [L("[덜 걷는 평지로] 버튼으로 경사 있는 곳 빼기", "Use [flatter route]"), L("중간에 쉬어 갈 카페를 넣기", "Add a café break"), L("[큰 글씨 일정표]를 가족과 공유", "Share the large-print plan with family"), L("상비약과 복용 시간표 챙기기", "Bring regular medicines")] },
+    { t: L("어르신", "Older adults"), i: [L("[오르막 있는 곳 빼기] 버튼으로 경사 있는 곳 빼기", "Use [flatter route]"), L("중간에 쉬어 갈 카페를 넣기", "Add a café break"), L("[큰 글씨 요약 일정표 보기]를 가족과 공유", "Share the large-print plan with family"), L("상비약과 복용 시간표 챙기기", "Bring regular medicines")] },
     { t: L("외국인", "Visitors from abroad"), i: [L("언어를 English로 바꾸면 영어 안내가 되는 안내소를 먼저 보여 줘요", "Switch to English to see English-speaking info centers first"), L("관광통역안내 1330 (24시간)", "Call 1330 for interpretation (24h)")] },
     { t: L("누구나 챙길 것", "For everyone"), i: [L("장애인 등록증·복지카드 (주차 요금 면제, 입장료 할인)", "Disability card (parking & ticket discounts)"), L("휴대폰 보조배터리 — 지도·전화를 계속 쓰니까요", "A power bank for maps and calls"), L("늘 먹는 약과 복용 시간표", "Regular medicines"), L("가족 연락처를 적은 쪽지", "A note with family phone numbers")] },
     { t: L("겨울 바닷가 (11~2월)", "Winter by the sea (Nov–Feb)"), i: [L("바닷바람이 차요 — 모자·장갑·무릎 담요", "Sea wind is cold: hat, gloves, lap blanket"), L("해 지는 시각이 5시 반 무렵이라 실외는 오후 4시 전에", "Sunset ~5:30pm; finish outdoors by 4pm"), L("해맞이는 새벽이라 춥고 붐벼요. 출렁다리는 보통 오전 9시부터", "Sunrise is cold and crowded; the bridge usually opens at 9am"), L("눈·비 오는 날은 데크가 미끄러워요 — 실내 위주로", "Wet decks are slippery; go indoors")] },
   ];
   const faq = [
-    [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("5단계로 나눠요: 1 매우 쉬움·2 쉬움(초록, 이동 가능) / 3 주의·4 보조 필요(노랑) / 5 통행 불가(빨강). 경사·턱·폭·계단·노면을 장애인등편의법 시행규칙 기준(경사 1/18·1/12, 턱 2cm, 폭 1.2m)과 휠체어 경사로 연구(김충식 외 2010: 1/10·1/8·1/6)에 비교해 가장 어려운 항목으로 정해요. 측정값이 없는 구간은 출처 자료의 판정을 그대로 써요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
+    [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 편하게 다닐 수 있는 곳, 노랑은 조심하거나 도움이 있으면 다닐 수 있는 곳, 빨강은 다니기 어려운 곳이에요. 경사·턱·길 폭·계단·바닥을 따져 정해요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
     [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("운영시간은 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
-    [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
+    [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [불편 알리기]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
     [L("휠체어가 탈 수 있는 차는 어떻게 불러요?", "How do I book a wheelchair vehicle?"), L("동해시 교통약자이동지원센터 1577-2014로 전화하거나 강원 교통약자 광역이동지원센터 앱으로 예약해요. 다른 지역에 사는 등록 장애인도 이용할 수 있고, 시외로 갈 때는 7일 전까지 예약해요. [교통] 페이지에 자세히 있어요.", "Call 1577-2014 or use the Gangwon mobility app. Visitors from other regions can use it; book 7 days ahead for out-of-town trips.")],
     [L("장애인 차량은 주차비가 얼마예요?", "Is parking free with a disability permit?"), L("공영주차장 24곳 중 18곳은 장애인 차량이 무료예요(2시간이 넘으면 반값). [교통 → 주차장]에서 '장애인 차량 면제만'을 누르면 그곳만 보여요.", "18 of 24 public car parks are free with a permit (half price after 2 hours).")],
     [L("비가 오면 코스가 바뀌나요?", "What if it rains?"), L("그날 비 예보가 있으면 실내 장소를 먼저 넣어요. 직접 [실내 위주로 바꾸기]를 눌러도 돼요. 다만 휠체어·유모차로 갈 수 있는 실내 장소는 아직 많지 않아요.", "Indoor places go first on rainy days. Few indoor places are wheelchair-accessible yet.")],
@@ -936,7 +937,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
     [L("전동휠체어 배터리가 걱정돼요.", "Worried about wheelchair battery?"), L("동해시에 전동휠체어 급속충전기가 5곳 있어요. [편의시설 지도]에서 위치와 운영 시간을 보고, 코스 카드의 '근처 충전기'도 확인하세요.", "There are 5 fast chargers; see the facilities map.")],
     [L("코스가 마음에 안 들어요.", "I don't like my route."), L("코스 아래 [다른 곳으로 새로 짜기]·[더 느긋하게]·[더 알차게]를 눌러 보세요. 마음에 안 들면 [되돌리기]로 돌아가요. 동이에게 \"오르막 빼줘\"처럼 말해도 돼요.", "Try 'different places', 'more relaxed' or 'fit in more', or just tell Dongi.")],
     [L("타자 치기가 어려워요.", "Typing is hard for me."), L("입력칸 옆 마이크 버튼을 누르고 말하면 글자로 바꿔 줘요. 장소 이름을 조금 틀리게 써도 알아들어요.", "Tap the microphone and speak. Small typos in place names are understood.")],
-    [L("가족에게 일정을 보내고 싶어요.", "How do I share my plan?"), L("[큰 글씨 요약 일정표]에서 [가족에게 보내기]나 [인쇄]를 누르세요. [내 일정]에 저장한 코스도 보낼 수 있어요.", "Use the large-print summary or My trips → Share.")],
+    [L("가족에게 일정을 보내고 싶어요.", "How do I share my plan?"), L("[큰 글씨 요약 일정표]에서 [가족에게 보내기]나 [인쇄하기]를 누르세요. [내 일정]에 저장한 코스도 보낼 수 있어요.", "Use the large-print summary or My trips → Share.")],
     [L("내 위치를 저장하나요?", "Is my location stored?"), L("가까운 안내소·주차장을 찾을 때 한 번만 쓰고 저장하지 않아요.", "Used once to find nearby help or parking; never stored.")],
   ];
   if (embedded) return (

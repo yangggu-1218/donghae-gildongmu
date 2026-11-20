@@ -232,7 +232,7 @@ class Session:
             "restaurants": lambda: public_data.eateries(elat, elon, food or "", 1000, 5)["count"] and public_data.eateries(elat, elon, food or "", 1000, 5) or public_data.eateries(elat, elon, food or "", 3000, 5),
             "parking": lambda: public_data.parking_near(lat, lon, 3000, 2),
             "taxi": lambda: [t for pid in self.course_ids for t in public_data.taxi_for(pid)][:2] or public_data.taxi_at_start(self.c.start),
-            "hospital_pharmacy": lambda: {"say": "화면 위 '안심' 버튼에서 지금 문 연 약국·병원과 응급실을 보여 드려요. 위급하면 119."},
+            "hospital_pharmacy": lambda: {"say": "오른쪽 아래 동이를 누른 뒤 [긴급·도움]에서 지금 문 연 약국·병원과 응급실을 보여 드려요. 위급하면 119."},
         }.get(kind, lambda: {"error": "모르는 종류"})()
         self.cards.append({"kind": kind, "data": data})
         return data
@@ -365,8 +365,8 @@ def _rule(s: Session, message: str) -> dict:
     # 1) 도움 질문
     if re.search(r"아파|다쳤|응급|쓰러", message):
         s.find_help("hospital_pharmacy")
-        return s.result("많이 놀라셨죠. 위급하면 바로 119에 전화해 주세요. 화면 위 '안심' 버튼에서 가까운 병원·약국을 보여 드려요." if s.c.lang == "ko"
-                        else "If it's an emergency, call 119 now. Tap 'Safety' at the top for nearby hospitals and pharmacies.", "rule")
+        return s.result("많이 놀라셨죠. 위급하면 바로 119에 전화해 주세요. 오른쪽 아래 동이를 누른 뒤 [긴급·도움]에서 가까운 병원·약국을 보여 드려요." if s.c.lang == "ko"
+                        else "If it's an emergency, call 119 now. tap Dongi at the bottom right, then Help now for nearby hospitals and pharmacies.", "rule")
     if re.search(TRANSIT, low):
         if re.search(r"차\s*(가|는|도)?\s*없|뚜벅|no car|without a car", low) and s.c.start == "자가용":
             s.c.start = "동해역"

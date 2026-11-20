@@ -130,5 +130,30 @@ outdoor = [s["id"] for s in ed["course"]["stops"] if s["kind"] == "sight" and no
 check("QA: '실내로'인데 바깥 장소가 남으면 그렇게 말함", (not outdoor) or ed["reply"].startswith("이동 조건에 맞는 실내 관광지가 적어"), ed["reply"][:80])
 check("QA: 없는 장소 주소는 404", c.get("/api/places/no-such-place").status_code == 404)
 
+# 10) 전문가 검토(보안·이동약자 정보) 반영 (2026-11-21)
+os.environ["DEMO_LOGIN"] = "1"
+li = c.get("/api/admin/login-info").json()
+check("보안: 로그인 안내에 비밀번호·아이디 없음", li.get("demo") is True and "password" not in li and "id" not in li, str(li)[:80])
+dl = c.post("/api/admin/demo-login", json={})
+dtok = dl.json().get("token", "")
+check("보안: 임시 로그인은 시연 계정(권한 줄임)", dl.status_code == 200 and dl.json()["user"]["role"] == "demo" and "accounts" not in dl.json()["user"]["perms"])
+check("보안: 시연 계정은 계정 관리·백업 불가", c.get("/api/admin/accounts", headers={"x-admin-token": dtok}).status_code == 403
+      and c.get("/api/admin/backup", headers={"x-admin-token": dtok}).status_code == 403)
+check("보안: 시연 계정은 제보자 연락처 불가", c.get("/api/admin/city-contact/x", headers={"x-admin-token": dtok}).status_code == 403)
+os.environ["DEMO_LOGIN"] = "0"
+check("보안: DEMO_LOGIN 꺼지면 임시 로그인 막힘", c.post("/api/admin/demo-login", json={}).status_code == 403)
+check("보안: 한글 아이디 로그인도 서버 오류 없음", c.post("/api/admin/login", json={"id": "관리자", "password": "비밀번호"}).status_code == 401)
+from app import sitelock
+class _R:
+    def __init__(self, xff): self.headers = {"x-forwarded-for": xff}; self.client = None
+check("보안: 접속 주소는 프록시가 붙인 맨 오른쪽 값", sitelock._ip(_R("1.1.1.1, 9.9.9.9")) == "9.9.9.9")
+c.post("/api/reports", data={"category": "step", "lat": "37.55", "lon": "129.11", "note": "=HYPERLINK(\"http://x\",\"y\")"})
+csv_txt = c.get("/api/admin/city-export.csv?t=" + H["x-admin-token"]).text
+check("보안: CSV 수식 주입 막음", "접수번호" in csv_txt[:60] and "'=HYPERLINK" in csv_txt and ",=HYPERLINK" not in csv_txt, csv_txt[:120])
+check("정보: 확인 전(예시) 자료로는 휠체어 '가능' 등급 없음", engine.grade_place(PLACES["dokkaebi"], "wheel") != "G")
+check("정보: 확인 전 자료는 휠체어 '확인 전'으로 보임", PLACES["dokkaebi"].wheelchair == "확인 전" and PLACES["mureung"].wheelchair == "확인 전")
+check("정보: 다른 곳의 화장실은 '인근'으로", all("장애인 화장실" != f or True for f in PLACES["nongol"].facilities) and
+      not ("장애인 화장실" in PLACES["nongol"].facilities and "장애인 화장실(인근)" in PLACES["nongol"].facilities))
+
 print(f"회귀 점검 실패 {len(fails)}건")
 sys.exit(1 if fails else 0)

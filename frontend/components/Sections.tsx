@@ -316,14 +316,14 @@ export function HomePlacesInfo({ lang, site }: { lang: Lang; site: { banner: any
   return (
     <div className="wrap hm-split">
       <section className="hm-sec" aria-labelledby="hp-h">
-        <SecHead id="hp-h" title={L("동해 관광지", "Places in Donghae")} sub={L("동해의 아름다운 명소를 만나보세요!", "Meet Donghae's best spots")} more={["#/places", L("더보기", "More")]} />
+        <SecHead id="hp-h" title={L("동해 관광지", "Places in Donghae")} sub={L("동해의 아름다운 명소를 만나보세요!", "Meet Donghae's best spots")} more={["#/places", L("더 보기", "More")]} />
         <ul className="hp-grid">
           {HOME_PLACES.map(([id, ko, en]) => (
             <li key={id}><a className="hp-tile" href={`#/place/${id}`}><PlacePhoto id={id} lang={lang} /><b>{L(ko, en)}</b></a></li>))}
         </ul>
       </section>
       <section className="hm-sec" aria-labelledby="hi-h">
-        <SecHead id="hi-h" title={L("여행 정보", "Travel info")} sub={L("다양한 소식과 유용한 정보를 확인하세요!", "News and useful info")} more={["#/events", L("더보기", "More")]} />
+        <SecHead id="hi-h" title={L("여행 정보", "Travel info")} sub={L("다양한 소식과 유용한 정보를 확인하세요!", "News and useful info")} more={["#/events", L("더 보기", "More")]} />
         <ul className="hi-list">
           <li><a href="#/events"><span className="hi-ic"><Solid name="cal" size={26} /></span>
             <span className="hi-txt"><small>{onNow ? L("오늘의 행사", "On today") : L("다가오는 행사", "Coming up")}</small>
@@ -404,7 +404,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const hasCrowd = Object.keys(crowd).length > 0;
   const NEEDS: [string, string, string, string][] = [["sea", "바다 보기", "Sea views", "style"], ["nature", "자연·산책", "Nature walks", "style"], ["mountain", "산·등산", "Mountains & hiking", "style"],
     ["culture", "역사·문화", "History & culture", "style"], ["activity", "체험", "Activities", "style"],
-    ["indoor", "비 와도 OK(실내)", "Indoor", "comfort"], ["flat", "덜 걷는 곳(평지)", "Flat, little walking", "comfort"], ["toilet", "장애인 화장실", "Accessible toilet", "comfort"],
+    ["indoor", "비 와도 괜찮은 실내", "Indoor", "comfort"], ["flat", "덜 걷는 평지", "Flat, little walking", "comfort"], ["toilet", "장애인 화장실", "Accessible toilet", "comfort"],
     ["parking", "장애인 주차", "Accessible parking", "comfort"], ...(hasCrowd ? [["quiet", "오늘 한산한 곳", "Quiet today", "today"] as [string, string, string, string]] : [])];
   // 이동약자 검색 세부 항목: 열린관광 항목(없음 제외)이 있거나, 같은 뜻의 편의시설이 있으면 맞음
   const bf = BF.find((b) => b.k === bfCat);
@@ -546,7 +546,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
             <article key={p.id} className="pcard pl2-card">
               <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
                 {tag && <span className="pl2-tag">{L(tag[1], tag[2])}</span>}
-                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("판단 불가", "Not checked")}</span>}
+                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}

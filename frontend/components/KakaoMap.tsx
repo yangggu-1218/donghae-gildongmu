@@ -115,7 +115,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
           return;
         }
         const el = document.createElement("button");
-        el.type = "button"; el.setAttribute("aria-label", `${p.icon || i + 1}. ${p.label}`);
+        el.type = "button"; el.setAttribute("aria-label", `${p.icon || i + 1}. ${p.label}${p.grade ? ` · ${{ G: "가능", Y: "주의", R: "어려움" }[p.grade as "G" | "Y" | "R"] || ""}` : ""}`);
         el.style.cssText = `width:30px;height:30px;border-radius:50%;background:${bg};color:${p.grade === "Y" ? "#1A2433" : "#fff"};display:grid;place-items:center;font:700 14px sans-serif;border:3px solid #fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35)`;
         el.textContent = p.icon || String(i + 1);
         hook(el, p, pos, i);

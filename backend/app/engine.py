@@ -112,6 +112,8 @@ def grade_place(p: Place, mode: Mode, less_walk: bool = False):
     g = worst(grade_segment(s, mode) for s in segs) or "Y"
     if (p.access_scope.get(mode) or {}).get("level") in ("입구까지", "관람 불가"):   # 출처상 안으로 못 들어가면 불가
         g = "R"
+    if g == "G" and p.access_source == "예시":   # 현장·공식 확인 전 자료로는 '가능'을 주지 않는다 (QA 2026-11-21)
+        g = "Y"
     return g
 
 

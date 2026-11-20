@@ -33,10 +33,12 @@ export function courseKeywords(stops: StopLite[], places: Record<string, P>, ext
   const ps = stops.map((s) => places[s.id]).filter(Boolean);
   const fac = (re: RegExp) => ps.some((p) => (p.facilities || []).some((f) => re.test(f)));
   const out: Keyword[] = [];
-  const wheelOk = (move.includes("휠체어") && overall === "G") || (stops.length > 0 && stops.every((s) => extras[s.id]?.wheelchair === "가능"));
+  // 휠체어 조건으로 짠 코스가 모두 '가능'(확인된 자료)일 때만 (QA 2026-11-21: 확인 전 자료는 제외)
+  const wheelOk = move.includes("휠체어") && overall === "G" && ps.every((p: any) => p.access_source !== "예시");
   if (wheelOk) out.push({ icon: "wheel", text: ko ? "휠체어 접근 가능" : "Wheelchair OK" });
-  if (fac(/장애인 화장실/)) out.push({ icon: "toilet", text: ko ? "장애인 화장실" : "Accessible toilet" });
-  if (fac(/주차/) || stops.some((s) => extras[s.id]?.nearby?.parking)) out.push({ icon: "parking", text: ko ? "주차 가능" : "Parking" });
+  // 그 장소 안에 있는 것만 (근처·인근 시설은 제외, QA 2026-11-21)
+  if (ps.some((p) => (p.facilities || []).some((f) => f.includes("장애인 화장실") && !f.includes("인근")))) out.push({ icon: "toilet", text: ko ? "장애인 화장실" : "Accessible toilet" });
+  if (fac(/장애인 주차/)) out.push({ icon: "parking", text: ko ? "장애인 주차" : "Accessible parking" });
   const flat = stops.filter((s) => extras[s.id]?.walk_load === "평지").length;
   if (out.length < 3 && stops.length && flat * 2 >= stops.length) out.push({ icon: "walk", text: ko ? "평지 위주" : "Mostly flat" });
   if (out.length < 3 && fac(/엘리베이터/)) out.push({ icon: "lift", text: ko ? "엘리베이터" : "Elevator" });

@@ -21,7 +21,9 @@ _FAILS: dict[str, list[float]] = {}
 
 
 def _ip(request: Request) -> str:
-    return (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "") or "?").split(",")[0].strip()
+    """접속 주소. X-Forwarded-For 는 앞쪽을 이용자가 지어낼 수 있어서, 프록시(Render)가 마지막에 붙인 값을 쓴다 (QA 2026-11-21)."""
+    xff = [x.strip() for x in (request.headers.get("x-forwarded-for") or "").split(",") if x.strip()]
+    return xff[-1] if xff else ((request.client.host if request.client else "") or "?")
 
 
 def _locked(ip: str) -> int:

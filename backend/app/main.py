@@ -42,6 +42,9 @@ def load_places() -> dict[str, Place]:
     places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
     places = kto_access.drop_vision(places)   # 시각장애 편의 내용은 다루지 않음 (관리자 값까지 정리)
     public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
+    for p in places.values():   # 접근 자료가 아직 '예시'(확인 전)면 휠체어 '가능·일부'로 보이지 않게 (QA 2026-11-21)
+        if p.access_source == "예시" and p.wheelchair in ("가능", "일부"):
+            p.wheelchair = "확인 전"
     for p in places.values():             # 지형 참고 안내 (DEM 90m, 관리자가 바꾼 좌표 기준). 판정에는 쓰지 않음
         p.terrain = terrain.place_terrain(p.lat, p.lon) if p.lat is not None and p.lon is not None else {}
     return places
@@ -311,10 +314,14 @@ def ai_judge_place(pid: str, mode: str = "wheel", lang: str = "ko"):
     return ai_judge.judge(p, mode, "en" if lang == "en" else "ko", _recent_reports(pid))
 
 
+_NOTE_HITS: dict[str, list[float]] = {}
+
+
 @app.post("/api/place-notes")
-def place_note(body: dict):
+def place_note(body: dict, request: Request):
     """커뮤니티 '한 줄 후기·길 메모'를 서버에도 저장 → ③ 최근 길 상태 요약의 재료. 닉네임·연락처는 저장하지 않는다."""
     pid, text = body.get("place_id"), " ".join(str(body.get("text") or "").split())
+    _hit_limit(_NOTE_HITS, request, 20, "잠시 뒤에 다시 남겨 주세요.")
     if pid not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
     if not 2 <= len(text) <= 300:
@@ -682,7 +689,10 @@ def brief(body: dict):
 async def photo_check(photo: UploadFile = File(...), move: str = Form(""), lang: str = Form("ko")):
     """사진으로 물어보기: 사진은 저장하지 않고(위치 정보도 지운 사본만) AI에게 한 번 보여 준 뒤 버린다."""
     try:   # 사진이 아니거나 깨진 파일이면 서버 오류 대신 안내 (QA 2026-11-21)
-        img = Image.open(io.BytesIO(await photo.read())).convert("RGB")
+        img = Image.open(io.BytesIO(await photo.read(12 * 1024 * 1024)))
+        if img.size[0] * img.size[1] > 40_000_000:
+            raise ValueError("too large")
+        img = img.convert("RGB")
     except Exception:
         raise HTTPException(400, "사진을 읽지 못했어요. 다른 사진으로 다시 보내 주세요.")
     img.thumbnail((1024, 1024)); buf = io.BytesIO(); img.save(buf, "JPEG", quality=80)
@@ -801,16 +811,31 @@ async def report(request: Request, place_id: str = Form(""), kind: str = Form(""
 def _public_report(r: dict) -> dict:
     """이용자에게 보여 줄 것만 (사진·연락처·AI 내부 값 없음)."""
     return {"id": r["id"], "code": r.get("code"), "category": city.cat_of(r), "status": r["status"], "created_at": r.get("created_at"),
-            "place": PLACES[r["place_id"]].name_ko if r.get("place_id") in PLACES else "", "note": (r.get("note") or "")[:120],
+            "place": PLACES[r["place_id"]].name_ko if r.get("place_id") in PLACES else "", "note": city.scrub(r.get("note") or "")[:120],
             "summary": (r.get("triage") or {}).get("summary", ""), "reply": r.get("reply", ""), "after_photo": bool(r.get("after_photo")),
             "steps": [{"status": h.get("status"), "at": h.get("at")} for h in r.get("history", []) if h.get("status")], "sample": bool(r.get("sample"))}
 
 
+_LOOKUP_HITS: dict[str, list[float]] = {}
+
+
+def _hit_limit(store: dict, request: Request, per_hour: int, msg: str):
+    """공개 쓰기·찾기의 접속 주소당 1시간 횟수 제한 (QA 2026-11-21)."""
+    import time as _t
+    ip = sitelock._ip(request)
+    hits = [x for x in store.get(ip, []) if _t.time() - x < 3600]
+    if len(hits) >= per_hour:
+        raise HTTPException(429, msg)
+    store[ip] = hits + [_t.time()]
+
+
 @app.get("/api/reports/mine")
-def reports_mine(ids: str = "", code: str = ""):
+def reports_mine(request: Request, ids: str = "", code: str = ""):
     """내 제보: 이 기기에 저장한 제보 id 들, 또는 접수번호(DH-12345)로 찾기."""
     want = set(ids.split(",")) - {""}
     code = code.strip().upper()
+    if code:
+        _hit_limit(_LOOKUP_HITS, request, 30, "잠시 뒤에 다시 찾아 주세요.")
     rows = reports_store.all_rows(True)
     return [_public_report(r) for r in rows if r["id"] in want or (code and r.get("code") == code)][:30]
 
@@ -889,6 +914,8 @@ def admin_city_photo(name: str, t: str = ""):
 def admin_city_contact(rid: str, x_admin_token: str | None = Header(None)):
     """제보자가 동의하고 남긴 연락처 (보는 것도 이력에 남긴다)."""
     s = _admin(x_admin_token, "reports")
+    if s.get("role") == "demo":
+        raise HTTPException(403, "시연 계정은 제보자 연락처를 볼 수 없어요.")
     c = reports_store.contact_of(rid)
     if c:
         with cms._lock:
@@ -1013,10 +1040,12 @@ def admin_city_export(t: str = "", sample: int = 0):
     depts = _city_cfg()["depts"]
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["접수번호", "접수일시", "묶음", "상태", "분류", "심각도", "담당 부서", "우선순위", "위도", "경도", "가까운 관광지", "누가 불편", "내용", "AI 요약", "정리", "답변", "가상"])
+    _cell = lambda v: ("'" + v) if isinstance(v, str) and v[:1] in ("=", "+", "-", "@", "\t", "\r") else v   # 엑셀 수식 주입 막기 (QA)
+    put = lambda row: w.writerow([_cell(v) for v in row])
+    put(["접수번호", "접수일시", "묶음", "상태", "분류", "심각도", "담당 부서", "우선순위", "위도", "경도", "가까운 관광지", "누가 불편", "내용", "AI 요약", "정리", "답변", "가상"])
     for r in sorted(rows, key=lambda r: r.get("created_at") or ""):
         cat = city.cat_of(r)
-        w.writerow([r.get("code") or r["id"], r.get("created_at"), cid.get(r["id"]), r["status"], city.CATS[cat],
+        put([r.get("code") or r["id"], r.get("created_at"), cid.get(r["id"]), r["status"], city.CATS[cat],
                     city.SEV.get(city.val(r, "severity", "minor"), ""), depts.get(city.val(r, "dept", city.CAT_DEPT[cat]), ""),
                     city.PRI.get(city.val(r, "priority", ""), ""), r.get("lat") or "", r.get("lon") or "",
                     PLACES[r["place_id"]].name_ko if r.get("place_id") in PLACES else "", ",".join(r.get("who") or []), city.scrub(r.get("note") or ""),
@@ -1139,10 +1168,17 @@ def _who(s: dict) -> str:
 @app.get("/api/admin/login-info")
 def admin_login_info():
     """로그인 화면: [임시 로그인] 버튼을 보여 줄지. DEMO_LOGIN=1 일 때만 계정을 돌려준다(본선 시연용)."""
-    if cms.demo_login_enabled():
-        uid, pw = cms.account()
-        return {"demo": True, "id": uid, "password": pw}
-    return {"demo": False}
+    return {"demo": cms.demo_login_enabled()}   # 계정·비밀번호는 절대 보내지 않는다 (QA 2026-11-21: 예전엔 비밀번호가 공개 응답에 있었음)
+
+
+@app.post("/api/admin/demo-login")
+def admin_demo_login():
+    """[임시 로그인]: 권한을 줄인 시연 계정으로 바로 로그인 (DEMO_LOGIN=1 일 때만)."""
+    try:
+        r = cms.demo_login()
+    except ValueError as e:
+        raise HTTPException(403, str(e))
+    return {**r, "hours": cms.SESSION_HOURS}
 
 
 @app.post("/api/admin/login")
@@ -1478,11 +1514,15 @@ _seed_samples()
 INQ_CATS = {"이용 방법", "장소 정보", "접근성·길 정보", "오류 신고", "기타"}
 
 
+_INQ_HITS: dict[str, list[float]] = {}
+
+
 @app.post("/api/inquiries")
-def inquiry_new(body: dict):
+def inquiry_new(body: dict, request: Request):
     text = (body.get("text") or "").strip()
     if len(text) < 5:
         raise HTTPException(400, "문의 내용을 5자 이상 적어 주세요")
+    _hit_limit(_INQ_HITS, request, 10, "잠시 뒤에 다시 보내 주세요.")
     rec = {"id": uuid.uuid4().hex[:12], "nick": (body.get("nick") or "방문자").strip()[:20], "contact": (body.get("contact") or "").strip()[:60],
            "category": body.get("category") if body.get("category") in INQ_CATS else "기타", "text": text[:1000],
            "status": "접수", "answer": "", "created_at": dt.datetime.now().isoformat(timespec="seconds")}
