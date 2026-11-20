@@ -16,8 +16,8 @@ type Judge = {
   rule_grade?: string | null; evidence_count?: number; reports_used?: number;
 };
 const VERDICT: Record<string, [string, string]> = {
-  G: ["편하게 갈 수 있어요", "Easy to visit"], Y: ["도움이 있으면 갈 수 있어요", "OK with some help"],
-  R: ["어려워요", "Difficult"], U: ["판단하기 어려워요", "Not sure yet"],
+  G: ["이동 가능", "Easy to visit"], Y: ["주의 구간 있음 · 보조 권장", "OK with some help"],
+  R: ["이동 어려움", "Difficult"], U: ["판단 불가 (접근 정보 부족)", "Not sure yet"],
 };
 const CONF: Record<string, [string, string]> = { high: ["확신 높음", "High confidence"], medium: ["확신 보통", "Medium confidence"], low: ["확신 낮음", "Low confidence"] };
 

@@ -26,6 +26,7 @@ class Segment(BaseModel):
     note: str = ""
     source: str = "공공데이터"           # 공공데이터 / 현장 답사 / 이용자 제보
     checked_at: Optional[str] = None     # 확인일 YYYY-MM-DD
+    optional: bool = False               # 빠져도 주요 관람이 되는 구간(전망 지점 등) — 장소 등급에서 빼고 '일부 구간 제한'으로 안내
 
 
 class Place(BaseModel):
@@ -79,6 +80,10 @@ class Place(BaseModel):
     notices: list[dict] = Field(default_factory=list)   # 관리자 임시 알림 (cms.py)
     access_kto: dict = Field(default_factory=dict)   # 열린관광 이동약자 편의정보 {cats, items, links} (kto_access.py)
     market_days: list[int] = Field(default_factory=list)   # 장날: 날짜 끝자리 (예: [3, 8] = 3·8·13·18·23·28일)
+    # 접근 범위: 출처에 적힌 것만. {"wheel"|"stroller"|"walk": {"level": 전체/주요 관람 구역/일부 시설/입구까지/관람 불가, "note", "source"}}
+    access_scope: dict = Field(default_factory=dict)
+    fee_detail: dict = Field(default_factory=dict)   # 공식 확인 요금 {"어른": "5,000원", ..., "주차": "..."} (없으면 표시 안 함)
+    verify: dict = Field(default_factory=dict)       # 관리자용 검증 기록 {"url", "checked", "confidence"}
 
     @property
     def verified(self) -> bool:

@@ -18,7 +18,7 @@ import { AiJudge, AiStatus, useJudge, verdictText } from "@/components/AiCards";
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
 const dist = (m?: number) => (m == null ? "" : m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
-const GRADE = { G: ["갈 수 있어요", "Accessible"], Y: ["주의", "Caution"], R: ["어려워요", "Not accessible"] } as const;
+const GRADE = { G: ["이동 가능", "Accessible"], Y: ["주의", "Caution"], R: ["어려움", "Not accessible"] } as const;
 const WALK_EN: Record<string, string> = { "평지": "Flat", "완만한경사": "Gentle slope", "급경사": "Steep", "확인 전": "Not checked" };
 
 export function Head({ title, sub, crumb, lang, photo, mascot }: { title: string; sub?: string; crumb?: [string, string][]; lang: Lang; photo?: string; mascot?: string }) {
@@ -195,8 +195,8 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const lines = (p.about || []).flatMap((a: any) => a.i.map((x: string[]) => ({ t: a.t, x })));
   const news = lines.filter((l: any) => NEWS_RE.test(l.x[0]));
   const closedMore = lines.filter((l: any) => !NEWS_RE.test(l.x[0]) && CLOSED_RE.test(l.x[0])).map((l: any) => L(l.x[0], l.x[1]));
-  const feeMore = lines.filter((l: any) => !NEWS_RE.test(l.x[0]) && !CLOSED_RE.test(l.x[0]) && FEE_RE.test(l.x[0])).map((l: any) => L(l.x[0], l.x[1]));
-  const moved = new Set([...news, ...lines.filter((l: any) => CLOSED_RE.test(l.x[0]) || FEE_RE.test(l.x[0]))].map((l: any) => l.x[0]));
+  const feeRows: [string, string][] = Object.entries(p.fee_detail || {}) as [string, string][];   // 공식 확인 요금만
+  const moved = new Set([...news, ...lines.filter((l: any) => CLOSED_RE.test(l.x[0]) || (feeRows.length > 0 && FEE_RE.test(l.x[0])))].map((l: any) => l.x[0]));
   const about = (p.about || []).map((a: any) => ({ ...a, i: a.i.filter((x: string[]) => !moved.has(x[0])) })).filter((a: any) => a.i.length);
 
   // 한눈에 칩 (AI 근거와 겹치므로 접힌 '근거' 안으로)
@@ -210,9 +210,13 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   if (p.benches) chips.push(L("쉬는 벤치 있음", "Benches"));
 
   // 판정 한 줄: AI(또는 구간 계산) 판정 + 조심할 곳 하나. 없으면 가장 어려운 구간, 그것도 없으면 '길 정보 없음'
-  const worst = segs.filter((s) => s.grade !== "G").sort((a, b) => (a.grade === "R" ? -1 : 1) - (b.grade === "R" ? -1 : 1))[0];
+  const limited = segs.filter((s) => s.optional && s.grade !== "G");   // 빠져도 되는 구간(전망 지점 등)
+  const worst = segs.filter((s) => s.grade !== "G" && !s.optional).sort((a, b) => (a.grade === "R" ? -1 : 1) - (b.grade === "R" ? -1 : 1))[0];
   const jv = j.state === "ok" && j.d ? j.d.verdict : worst ? worst.grade : segs.length ? "G" : "U";
-  const extra = (j.state === "ok" && j.d?.cautions?.[0]) || (worst ? `${worst.name} ${L(GRADE[worst.grade as "G" | "Y" | "R"][1] === "Caution" ? "주의" : "어려움", GRADE[worst.grade as "G" | "Y" | "R"][1])}` : "");
+  const scopeBad = (p.access_scope || {})[mode] && /불가|입구까지/.test((p.access_scope || {})[mode].level) ? (p.access_scope || {})[mode].note : "";
+  const extra = scopeBad || (j.state === "ok" && j.d?.cautions?.[0]) || (worst ? `${worst.name} ${L(GRADE[worst.grade as "G" | "Y" | "R"][1] === "Caution" ? "주의" : "어려움", GRADE[worst.grade as "G" | "Y" | "R"][1])}`
+    : limited[0] ? L(`일부 구간 제한: ${limited[0].name}`, `Limited: ${limited[0].name}`) : "");
+  const scope = (p.access_scope || {})[mode];   // 출처에 적힌 접근 범위 (입구까지 / 관람 구역 등)
   const noPath = stay || (!segs.length && (j.state !== "ok" || jv === "U"));
   const surveyed = !!p.last_visit;
   const sample = p.access_source === "예시" || segs.some((s) => s.source === "예시");
@@ -221,7 +225,8 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const DAY_EN: Record<string, string> = { "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat", "일": "Sun" };
   const daysEn = String(p.closed_days || "").replace(/([월화수목금토일])요일/g, (_: string, d: string) => DAY_EN[d]).replace(/·|,\s*/g, ", ");
   const closedTxt = p.closed_days ? L(`${p.closed_days} 휴무`, `Closed ${daysEn}`) : p.hours_text?.includes("휴무") ? "" : L("정기 휴무 없음", "No regular closing day");
-  const fee = p.fee ? tr(lang, p.fee) : feeMore[0] || "";
+  const feeMain = feeRows.find(([k]) => k === "입장료") || feeRows[0];
+  const fee = feeMain ? (feeMain[0] === "입장료" ? feeMain[1] : `${feeMain[0]} ${feeMain[1]}`) : p.fee ? tr(lang, p.fee) : "";
   const intro = (lang === "ko" ? p.intro_ko || p.tip_ko : p.intro_en || p.tip_en || p.intro_ko) || "";
   const toilet = (p.toilets || [])[0];
   const pins = [{ lat: p.lat, lon: p.lon, label: name, grade: null, color: "#12355E", icon: "★" },
@@ -246,17 +251,21 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const good = Array.from(new Set((p.facilities || []).filter((f: string) => GOOD_RE.test(f)).map((f: string) => f.split(" (")[0]))).slice(0, 3) as string[];
   const tipLine = (j.state === "ok" && j.d?.tip) || (lang === "ko" ? p.carer_tip : "") || "";
   const pills: [string, string][] = [];
-  if (good.length) pills.push(["ok", L(`${good.join(" · ")} 있어요`, `Has ${good.join(", ")}`)]);
+  if (scope) pills.push([/불가|입구까지/.test(scope.level) ? "bad" : scope.level === "일부 시설" ? "warn" : "ok",
+    `${modeName} ${L("접근 범위", "access")}: ${scope.level}${scope.note ? ` — ${scope.note}` : ""}`]);
+  if (good.length) pills.push(["ok", L(`편의시설: ${good.join(" · ")}`, `Has ${good.join(", ")}`)]);
   if (worst) pills.push([worst.grade === "R" ? "bad" : "warn", `${worst.name} — ${worst.note || L(worst.grade === "R" ? "어려움" : "주의", worst.grade === "R" ? "difficult" : "caution")}`]);
+  limited.forEach((s) => pills.push(["warn", L(`일부 구간 제한 — ${s.name}${s.note ? `: ${s.note}` : ""}`, `Limited part — ${s.name}`)]));
   if (tipLine) pills.push(["info", tipLine]);
 
   // 방문 전 확인 (휴무 · 입장료 · 가기 전에 물어볼 것)
   const before: [string, string][] = [];
   if (closedMore[0]) before.push(["cal", closedMore[0]]);       // 자세한 휴무 문장이 있으면 그것 하나만
   else if (closedTxt) before.push(["cal", closedTxt]);
-  if (fee) before.push(["ticket", /입장료|무료|요금/.test(fee) ? fee : L(`입장료 ${fee}`, `Admission ${fee}`)]);
+  if (feeRows.length > 1) feeRows.forEach(([k, v]) => before.push(["ticket", `${k}: ${v}`]));
+  else if (fee) before.push(["ticket", /입장료|무료|요금/.test(fee) ? fee : L(`입장료 ${fee}`, `Admission ${fee}`)]);
   ((j.state === "ok" && j.d?.ask_before) || []).slice(0, 2).forEach((x: string) => before.push(["wheel", x]));
-  if (noPath) before.push(["phone", L("길 정보가 아직 없어요 — 가기 전에 전화로 확인해 주세요", "No path info yet — please call ahead")]);
+  if (noPath) before.push(["phone", L("이동약자 접근 정보: 판단 불가 · 방문 전 전화 확인 권장", "No path info yet — please call ahead")]);
   const tipsAll = Array.from(new Set([lang === "ko" ? p.carer_tip : "", j.state === "ok" ? j.d?.tip : "", lang === "ko" ? p.tip_ko : p.tip_en].filter((x) => x && x !== tipLine))).slice(0, 3) as string[];   // 파란 칸에 이미 보인 팁은 빼기
   const shown = mainPh || p.id;
   const near: [string, string, string, number | undefined][] = [
@@ -297,17 +306,17 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               <span className="pm-now" aria-hidden="true">{modeName}</span>
             </div>
           </div>
-          <dl className="pp4-info">
-            <div><dt><Icon name="time" />{L("운영시간", "Hours")}</dt><dd>{hours || L("확인 필요", "Check")}<span className={`pp4-today ${p.today === "open" || p.today === "always" ? "on" : ""}`}>{today}</span></dd></div>
-            <div><dt><Icon name="cal" />{L("휴무", "Closed")}</dt><dd>{p.closed_days || L("정기 휴무 없음", "None")}</dd></div>
-            <div><dt><Icon name="ticket" />{L("입장료", "Admission")}</dt><dd title={fee || undefined}>{fee || L("확인 필요", "Check")}</dd></div>
-            <div><dt><Icon name="phone" />{L("문의", "Phone")}</dt><dd>{p.phone ? <a href={`tel:${p.phone}`}>{p.phone}</a> : L("없음", "—")}</dd></div>
-          </dl>
           <p className={`pp3-verdict pp4-verdict v-${noPath ? "U" : jv}`} aria-live="polite">
             <Picto name={noPath ? "ask" : VERDICT_PICTO[jv] || "ask"} size={22} />
-            <span><b>{modeName}:</b> {noPath ? L("길 정보가 아직 없어요 · 가기 전에 전화로 확인해 주세요", "No path info yet · please call ahead")
+            <span><b>{modeName}:</b> {noPath ? L("판단 불가 (접근 정보 부족) · 방문 전 전화 확인 권장", "No path info yet · please call ahead")
               : j.state === "load" && !worst ? L("확인하는 중…", "Checking…") : verdictText(jv, lang)}{!noPath && extra ? ` · ${extra}` : ""}</span>
           </p>
+          {(hours || fee || p.phone) && <dl className="pp4-info">
+            {hours && <div><dt><Icon name="time" />{L("운영시간", "Hours")}</dt><dd>{hours}{p.today !== "unknown" && p.today !== "always" && <span className={`pp4-today ${p.today === "open" || p.today === "always" ? "on" : ""}`}>{today}</span>}</dd></div>}
+            {hours && <div><dt><Icon name="cal" />{L("휴무", "Closed")}</dt><dd>{p.closed_days || L("정기 휴무 없음", "None")}</dd></div>}
+            {fee && <div><dt><Icon name="ticket" />{L("입장료", "Admission")}</dt><dd title={fee}>{fee}</dd></div>}
+            {p.phone && <div><dt><Icon name="phone" />{L("문의", "Phone")}</dt><dd><a href={`tel:${p.phone}`}>{p.phone}</a></dd></div>}
+          </dl>}
           <div className="pp4-acts">
             <button className={`pp4-btn main${wished ? " on" : ""}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}><Icon name="bookmark" />{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
             {p.lat && <a className="pp4-btn" href={`https://map.kakao.com/link/to/${encodeURIComponent(p.name_ko)},${p.lat},${p.lon}`} target="_blank" rel="noreferrer"><Icon name="navi" />{L("길찾기", "Directions")}<span className="sr-only">{L(" (카카오맵, 새 창)", " (Kakao Map, new tab)")}</span></a>}
@@ -331,19 +340,19 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
       <section className="panel pp4-access" aria-labelledby="pp4-acc-h">
         <div className="pp4-h-row">
           <h2 id="pp4-acc-h" className="h3 pp4-h"><AccIcon k="지체장애" size={26} />{L("이동약자 이용 정보", "Access information")}</h2>
-          {surveyed ? <span className="badge b-open">{L(`현장 확인 ${p.last_visit.date}`, `Surveyed ${p.last_visit.date}`)}</span>
-            : !stay && <span className="badge b-unknown" title={L("가기 전에 전화로 한 번 더 확인해 주세요", "Please call ahead")}>{L("현장 확인 전", "Not surveyed yet")}</span>}
+          {surveyed && <span className="badge b-open">{L(`현장 확인 ${p.last_visit.date}`, `Surveyed ${p.last_visit.date}`)}</span>}
         </div>
         {pills.length > 0 ? <ul className="pp4-pills">{pills.map(([tone, t]) => (
           <li key={t} className={`p-${tone}`}><Picto name={tone === "ok" ? "ok" : tone === "bad" ? "stop" : tone === "warn" ? "warn" : "tip"} size={22} /><span>{t}</span></li>))}</ul>
-          : <p className="muted">{L("아직 확인된 이용 정보가 없어요. 가기 전에 전화로 확인해 주세요.", "No access info yet. Please call ahead.")}</p>}
+          : <p className="muted">{L("이동약자 이용 정보: 판단 불가 (자료 없음) · 방문 전 전화 확인 권장", "No access info yet. Please call ahead.")}</p>}
         {segs.length > 0 && <div className="pp4-route">
           <ol aria-label={L("도착부터 구간별", "Path, step by step")}>
             {segs.map((s: any) => {
               const d = s.facts.find((f: string) => DIST_RE.test(f))?.match(DIST_RE)?.[0] || "";
               return <li key={s.name} title={[...s.facts, s.note].filter(Boolean).join(" · ") || undefined}>
                 <Icon name="pin" /><span>{s.name}{d && ` ${d}`}</span>
-                <span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span></li>;
+                <span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span>
+                {s.optional && <span className="badge b-plain">{L("선택 구간", "Optional")}</span>}</li>;
             })}</ol>
           {moreBtn}
         </div>}
@@ -488,7 +497,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
               <div key={s.name} className="panel">
                 <h3 className="h3">{nm(lang, s.name)}{lang !== "ko" && <small className="muted ko-name"> {s.name}</small>}</h3>
                 <dl className="tr-facts one">
-                  <div><dt>{L("장애인 화장실", "Accessible toilet")}</dt><dd>{s.toilet ? L(`역 안 · ${s.toilet.hours}`, `In the station · ${s.toilet.hours}`) : L("확인 전", "Not checked")}</dd></div>
+                  {s.toilet && <div><dt>{L("장애인 화장실", "Accessible toilet")}</dt><dd>{L(`역 안 · ${s.toilet.hours}`, `In the station · ${s.toilet.hours}`)}</dd></div>}
                   <div><dt>{L("택시 승차대", "Taxi stand")}</dt><dd>{s.taxi ? L(`역 앞 ${s.taxi.spaces}면`, `${s.taxi.spaces} spaces in front`) : "-"}</dd></div>
                   {s.rentals?.length > 0 && <div><dt>{L("가까운 렌터카", "Nearby rentals")}</dt><dd><ul className="tr-phones">{s.rentals.slice(0, 3).map((r: any) => <li key={r.name}>{nm(lang, r.name)}{r.vans ? <small className="muted"> · {L(`승합 ${r.vans}대`, `${r.vans} vans`)}</small> : null} <a href={`tel:${r.tel}`}>{r.tel}</a></li>)}</ul></dd></div>}
                 </dl>
@@ -702,7 +711,7 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
             <ul className="plain">{unmapped.map((t: any) => <li key={t.name + t.road}>{nm(lang, t.name)} · {tr(lang, t.kind)} · {tr(lang, t.hours)} <small className="muted">{ad(lang, t.road)}</small></li>)}</ul>
           </details>
         )}
-        {on.lodging && <p className="muted small">{L("숙소 위치는 공공데이터 주소로 찾은 건물 위치예요. 장애인 객실은 확인 전이에요. ", "Stay locations come from public address data; accessible rooms not yet checked. ")}<a href="#/stay">{L("숙소 목록으로 보기", "See the list")}</a></p>}
+        {on.lodging && <p className="muted small">{L("숙소 위치는 공공데이터 주소로 찾은 건물 위치예요. 장애인 객실 정보는 공공데이터에 없음. ", "Stay locations come from public address data; accessible rooms not yet checked. ")}<a href="#/stay">{L("숙소 목록으로 보기", "See the list")}</a></p>}
       </>)}
     </section>
   );
@@ -777,7 +786,7 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
         <h2 id="ev-y-h" className="h3">{L("해마다 열리는 축제", "Festivals held every year")}</h2>
         <p className="muted small">{L("올해 열린 때를 기준으로 보여 줘요. 내년 날짜는 아직 발표 전이라 확인이 필요해요. 날짜가 정해지면 관리자가 [공지·행사]에서 올리면 달력에 바로 보여요.", "Based on this year's dates. Next year's dates aren't announced yet.")}</p>
         <ol className="ev-y-list">{yearly.map((e) => <li key={e.name}><span className="ev-m">{L(`${e.m}월`, new Date(2026, e.m - 1, 1).toLocaleDateString("en", { month: "short" }))}</span>
-          <div><b>{e.name}</b><small className="muted">{L(`올해 ${e.last}`, `this year ${e.last}`)}{e.venue ? ` · ${e.venue}` : ""}</small></div><span className="badge b-unknown">{L("날짜 확인 전", "Date TBC")}</span></li>)}</ol>
+          <div><b>{e.name}</b><small className="muted">{L(`올해 ${e.last}`, `this year ${e.last}`)}{e.venue ? ` · ${e.venue}` : ""}</small></div><span className="badge b-unknown">{L("올해 날짜 미발표", "Date TBC")}</span></li>)}</ol>
         <p className="muted small">{L("2023년처럼 안전 문제로 해맞이 행사를 열지 않은 해도 있어요.", "Some years the sunrise event was cancelled for safety.")}</p>
       </section>
     </section>
@@ -864,7 +873,7 @@ export function StayPage({ lang }: { lang: Lang }) {
         <ul className="checks">{Q.map((q) => <li key={q}>{q}</li>)}</ul>
       </div>
       <h2 className="h3 stay-all-h">{L("동해시 숙소 전체 (공공데이터)", "All lodging in Donghae (open data)")}</h2>
-      <p className="muted small">{L("동해시에 등록된 모든 숙소예요. 이동약자 객실 여부는 아직 확인 전이라 예약 전에 위 질문을 물어보세요.", "Every registered stay. Accessible rooms are not verified yet; ask the questions above.")}</p>
+      <p className="muted small">{L("동해시에 등록된 모든 숙소예요. 이동약자 객실 정보는 공공데이터에 없음 · 예약 전 위 질문으로 전화 확인.", "Every registered stay. Accessible rooms are not verified yet; ask the questions above.")}</p>
       <div className="tabs" role="group" aria-label={L("권역", "Areas")}>
         {ZONES.map((z) => <button key={z.k} aria-pressed={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>)}
       </div>
@@ -883,7 +892,7 @@ export function StayPage({ lang }: { lang: Lang }) {
             {rows.map((r: any) => <tr key={r.name + r.address}><td className="tbl-name">{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td data-label={L("종류", "Type")}>{tr(lang, r.kind)}</td><td data-label={L("주소", "Address")}><small>{r.address}</small></td><td data-label={L("전화", "Phone")}>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td data-label={L("예약", "Book")}><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
         </table></div>
       )}
-      <p className="muted small">{L(`${rows.length}곳 · 이동약자 객실 여부는 모두 '확인 전'이에요.`, `${rows.length} places. Accessible rooms: not verified. Source: Donghae lodging open data (Sep 2026).`)}</p>
+      <p className="muted small">{L(`${rows.length}곳 · 이동약자 객실 정보: 공공데이터에 없음`, `${rows.length} places. Accessible rooms: not verified. Source: Donghae lodging open data (Sep 2026).`)}</p>
     </section>
   );
 }
@@ -904,7 +913,6 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
     [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("운영시간은 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
     [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
-    [L("'현장 확인 전'은 무슨 뜻이에요?", "What does 'not yet surveyed' mean?"), L("팀이 아직 현장에서 직접 재 보지 못한 곳이에요. 비슷한 자료로 미리 판정해 둔 값이라 가기 전에 전화로 한 번 더 확인해 주세요.", "Not yet measured on site by the team. Please call ahead.")],
     [L("휠체어가 탈 수 있는 차는 어떻게 불러요?", "How do I book a wheelchair vehicle?"), L("동해시 교통약자이동지원센터 1577-2014로 전화하거나 강원 교통약자 광역이동지원센터 앱으로 예약해요. 다른 지역에 사는 등록 장애인도 이용할 수 있고, 시외로 갈 때는 7일 전까지 예약해요. [교통] 페이지에 자세히 있어요.", "Call 1577-2014 or use the Gangwon mobility app. Visitors from other regions can use it; book 7 days ahead for out-of-town trips.")],
     [L("장애인 차량은 주차비가 얼마예요?", "Is parking free with a disability permit?"), L("공영주차장 24곳 중 18곳은 장애인 차량이 무료예요(2시간이 넘으면 반값). [교통 → 주차장]에서 '장애인 차량 면제만'을 누르면 그곳만 보여요.", "18 of 24 public car parks are free with a permit (half price after 2 hours).")],
     [L("비가 오면 코스가 바뀌나요?", "What if it rains?"), L("그날 비 예보가 있으면 실내 장소를 먼저 넣어요. 직접 [실내 위주로 바꾸기]를 눌러도 돼요. 다만 휠체어·유모차로 갈 수 있는 실내 장소는 아직 많지 않아요.", "Indoor places go first on rainy days. Few indoor places are wheelchair-accessible yet.")],

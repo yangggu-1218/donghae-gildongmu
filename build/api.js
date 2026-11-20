@@ -155,16 +155,24 @@ export function makeApi(DATA) {
     } else g = s.grade || "Y";
     if (mode === "walk") {
       const hard = (s.steps || 0) > 10 || ["산길", "모래"].includes(s.surface || "");
-      if (g === "R" && !hard) g = "Y";
+      if (g === "R" && measured && !hard) g = "Y";
       if ((s.distance_m || 0) > 300) g = worst([g, "Y"]);
     } else if (mode === "stroller" && s.curb_cm != null && s.curb_cm > 2 && s.curb_cm <= 5) g = worst([g, "Y"]);
     return g;
   }
   function gradePlace(p, mode, lessWalk = false) {
     if (mode === "none") return null;
-    let segs = p.segments;
+    const req = p.segments.filter((s) => !s.optional);
+    let segs = req.length ? req : p.segments;
     if (lessWalk) { const f = segs.filter((s) => !((s.distance_m || 0) > 300 || s.name.includes("전망 데크"))); segs = f.length ? f : segs; }
-    return worst(segs.map((s) => gradeSegment(s, mode))) || "Y";
+    const g = worst(segs.map((s) => gradeSegment(s, mode))) || "Y";
+    return ["입구까지", "관람 불가"].includes(((p.access_scope || {})[mode] || {}).level) ? "R" : g;
+  }
+  function whyNot(p, mode) {   // engine.why_not 과 같게
+    const sc = ((p.access_scope || {})[mode] || {}).note;
+    if (sc) return sc;
+    const r = p.segments.find((s) => !s.optional && gradeSegment(s, mode) === "R");
+    return r ? (r.note ? `${r.name}: ${r.note}` : r.name) : "";
   }
   const modeFrom = (move) => move.includes("휠체어") ? "wheel" : move.includes("유모차") ? "stroller"
     : (move.includes("오래 걷기 어려움") || move.includes("계단 어려움")) ? "walk" : "none";
@@ -185,7 +193,11 @@ export function makeApi(DATA) {
     if (c.wish.includes(p.id)) s += 10.0;
     if (p.segments.some((seg) => seg.source === "현장 답사")) s += 1.0;
     if (["부모님과", "아이와"].includes(c.who) && p.styles.includes("체험")) s += 1.0;
-    if (modeFrom(c.move) !== "none") s += ({ "평지": 1.5, "완만한경사": 0.5 }[p.walk_load] || 0) + (p.benches ? 0.5 : 0);
+    const mode = modeFrom(c.move);
+    if (mode !== "none") {
+      s += ({ "평지": 1.5, "완만한경사": 0.5 }[p.walk_load] || 0) + (p.benches ? 0.5 : 0);
+      if (gradePlace(p, mode, c.move.includes("오래 걷기 어려움")) === "Y") s -= 3.0;
+    }
     if (["식당", "카페"].includes(p.type)) {
       if (c.meal.includes("부드러운 메뉴") && p.soft_menu) s += 2.0;
       if (c.meal.includes("입식") && p.table === "입식") s += 1.0;
@@ -226,7 +238,7 @@ export function makeApi(DATA) {
     return [true, "open", wait];
   }
   function hoursText(p, lang = "ko") {
-    if (!p.open) return lang === "ko" ? "운영시간 정보 없음" : "Hours unknown";
+    if (!p.open) return "";   // details.hours_text 와 같게: 확인 안 된 운영시간은 표시 안 함
     if (p.open === "00:00" && p.close === "24:00") return lang === "ko" ? "상시 개방" : "Open 24h";
     let t = `${p.open}~${p.close}`;
     if (p.break_time) t += lang === "ko" ? ` (쉬는 시간 ${p.break_time[0]}~${p.break_time[1]})` : ` (break ${p.break_time[0]}-${p.break_time[1]})`;
@@ -279,8 +291,10 @@ export function makeApi(DATA) {
     }
     if (c.flat_only) pool = pool.filter((p) => p.walk_load === "평지" || ["식당", "카페"].includes(p.type));
     const ok = pool.filter((p) => gradePlace(p, mode, less) !== "R");
-    const dropped = pool.filter((p) => (c.wish.includes(p.id) || c.must.includes(p.id)) && !ok.includes(p)).map((p) => p.name_ko);
-    if (dropped.length) notes.push(`담아 두신 ${josa(dropped.join(", "), "은는")} 이 조건으로 갈 수 없어 뺐어요.`);
+    for (const p of pool.filter((p) => (c.wish.includes(p.id) || c.must.includes(p.id)) && !ok.includes(p))) {
+      const why = whyNot(p, mode);
+      notes.push(`${josa(p.name_ko, "은는")} 이 조건으로 관람이 어려워 뺐어요${why ? ` (${why})` : ""}. 대신 갈 수 있는 곳으로 짰어요.`);
+    }
     for (const p of [...ok]) {
       const tmp = noticeOn(p, "closed", day);
       if ((p.closed_day_nums || []).includes(wd) || tmp) {
@@ -684,7 +698,7 @@ export function makeApi(DATA) {
   const kakaoBy = (mode, a, b) => { const cl = (s) => s.replace(/[,/]/g, " "); return `https://map.kakao.com/link/by/${mode}/${cl(a[0])},${a[1]},${a[2]}/${cl(b[0])},${b[1]},${b[2]}`; };
   function transit(points, start, move, lang = "ko") {
     const st = start === "자가용" ? "동해역" : start; const [sx, sy] = TRANSIT_STARTS[st];
-    const slow = move.length > 0; const [speed, walkMax] = slow ? [3.0, 0.4] : [4.0, 0.8];
+    const slow = move.length > 0; const [speed, walkMax] = slow ? [2.52, 0.4] : [3.6, 0.8];   // 1.0 / 0.7 m/s (public_data.transit 근거 참고)
     const seq = [["start", st, sx, sy], ...points.filter((p) => p[2] != null), ["start", st, sx, sy]];
     const hops = [];
     for (let i = 0; i + 1 < seq.length; i++) { const a = seq[i], b = seq[i + 1]; const km = kmBetween([a[2], a[3]], [b[2], b[3]]);
@@ -1094,7 +1108,7 @@ export function makeApi(DATA) {
       if (s.slope_deg != null) facts.push(`경사 ${s.slope_deg}°`);
       if (s.width_m != null) facts.push(`폭 ${s.width_m}m`);
       if (s.surface) facts.push(s.surface);
-      return { name: s.name, grade: gradeSegment(s, m), facts, note: s.note || "", source: s.source || "",
+      return { name: s.name, grade: gradeSegment(s, m), facts, note: s.note || "", source: s.source || "", optional: !!s.optional,
         measured: [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null) };
     });
   }

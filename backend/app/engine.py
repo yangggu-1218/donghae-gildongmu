@@ -38,9 +38,9 @@ def grade_segment(s: Segment, mode: Mode) -> str:
         elif surface in ("자갈", "데크 이음새"): g = worst([g, "Y"])
     else:
         g = s.grade or "Y"   # 정보 없음 = 확인 필요(주의)
-    if mode == "walk":       # 오래 걷기·계단 어려움: 대부분 주의로 보되, 계단 10개 초과·산길은 불가 유지
+    if mode == "walk":       # 오래 걷기·계단 어려움: 측정값으로 계단 10개 이하·산길 아님이 확인될 때만 불가를 주의로
         hard = (s.steps or 0) > 10 or (s.surface or "") in ("산길", "모래")
-        if g == "R" and not hard: g = "Y"
+        if g == "R" and measured and not hard: g = "Y"
         if (s.distance_m or 0) > 300: g = worst([g, "Y"])
     elif mode == "stroller" and s.curb_cm is not None and 2 < s.curb_cm <= 5:
         g = worst([g, "Y"])
@@ -50,10 +50,22 @@ def grade_segment(s: Segment, mode: Mode) -> str:
 def grade_place(p: Place, mode: Mode, less_walk: bool = False):
     if mode == "none":
         return None
-    segs = p.segments
+    segs = [s for s in p.segments if not s.optional] or p.segments
     if less_walk:   # 긴 걷기 구간(300m 초과 또는 '전망' 구간)은 빼고 판정
         segs = [s for s in segs if not ((s.distance_m or 0) > 300 or "전망 데크" in s.name)] or segs
-    return worst(grade_segment(s, mode) for s in segs) or "Y"
+    g = worst(grade_segment(s, mode) for s in segs) or "Y"
+    if (p.access_scope.get(mode) or {}).get("level") in ("입구까지", "관람 불가"):   # 출처상 안으로 못 들어가면 불가
+        g = "R"
+    return g
+
+
+def why_not(p: Place, mode: Mode) -> str:
+    """갈 수 없는 이유 한 줄: 출처의 접근 범위 메모, 없으면 첫 '불가' 구간."""
+    sc = (p.access_scope.get(mode) or {}).get("note")
+    if sc:
+        return sc
+    r = next((s for s in p.segments if not s.optional and grade_segment(s, mode) == "R"), None)
+    return (f"{r.name}: {r.note}" if r.note else r.name) if r else ""
 
 
 def mode_from(move: list[str]) -> Mode:
@@ -114,8 +126,11 @@ def score(p: Place, c: Conditions, rain: bool) -> float:
         s += 1.0                         # 직접 확인한 곳을 조금 더 믿는다
     if c.who in ("부모님과", "아이와") and "체험" in p.styles:
         s += 1.0
-    if mode_from(c.move) != "none":      # 이동이 불편하면 평지·벤치 있는 곳을 먼저
+    mode = mode_from(c.move)
+    if mode != "none":                   # 이동이 불편하면 평지·벤치 있는 곳을 먼저, '주의'보다 '가능'을 먼저
         s += {"평지": 1.5, "완만한경사": 0.5}.get(p.walk_load, 0.0) + (0.5 if p.benches else 0.0)
+        if grade_place(p, mode, "오래 걷기 어려움" in c.move) == "Y":
+            s -= 3.0
     if p.type in ("식당", "카페"):
         if "부드러운 메뉴" in c.meal and p.soft_menu: s += 2.0
         if "입식" in c.meal and p.table == "입식": s += 1.0     # 혼합보다 완전 입식을 먼저
@@ -250,9 +265,9 @@ def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course
     if c.flat_only:
         pool = [p for p in pool if p.walk_load == "평지" or p.type in ("식당", "카페")]
     ok = [p for p in pool if grade_place(p, mode, less) != "R"]
-    dropped = [p.name_ko for p in pool if (p.id in c.wish or p.id in c.must) and p not in ok]
-    if dropped:
-        notes.append(f"담아 두신 {D.josa(', '.join(dropped), '은는')} 이 조건으로 갈 수 없어 뺐어요.")
+    for p in [p for p in pool if (p.id in c.wish or p.id in c.must) and p not in ok]:
+        why = why_not(p, mode)
+        notes.append(f"{D.josa(p.name_ko, '은는')} 이 조건으로 관람이 어려워 뺐어요{f' ({why})' if why else ''}. 대신 갈 수 있는 곳으로 짰어요.")
     # 정기휴무
     # 정기휴무 + 관리자 임시 휴무 알림 (cms.py)
     day_s = day.isoformat()

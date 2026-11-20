@@ -56,7 +56,7 @@ def apply(places: dict[str, Place]) -> dict[str, Place]:
             continue
         for k in ("open", "close", "break_time", "last_entry", "hours_source", "wheelchair", "walk_load", "entrance_step",
                   "table", "benches", "carer_tip", "access_source", "soft_menu", "parking_easy", "stay_min", "type",
-                  "intro_ko", "intro_en", "intro_source", "about"):
+                  "intro_ko", "intro_en", "intro_source", "about", "fee", "fee_detail", "verify", "access_scope"):
             if k in d and d[k] is not None:
                 setattr(p, k, d[k])
         if d.get("segments"):   # 공식 자료로 확인한 구간 정보가 있으면 예시 구간을 바꾼다
@@ -115,7 +115,7 @@ def open_check(p: Place, weekday: int, arrive: int, stay: int) -> tuple[bool, st
 
 def hours_text(p: Place, lang: str = "ko") -> str:
     if not p.open:
-        return "운영시간 정보 없음" if lang == "ko" else "Hours unknown"
+        return ""   # 확인 안 된 운영시간은 표시하지 않는다
     if (p.open, p.close) == ("00:00", "24:00"):
         return "상시 개방" if lang == "ko" else "Open 24h"
     t = f"{p.open}~{p.close}"

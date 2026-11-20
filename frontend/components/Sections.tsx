@@ -213,9 +213,7 @@ export function HomeFacts({ lang }: { lang: Lang }) {
   }, []);
   if (!n) return null;
   const rows: [number, string, string, string][] = [
-    [n.places, n.example >= n.places ? L("구간 판정 관광지 (현장 확인 전 포함)", "places with path grades (some not yet surveyed)")
-      : n.example > 0 ? L(`구간 판정 관광지 (현장 확인 전 ${n.example}곳 포함)`, `places with path grades (${n.example} not yet surveyed)`)
-      : L("구간 판정 관광지", "places with path grades"), "#/places", L("곳", "")],
+    [n.places, L("구간 판정 관광지", "places with path grades"), "#/places", L("곳", "")],
     [n.toilets, L("장애인 화장실", "accessible toilets"), "#/map", L("곳", "")],
     [n.chargers, L("전동휠체어 급속충전기", "wheelchair fast chargers"), "#/map", L("곳", "")],
     [n.parking, L("공영주차장", "public car parks"), "#/transport", L("곳", "")],
@@ -496,7 +494,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
             <article key={p.id} className="pcard pl2-card">
               <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
                 {tag && <span className="pl2-tag">{L(tag[1], tag[2])}</span>}
-                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
+                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("판단 불가", "Not checked")}</span>}
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}

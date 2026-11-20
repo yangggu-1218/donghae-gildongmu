@@ -11,7 +11,7 @@ import json
 from . import ai, engine
 from .schemas import Place
 
-MODE_KO = {"wheel": "휠체어 사용자 (수동·전동)", "stroller": "유모차를 미는 보호자", "walk": "오래 걷기·계단이 힘든 어르신"}
+MODE_KO = {"wheel": "휠체어 사용자", "stroller": "유모차를 미는 보호자", "walk": "오래 걷기·계단이 힘든 어르신"}
 MODE_EN = {"wheel": "wheelchair user", "stroller": "parent with a stroller", "walk": "older adult who can't walk far or climb steps"}
 
 SYSTEM = """너는 '동해 길동무'의 접근성 판정관이다. 동해시 관광지 한 곳에 대해, 주어진 근거 자료만 읽고
@@ -30,7 +30,10 @@ SYSTEM = """너는 '동해 길동무'의 접근성 판정관이다. 동해시 �
 4. 최근 제보·임시 알림(공사, 고장, 막힘)은 오래된 자료보다 우선해서 판정에 반영한다.
 5. 안전이 걸린 일이라 애매하면 한 단계 보수적으로(G 대신 Y) 판정하고 직접 확인을 권한다.
 6. ask_before 에는 가기 전에 전화로 물어보면 좋은 구체적인 질문을 적는다 (예: "엘리베이터가 지금 운행하나요?").
-7. 쉬운 존댓말로 짧게 쓴다. 언어가 en 이면 영어로 쓴다.
+7. '항목: 내용' 형태의 짧은 객관형으로 쓴다 (예: "호수 데크: 완만한 오르막", "장애인 화장실: 방문자센터").
+   '~있어요', '~할 수 있어요' 같은 구어체와 추측을 쓰지 않는다. 근거에 없는 휠체어 종류(수동·전동) 구분을 만들지 않는다.
+   access_scope(접근 범위)가 있으면 입구까지인지 관람 구역까지인지 구분해 쓴다. optional 구간은 '일부 구간 제한'으로만 다룬다.
+   언어가 en 이면 영어로 쓴다.
 8. 화면에는 픽토그램 옆에 한 줄씩 보인다. headline 은 30자, reasons·cautions·ask_before·tip 은 항목마다 25자 안팎으로 줄인다.
    reasons 는 3개, cautions·ask_before 는 2개까지. text 안에 출처·근거 이름을 쓰지 않는다(출처는 source 에만).
 """
@@ -58,7 +61,7 @@ def evidence(p: Place, mode: str, reports: list[dict], today: str) -> dict:
     for s in p.segments:
         facts = {k: getattr(s, k) for k in ("distance_m", "steps", "curb_cm", "slope_deg", "width_m", "surface", "alt_route") if getattr(s, k) is not None}
         segs.append({"name": s.name, "rule_grade": engine.grade_segment(s, mode), "measured": facts, "note": s.note,
-                     "source": s.source, "checked_at": s.checked_at})
+                     "source": s.source, "checked_at": s.checked_at, "optional": s.optional})
     notes = [{"date": (r.get("created_at") or "")[:10], "kind": r.get("kind"), "text": (r.get("note") or "")[:200],
               "photo_ai": ((r.get("ai") or {}).get("summary") or "")[:200], "status": r.get("status")}
              for r in reports][:12]
@@ -69,6 +72,7 @@ def evidence(p: Place, mode: str, reports: list[dict], today: str) -> dict:
         "summary_fields": {"walk_load": p.walk_load, "wheelchair": p.wheelchair, "entrance_step": p.entrance_step, "benches": p.benches,
                            "access_source": p.access_source, "facilities": p.facilities, "carer_tip": p.carer_tip},
         "segments": segs,
+        "access_scope": p.access_scope.get(mode) or {},
         "kto_barrier_free": (p.access_kto or {}).get("items", {}),
         "recent_reports_90d": notes,
         "active_notices": notices,
@@ -100,11 +104,13 @@ def judge(p: Place, mode: str, lang: str, reports: list[dict]) -> dict:
         }
         if not out["reasons"] and out["verdict"] != "U":   # 근거 없는 판정은 믿지 않는다
             out.update(verdict="U", confidence="low")
+        if rule and out["verdict"] in engine.RANK and engine.RANK[out["verdict"]] < engine.RANK[rule]:
+            out["verdict"] = rule                           # 안전: AI가 자료 판정보다 후하게 올리지 못한다
     else:
         ko = lang == "ko"
         out = {"by": "rule", "model": None, "verdict": rule or "U", "confidence": "low" if not rule else "medium",
-               "headline": ("근거가 아직 부족해 판단이 어려워요. 가기 전에 전화로 확인해 주세요." if ko else "Not enough information yet; please call ahead.") if not rule
-               else ("구간 정보로 계산한 판정이에요." if ko else "Based on the path data."),
+               "headline": ("접근 정보 부족: 판단 불가 · 방문 전 전화 확인 권장" if ko else "Not enough information yet; please call ahead.") if not rule
+               else ("구간 정보 기준 판정" if ko else "Based on the path data."),
                "reasons": [], "cautions": [], "ask_before": [], "tip": ""}
     out.update(rule_grade=rule, mode=mode, evidence_count=len(ev["segments"]) + len(ev["recent_reports_90d"]) + (1 if ev["kto_barrier_free"] else 0),
                reports_used=len(ev["recent_reports_90d"]))

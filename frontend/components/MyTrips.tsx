@@ -179,7 +179,7 @@ function TripDetail({ p, lang }: { p: SavedPlan; lang: Lang }) {
                 <div className="tt-head"><b>{i + 1}. {nm(s.id)}</b>
                   {s.kind !== "sight" && <small className="tl-kind">{s.kind === "lunch" ? L("점심", "Lunch") : L("쉬어 가기", "Break")}</small>}
                   {s.grade && <span className={`badge g-${s.grade}`}>{L(...GRADE_W[s.grade])}</span>}</div>
-                <p className="muted small">{s.hours_text || L("운영시간 확인 필요", "Check hours")}
+                <p className="muted small">{s.hours_text}
                   {x.walk_load && x.walk_load !== "확인 전" ? ` · ${lang === "ko" ? `걷기 ${x.walk_load}` : `walking: ${WALK_W[x.walk_load] || x.walk_load}`}` : ""}
                   {s.kind !== "sight" && x.table ? ` · ${lang === "ko" ? `${x.table} 테이블` : x.table === "입식" ? "chairs & tables" : "floor seating"}` : ""}</p>
                 <p className="tt-links">

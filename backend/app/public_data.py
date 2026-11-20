@@ -401,11 +401,13 @@ def _kakao_by(mode: str, a: tuple, b: tuple) -> str:
 
 def transit(points: list[tuple[str, str, float, float]], start: str, move: list[str], lang: str = "ko") -> dict:
     """points = [(id, 이름, 위도, 경도), ...] 코스 순서. 출발역에서 시작해 출발역으로 돌아온다.
-    걷기: 직선거리 x 1.3 을 시속 4km(이동이 불편하면 3km)로. 0.8km(이동이 불편하면 0.4km)까지만 걸어가기로 권한다."""
+    걷기: 직선거리 x 1.3 을 평지 속도로 (휴식·경사 미포함). 0.8km(이동이 불편하면 0.4km)까지만 걸어가기로 권한다.
+    속도: 일반 1.0 m/s(경찰청 신호 보행속도), 이동 조건이 있으면 0.7 m/s(경찰청 노인·어린이 보호구역 기준,
+    수동휠체어 일상 평균 0.77·전동 0.7 m/s 연구값과 비슷한 낮은 쪽) — 근거는 docs/21_IMPROVEMENT_PLAN.md 7번."""
     st = "동해역" if start == "자가용" else start
     sx, sy = TRANSIT_STARTS[st]
     slow = bool(move)
-    speed, walk_max = (3.0, 0.4) if slow else (4.0, 0.8)
+    speed, walk_max = (2.52, 0.4) if slow else (3.6, 0.8)   # km/h = m/s x 3.6
     seq = [("start", st, sx, sy)] + [p for p in points if p[2] is not None] + [("start", st, sx, sy)]
     hops = []
     for a, b in zip(seq, seq[1:]):

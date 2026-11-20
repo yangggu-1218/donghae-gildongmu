@@ -15,7 +15,7 @@ _T = json.loads((DATA / "public" / "toilets.json").read_text(encoding="utf-8")) 
 TOILETS = _T["items"]
 TOILET_META = {"as_of": _T.get("as_of", ""), "source": _T.get("source", "")}
 
-SEG_KO = {"G": "갈 수 있어요", "Y": "주의", "R": "어려워요"}
+SEG_KO = {"G": "이동 가능", "Y": "주의", "R": "어려움"}
 
 
 def toilets(with_coords_only: bool = False) -> list[dict]:
@@ -51,7 +51,7 @@ def segments(p: Place, mode: str) -> list[dict]:
         if s.slope_deg is not None: facts.append(f"경사 {s.slope_deg:g}°")
         if s.width_m is not None: facts.append(f"폭 {s.width_m:g}m")
         if s.surface: facts.append(s.surface)
-        out.append({"name": s.name, "grade": g, "facts": facts, "note": s.note or "", "source": s.source or "",
+        out.append({"name": s.name, "grade": g, "facts": facts, "note": s.note or "", "source": s.source or "", "optional": s.optional,
                     "measured": any(v is not None for v in (s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface))})
     return out
 

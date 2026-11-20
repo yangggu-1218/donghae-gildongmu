@@ -1071,7 +1071,7 @@ function noteText(n: string, lang: string): string {
   if (lang === "ko") return n;
   const rules: [RegExp, (m: RegExpMatchArray) => string][] = [
     [/^접근성을 아직 확인하지 못한 (\d+)곳은 코스에서 뺐어요/, (m) => `${m[1]} places whose access hasn't been checked yet were left out.`],
-    [/^담아 두신 .* 이 조건으로 갈 수 없어 뺐어요/, () => "Some places you saved can't be reached with these needs, so they were left out."],
+    [/ 이 조건으로 관람이 어려워 뺐어요/, () => "Some places you saved can't be reached with these needs, so they were left out."],
     [/^방문 시각에 문을 연 식당을 찾지 못했어요/, () => "No restaurant is open at that time. Try a different start time."],
     [/^점심때까지 시간이 남아 .* 넣었어요/, () => "Added a stop to fill the time before lunch."],
     [/^점심 전까지 .* (\d+)분 더 여유 있게 쉬어요/, (m) => `${m[1]} extra minutes to rest before lunch.`],

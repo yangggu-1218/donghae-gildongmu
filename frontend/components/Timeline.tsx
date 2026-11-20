@@ -141,7 +141,7 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
 
 function routeCostFields(costs: NonNullable<Course["route_costs"]>, lang: string) {
   const ko = lang === "ko";
-  const missing = ko ? "정보 없음" : "Unavailable";
+  const missing = "-";
   const won = (value: number | null) => value == null ? missing :
     (ko ? `${value.toLocaleString("ko-KR")}원` : `₩${value.toLocaleString("en-US")}`);
   const m = costs.distance_m;
