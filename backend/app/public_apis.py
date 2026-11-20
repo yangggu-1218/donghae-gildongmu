@@ -112,6 +112,14 @@ ODSAY = "https://api.odsay.com/v1/api/searchPubTransPathT"
 TRANSIT_STATS = {"calls": 0, "ok": 0, "fail": 0, "walk_only": 0, "last_error": "", "last_detail": ""}
 
 
+SITE_URL = os.getenv("SITE_URL") or "https://donghae-gildongmu.onrender.com"
+
+
+def _odsay_headers() -> dict:
+    """ODsay 키를 '웹(URI)'으로 등록했을 때 확인하는 주소. 서버(IP) 키면 무시된다."""
+    return {"Referer": SITE_URL + "/", "Origin": SITE_URL}
+
+
 def odsay_available() -> bool:
     return bool(os.getenv("ODSAY_API_KEY"))
 
@@ -122,7 +130,7 @@ def _odsay(sx: float, sy: float, ex: float, ey: float, time_bucket: int) -> dict
     if timeout < 0.5:
         raise TimeoutError("route budget used up")
     TRANSIT_STATS["calls"] += 1
-    res = httpx.get(ODSAY, params={"apiKey": os.environ["ODSAY_API_KEY"], "SX": sx, "SY": sy, "EX": ex, "EY": ey, "OPT": 0}, timeout=timeout)
+    res = httpx.get(ODSAY, params={"apiKey": os.environ["ODSAY_API_KEY"], "SX": sx, "SY": sy, "EX": ex, "EY": ey, "OPT": 0}, headers=_odsay_headers(), timeout=timeout)
     res.raise_for_status()
     return res.json()
 
@@ -206,18 +214,47 @@ def _tago_near(lat: float, lon: float, day: str) -> tuple:
     return tuple((str(x.get("nodenm") or ""), float(x["gpslati"]), float(x["gpslong"]), str(x.get("nodeid") or "")) for x in ([it] if isinstance(it, dict) else it))
 
 
+ODSAY_POINT = "https://api.odsay.com/v1/api/pointSearch"
+STOP_STATS = {"odsay_calls": 0, "odsay_ok": 0, "odsay_fail": 0, "last_detail": ""}
+
+
+@lru_cache(maxsize=256)
+def _odsay_stops(lat: float, lon: float, day: str) -> tuple:
+    """ODsay 주변 정류장 검색 (버스 정류장만, 반경 500m)."""
+    STOP_STATS["odsay_calls"] += 1
+    r = httpx.get(ODSAY_POINT, params={"apiKey": os.environ["ODSAY_API_KEY"], "x": lon, "y": lat, "radius": 500, "stationClass": 1},
+                  headers=_odsay_headers(), timeout=3)
+    r.raise_for_status()
+    j = r.json()
+    if j.get("error"):
+        err = j["error"][0] if isinstance(j["error"], list) and j["error"] else j["error"]
+        STOP_STATS["last_detail"] = _redact(f"{err.get('code')} {err.get('message') or err.get('msg') or ''}")
+        raise ValueError("odsay error")
+    st = (j.get("result") or {}).get("station") or []
+    return tuple((str(x.get("stationName") or ""), float(x["y"]), float(x["x"]), str(x.get("stationID") or "")) for x in st)
+
+
 def bus_stops_near(lat, lon, limit: int = 2) -> list[dict]:
-    """가까운 버스 정류장 (반경 약 500m, 가까운 순). 키가 없거나 실패하면 []."""
-    if not KEY or lat is None or time.monotonic() < TAGO_STATS.get("pause_until", 0):
-        return []   # 실패한 뒤 10분은 부르지 않는다 (상세 화면이 느려지지 않게)
-    try:
-        rows = _tago_near(round(lat, 5), round(lon, 5), dt.date.today().isoformat())
-        TAGO_STATS["ok"] += 1
-    except (httpx.HTTPError, KeyError, ValueError, TypeError, AttributeError) as e:
-        TAGO_STATS["fail"] += 1
-        TAGO_STATS["last_error"] = type(e).__name__
-        TAGO_STATS["pause_until"] = time.monotonic() + 600
+    """가까운 버스 정류장 (반경 약 500m, 가까운 순). TAGO(공공데이터) 먼저, 없으면 ODsay. 둘 다 실패하면 [].
+    실패한 쪽은 10분 동안 부르지 않는다 (상세 화면이 느려지지 않게). TAGO는 동해시 정류장을 돌려주지 않는 것으로 보임(2026-11-21)."""
+    if lat is None:
         return []
+    day, rows = dt.date.today().isoformat(), ()
+    if KEY and time.monotonic() >= TAGO_STATS.get("pause_until", 0):
+        try:
+            rows = _tago_near(round(lat, 5), round(lon, 5), day)
+            TAGO_STATS["ok"] += 1
+        except (httpx.HTTPError, KeyError, ValueError, TypeError, AttributeError) as e:
+            TAGO_STATS["fail"] += 1
+            TAGO_STATS["last_error"] = type(e).__name__
+            TAGO_STATS["pause_until"] = time.monotonic() + 600
+    if not rows and odsay_available() and time.monotonic() >= STOP_STATS.get("pause_until", 0):
+        try:
+            rows = _odsay_stops(round(lat, 5), round(lon, 5), day)
+            STOP_STATS["odsay_ok"] += 1
+        except (httpx.HTTPError, KeyError, ValueError, TypeError, AttributeError):
+            STOP_STATS["odsay_fail"] += 1
+            STOP_STATS["pause_until"] = time.monotonic() + 600
     out = sorted(({"name": n, "lat": la, "lon": lo, "id": i, "dist_m": _dist_m(lat, lon, la, lo)} for n, la, lo, i in rows if n), key=lambda x: x["dist_m"])
     return out[:limit]
 

@@ -44,6 +44,8 @@ CALLS = []
 
 def fake_get(url, params=None, headers=None, timeout=None):
     CALLS.append(url)
+    if "pointSearch" in url:
+        return Resp({"result": {"count": 1, "station": [{"stationClass": 1, "stationName": "ODsay 정류장", "stationID": 77, "x": params["x"], "y": params["y"] + 0.002}]}})
     if "odsay" in url:
         if MODE["odsay"] == "error":
             raise public_apis.httpx.ConnectError("down")
@@ -54,6 +56,8 @@ def fake_get(url, params=None, headers=None, timeout=None):
                                                       {"trafficType": 2, "distance": 5200, "sectionTime": 18, "lane": [{"busNo": "12-4"}]},
                                                       {"trafficType": 3, "distance": 210, "sectionTime": 3}]}]}})
     if "BusSttnInfoInqireService" in url:
+        if MODE.get("tago") == "empty":
+            return Resp({"response": {"header": {"resultCode": "00"}, "body": {"items": "", "totalCount": 0}}})
         return Resp({"response": {"body": {"items": {"item": [
             {"nodenm": "먼 정류장", "gpslati": params["gpsLati"] + 0.003, "gpslong": params["gpsLong"], "nodeid": "B2"},
             {"nodenm": "가까운 정류장", "gpslati": params["gpsLati"] + 0.001, "gpslong": params["gpsLong"], "nodeid": "B1"}]}}}})
@@ -97,6 +101,12 @@ check("공공데이터 키 없으면 정류장 []", public_apis.bus_stops_near(3
 public_apis.KEY = "test-data-key"   # 점검용 가짜 값
 stops = public_apis.bus_stops_near(37.5, 129.12)
 check("가까운 순으로 정류장", stops and stops[0]["name"] == "가까운 정류장" and stops[0]["dist_m"] < stops[1]["dist_m"], str(stops))
+MODE["tago"] = "empty"; public_apis._tago_near.cache_clear()
+os.environ["ODSAY_API_KEY"] = "test-odsay-key"
+stops = public_apis.bus_stops_near(37.51, 129.11)
+check("TAGO에 정류장이 없으면 ODsay 주변 정류장", stops and stops[0]["name"] == "ODsay 정류장", str(stops))
+check("ODsay 호출에 사이트 주소(Referer)", public_apis._odsay_headers()["Referer"].startswith("https://"))
+os.environ.pop("ODSAY_API_KEY")
 
 print(f"대중교통 점검 실패 {len(fails)}건")
 sys.exit(1 if fails else 0)

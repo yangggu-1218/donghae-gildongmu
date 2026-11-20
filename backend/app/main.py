@@ -64,7 +64,7 @@ def health():
     return {"ok": True, "places": len(PLACES), "verified": sum(p.verified for p in PLACES.values()),
             "official_coords": sum(bool(p.coord_source) for p in PLACES.values()),
             "llm": bool(llm.API_KEY), "ai": llm.status(), "public_api": bool(public_apis.KEY), "public_files": public_data.sources(),
-            "routes": {"kakao": public_apis.ROUTE_STATS, "odsay": {**public_apis.TRANSIT_STATS, "key": public_apis.odsay_available()}, "tago": public_apis.TAGO_STATS}}   # 키 값 없음, 오류 문구만
+            "routes": {"kakao": public_apis.ROUTE_STATS, "odsay": {**public_apis.TRANSIT_STATS, "key": public_apis.odsay_available()}, "tago": public_apis.TAGO_STATS, "stops_odsay": public_apis.STOP_STATS}}   # 키 값 없음, 오류 문구만
 
 
 @app.get("/api/places")
