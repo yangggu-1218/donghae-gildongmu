@@ -287,7 +287,7 @@ def eat_group(text: str) -> str:
     return next((g for g, pat in EAT_WORDS if re.search(pat, text or "")), "")
 
 
-EAT_LINK: dict[str, tuple[str, bool]] = {}   # 업소명 → (길동무 장소 id, 무장애 정보 확인 여부)
+EAT_LINK: dict[str, tuple[str, bool]] = {}   # 업소명 → (길동무 장소 id, 이동약자 정보 확인 여부)
 
 
 def _core(n: str) -> str:
@@ -312,12 +312,12 @@ EAT_SORTS = ("pick", "dist", "old", "access")
 
 
 def _eat_score(r: dict) -> float:
-    """길동무 추천순: 무장애 정보 확인 +5, 영업 연수(최대 30년) 해마다 +0.3, 100m 멀어질 때마다 -1."""
+    """길동무 추천순: 이동약자 정보 확인 +5, 영업 연수(최대 30년) 해마다 +0.3, 100m 멀어질 때마다 -1."""
     return (5 if r["checked"] else 0) + 0.3 * min(r["years"], 30) - r["dist_m"] / 100
 
 
 def eateries(lat: float, lon: float, group: str = "", radius: int = 800, limit: int = 8, sort: str = "pick") -> dict:
-    """좌표 주변 일반음식점. 접근성은 확인 전이고, 한국관광공사 무장애 정보로 확인한 식당(checked)은 표시해서 먼저 보여 준다."""
+    """좌표 주변 일반음식점. 접근성은 확인 전이고, 한국관광공사 이동약자 정보로 확인한 식당(checked)은 표시해서 먼저 보여 준다."""
     from . import sync   # 자동 갱신(docs/20_AUTO_SYNC.md): 폐업 의심 표시·숨김
     hidden, suspect = sync.hidden_eateries(), sync.suspect_eateries()
     seen, near = set(), []

@@ -6,7 +6,7 @@ import { Icon, Picto } from "@/components/Icon";
 
 type Any = any;
 const KIND: Record<string, [string, string]> = { update: ["변경", "b-plain"], conflict: ["충돌 (관리자 값과 다름)", "g-R"], mismatch: ["불일치 (출처끼리 다름)", "g-R"],
-  recheck: ["다시 확인 요청", "b-unknown"], access: ["무장애 정보 · 현장 확인 필요", "b-unknown"], closure: ["폐업 의심", "b-unknown"] };
+  recheck: ["다시 확인 요청", "b-unknown"], access: ["이동약자 정보 · 현장 확인 필요", "b-unknown"], closure: ["폐업 의심", "b-unknown"] };
 const RES: Record<string, string> = { auto: "자동 반영", approved: "승인", rejected: "거절", reverted: "되돌림", drop: "버림", checked: "확인함", superseded: "불일치로 넘김" };
 const RULE: Record<string, string> = { auto: "자동 반영", review: "검수", off: "끄기" };
 const fmt = (v: Any) => v == null || v === "" ? "(없음)" : Array.isArray(v) ? v.join(", ") : typeof v === "object" ? (v.name ? `${v.name}${v.start ? ` · ${v.start}~${v.end || ""}` : ""}` : JSON.stringify(v)) : String(v);
@@ -22,7 +22,7 @@ export function SyncAdmin({ tok, call, onExpired, can }: { tok: string; call: An
   return (
     <div className="sy">
       {d.demo && <p className="ca-warn" role="note"><Picto name="ask" size={18} /><span>데모 화면이에요. 서버가 없어 자동 갱신이 연결되어 있지 않아요.</span></p>}
-      <p className="muted small"><Icon name="info" /> 공식 API·공공데이터를 매일·매주 확인해요. 전화·주소·좌표(50m 안)·행사는 규칙대로 자동 반영하고, 나머지는 여기서 승인해야 사이트에 반영돼요. 무장애 정보는 절대 자동으로 바꾸지 않아요.
+      <p className="muted small"><Icon name="info" /> 공식 API·공공데이터를 매일·매주 확인해요. 전화·주소·좌표(50m 안)·행사는 규칙대로 자동 반영하고, 나머지는 여기서 승인해야 사이트에 반영돼요. 이동약자 정보는 절대 자동으로 바꾸지 않아요.
         {!d.token_set && <> <b>예약 실행 토큰(SYNC_TOKEN)이 서버에 없어 지금은 [지금 실행]으로만 돌아요.</b></>}</p>
       <div className="tabs ca-views" role="group" aria-label="자동 갱신 보기">
         {([["pending", `검수 대기 (${d.pending.length})`], ["log", "반영 기록"], ["src", "소스 상태"], ["set", "자동 갱신 설정"]] as const).map(([k, t]) =>

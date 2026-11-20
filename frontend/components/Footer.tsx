@@ -37,8 +37,6 @@ export function SiteFooter({ lang, t }: { lang: Lang; t: (k: string) => string }
               <a href="https://www.hallym.ac.kr" target="_blank" rel="noreferrer" aria-label={L("한림대학교 누리집 (새 창)", "Hallym University website (new tab)")}><img src="/photos/brand-hallym.png" alt={L("한림대학교", "Hallym University")} /></a>
             </div>
             <p className="sf-brand"><b>{t("brand")}</b> {t("foot.team")}</p>
-            <p className="sf-note">{t("foot.data")}</p>
-            <p className="sf-note">{t("foot.ai")}</p>
           </div>
           <div className="sf-right">
             <p className="sf-sns-h">{L("동해시 공식 SNS", "Donghae City on social media")}</p>

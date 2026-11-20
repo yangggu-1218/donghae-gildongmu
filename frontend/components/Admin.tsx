@@ -544,7 +544,7 @@ function Visits({ places, tok, call, me }: any) {
 function Probe({ tok }: { tok: string }) {
   const [r, setR] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const NAMES: Record<string, string> = { bf_food: "무장애 음식점", bf_stay: "무장애 숙소", bf_sight: "무장애 관광지", crowd: "집중률 예측(장소 수)",
+  const NAMES: Record<string, string> = { bf_food: "이동약자 음식점", bf_stay: "이동약자 숙소", bf_sight: "이동약자 관광지", crowd: "집중률 예측(장소 수)",
     related: "연관 관광지(장소 수)", visitors: "방문자수(일 수)", audio: "오디오 가이드", photo: "관광사진" };
   async function run() { setBusy(true); try { setR(await api.get("/api/admin/probe", tok)); } catch (e: any) { setR({ error: String(e.message || e) }); } setBusy(false); }
   return (

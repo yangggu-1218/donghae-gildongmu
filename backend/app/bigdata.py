@@ -1,6 +1,6 @@
 """한국관광공사 공공 빅데이터 중계 (공공데이터포털 키 DATA_GO_KR_KEY 하나로 모두 호출).
 
-- 무장애 여행 정보(KorWithService2): 동해시 음식점·카페·숙소·관광지의 무장애 항목
+- 이동약자 여행 정보(KorWithService2): 동해시 음식점·카페·숙소·관광지의 이동약자 항목
 - 관광지 집중률 방문자 추이 예측(TatsCnctrRateService): 앞으로 30일 붐빔 정도
 - 관광지별 연관 관광지(TarRlteTarService): 함께 많이 가는 곳
 - 빅데이터 지역별 방문자수(DataLabService): 동해시 일별 방문자 (현지인·외지인·외국인)
@@ -117,7 +117,7 @@ def norm(s: str) -> str:
     return "".join(ch for ch in (s or "") if ch.isalnum()).lower()
 
 
-# ---------------- 1. 무장애 여행 정보 ----------------
+# ---------------- 1. 이동약자 여행 정보 ----------------
 BF_TYPES = {"sight": "12", "culture": "14", "stay": "32", "food": "39", "shop": "38", "leports": "28", "event": "15"}
 BF_LABEL = {   # 화면에 보여 줄 항목 (값이 비어 있으면 숨김)
     "parking": "주차", "route": "접근로", "publictransport": "대중교통", "ticketoffice": "매표소", "wheelchair": "휠체어",
@@ -169,7 +169,7 @@ def barrier_free(kind: str = "food", limit: int = 60) -> dict:
         out.append({"id": str(it.get("contentid")), "type": kind, "name": it.get("title", ""), "addr": it.get("addr1", ""),
                     "tel": it.get("tel", ""), "lat": lat, "lon": lon, "image": it.get("firstimage") or it.get("firstimage2") or "",
                     "facts": facts, "wheel": _wheel_level(facts)})
-    res = {"items": out, "count": len(out), "source": "한국관광공사 무장애 여행 정보", "updated": dt.datetime.now(KST).strftime("%Y-%m-%d"),
+    res = {"items": out, "count": len(out), "source": "한국관광공사 이동약자 여행 정보", "updated": dt.datetime.now(KST).strftime("%Y-%m-%d"),
            "ok": bool(out)}
     if out or KEY:
         _cache_put(name, res)
@@ -177,7 +177,7 @@ def barrier_free(kind: str = "food", limit: int = 60) -> dict:
 
 
 def _wheel_level(f: dict) -> str:
-    """무장애 항목 문구로 휠체어 접근을 세 단계로 나눈다. (공식 판정이 아니라 문구 요약)"""
+    """이동약자 항목 문구로 휠체어 접근을 세 단계로 나눈다. (공식 판정이 아니라 문구 요약)"""
     txt = " ".join(f.get(k, "") for k in ("wheelchair", "exit", "route", "restroom", "elevator"))
     if not txt.strip():
         return "unknown"

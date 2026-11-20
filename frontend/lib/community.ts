@@ -3,7 +3,7 @@
 export type Cmt = { nick: string; date: string; text: string };
 export type Post = {
   id: string; title: string; nick: string; date: string;
-  kind: "easy" | "free";          // 무장애 / 일반
+  kind: "easy" | "free";          // 이동약자 / 일반
   move: string[];                 // 휠체어, 유모차, 어르신(오래 걷기 어려움), 계단 어려움
   who: string; zone: string; stops: string[]; rating: number;
   body: string; tips: string[];   // 길 메모: 다녀온 사람이 본 턱·경사·화장실 등

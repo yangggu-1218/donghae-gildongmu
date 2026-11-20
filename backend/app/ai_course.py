@@ -40,7 +40,7 @@ TOOLS = [
          "zone": {"type": "string", "enum": ZONES}, "types": {"type": "array", "items": {"type": "string", "enum": ["관광지", "식당", "카페"]}},
          "indoor_only": {"type": "boolean"}, "keyword": {"type": "string", "description": "이름·소개에 들어 있는 말"}},
          "additionalProperties": False}},
-    {"name": "place_detail", "description": "장소 하나의 자세한 정보: 소개, 구간별 길 정보, 편의시설, 보호자 꿀팁, 무장애 정보, 임시 알림.",
+    {"name": "place_detail", "description": "장소 하나의 자세한 정보: 소개, 구간별 길 정보, 편의시설, 보호자 꿀팁, 이동약자 정보, 임시 알림.",
      "input_schema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"], "additionalProperties": False}},
     {"name": "check_plan", "description": "고른 순서대로 서버가 도착·떠나는 시각, 이동 시간, 그날 영업 여부를 계산해 문제(problems)를 알려 준다. 최종 답 전에 반드시 부른다.",
      "input_schema": {"type": "object", "properties": {"stops": {"type": "array", "items": {"type": "object", "properties": {

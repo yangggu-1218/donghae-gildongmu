@@ -117,7 +117,7 @@ export function NowDonghae({ lang }: { lang: Lang }) {
   if (quiet.length) cards.push(
     <div key="q" className="now-c"><span className="now-k">{L("오늘 한산할 곳", "Quiet today")}</span>
       <b>{quiet.map(([id], i) => <span key={id}>{i > 0 && ", "}<a href={`#/place/${id}`}>{nm(id)}</a></span>)}</b>
-      <span>{L("한국관광공사 집중률 예측", "KTO crowd forecast")}</span></div>);
+      <span>{L("관광지 혼잡 예측", "KTO crowd forecast")}</span></div>);
   if (busy.length) cards.push(
     <div key="b" className="now-c"><span className="now-k">{L("오늘 붐빌 곳", "Busy today")}</span>
       <b>{busy.map(([id], i) => <span key={id}>{i > 0 && ", "}<a href={`#/place/${id}`}>{nm(id)}</a></span>)}</b>
@@ -243,7 +243,7 @@ export function MoreLinks({ lang }: { lang: Lang }) {
   );
 }
 
-// 무장애 검색: 한국관광공사 열린관광의 분류·항목 이름을 그대로 쓴다 (backend/app/kto_access.py 의 access_kto.items)
+// 이동약자 검색: 한국관광공사 열린관광의 분류·항목 이름을 그대로 쓴다 (backend/app/kto_access.py 의 access_kto.items)
 // mode = 이 분류를 고르면 카드 신호등을 어떤 기준으로 볼지 (기존 '누구 기준으로 볼까요')
 const BF: { k: string; ko: string; en: string; mode: string; opts: [string, string, string, string[]][] }[] = [
   { k: "지체장애", ko: "지체장애", en: "Mobility", mode: "wheel", opts: [
@@ -267,7 +267,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const L = pick(lang);
   const [zone, setZone] = useState(ZONES.some((z) => z.k === zone0) ? zone0! : "all");
   useEffect(() => { if (ZONES.some((z) => z.k === zone0)) setZone(zone0!); }, [zone0]);
-  const [bfCat, setBfCat] = useState("");            // 무장애 검색에서 고른 분류
+  const [bfCat, setBfCat] = useState("");            // 이동약자 검색에서 고른 분류
   const [bfOpts, setBfOpts] = useState<string[]>([]); // 그 분류의 세부 항목 (비면 '전체')
   const [open, setOpen] = useState<"" | "bf" | "need" | "sort">("");
   const mode = BF.find((b) => b.k === bfCat)?.mode || "none";
@@ -298,7 +298,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
     ["culture", "역사·문화", "History & culture", "style"], ["activity", "체험", "Activities", "style"],
     ["indoor", "비 와도 OK(실내)", "Indoor", "comfort"], ["flat", "덜 걷는 곳(평지)", "Flat, little walking", "comfort"], ["toilet", "장애인 화장실", "Accessible toilet", "comfort"],
     ["parking", "장애인 주차", "Accessible parking", "comfort"], ...(hasCrowd ? [["quiet", "오늘 한산한 곳", "Quiet today", "today"] as [string, string, string, string]] : [])];
-  // 무장애 검색 세부 항목: 열린관광 항목(없음 제외)이 있거나, 같은 뜻의 편의시설이 있으면 맞음
+  // 이동약자 검색 세부 항목: 열린관광 항목(없음 제외)이 있거나, 같은 뜻의 편의시설이 있으면 맞음
   const bf = BF.find((b) => b.k === bfCat);
   const bfOk = (p: any) => {
     if (!bf) return true;
@@ -350,16 +350,16 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
         </div>
       </header>
 
-      {/* 무장애 검색: 접힌 띠 → 분류 상자 5개 → 고른 분류의 세부 항목 */}
+      {/* 이동약자 검색: 접힌 띠 → 분류 상자 5개 → 고른 분류의 세부 항목 */}
       <div className={`bf2${open === "bf" ? " on" : ""}`}>
         <button className="bf2-bar" aria-expanded={open === "bf"} aria-controls="bf2-body" onClick={() => setOpen(open === "bf" ? "" : "bf")}>
-          <span className="bf2-bar-t"><AccIcon k="지체장애" size={24} />{L("무장애 검색", "Accessibility search")}</span>
+          <span className="bf2-bar-t"><AccIcon k="지체장애" size={24} />{L("이동약자 검색", "Accessibility search")}</span>
           {bf && <span className="bf2-bar-sel">{L(bf.ko, bf.en)}{bfOpts.length ? ` · ${bfOpts.length}` : ""}</span>}
           <Icon name="down" className={`bf2-chev${open === "bf" ? " up" : ""}`} />
         </button>
         {open === "bf" && (
           <div id="bf2-body" className="bf2-body">
-            <div className="bf2-cats" role="group" aria-label={L("무장애 분류", "Access categories")}>
+            <div className="bf2-cats" role="group" aria-label={L("이동약자 분류", "Access categories")}>
               {BF.map((b) => (
                 <button key={b.k} className="bf2-cat" aria-pressed={bfCat === b.k} onClick={() => pickCat(b.k)}>
                   <AccIcon k={b.k} size={44} />
@@ -372,7 +372,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
                 <label className="bf2-ck"><input type="checkbox" checked={!bfOpts.length} onChange={() => setBfOpts([])} /><span>{L("전체", "All")}</span></label>
                 {bf.opts.map(([o, ko, en]) => (
                   <label key={o} className="bf2-ck"><input type="checkbox" checked={bfOpts.includes(o)} onChange={() => toggleOpt(o)} /><span>{L(ko, en)}</span></label>))}
-                {bf.k === "청각장애" && <p className="muted small bf2-note">{L("동해 관광지에는 아직 청각장애 편의정보가 등록되지 않았어요 (한국관광공사 열린관광 기준).", "No hearing-access info is registered for Donghae places yet.")}</p>}
+                {bf.k === "청각장애" && <p className="muted small bf2-note">{L("동해 관광지에는 아직 청각장애 편의정보가 등록되지 않았어요.", "No hearing-access info is registered for Donghae places yet.")}</p>}
                 {bf.mode !== "none" && <p className="muted small bf2-note">{L(`카드에 ${({ wheel: "휠체어", stroller: "유모차", walk: "오래 걷기 어려움" } as any)[bf.mode]} 기준 신호등이 보여요. 세부 항목을 고르면 그 시설이 있는 곳만 남아요.`, "Cards show an access signal for this need. Tick details to keep only places with them.")}</p>}
               </fieldset>
             ) : <p className="muted small bf2-hint">{L("누구와 가는지 상자를 하나 골라 주세요. 다시 누르면 풀려요.", "Pick a box. Tap again to clear.")}</p>}
@@ -444,7 +444,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}
-                <h3 className="pl2-name"><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}
+                <h3 className="pl2-name"><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{null}
                   {r != null && <span className={`pl2-crowd crowd-${r >= 70 ? "high" : r >= 40 ? "mid" : "low"}`} title={L(`오늘 붐빔 예상 ${Math.round(r)}%`, `Today ${Math.round(r)}%`)}>{L("오늘", "Today")} {r >= 70 ? L("붐빔", "busy") : r >= 40 ? L("보통", "moderate") : L("여유", "quiet")}</span>}</h3>
                 <p className="pl2-desc">{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.intro_en || p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
                 {ic.length > 0 && <ul className="pl2-ic" aria-label={L("편의시설", "Facilities")}>{ic.map(([k, el, ko, en]) => <li key={k} title={L(ko, en)}>{el}<span className="sr-only">{L(ko, en)}</span></li>)}</ul>}

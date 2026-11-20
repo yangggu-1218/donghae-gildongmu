@@ -81,7 +81,7 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
         <div className="stop-identity"><PlacePhoto id={s.id} lang={lang as "ko" | "en"} small />
           <div><span>{s.arrive} – {s.depart}</span><h4>{name}</h4></div></div>
         <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
-          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}{x?.access_source === "예시" ? (lang === "ko" ? " · 예시" : " · sample") : ""}</span>}</div>
+          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}</div>
         {s.notice && <p role="note">{s.notice}</p>}
                 <div className="stop-actions">
           <button type="button" className="chip go" onClick={() => dialog.current?.showModal()}>{lang === "ko" ? "장소 상세 보기" : "Stop details"}</button>
@@ -107,7 +107,7 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
         </div>
         <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
-          {lv && <span className={`badge crowd-${lv}`} title={lang === "ko" ? "한국관광공사 관광지 집중률 예측" : "KTO crowd forecast"}>{crowdTxt} {Math.round(crowd!)}%</span>}</div>
+          {lv && <span className={`badge crowd-${lv}`} title={lang === "ko" ? "관광지 혼잡 예측" : "KTO crowd forecast"}>{crowdTxt} {Math.round(crowd!)}%</span>}</div>
         {!!s.weather?.hours.length && <StopWeather forecast={s.weather} lang={lang} />}
         {s.notice && <p className="tl-notice" role="note"><Icon name="warn" /> {s.notice}</p>}
         {s.wait_min > 0 && <p className="muted"><Icon name="wait" /> {t("tl.wait", { m: s.wait_min })}</p>}

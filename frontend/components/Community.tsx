@@ -173,7 +173,7 @@ function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Reco
   const LEVEL: [string, string][] = [["쉬움", "Easy"], ["보통", "Moderate"], ["조금 힘듦", "Harder"]];
   const dur = (m: number) => { const h = Math.floor(m / 60), r = Math.round((m % 60) / 10) * 10; return lang === "ko" ? `${h ? `${h}시간 ` : ""}${r ? `${r}분` : ""}`.trim() || "30분" : `${h ? `${h}h ` : ""}${r ? `${r}m` : ""}`.trim(); };
   const pins = rows.map((p) => { const f = facts(p, places); return f.first ? { lat: f.first.lat, lon: f.first.lon, label: p.title, grade: null, icon: p.kind === "easy" ? L("무", "B") : L("일", "R"), sub: `${p.stops.map(pn).join(" → ")}`, color: p.kind === "easy" ? "#2462B4" : "#C7671A" } : null; }).filter(Boolean) as any[];
-  const KIND: [("" | "easy" | "free"), string, string, JSX.Element | null][] = [["", "전체", "All", null], ["easy", "무장애 여행", "Barrier-free", <Icon key="i" name="shield" />], ["free", "일반 여행", "Regular", <Icon key="i" name="trail" />]];
+  const KIND: [("" | "easy" | "free"), string, string, JSX.Element | null][] = [["", "전체", "All", null], ["easy", "이동약자 여행", "Barrier-free", <Icon key="i" name="shield" />], ["free", "일반 여행", "Regular", <Icon key="i" name="trail" />]];
   const MV_IC: Record<string, JSX.Element> = { "휠체어": <Icon name="wheel" />, "유모차": <StrollerIc />, "오래 걷기 어려움": <Icon name="walk" /> };
   const clear = () => { setKind(""); setMove(""); setZone(""); setQ(""); setQIn(""); };
   return (
@@ -218,8 +218,8 @@ function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Reco
       : view === "map" ? (
         <div className="cm-mapview">
           <KakaoMap pins={pins} dots label={L("다녀온 길 지도: 각 글의 첫 장소", "Trips map: first stop of each post")} />
-          <p className="muted small">{L("점은 각 글의 첫 장소예요. 파란 점은 무장애 여행, 주황 점은 일반 여행이에요.", "Each dot is a post's first stop. Blue = barrier-free, orange = regular.")}</p>
-          <ul className="cm-maplist">{rows.map((p) => <li key={p.id}><a href={`#/community/${p.id}`}><span className={`cm-badge ${p.kind}`}>{p.kind === "easy" ? L("무장애", "Barrier-free") : L("일반", "Regular")}</span><b>{p.title}</b><small>{p.stops.map(pn).join(" → ")}</small></a></li>)}</ul>
+          <p className="muted small">{L("점은 각 글의 첫 장소예요. 파란 점은 이동약자 여행, 주황 점은 일반 여행이에요.", "Each dot is a post's first stop. Blue = barrier-free, orange = regular.")}</p>
+          <ul className="cm-maplist">{rows.map((p) => <li key={p.id}><a href={`#/community/${p.id}`}><span className={`cm-badge ${p.kind}`}>{p.kind === "easy" ? L("이동약자", "Barrier-free") : L("일반", "Regular")}</span><b>{p.title}</b><small>{p.stops.map(pn).join(" → ")}</small></a></li>)}</ul>
         </div>
       ) : (<>
         <ul className="cm-grid">
@@ -234,7 +234,7 @@ function List({ lang, posts, places }: { lang: Lang; posts: Post[]; places: Reco
                     {f.cover ? <img src={photoAt(f.cover, 500)} alt="" loading="lazy" decoding="async" /> : <span className="cm-pimg-none"><img src="/dongi/full-basic.webp" alt="" /></span>}
                   </a>
                   <span className="cm-badges">
-                    <span className={`cm-badge ${p.kind}`}>{p.kind === "easy" ? L("무장애", "Barrier-free") : L("일반", "Regular")}</span>
+                    <span className={`cm-badge ${p.kind}`}>{p.kind === "easy" ? L("이동약자", "Barrier-free") : L("일반", "Regular")}</span>
                     {tag && <span className="cm-badge tag">{L(tag[0], tag[1])}</span>}
                   </span>
                   <button className="cm-heart" aria-pressed={!!fav[p.id]} onClick={() => toggleFav(p.id)} aria-label={fav[p.id] ? L(`'${p.title}' 찜 풀기`, "Remove from saved") : L(`'${p.title}' 찜하기`, "Save this trip")}>
@@ -288,7 +288,7 @@ function Detail({ lang, p, places, helped, onHelp, onComment, onHide, onUse }: {
     <section className="sec wrap cm cm-detail">
       <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/community">{L("커뮤니티", "Community")}</a> › <a href="#/community/talk">{L("다녀온 길", "Trips")}</a></p>
       <article className="panel cm-post">
-        <span className={`cm-kind ${p.kind}`}>{p.kind === "easy" ? L("무장애 여행", "Barrier-free") : L("일반 여행", "Regular")} · {p.who} · {L(ZONE[p.zone]?.[0] || "", ZONE[p.zone]?.[1] || "")}</span>
+        <span className={`cm-kind ${p.kind}`}>{p.kind === "easy" ? L("이동약자 여행", "Barrier-free") : L("일반 여행", "Regular")} · {p.who} · {L(ZONE[p.zone]?.[0] || "", ZONE[p.zone]?.[1] || "")}</span>
         <h1 className="cm-h">{p.title}</h1>
         <p className="cm-meta"><span className="cm-who"><Avatar nick={p.nick} />{p.nick}</span><span>{p.date}</span><span className="cm-stars" aria-label={L(`만족도 ${p.rating}점`, `${p.rating} of 5`)}>{stars(p.rating)}</span></p>
         <h2 className="h3">{L("다녀온 순서", "Route")}</h2>
@@ -356,7 +356,7 @@ function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, an
       <div className="panel cm-form big">
         <fieldset><legend>{L("어떤 여행이었나요?", "Trip type")}</legend>
           <div className="chips">
-            <button type="button" className="chip" aria-pressed={kind === "easy"} onClick={() => setKind("easy")}>{L("무장애 여행", "Barrier-free")}</button>
+            <button type="button" className="chip" aria-pressed={kind === "easy"} onClick={() => setKind("easy")}>{L("이동약자 여행", "Barrier-free")}</button>
             <button type="button" className="chip" aria-pressed={kind === "free"} onClick={() => setKind("free")}>{L("일반 여행", "Regular")}</button>
           </div>
           {kind === "easy" && <div className="chips">{MOVE.map(([v, ko, en]) => <button type="button" key={v} className="chip" aria-pressed={move.includes(v)} onClick={() => setMove(move.includes(v) ? move.filter((x) => x !== v) : [...move, v])}>{L(ko, en)}</button>)}</div>}

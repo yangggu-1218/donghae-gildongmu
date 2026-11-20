@@ -8,7 +8,7 @@ import Dongi from "@/components/Dongi";
 import KakaoMap, { geocode } from "@/components/KakaoMap";
 import { fuzzyHit as fz } from "@/lib/fuzzy";
 import { Hero, HomeFacts, HowToStrip, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS } from "@/components/Sections";
-import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, SourcesPage, AdminPage, BookLinks } from "@/components/Pages";
+import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
 import { buildQuestions, applyExtra, summarize, ExtraQ, ExtraAns } from "@/lib/followup";
@@ -178,7 +178,7 @@ export default function Page() {
       const m = h.match(/^#plan=(.+)$/);
       const c = m && decodePlan(m[1]);
       if (c) {
-        setLang(c.lang || "ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
+        setLang("ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
         api.course(c).then((r) => { applyRes(r); setSumOpen(true); }).catch(() => say({ pose: "worry", text: t("error.server") })).finally(() => setBusy(false));
         return;
       }
@@ -677,10 +677,6 @@ export default function Page() {
             <a className="box cr-btn" href="#/report" aria-label={t("cr.open")} title={t("cr.open")}><Icon name="flag" /><span aria-hidden="true">{t("cr.open")}</span></a>
             <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
             <button className="box bigt" aria-pressed={big} onClick={toggleBig}><span className="long">{big ? t("tool.bigOn") : t("tool.big")}</span><span className="short" aria-hidden="true">{big ? t("tool.bigOnShort") : t("tool.bigShort")}</span></button>
-            <label className="sr-only" htmlFor="lang">{t("tool.lang")}</label>
-            <select id="lang" className="box" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-              <option value="ko">한국어</option><option value="en">English</option>
-            </select>
             <ProfileButton lang={lang} />
           </div>
         </div>
@@ -710,7 +706,6 @@ export default function Page() {
       {route[0] === "events" && <EventsPage lang={lang} onPlanDate={planDate} />}
       {route[0] === "stay" && <StayPage lang={lang} />}
       {route[0] === "guide" && <CommunityPage lang={lang} sub="ask" onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
-      {route[0] === "sources" && <SourcesPage lang={lang} />}
       {route[0] === "admin" && <AdminPage lang={lang} />}
       {route[0] === "login" && <LoginPage lang={lang} />}
       {route[0] === "me" && <ProfilePage lang={lang} wish={cond.wish || []} places={places} onRemoveWish={removeWish} />}
@@ -993,7 +988,6 @@ export default function Page() {
               )}
               {hint?.stay && <p className="muted"><Icon name="bed" /> {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
               <ReportBox stops={course.stops.map((s) => ({ id: s.id, name: name(s.id) }))} t={t} />
-              <p className="muted small">{t("x.src")}</p>
             </>
           )}
         </section>
@@ -1121,7 +1115,7 @@ function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: an
   else if (c.kind === "mobility_van") body = <>{row(d.name, `${d.tel} · ${d.hours}`)}<p className="muted">{t("x.mobilityWho")}</p></>;
   else if (c.kind === "city_tour") body = row(`${d.name} · ${d.days}`, `${d.board} ${d.first}~${d.last} · ${d.fare}`);
   else if (c.kind === "events") body = d.map((x: any) => row(x.name, `${x.start}~${x.end} · ${x.venue}`));
-  else if (c.kind === "restaurants" && d.items?.[0]?.dist_m != null) body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}${x.checked ? (lang === "ko" ? " · 무장애 정보 있음" : " · access info") : ""}`, `${x.dist_m}m${x.tel ? " · " + x.tel : ""}`))}<p className="muted">{t("card.eats", { n: d.total, r: d.radius / 1000 })}</p></>;
+  else if (c.kind === "restaurants" && d.items?.[0]?.dist_m != null) body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}${x.checked ? (lang === "ko" ? " · 이동약자 정보 있음" : " · access info") : ""}`, `${x.dist_m}m${x.tel ? " · " + x.tel : ""}`))}<p className="muted">{t("card.eats", { n: d.total, r: d.radius / 1000 })}</p></>;
   else if (c.kind === "lodging") body = <>{d.items.map((x: any) => <div key={x.name + x.address}>{row(`${x.name} · ${x.kind}`, x.tel || x.address)}<BookLinks name={x.name} lang={lang} /></div>)}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "lodging" || c.kind === "restaurants") body = <>{d.items.map((x: any) => row(`${x.name} · ${x.kind}`, x.tel || x.address))}<p className="muted">{t("card.unverified", { n: d.count })}</p></>;
   else if (c.kind === "parking") body = d.map((x: any) => row(`${x.name} (${x.spaces})`, `${x.fee}${x.disabled_free ? " · " + t("x.parkingFree") : ""} · ${x.dist_m}m`));
@@ -1141,10 +1135,10 @@ function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: an
       {d.taxi && <p className="muted small">{ko ? `택시: ${d.taxi.name} 택시 승차대 (${d.taxi.address})` : `Taxi stand: ${d.taxi.name} (${d.taxi.address})`}</p>}
       {d.van && <p className="muted small">{ko ? `휠체어 차량: ${d.van.name} ${d.van.tel} (이용 대상이 정해져 있어요)` : `Wheelchair van: ${d.van.name} ${d.van.tel} (eligibility applies)`}</p>}
       <p className="muted small">{d.note}</p>
-      {d.hops.some((h: any) => h.bus_2019?.length) && <p className="muted small">{ko ? `버스 번호 출처: ${d.bus_src}. 노선이 바뀌었을 수 있으니 길찾기 링크로 확인해 주세요.` : "Bus numbers: Korea Tourism Organization (2019). Routes may have changed; check the route link."}</p>}
+      {d.hops.some((h: any) => h.bus_2019?.length) && <p className="muted small">{ko ? "버스 노선이 바뀌었을 수 있으니 길찾기 링크로 확인해 주세요." : "Bus numbers: Korea Tourism Organization (2019). Routes may have changed; check the route link."}</p>}
     </>;
   }
-  return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}<p className="muted small">{t("x.src")}</p></div>;
+  return <div className="card-help" style={{ margin: "4px 0 12px 56px" }}>{body}</div>;
 }
 
 // 현장 제보: 사진을 올리면 서버가 AI 비전으로 장애물을 찾아 '검수용 제안'을 돌려준다

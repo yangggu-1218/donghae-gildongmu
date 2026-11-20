@@ -43,7 +43,7 @@ export function TripSuggestions({ conditions, places, lang, t }: {
         const p = places[s.id];
         if (!p) return null;
         return <li key={s.id}><a href={"#/place/" + s.id}>{(ko ? p.name_ko : p.name_en) || p.name_ko}</a>
-          {s.grade && <small>{t("grade." + s.grade)}{(p.access_source === "예시" || p.segments?.some((g: any) => g.source === "예시")) && (ko ? " · 예시 정보" : " · sample data")}</small>}</li>;
+          {s.grade && <small>{t("grade." + s.grade)}</small>}</li>;
       })}</ol>
       {!!pins.length && <KakaoMap pins={pins} overview />}
     </> : <p>{stops === undefined ? (ko ? "조건에 맞는 장소를 찾고 있어요." : "Finding places…")

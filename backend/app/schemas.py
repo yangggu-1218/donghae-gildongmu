@@ -66,7 +66,7 @@ class Place(BaseModel):
     closed_day_nums: list[int] = Field(default_factory=list)   # 정기휴무 0=일 ~ 6=토
     last_entry: Optional[str] = None     # 마지막 입장
     hours_source: str = ""               # 공공데이터 / 상시 개방 / 예시(확인 필요)
-    # ----- 작업1: 어르신·무장애 상세 -----
+    # ----- 작업1: 어르신·이동약자 상세 -----
     wheelchair: str = "확인 전"           # 가능 / 일부 / 불가 / 확인 전
     walk_load: str = "확인 전"            # 평지 / 완만한경사 / 급경사 / 확인 전
     entrance_step: Optional[bool] = None # 출입구 단차
@@ -77,7 +77,7 @@ class Place(BaseModel):
     soft_menu: Optional[bool] = None     # 부드러운 메뉴
     parking_easy: Optional[bool] = None  # 주차 편함
     notices: list[dict] = Field(default_factory=list)   # 관리자 임시 알림 (cms.py)
-    access_kto: dict = Field(default_factory=dict)   # 열린관광 무장애 편의정보 {cats, items, links} (kto_access.py)
+    access_kto: dict = Field(default_factory=dict)   # 열린관광 이동약자 편의정보 {cats, items, links} (kto_access.py)
     market_days: list[int] = Field(default_factory=list)   # 장날: 날짜 끝자리 (예: [3, 8] = 3·8·13·18·23·28일)
 
     @property

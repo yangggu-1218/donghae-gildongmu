@@ -38,7 +38,7 @@ def load_places() -> dict[str, Place]:
     places = {p["id"]: Place(**p) for p in json.loads(f.read_text(encoding="utf-8"))}
     places = public_data.enrich(places)   # 공공데이터로 좌표·전화·소개 보정, 장소 추가
     places = details.apply(places)        # 영업시간·어르신 접근성 상세, 식당·카페
-    places = kto_access.apply(places)     # 한국관광공사 열린관광 무장애 편의정보 (분류 아이콘·편의시설·출입구)
+    places = kto_access.apply(places)     # 한국관광공사 열린관광 이동약자 편의정보 (분류 아이콘·편의시설·출입구)
     places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
     public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
     return places
@@ -472,7 +472,7 @@ def weather():
 # ---------------- 한국관광공사 빅데이터 ----------------
 @app.get("/api/bf")
 def bf_list(kind: str = "food"):
-    """무장애 여행 정보: 동해시 음식점(food)·숙소(stay)·관광지(sight)·문화시설(culture)."""
+    """이동약자 여행 정보: 동해시 음식점(food)·숙소(stay)·관광지(sight)·문화시설(culture)."""
     return {**bigdata.barrier_free(kind), "labels": bigdata.BF_LABEL}
 
 
@@ -496,7 +496,7 @@ def visitors():
 
 @app.get("/api/place/{pid}/bigdata")
 def place_bigdata(pid: str, lang: str = "ko"):
-    """장소 상세의 빅데이터 묶음: 붐빔 예측, 함께 가는 곳, 근처 무장애 음식점·숙소, 해설 듣기."""
+    """장소 상세의 빅데이터 묶음: 붐빔 예측, 함께 가는 곳, 근처 이동약자 음식점·숙소, 해설 듣기."""
     if pid not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
     p = PLACES[pid]
@@ -948,7 +948,7 @@ def admin_sync_revert(cid: str, x_admin_token: str | None = Header(None)):
 
 @app.post("/api/admin/sync/rules")
 def admin_sync_rules(body: dict, x_admin_token: str | None = Header(None)):
-    """[자동 갱신 설정] 항목별 auto·review·off (총괄 관리자만, 무장애 정보는 auto 불가)."""
+    """[자동 갱신 설정] 항목별 auto·review·off (총괄 관리자만, 이동약자 정보는 auto 불가)."""
     s = _admin(x_admin_token, "accounts")
     return sync_mod.set_rules(body.get("rules") or {}, _who(s))
 

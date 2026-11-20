@@ -55,7 +55,7 @@ export type Extra = {
   park: { name: string; kind: string; dist_m: number }[];
   events_here: { name: string; start: string; end: string; festival?: boolean }[];
   hours: string; closed_days: string; fee: string;
-  // 작업1: 어르신·무장애 상세 + 가까운 시설
+  // 작업1: 어르신·이동약자 상세 + 가까운 시설
   walk_load?: string; wheelchair?: string; entrance_step?: boolean | null; table?: string | null; benches?: boolean | null;
   carer_tip?: string; indoor?: boolean; soft_menu?: boolean | null; parking_easy?: boolean | null; hours_source?: string;
   access_source?: string; sample?: boolean; type?: string; nearby?: Nearby;

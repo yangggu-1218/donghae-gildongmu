@@ -1151,7 +1151,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .grid:not(.has-course) > #timeline { display: none; }
 .trip-line { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--mist); }
 .tl-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 2px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: .9em; font-weight: 600; color: var(--sea-deep); }
-/* 입구 두 갈래: 고르기 전엔 카드만, 고르면 대화창. 무장애 카드를 더 크게(주 기능) */
+/* 입구 두 갈래: 고르기 전엔 카드만, 고르면 대화창. 이동약자 카드를 더 크게(주 기능) */
 .fork-stage { padding: 28px 28px 32px; display: grid; gap: 18px; }
 .fork-hi { display: flex; gap: 12px; align-items: center; margin: 0; }
 .fork-hi img { width: 64px; height: 64px; object-fit: contain; flex: none; }
@@ -1225,7 +1225,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .tr-jump button[aria-pressed="true"] { background: var(--sea); border-color: var(--sea); color: var(--sea-ink); }
 .tr-jump button[aria-pressed="true"] .ic { color: var(--sea-ink); }
 .tr-none { margin: 4px 0 18px; }
-/* 입구 카드 색 구분: 무장애 = 바다 파랑, 일반 = 햇살 주황 */
+/* 입구 카드 색 구분: 이동약자 = 바다 파랑, 일반 = 햇살 주황 */
 .fork-btn:not(.main) { background: color-mix(in srgb, var(--sun) 12%, var(--surface)); border-color: color-mix(in srgb, var(--sun-deep) 55%, var(--line-strong)); }
 .fork-btn:not(.main):hover, .fork-btn:not(.main):focus-visible { background: color-mix(in srgb, var(--sun) 22%, var(--surface)); border-color: var(--sun-deep); }
 .fork-btn:not(.main) .fork-k .ic { color: var(--sun-deep); }
@@ -1487,7 +1487,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .tz-hop .tz-link { grid-column: 2; grid-row: 1 / span 2; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; white-space: nowrap; }
 @media (max-width: 560px) { .tz-hop { grid-template-columns: 1fr; } .tz-hop .tz-link { grid-column: 1; grid-row: auto; justify-self: start; } }
 
-/* 무장애 편의정보 아이콘·상세 (열린관광 분류, 2026-11-20) */
+/* 이동약자 편의정보 아이콘·상세 (열린관광 분류, 2026-11-20) */
 .acc-badges { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .acc-badges li { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; border-radius: 7px; background: #5C6270; color: #fff; }
 .acc-badges.big li { width: auto; height: 40px; padding: 0 12px 0 9px; font-weight: 700; font-size: .95rem; }
@@ -1561,7 +1561,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .pp2-row.two:has(> .pp2-side:empty) .pp2-near { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
 .pp2-side:empty { display: none; }
 
-/* 관광지 목록 새 화면 (2026-11-20): 첫 띠 · 무장애 검색 · 맞춤 필터/정렬 · 카드 */
+/* 관광지 목록 새 화면 (2026-11-20): 첫 띠 · 이동약자 검색 · 맞춤 필터/정렬 · 카드 */
 .pl2 { display: grid; gap: 16px; }
 .pl2 > * { margin: 0; }
 .pl2-hero { position: relative; overflow: hidden; border-radius: 28px; min-height: 230px; display: flex; align-items: center;
@@ -1644,7 +1644,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .pl2-tool { white-space: nowrap; }
 @media (max-width: 620px) { .pl2-tool { padding: 0 12px; font-size: .95rem; gap: 6px; } .pl2-tools { padding: 6px; } }
 
-/* 무장애 픽토그램 (열린관광 아이콘을 모양 틀로, 색은 글자색) */
+/* 이동약자 픽토그램 (열린관광 아이콘을 모양 틀로, 색은 글자색) */
 .acc-ic { display: inline-block; flex: none; background: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
 
 /* 카드 이름 오른쪽 끝의 '오늘 여유/보통/붐빔' 작은 알약 */
@@ -1665,7 +1665,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .brief .brief-act:hover { background: var(--sea); color: var(--sea-ink); }
 .brief .brief-act .ic { width: 18px; height: 18px; }
 
-/* IMP-005: 무장애 여행 버튼도 마우스를 올리면 색이 바뀌게 (일반 여행과 같게) */
+/* IMP-005: 이동약자 여행 버튼도 마우스를 올리면 색이 바뀌게 (일반 여행과 같게) */
 .fork-btn.main:hover, .fork-btn.main:focus-visible { background: var(--sea-soft); border-color: var(--sea-deep); box-shadow: 0 4px 14px rgba(18,53,94,.14); }
 .fork-btn:not(.main):hover, .fork-btn:not(.main):focus-visible { box-shadow: 0 4px 14px rgba(18,53,94,.14); }
 
@@ -1684,7 +1684,7 @@ body.big .quick a, body.big .quick button { width: 88px; font-size: 14px; }
 .st-check { background: var(--mist); color: var(--muted); }
 .sheet-row.is-closed > span:first-child { color: var(--muted); }
 
-/* 숙소: 무장애 확인 숙소는 픽토그램, 자세히는 펼쳐서 / 전체 목록 제목 (IMP-013·014) */
+/* 숙소: 이동약자 확인 숙소는 픽토그램, 자세히는 펼쳐서 / 전체 목록 제목 (IMP-013·014) */
 .bf-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .bf-picto { margin: 0; }
 .bf-more > summary, .bf-food > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; color: var(--sea-deep); font-weight: 600; }

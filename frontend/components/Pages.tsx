@@ -60,7 +60,7 @@ const CROWD_TXT = { high: ["붐빔 예상", "Busy"], mid: ["보통", "Moderate"]
 export function CrowdBadge({ rate, lang }: { rate?: number | null; lang: Lang }) {
   const lv = crowdLevel(rate);
   if (!lv) return null;
-  return <span className={`badge crowd-${lv}`} title={pick(lang)("한국관광공사 관광지 집중률 예측", "KTO crowd forecast")}>{pick(lang)(CROWD_TXT[lv][0], CROWD_TXT[lv][1])} {Math.round(rate!)}%</span>;
+  return <span className={`badge crowd-${lv}`} title={pick(lang)("관광지 혼잡 예측", "KTO crowd forecast")}>{pick(lang)(CROWD_TXT[lv][0], CROWD_TXT[lv][1])} {Math.round(rate!)}%</span>;
 }
 const ymd = (s: string) => `${+s.slice(4, 6)}/${+s.slice(6, 8)}`;
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
@@ -79,7 +79,7 @@ function PlaceData({ id, lang }: { id: string; lang: Lang }) {
   const has = crowd.length || d.related?.length || d.food?.length || d.stay?.length || d.audio?.length;
   if (!has) return null;
   const facts = (f: Record<string, string>) => Object.entries(f).filter(([k]) => ["wheelchair", "exit", "route", "restroom", "parking", "elevator", "stroller"].includes(k)).slice(0, 4);
-  // 관광지 상세: '한산한 날' 한 줄만 보이고, 그래프·표·해설·함께 간 곳·근처 무장애 정보는 접어 둔다 (출처는 맨 아래 '정보 출처')
+  // 관광지 상세: '한산한 날' 한 줄만 보이고, 그래프·표·해설·함께 간 곳·근처 이동약자 정보는 접어 둔다 (출처는 맨 아래 '정보 출처')
   return (
     <div className="panel bigdata pp2-days">
       <h2 className="h3 pp2-h"><Icon name="crowd" />{L("방문하기 좋은 날", "Best days to visit")}</h2>
@@ -132,7 +132,7 @@ function PlaceData({ id, lang }: { id: string; lang: Lang }) {
       )}
       {(d.food?.length > 0 || d.stay?.length > 0) && (
         <section>
-          <h3>{L("근처 무장애 정보가 있는 곳", "Nearby places with access info")}</h3>
+          <h3>{L("근처 이동약자 정보가 있는 곳", "Nearby places with access info")}</h3>
           <ul className="plain bf-list">
             {[...(d.food || []), ...(d.stay || [])].map((b: any) => (
               <li key={b.id}>
@@ -268,7 +268,6 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           <AccessBadges a={p.access_kto} lang={lang} />
           {intro && <p className={`pp2-intro${introOpen ? "" : " clamp2"}`}>{intro}</p>}
           {intro.length > 90 && <button className="link-btn small" aria-expanded={introOpen} onClick={() => setIntroOpen(!introOpen)}>{introOpen ? L("소개 접기", "Less") : L("소개 더 보기", "More")}</button>}
-          {p.sample && <p className="muted small">{L("예시 데이터예요. 실제 정보는 확인 전이에요.", "Sample data, not yet verified.")}</p>}
           <div className="chips">
             <button className={`chip ${wished ? "" : "go"}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}>{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
             <a className="chip" href={`#/report/${p.id}`}><Icon name="flag" />&nbsp;{L("이곳 불편 알리기", "Report a barrier here")}</a>
@@ -303,7 +302,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               <span className={`badge g-${s.grade}`}><Picto name={VERDICT_PICTO[s.grade] || "ask"} size={14} />{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span></li>;
           })}</ul>
           : <p className="muted small">{L("아직 길 정보가 없어요. 가기 전에 전화로 확인해 주세요.", "No path info yet. Please call ahead.")}</p>}
-        {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("무장애 편의정보 자세히 (한국관광공사)", "Accessibility details (KTO)")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
+        {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("이동약자 편의정보 자세히", "Accessibility details (KTO)")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
       </div>
 
       {/* 3. 주변 | 4. 방문하기 좋은 날 */}
@@ -322,7 +321,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           <p className="small"><a href="#/map">{L("편의시설 지도에서 더 보기 (약국·병원·전동휠체어 충전·관광안내소)", "More on the facilities map (pharmacies, clinics, chargers, info centers)")}</a></p>
           {stay ? <>
             <h3 className="pp2-sub">{L("예약", "Booking")}</h3>
-            <p className="muted small">{L("무장애 객실 여부는 전화로 꼭 물어보세요.", "Ask about accessible rooms by phone.")}</p>
+            <p className="muted small">{L("이동약자 객실 여부는 전화로 꼭 물어보세요.", "Ask about accessible rooms by phone.")}</p>
             <BookLinks name={p.name_ko} lang={lang} /></>
             : p.lat && <><h3 className="pp2-sub"><Icon name="food" />{L("가까운 식당", "Nearest places to eat")}</h3>
               <NearbyEats lat={p.lat} lon={p.lon} lang={lang} r={p.type === "관광지" ? 800 : 400} limit={3} exclude={p.id} short />
@@ -349,22 +348,6 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           </div>
         </details>)}
 
-      {/* 7. 정보 출처 (칸마다 쓰던 출처를 한곳에) */}
-      <details className="panel pp3-src">
-        <summary><h2 className="h3 pp2-h"><Icon name="info" />{L("정보 출처", "Sources")}</h2></summary>
-        <ul className="small">
-          {p.hours_source && <li><b>{L("운영시간", "Hours")}</b> {p.hours_source}</li>}
-          {segs.length > 0 && <li><b>{L("길 정보(구간)", "Path data")}</b> {segSources.length ? segSources.join(", ") : ""}{sample ? L(" · 현장 확인 전 예시 값", " · sample values, not surveyed") : ""}
-            {p.last_visit ? L(` · 팀 현장 확인 ${p.last_visit.date}${p.last_visit.who ? ` (${p.last_visit.who})` : ""}`, ` · team visit ${p.last_visit.date}`) : ""}</li>}
-          {!stay && j.state === "ok" && j.d && <li><b>{L("판정", "Verdict")}</b> {j.d.by === "ai"
-            ? L(`AI가 근거 ${j.d.evidence_count ?? 0}가지(최근 제보 ${j.d.reports_used ?? 0}건 포함)를 읽고 낸 의견 · 현장 상황은 바뀔 수 있어요`, `AI opinion from ${j.d.evidence_count ?? 0} pieces of evidence`)
-            : L("AI를 쓸 수 없어 구간 정보만으로 계산", "Calculated from path data only")}</li>}
-          {p.access_kto?.cats?.length > 0 && <li><b>{L("무장애 편의정보", "Accessibility info")}</b> {L("한국관광공사 열린관광 무장애 여행정보", "Korea Tourism Organization barrier-free data")}</li>}
-          <li><b>{L("주변 시설", "Nearby")}</b> {L("동해시·공공데이터포털 표준데이터(장애인 화장실·주차장), 국립중앙의료원(응급실)", "Donghae City & data.go.kr standard data; National Medical Center")}</li>
-          {!stay && <li><b>{L("식당", "Restaurants")}</b> {L("동해시 일반음식점 인허가 현황(2026-03) · 휠체어 접근은 가기 전 전화로 확인해 주세요", "Donghae restaurant licences (2026-03) · call ahead about access")}</li>}
-          <li><b>{L("방문하기 좋은 날", "Best days")}</b> {L("한국관광공사 관광지 집중률 예측·연관 관광지·무장애 여행 정보·오디오 가이드 (예측값)", "Korea Tourism Organization forecasts and open APIs")}</li>
-        </ul>
-      </details>
     </section>
   );
 }
@@ -730,7 +713,7 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
         <p className="muted small">{L("올해 열린 때를 기준으로 보여 줘요. 내년 날짜는 아직 발표 전이라 확인이 필요해요. 날짜가 정해지면 관리자가 [공지·행사]에서 올리면 달력에 바로 보여요.", "Based on this year's dates. Next year's dates aren't announced yet.")}</p>
         <ol className="ev-y-list">{yearly.map((e) => <li key={e.name}><span className="ev-m">{L(`${e.m}월`, new Date(2026, e.m - 1, 1).toLocaleDateString("en", { month: "short" }))}</span>
           <div><b>{e.name}</b><small className="muted">{L(`올해 ${e.last}`, `this year ${e.last}`)}{e.venue ? ` · ${e.venue}` : ""}</small></div><span className="badge b-unknown">{L("날짜 확인 전", "Date TBC")}</span></li>)}</ol>
-        <p className="muted small">{L("해맞이 행사 출처: 강원관광(gangwon.to) 축제·행사. 2023년처럼 안전 문제로 행사를 열지 않은 해도 있어요.", "Sunrise event source: Gangwon tourism. Some years it was cancelled for safety.")}</p>
+        <p className="muted small">{L("2023년처럼 안전 문제로 해맞이 행사를 열지 않은 해도 있어요.", "Some years the sunrise event was cancelled for safety.")}</p>
       </section>
     </section>
   );
@@ -748,7 +731,7 @@ export function BookLinks({ name, lang }: { name: string; lang: Lang }) {
   );
 }
 
-// 한국관광공사 무장애 여행 정보에 올라 있는 동해시 숙소 (객실·출입 정보가 실제로 있는 곳)
+// 한국관광공사 이동약자 여행 정보에 올라 있는 동해시 숙소 (객실·출입 정보가 실제로 있는 곳)
 // 목록에서는 편의시설을 픽토그램으로만, 자세한 내용은 펼쳐서 (IMP-013). 같은 자료의 음식점은 아래에 따로 접어 둠
 const BF_PICTO: [string, string, string, string][] = [["parking", "P", "장애인 주차", "Accessible parking"], ["route", "wheel", "출입 접근로", "Step-free approach"], ["elevator", "elev", "엘리베이터", "Elevator"],
   ["restroom", "toilet", "장애인 화장실", "Accessible toilet"], ["room", "bed", "장애인 객실", "Accessible room"], ["lactationroom", "family", "수유실", "Nursing room"], ["braileblock", "vision", "점자블록", "Tactile paving"]];
@@ -781,10 +764,10 @@ function BfStays({ lang }: { lang: Lang }) {
     </li>);
   return (
     <div className="panel bigdata">
-      <h2 className="h3">{L(`무장애 정보가 확인된 숙소 ${stays.length}곳`, `${stays.length} stays with verified access info`)}</h2>
-      <p className="muted small">{L("한국관광공사 무장애 여행 정보에 객실·출입 정보가 등록된 숙소예요. 아래 '동해시 숙소 전체'와 달리 편의시설이 확인돼 있어요.", "Listed in KTO barrier-free data with room and entrance info, unlike the full list below.")}</p>
+      <h2 className="h3">{L(`이동약자 정보가 확인된 숙소 ${stays.length}곳`, `${stays.length} stays with verified access info`)}</h2>
+      <p className="muted small">{L("객실·출입 정보가 확인된 숙소예요. 아래 '동해시 숙소 전체'와 달리 편의시설이 확인돼 있어요.", "Listed in KTO barrier-free data with room and entrance info, unlike the full list below.")}</p>
       {stays.length > 0 && <ul className="plain bf-list">{stays.map(row)}</ul>}
-      {foods.length > 0 && <details className="bf-food"><summary>{L(`같은 자료의 무장애 음식점 ${foods.length}곳 보기`, `${foods.length} accessible restaurants in the same data`)}</summary>
+      {foods.length > 0 && <details className="bf-food"><summary>{L(`같은 자료의 이동약자 음식점 ${foods.length}곳 보기`, `${foods.length} accessible restaurants in the same data`)}</summary>
         <ul className="plain bf-list">{foods.map(row)}</ul></details>}
     </div>
   );
@@ -816,7 +799,7 @@ export function StayPage({ lang }: { lang: Lang }) {
         <ul className="checks">{Q.map((q) => <li key={q}>{q}</li>)}</ul>
       </div>
       <h2 className="h3 stay-all-h">{L("동해시 숙소 전체 (공공데이터)", "All lodging in Donghae (open data)")}</h2>
-      <p className="muted small">{L("동해시에 등록된 모든 숙소예요. 무장애 객실 여부는 아직 확인 전이라 예약 전에 위 질문을 물어보세요.", "Every registered stay. Accessible rooms are not verified yet; ask the questions above.")}</p>
+      <p className="muted small">{L("동해시에 등록된 모든 숙소예요. 이동약자 객실 여부는 아직 확인 전이라 예약 전에 위 질문을 물어보세요.", "Every registered stay. Accessible rooms are not verified yet; ask the questions above.")}</p>
       <div className="tabs" role="group" aria-label={L("권역", "Areas")}>
         {ZONES.map((z) => <button key={z.k} aria-pressed={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>)}
       </div>
@@ -835,7 +818,7 @@ export function StayPage({ lang }: { lang: Lang }) {
             {rows.map((r: any) => <tr key={r.name + r.address}><td className="tbl-name">{r.name}{r.tourist && <span className="badge b-plain">{L("관광숙박업", "Registered")}</span>}</td><td data-label={L("종류", "Type")}>{tr(lang, r.kind)}</td><td data-label={L("주소", "Address")}><small>{r.address}</small></td><td data-label={L("전화", "Phone")}>{r.tel ? <a href={`tel:${r.tel}`}>{r.tel}</a> : "-"}</td><td data-label={L("예약", "Book")}><BookLinks name={r.name} lang={lang} /></td></tr>)}</tbody>
         </table></div>
       )}
-      <p className="muted small">{L(`${rows.length}곳 · 무장애 객실 여부는 모두 '확인 전'이에요. 자료: 동해시 숙박업소(2026-09-28)·관광숙박업(2025-11-04) 공공데이터 — 지금 공개된 것 중 가장 최신이에요.`, `${rows.length} places. Accessible rooms: not verified. Source: Donghae lodging open data (Sep 2026).`)}</p>
+      <p className="muted small">{L(`${rows.length}곳 · 이동약자 객실 여부는 모두 '확인 전'이에요.`, `${rows.length} places. Accessible rooms: not verified. Source: Donghae lodging open data (Sep 2026).`)}</p>
     </section>
   );
 }
@@ -853,7 +836,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
   ];
   const faq = [
     [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 그 기준으로 갈 수 있어요, 노랑은 도움이 있거나 조심하면 갈 수 있어요, 빨강은 어려워요. 경사로 기울기·출입구 턱·통로 폭을 장애인등편의법 기준과 비교해 정해요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
-    [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("공공데이터와 한국관광공사 정보를 바탕으로 보여 드려요. 운영시간은 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
+    [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("운영시간은 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
     [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
     [L("'현장 확인 전'은 무슨 뜻이에요?", "What does 'not yet surveyed' mean?"), L("팀이 아직 현장에서 직접 재 보지 못한 곳이에요. 비슷한 자료로 미리 판정해 둔 값이라 가기 전에 전화로 한 번 더 확인해 주세요.", "Not yet measured on site by the team. Please call ahead.")],
@@ -912,7 +895,7 @@ function Visitors({ lang }: { lang: Lang }) {
   return (
     <div className="panel bigdata">
       <h2 className="h3">{L("동해시를 찾는 사람들", "Visitors to Donghae")}</h2>
-      <p className="muted small">{L("한국관광공사 빅데이터(이동통신 데이터)로 집계한 최근 4주 일별 방문자 수예요.", "Daily visitors over the last 4 weeks, from KTO mobile-network big data.")}</p>
+      <p className="muted small">{L("최근 4주 일별 방문자 수예요.", "Daily visitors over the last 4 weeks, from KTO mobile-network big data.")}</p>
       <p>{L("4주 합계", "4-week total")} <b>{Math.round(sum).toLocaleString()}</b>{L("명", "")} · {L("하루 평균", "daily avg")} <b>{Math.round(sum / last.length).toLocaleString()}</b>{L("명", "")}</p>
       <div className="crowd-chart" aria-hidden="true">
         {last.map((r) => <div key={r.date} className="cc-col" title={`${ymd(r.date)} ${Math.round(tot(r)).toLocaleString()}`}>

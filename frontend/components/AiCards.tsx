@@ -70,7 +70,7 @@ export function AiJudge({ j, lang, chips = [], carerTip = "" }: { j: { d: Judge 
       {more > 0 && <details className="aj-more"><summary>{L("근거·가기 전에 물어볼 것", "Why, and what to ask ahead")}</summary>
         {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
         <ul className="aj-list">
-          {d.reasons.map((r, i) => <li key={"r" + i}><Picto name="ok" size={18} label={L("근거", "Reason")} />{r.text}{r.source && <small className="muted"> · {r.source}</small>}</li>)}
+          {d.reasons.map((r, i) => <li key={"r" + i}><Picto name="ok" size={18} label={L("근거", "Reason")} />{r.text}</li>)}
           {d.ask_before.map((c, i) => <li key={"a" + i}><Picto name="call" size={18} label={L("가기 전에 물어보기", "Ask ahead")} />{c}</li>)}
         </ul>
       </details>}
