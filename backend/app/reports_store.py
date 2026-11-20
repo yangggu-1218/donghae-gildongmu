@@ -86,6 +86,11 @@ def sample_loaded() -> bool:
     return (root() / "sample_reports.jsonl").exists()
 
 
+def samples_cleared() -> bool:
+    """관리자가 [가상 데이터 모두 지우기]를 했으면, 서버를 다시 켜도 가상 데이터를 다시 넣지 않는다."""
+    return (root() / "samples_cleared").exists()
+
+
 def load_samples() -> int:
     """저장소의 가상 제보 원본을 작업용 파일로 복사 (날짜는 오늘 기준으로 옮긴다: days_ago 칸)."""
     rows = [json.loads(l) for l in SAMPLE_SEED.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -99,15 +104,15 @@ def load_samples() -> int:
         out.append({**r, "sample": True})
     with _lock:
         _write("sample_reports.jsonl", out)
+        (root() / "samples_cleared").unlink(missing_ok=True)
     return len(out)
 
 
 def clear_samples() -> int:
     with _lock:
         n = len(_read("sample_reports.jsonl"))
-        f = root() / "sample_reports.jsonl"
-        if f.exists():
-            f.unlink()
+        (root() / "sample_reports.jsonl").unlink(missing_ok=True)
+        (root() / "samples_cleared").write_text(now(), encoding="utf-8")
         return n
 
 

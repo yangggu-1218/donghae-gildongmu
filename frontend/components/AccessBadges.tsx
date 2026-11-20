@@ -1,5 +1,5 @@
 "use client";
-// 이동약자 편의정보 아이콘 (한국관광공사 '열린관광 모두의 여행'의 분류를 따름): 지체장애 · 시각장애 · 영유아가족 · 고령자
+// 이동약자 편의정보 아이콘 (한국관광공사 '열린관광 모두의 여행'의 분류를 따름): 지체장애 · 영유아가족 · 고령자 (시각장애 편의는 다루지 않음)
 // 그 분류에 '없음'이 아닌 항목이 하나라도 있을 때만 아이콘을 보인다 (backend/app/kto_access.py).
 type Lang = "ko" | "en";
 // 아이콘 모양: 한국관광공사 열린관광의 이동약자 픽토그램을 오려 모양 틀(mask)로 쓰고, 색은 사이트 색(currentColor)을 입힌다
@@ -11,8 +11,6 @@ export function AccIcon({ k, size = 20 }: { k: string; size?: number }) {
 export const ACCESS_CATS: Record<string, { ko: string; en: string; d: JSX.Element }> = {
   "지체장애": { ko: "휠체어·지체장애 편의", en: "Wheelchair access",
     d: <><circle cx="10.5" cy="4" r="2" fill="currentColor" /><path d="M10.5 7v6h5l2.5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 10.2A5.5 5.5 0 1 0 15.2 17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></> },
-  "시각장애": { ko: "시각장애 편의", en: "Low-vision support",
-    d: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" fill="currentColor" /><path d="M4 20 20 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></> },
   "영유아가족": { ko: "영유아 가족 편의", en: "Family & baby facilities",
     d: <><circle cx="7.5" cy="5" r="2" fill="currentColor" /><circle cx="16.5" cy="9" r="1.7" fill="currentColor" /><path d="M7.5 8v12M4.5 11.5h6M16.5 12v8M14 14.5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></> },
   "고령자": { ko: "어르신 편의", en: "Senior support",

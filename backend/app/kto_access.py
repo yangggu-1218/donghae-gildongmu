@@ -22,7 +22,8 @@ MAP = {"천곡천연동굴 자연학습체험공원": "nature_park", "연필뮤�
        "노봉해변": "nobong", "망상해변": "mangsang", "묵호등대": "mukho_lighthouse", "동해 논골담길": "nongol", "어달해변": "eodal",
        "동해약천온천실버타운": "yakcheon", "가원습지 생태자연공원": "gawon", "묵호시장": "mukho_market", "북평성당": "bukpyeong_church",
        "동해문화원": "culture_center", "봉정연꽃마을": "bongjeong_lotus"}
-CATS = ["지체장애", "시각장애", "영유아가족", "고령자"]
+VISION = re.compile(r"점자|보조견|시각장애|음성 ?안내|큰활자")
+CATS = ["지체장애", "영유아가족", "고령자"]   # 시각장애 편의는 다루지 않음 (팀장 요청 2026-11-20)
 
 # 열린관광에만 있고 길동무에 없던 6곳 (좌표: 주소 → 카카오 지도 주소 검색, 2026-11-20)
 NEW = [
@@ -115,9 +116,6 @@ def _facilities(items: dict) -> list[str]:
     elif "턱이 없" in door: f.append("출입구 턱 없음")
     if "리프트" in val.get("지체장애 기타 상세", ""): f.append("장애인 리프트")
     if "샤워" in val.get("지체장애 기타 상세", ""): f.append("장애인 공용 샤워실")
-    vis = " ".join(v for _, v in items.get("시각장애", [])) + " ".join(k for k, _ in items.get("시각장애", []))
-    if "점자" in vis: f.append("점자 안내")
-    if "보조견" in vis: f.append("보조견 동반 가능")
     kid = " ".join(f"{k} {v}" for k, v in items.get("영유아가족", []))
     if "수유실" in kid: f.append("수유실")
     if "기저귀" in kid: f.append("기저귀 교환대")
@@ -176,4 +174,18 @@ def apply(places: dict[str, Place]) -> dict[str, Place]:
             p.hours = "상시 개방" if (o, c) == ("00:00", "24:00") else f"{o}~{c}"
             if closed:
                 p.closed_days = "·".join("일월화수목금토"[i] for i in closed) + "요일"
+    return places
+
+
+def drop_vision(places: dict[str, Place]) -> dict[str, Place]:
+    """시각장애 편의는 다루지 않는다 (팀장 요청 2026-11-20). 저장된 자료·관리자 값에 남은 분류·항목·편의시설 이름도 뺀다."""
+    # 시각장애 편의는 다루지 않는다 (팀장 요청 2026-11-20): 저장된 자료에 남은 분류·항목·편의시설 이름도 뺀다
+    for p in places.values():
+        a = p.access_kto or {}
+        if "시각장애" in (a.get("cats") or []) or "시각장애" in (a.get("items") or {}):
+            a["cats"] = [c for c in a.get("cats", []) if c != "시각장애"]
+            a["items"] = {c: v for c, v in (a.get("items") or {}).items() if c != "시각장애"}
+            p.access_kto = a
+        if p.facilities:
+            p.facilities = [f for f in p.facilities if not VISION.search(f)]
     return places

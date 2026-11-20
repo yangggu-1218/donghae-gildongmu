@@ -10,7 +10,7 @@ import { getJSON } from "@/lib/api";
 type T = (k: string, v?: Record<string, string | number>) => string;
 type Lang = "ko" | "en";
 export const CR_CATS: [string, string][] = [["step", "stairs"], ["sidewalk", "crack"], ["ramp", "ramp"], ["parking", "block"], ["toilet", "toilet"], ["lift", "lift"], ["works", "cone"], ["etc", "info"]];
-const WHO = ["휠체어", "유모차", "걷기 힘듦", "시각"];
+const WHO = ["휠체어", "유모차", "걷기 힘듦"];
 const STEPS = ["접수", "확인", "처리 중", "완료"];
 const STN: [number, number] = [37.4995, 129.124];
 const KEY = "gd-my-reports";

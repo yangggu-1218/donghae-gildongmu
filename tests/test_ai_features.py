@@ -191,5 +191,30 @@ f = FakeClaude(RuntimeError("down")); ai.set_client(f)
 r = c.post("/api/admin/ai/extract", data={"place_id": "mureung"}, files={"file": ("b.txt", "무릉별유천지 안내 운영시간은 오전 9시부터 오후 6시까지".encode(), "text/plain")}, headers=H)
 check("AI 실패면 직접 채우라고 안내", r.status_code == 200 and r.json()["ok"] is False and "직접" in r.json()["why"])
 
+# ---------- AI로 작업하기: 장소를 고르지 않아도 알아서 찾고, 바뀐 칸만 ----------
+txt = "무릉별유천지 운영 안내. 무릉별유천지는 매주 화요일 휴무이며 운영시간은 10:00부터 18:00까지입니다.".encode()
+d2 = {**draft, "open": "10:00", "close": "18:00", "closed_days": ["화"], "closed_days_known": True, "entrance_step": "", "wheelchair": "일부"}
+f = FakeClaude(json_msg(d2)); ai.set_client(f)
+open0 = PLACES["mureung"].open
+r = c.post("/api/admin/ai/work", files={"file": ("안내.txt", txt, "text/plain")}, headers=H); j = r.json()
+check("AI 작업: 이름으로 장소를 알아서 찾음", r.status_code == 200 and j["place"]["place_id"] == "mureung" and j["place"]["how"] == "rule", r.text[:300])
+keys = {x["key"] for x in j.get("changes", [])}
+check("AI 작업: 지금 값과 다른 칸만 (여는 시각·휴무·휠체어)", {"open", "closed_day_nums", "wheelchair"} <= keys and all(x["now"] != x["new"] for x in j["changes"]), j.get("changes"))
+check("AI 작업: 이동약자 칸은 표시", any(x["key"] == "wheelchair" and x["access"] for x in j["changes"]))
+check("AI 작업: 저장은 안 함", PLACES["mureung"].open == open0)
+f = FakeClaude(json_msg({"place_id": "cave", "reason": "자료에 천곡동굴 주소가 있음"}), json_msg(d2)); ai.set_client(f)
+r = c.post("/api/admin/ai/work", files={"file": ("x.txt", "동해시 천곡동 일대 동굴 관람 안내 자료입니다. 관람 시간 변경 안내.".encode(), "text/plain")}, headers=H); j = r.json()
+check("AI 작업: 이름이 없으면 AI가 후보 중에서 고름", r.status_code == 200 and j["place"]["how"] == "ai" and j["place"]["place_id"] == "cave", r.text[:300])
+f = FakeClaude(json_msg({"place_id": "cave", "reason": "자료의 주소가 천곡동굴"}), json_msg(d2)); ai.set_client(f)
+r = c.post("/api/admin/ai/work", files={"file": ("z.txt", "동해시 천곡동 관람 시설 운영 안내. 무릉별유천지 방면 버스는 그대로 다닙니다.".encode(), "text/plain")}, headers=H); j = r.json()
+check("AI 작업: 이름이 한 번뿐이면 규칙으로 정하지 않고 AI에게 물음", r.status_code == 200 and j["place"]["how"] == "ai" and j["place"]["place_id"] == "cave", r.text[:300])
+f = FakeClaude(json_msg(d2)); ai.set_client(f)
+r = c.post("/api/admin/ai/work", data={"place_id": "chotdae"}, files={"file": ("안내.txt", txt, "text/plain")}, headers=H)
+check("AI 작업: 관리자가 장소를 바꿀 수 있음", r.status_code == 200 and r.json()["place"]["place_id"] == "chotdae" and r.json()["place"]["how"] == "admin")
+ai.set_client(None)
+r = c.post("/api/admin/ai/work", files={"file": ("y.txt", "아무 장소 이름도 없는 그냥 긴 글입니다. 오늘 날씨가 좋네요.".encode(), "text/plain")}, headers=H)
+check("AI 작업: 못 찾으면 직접 고르라고", r.status_code == 200 and r.json()["ok"] is False and r.json()["place"]["place_id"] is None, r.text[:200])
+check("AI 작업: 관리자 아니면 못 씀", c.post("/api/admin/ai/work", data={"url": "https://example.com"}).status_code in (401, 403))
+
 ai.set_client(None)
 print(f"AI 점검 실패 {len(fails)}건")

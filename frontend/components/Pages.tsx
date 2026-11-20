@@ -176,6 +176,9 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const j = useJudge(id, mode, lang, !p || stay);
   const [introOpen, setIntroOpen] = useState(false);
   const [eatMore, setEatMore] = useState(false);
+  const [mainPh, setMainPh] = useState<string | null>(null);   // 작은 사진을 누르면 큰 사진으로
+  const [routeOpen, setRouteOpen] = useState(false);            // '상세 동선 보기'
+  useEffect(() => { setMainPh(null); setRouteOpen(false); }, [id]);
   if (!p) return <section className="sec wrap"><Loading err={err} lang={lang} /></section>;
   const name = lang === "ko" ? p.name_ko : p.name_en || p.name_ko;
   const zone = ZONES.find((z) => z.k === p.zone);
@@ -227,103 +230,169 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const segSources = Array.from(new Set(segs.map((s) => s.source).filter((x: string) => x && x !== "예시")));
   const gallery = (GALLERY[p.id] || []).slice(0, 3);
 
+  // 머리 카드의 한눈 표시 (자료에 있는 것만)
+  const tags: [string, string, "ok" | "warn" | "bad" | "plain"][] = [];
+  if (p.wheelchair === "가능") tags.push(["wheel", L("휠체어 접근", "Wheelchair access"), "ok"]);
+  else if (p.wheelchair === "일부") tags.push(["wheel", L("휠체어 일부 접근", "Partly wheelchair accessible"), "warn"]);
+  else if (p.wheelchair === "불가") tags.push(["wheel", L("휠체어 어려움", "Hard by wheelchair"), "bad"]);
+  if ((p.access_kto?.cats || []).includes("영유아가족")) tags.push(["stroller", L("유모차·영유아 편의", "Stroller & baby facilities"), "plain"]);
+  if (p.entrance_step === false) tags.push(["ramp", L("출입구 턱 없음", "Step-free entrance"), "ok"]);
+  if (segs.some((s) => s.grade === "Y")) tags.push(["warn", L("주의 구간 있음", "Some tricky parts"), "warn"]);
+  if (segs.some((s) => s.grade === "R")) tags.push(["warn", L("도움 필요 구간", "Needs help in places"), "bad"]);
+  if (p.indoor) tags.push(["lift", L("실내", "Indoor"), "plain"]);
+
+  // 이동약자 이용 정보: 좋은 점 · 조심할 곳 · 알아 두면 좋은 것 (자료가 있는 것만)
+  const GOOD_RE = /장애인 화장실|경사로|엘리베이터|리프트|턱 없음|휠체어 대여|장애인 주차|수유실/;
+  const good = Array.from(new Set((p.facilities || []).filter((f: string) => GOOD_RE.test(f)).map((f: string) => f.split(" (")[0]))).slice(0, 3) as string[];
+  const tipLine = (j.state === "ok" && j.d?.tip) || (lang === "ko" ? p.carer_tip : "") || "";
+  const pills: [string, string][] = [];
+  if (good.length) pills.push(["ok", L(`${good.join(" · ")} 있어요`, `Has ${good.join(", ")}`)]);
+  if (worst) pills.push([worst.grade === "R" ? "bad" : "warn", `${worst.name} — ${worst.note || L(worst.grade === "R" ? "어려움" : "주의", worst.grade === "R" ? "difficult" : "caution")}`]);
+  if (tipLine) pills.push(["info", tipLine]);
+
+  // 방문 전 확인 (휴무 · 입장료 · 가기 전에 물어볼 것)
+  const before: [string, string][] = [];
+  if (closedMore[0]) before.push(["cal", closedMore[0]]);       // 자세한 휴무 문장이 있으면 그것 하나만
+  else if (closedTxt) before.push(["cal", closedTxt]);
+  if (fee) before.push(["ticket", /입장료|무료|요금/.test(fee) ? fee : L(`입장료 ${fee}`, `Admission ${fee}`)]);
+  ((j.state === "ok" && j.d?.ask_before) || []).slice(0, 2).forEach((x: string) => before.push(["wheel", x]));
+  if (noPath) before.push(["phone", L("길 정보가 아직 없어요 — 가기 전에 전화로 확인해 주세요", "No path info yet — please call ahead")]);
+  const tipsAll = Array.from(new Set([lang === "ko" ? p.carer_tip : "", j.state === "ok" ? j.d?.tip : "", lang === "ko" ? p.tip_ko : p.tip_en].filter((x) => x && x !== tipLine))).slice(0, 3) as string[];   // 파란 칸에 이미 보인 팁은 빼기
+  const shown = mainPh || p.id;
+  const near: [string, string, string, number | undefined][] = [
+    ...(toilet ? [["toilet", L("장애인 화장실", "Accessible toilet"), toilet.name, toilet.dist_m] as [string, string, string, number | undefined]] : []),
+    ...(n.parking ? [["parking", L("주차장", "Parking"), `${n.parking.name}${n.parking.spaces ? ` (${n.parking.spaces}${L("면", "")})` : ""}`, n.parking.dist_m] as [string, string, string, number | undefined]] : []),
+    ...(n.medical?.["응급실"] ? [["shield", L("응급실", "ER"), n.medical["응급실"].name, n.medical["응급실"].dist_m] as [string, string, string, number | undefined]] : []),
+  ];
+
+  const moreBtn = !stay && !noPath ? <button className="pp4-more" aria-expanded={routeOpen} aria-controls="pp4-route-more" onClick={() => setRouteOpen(!routeOpen)}>
+    {routeOpen ? L("상세 동선 접기", "Hide details") : L(segs.length ? "상세 동선 보기" : "판정 근거 보기", segs.length ? "Path details" : "Why this verdict")}<span aria-hidden="true">{routeOpen ? "‹" : "›"}</span></button> : null;
   return (
-    <section className="sec wrap place-page pp2 pp3">
-      {/* 0. 중요한 소식: 임시 알림 + '알고 가면'의 공사·휴관 소식 */}
-      {(live.length > 0 || news.length > 0) && <div className="pp3-news" role="region" aria-label={L("중요한 소식", "Important notices")}>
+    <section className="sec wrap place-page pp2 pp4">
+      {/* 0. 중요한 소식 (임시 알림 + 공사·휴관 소식) — 맨 위 얇은 띠 */}
+      {(live.length > 0 || news.length > 0) && <div className="pp3-news pp4-news" role="region" aria-label={L("중요한 소식", "Important notices")}>
         {live.map((x: any) => (
           <div key={x.id} className={`pp-notice ${x.level}`} role="note">
             <Picto name={x.level === "closed" ? "stop" : x.level === "warn" ? "warn" : "tip"} size={20} />
             <b>{x.level === "closed" ? L("임시 휴무", "Temporarily closed") : x.level === "warn" ? L("주의", "Caution") : L("안내", "Notice")}</b> {x.title}
             <small>{x.start || ""}{x.end ? ` ~ ${x.end}` : ""}</small>{x.body && <p>{x.body}</p>}
           </div>))}
-        {news.map((l: any) => <div key={l.x[0]} className="pp-notice info" role="note"><Picto name="warn" size={20} /><b>{L("알아 두세요", "Good to know")}</b> {L(l.x[0], l.x[1])}</div>)}
+        {news.map((l: any) => <div key={l.x[0]} className="pp-notice info" role="note"><Picto name="warn" size={20} />{L(l.x[0], l.x[1])}</div>)}
       </div>}
 
-      {/* 1. 첫 화면: 이름 · 모드 · 판정 한 줄 · 이용 정보 띠 · 소개 2줄 · 사진 */}
-      <header className="pp2-hero">
-        <div className="pp2-hero-txt">
-          <p className="crumb"><a href="#/">{L("처음", "Home")}</a> › <a href="#/places">{L("관광지", "Places")}</a> › {name}</p>
+      {/* 1. 머리 카드: 이름 · 주소 · 한눈 표시 · 누구 기준 · 이용 정보 4칸 · 판정 · 담기/길찾기 | 사진 */}
+      <header className="panel pp4-hero">
+        <div className="pp4-hero-txt">
+          <nav className="pp4-crumb" aria-label={L("현재 위치", "Breadcrumb")}><a href="#/"><Icon name="home" />{L("처음", "Home")}</a><span aria-hidden="true">›</span><a href="#/places">{L("관광지", "Places")}</a></nav>
           <h1>{name}</h1>
-          <p className="pp2-where">{[zone ? L(zone.ko, zone.en) : "", p.address].filter(Boolean).join(" · ")}</p>
-          <div className="pp2-modes" role="group" aria-label={L("누구 기준으로 볼까요", "Check for")}>
-            {MODES.map(([k, ko, en, ic]) => (
-              <button key={k} className="pp2-mode" aria-pressed={mode === k} onClick={() => setMode(k)}>
-                {ic === "stroller" ? <svg className="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h2l2.2 8.5h9.3L20 7H7.2" /><path d="M12 7V3.5a5 5 0 0 1 5 3.5" /><circle cx="9" cy="18.5" r="1.8" /><circle cx="17" cy="18.5" r="1.8" /></svg> : <Icon name={ic} />}
-                {L(ko, en)}</button>))}
+          <p className="pp4-addr"><Icon name="pin" />{[zone ? L(zone.ko, zone.en) : "", p.address].filter(Boolean).join(" · ")}</p>
+          {tags.length > 0 && <ul className="pp4-tags" aria-label={L("한눈에", "At a glance")}>
+            {tags.map(([ic, t, tone]) => <li key={t} className={`t-${tone}`}>{ic === "stroller" ? <AccIcon k="영유아가족" size={18} /> : ic === "wheel" ? <AccIcon k="지체장애" size={18} /> : <Icon name={ic} />}{t}</li>)}</ul>}
+          <div className="pp4-modes">
+            <span className="pp4-k">{L("누구 기준", "Check for")}</span>
+            <div className="pp2-modes picto-modes" role="group" aria-label={L("누구 기준으로 볼까요", "Check for")}>
+              {MODES.map(([k, ko, en]) => (
+                <button key={k} className="pm-sq" aria-pressed={mode === k} onClick={() => setMode(k)} title={L(ko, en)} aria-label={L(ko, en)}>
+                  <AccIcon k={k === "wheel" ? "지체장애" : k === "stroller" ? "영유아가족" : "고령자"} size={28} /></button>))}
+              <span className="pm-now" aria-hidden="true">{modeName}</span>
+            </div>
           </div>
-          <p className={`pp3-verdict v-${noPath ? "U" : jv}`} aria-live="polite">
-            <Picto name={noPath ? "ask" : VERDICT_PICTO[jv] || "ask"} size={24} />
+          <dl className="pp4-info">
+            <div><dt><Icon name="time" />{L("운영시간", "Hours")}</dt><dd>{hours || L("확인 필요", "Check")}<span className={`pp4-today ${p.today === "open" || p.today === "always" ? "on" : ""}`}>{today}</span></dd></div>
+            <div><dt><Icon name="cal" />{L("휴무", "Closed")}</dt><dd>{p.closed_days || L("정기 휴무 없음", "None")}</dd></div>
+            <div><dt><Icon name="ticket" />{L("입장료", "Admission")}</dt><dd title={fee || undefined}>{fee || L("확인 필요", "Check")}</dd></div>
+            <div><dt><Icon name="phone" />{L("문의", "Phone")}</dt><dd>{p.phone ? <a href={`tel:${p.phone}`}>{p.phone}</a> : L("없음", "—")}</dd></div>
+          </dl>
+          <p className={`pp3-verdict pp4-verdict v-${noPath ? "U" : jv}`} aria-live="polite">
+            <Picto name={noPath ? "ask" : VERDICT_PICTO[jv] || "ask"} size={22} />
             <span><b>{modeName}:</b> {noPath ? L("길 정보가 아직 없어요 · 가기 전에 전화로 확인해 주세요", "No path info yet · please call ahead")
               : j.state === "load" && !worst ? L("확인하는 중…", "Checking…") : verdictText(jv, lang)}{!noPath && extra ? ` · ${extra}` : ""}</span>
           </p>
-          <ul className="pp3-strip" aria-label={L("이용 정보", "Visiting info")}>
-            <li><span className={`badge ${p.today === "open" || p.today === "always" ? "b-open" : "b-unknown"}`}>{today}</span></li>
-            {hours && <li><Icon name="time" />{hours}</li>}
-            {closedTxt && <li title={closedMore.join(" ") || undefined}><Icon name="closed" />{closedTxt}{closedMore.length > 0 && <small className="muted"> *</small>}</li>}
-            {fee && <li><Icon name="ticket" />{fee}</li>}
-            {p.phone && <li><Icon name="phone" /><a href={`tel:${p.phone}`}>{p.phone}</a></li>}
-          </ul>
-          {closedMore.length > 0 && <p className="muted small pp3-note">* {closedMore[0]}</p>}
-          <AccessBadges a={p.access_kto} lang={lang} />
-          {intro && <p className={`pp2-intro${introOpen ? "" : " clamp2"}`}>{intro}</p>}
-          {intro.length > 90 && <button className="link-btn small" aria-expanded={introOpen} onClick={() => setIntroOpen(!introOpen)}>{introOpen ? L("소개 접기", "Less") : L("소개 더 보기", "More")}</button>}
-          <div className="chips">
-            <button className={`chip ${wished ? "" : "go"}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}>{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
-            <a className="chip" href={`#/report/${p.id}`}><Icon name="flag" />&nbsp;{L("이곳 불편 알리기", "Report a barrier here")}</a>
+          <div className="pp4-acts">
+            <button className={`pp4-btn main${wished ? " on" : ""}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}><Icon name="bookmark" />{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
+            {p.lat && <a className="pp4-btn" href={`https://map.kakao.com/link/to/${encodeURIComponent(p.name_ko)},${p.lat},${p.lon}`} target="_blank" rel="noreferrer"><Icon name="navi" />{L("길찾기", "Directions")}<span className="sr-only">{L(" (카카오맵, 새 창)", " (Kakao Map, new tab)")}</span></a>}
+            <a className="pp4-report" href={`#/report/${p.id}`}><Icon name="flag" />{L("이곳 불편 알리기", "Report a barrier")}</a>
           </div>
         </div>
-        <div className="pp2-hero-img">
-          <div className="pp3-main">{PHOTOS[p.id] ? <PlacePhoto id={p.id} lang={lang} alt={name} />
+        <div className="pp4-photos">
+          <div className="pp4-main">{PHOTOS[shown] ? <PlacePhoto key={shown} id={shown} lang={lang} alt={shown === p.id ? name : L(gallery.find((g) => g[0] === shown)?.[1] || name, gallery.find((g) => g[0] === shown)?.[2] || name)} />
             : SCENE[p.id] ? <img src={`/dongi/${SCENE[p.id]}.webp`} alt={L("이 장소를 안내하는 동해시 마스코트 그림", "Donghae mascot at this place")} />
             : <div className="pp2-noimg"><img src="/dongi/full-basic.webp" alt="" /></div>}</div>
-          {gallery.length > 0 && <ul className="pp3-thumbs" aria-label={L("사진 더 보기", "More photos")}>
-            {gallery.map(([g, ko, en]) => <li key={g} title={L(ko, en)}><PlacePhoto id={g} lang={lang} alt={L(ko, en)} /></li>)}</ul>}
+          {gallery.length > 0 && PHOTOS[p.id] && <ul className="pp4-thumbs" aria-label={L("사진 더 보기", "More photos")}>
+            {[[p.id, name, name] as [string, string, string], ...gallery].slice(0, 4).map(([g, ko, en]) => (
+              <li key={g}><button type="button" aria-pressed={shown === g} onClick={() => setMainPh(g)} aria-label={L(`${ko} 크게 보기`, `Show ${en}`)}><PlacePhoto id={g} lang={lang} small /></button></li>))}</ul>}
         </div>
+        {intro && <div className="pp4-intro"><p className={introOpen ? "" : "clamp2"}>{intro}</p>
+          {intro.length > 90 && <button className="link-btn small" aria-expanded={introOpen} onClick={() => setIntroOpen(!introOpen)}>{introOpen ? L("소개 접기", "Less") : L("소개 더 보기", "More")}</button>}</div>}
       </header>
       {!stay && <AiStatus id={id} lang={lang} />}
 
-      {/* 2. 이동·접근성 */}
-      <div className="panel pp2-access">
-        <div className="pp3-h-row">
-          <h2 className="h3 pp2-h"><Icon name="walk" />{L("이동 및 접근성", "Getting around & access")}</h2>
+      {/* 2. 이동약자 이용 정보: 좋은 점·조심할 곳·알아 둘 것 + 구간 줄 + 상세 동선 */}
+      <section className="panel pp4-access" aria-labelledby="pp4-acc-h">
+        <div className="pp4-h-row">
+          <h2 id="pp4-acc-h" className="h3 pp4-h"><AccIcon k="지체장애" size={26} />{L("이동약자 이용 정보", "Access information")}</h2>
           {surveyed ? <span className="badge b-open">{L(`현장 확인 ${p.last_visit.date}`, `Surveyed ${p.last_visit.date}`)}</span>
-            : (sample || segs.length > 0 || !stay) && <span className="badge b-unknown" title={L("가기 전에 전화로 한 번 더 확인해 주세요", "Please call ahead")}>{L("현장 확인 전", "Not surveyed yet")}</span>}
+            : !stay && <span className="badge b-unknown" title={L("가기 전에 전화로 한 번 더 확인해 주세요", "Please call ahead")}>{L("현장 확인 전", "Not surveyed yet")}</span>}
         </div>
-        {!stay && !noPath && <AiJudge j={j} lang={lang} chips={chips} carerTip={lang === "ko" ? p.carer_tip || "" : ""} />}
-        {(stay || noPath || j.state === "fail") && (chips.length > 0 || (p.carer_tip && lang === "ko")) && <>
-          {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
-          {p.carer_tip && lang === "ko" && <p className="pp2-line"><Picto name="tip" size={18} label="보호자 꿀팁" />{p.carer_tip}</p>}</>}
-        {segs.length > 0 ? <ul className="pp3-segs" aria-label={L("도착부터 구간별", "Path, step by step")}>
-          {segs.map((s: any) => {
-            const d = s.facts.find((f: string) => DIST_RE.test(f))?.match(DIST_RE)?.[0] || s.facts[0] || "";
-            return <li key={s.name} title={[...s.facts, s.note].filter(Boolean).join(" · ") || undefined}>
-              <span className="pp3-seg-n">{s.name}</span>{d && <span className="muted"> · {d}</span>}
-              <span className={`badge g-${s.grade}`}><Picto name={VERDICT_PICTO[s.grade] || "ask"} size={14} />{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span></li>;
-          })}</ul>
-          : <p className="muted small">{L("아직 길 정보가 없어요. 가기 전에 전화로 확인해 주세요.", "No path info yet. Please call ahead.")}</p>}
-        {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("이동약자 편의정보 자세히", "Accessibility details (KTO)")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
+        {pills.length > 0 ? <ul className="pp4-pills">{pills.map(([tone, t]) => (
+          <li key={t} className={`p-${tone}`}><Picto name={tone === "ok" ? "ok" : tone === "bad" ? "stop" : tone === "warn" ? "warn" : "tip"} size={22} /><span>{t}</span></li>))}</ul>
+          : <p className="muted">{L("아직 확인된 이용 정보가 없어요. 가기 전에 전화로 확인해 주세요.", "No access info yet. Please call ahead.")}</p>}
+        {segs.length > 0 && <div className="pp4-route">
+          <ol aria-label={L("도착부터 구간별", "Path, step by step")}>
+            {segs.map((s: any) => {
+              const d = s.facts.find((f: string) => DIST_RE.test(f))?.match(DIST_RE)?.[0] || "";
+              return <li key={s.name} title={[...s.facts, s.note].filter(Boolean).join(" · ") || undefined}>
+                <Icon name="pin" /><span>{s.name}{d && ` ${d}`}</span>
+                <span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span></li>;
+            })}</ol>
+          {moreBtn}
+        </div>}
+        {segs.length === 0 && moreBtn && <div className="pp4-route">{moreBtn}</div>}
+        <div id="pp4-route-more" hidden={!routeOpen && !(stay || noPath || j.state === "fail")}>
+          {!stay && !noPath && <AiJudge j={j} lang={lang} chips={chips} carerTip={lang === "ko" ? p.carer_tip || "" : ""} />}
+          {(stay || noPath || j.state === "fail") && chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
+        </div>
+        {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("이동약자 편의정보 자세히", "Accessibility details")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
+      </section>
+
+      {/* 3. 위치 및 주변 편의시설 | 방문 전 확인 */}
+      <div className="pp4-row">
+        <section className="panel pp4-near" aria-labelledby="pp4-near-h">
+          <h2 id="pp4-near-h" className="h3 pp4-h"><Icon name="pin" />{L("위치 및 주변 편의시설", "Location & nearby")}</h2>
+          <div className="pp4-near-in">
+            {pins.length > 0 && <div className="pp4-map"><KakaoMap pins={pins} dots label={L(`${name} 주변 지도`, "Nearby map")} /></div>}
+            <div>
+              {near.length > 0 ? <dl className="pp4-dist">{near.map(([ic, k, nm, m]) => (
+                <div key={k}><dt><Icon name={ic} />{k}</dt><dd><span className="pp4-nm">{nm}</span>{m != null && <b>{dist(m)}</b>}</dd></div>))}</dl>
+                : <p className="muted small">{L("1.5km 안에 위치가 확인된 장애인 화장실이 없어요.", "No mapped accessible toilet within 1.5 km.")}</p>}
+              <a className="pp4-maplink" href="#/map">{L("편의시설 지도 보기", "Open facilities map")}<span aria-hidden="true">›</span></a>
+            </div>
+          </div>
+        </section>
+        <section className="panel pp4-before" aria-labelledby="pp4-before-h">
+          <h2 id="pp4-before-h" className="h3 pp4-h"><Picto name="tip" size={24} />{L("방문 전 확인", "Before you go")}</h2>
+          <div className="pp4-before-in">
+            <ul>{before.length ? before.map(([ic, t]) => <li key={t}>{ic === "wheel" ? <AccIcon k="지체장애" size={20} /> : <Icon name={ic} />}<span>{t}</span></li>)
+              : <li><Icon name="phone" /><span>{L("운영시간은 바뀔 수 있어요. 출발 전에 한 번 더 확인해 주세요.", "Hours can change. Please check before you go.")}</span></li>}</ul>
+            {p.phone && <a className="pp4-call" href={`tel:${p.phone}`}><Icon name="phone" />{L("전화 문의", "Call")}</a>}
+          </div>
+        </section>
       </div>
 
-      {/* 3. 주변 | 4. 방문하기 좋은 날 */}
+      {/* 4. 방문자 팁 */}
+      {tipsAll.length > 0 && <section className="pp4-tips" aria-labelledby="pp4-tips-h">
+        <h2 id="pp4-tips-h"><Icon name="bulb" />{L("방문자 팁", "Visitor tips")}</h2>
+        <ul>{tipsAll.map((t) => <li key={t}><Icon name="check" />{t}</li>)}</ul>
+      </section>}
+
+      {/* 5. 가까운 식당(숙소면 예약) | 방문하기 좋은 날 */}
       <div className="pp2-row two">
         <div className="panel">
-          <h2 className="h3 pp2-h"><Icon name="pin" />{L("주변", "Nearby")}</h2>
-          <div className="pp2-near pp3-near">
-            {pins.length > 1 && <KakaoMap pins={pins} dots label={L(`${name} 주변 지도`, "Nearby map")} />}
-            <ul className="near-list">
-              {toilet ? <li><span className="dot" style={{ background: "#2462B4" }}>{dot(lang, "화")}</span><b>{L("장애인 화장실", "Accessible toilet")}</b> {toilet.name} · {dist(toilet.dist_m)}{toilet.hours ? ` · ${toilet.hours}` : ""}</li>
-                : <li className="muted">{L("1.5km 안에 위치가 확인된 장애인 화장실이 없어요.", "No mapped accessible toilet within 1.5 km.")}</li>}
-              {n.parking && <li><span className="dot" style={{ background: "#566275" }}>P</span><b>{L("주차", "Parking")}</b> {n.parking.name}{n.parking.spaces ? ` (${n.parking.spaces}${L("면", "")})` : ""} {n.parking.dist_m ? dist(n.parking.dist_m) : ""}</li>}
-              {n.medical?.["응급실"] && <li><span className="dot" style={{ background: "#C9302C" }}>+</span><b>{L("응급실", "ER")}</b> {n.medical["응급실"].name}{n.medical["응급실"].dist_m ? ` · ${dist(n.medical["응급실"].dist_m)}` : ""}</li>}
-            </ul>
-          </div>
-          <p className="small"><a href="#/map">{L("편의시설 지도에서 더 보기 (약국·병원·전동휠체어 충전·관광안내소)", "More on the facilities map (pharmacies, clinics, chargers, info centers)")}</a></p>
           {stay ? <>
-            <h3 className="pp2-sub">{L("예약", "Booking")}</h3>
+            <h2 className="h3 pp2-h"><Icon name="bed" />{L("예약", "Booking")}</h2>
             <p className="muted small">{L("이동약자 객실 여부는 전화로 꼭 물어보세요.", "Ask about accessible rooms by phone.")}</p>
             <BookLinks name={p.name_ko} lang={lang} /></>
-            : p.lat && <><h3 className="pp2-sub"><Icon name="food" />{L("가까운 식당", "Nearest places to eat")}</h3>
+            : p.lat && <><h2 className="h3 pp2-h"><Icon name="food" />{L("가까운 식당", "Nearest places to eat")}</h2>
               <NearbyEats lat={p.lat} lon={p.lon} lang={lang} r={p.type === "관광지" ? 800 : 400} limit={3} exclude={p.id} short />
               <details className="pp2-more" onToggle={(e) => setEatMore((e.target as HTMLDetailsElement).open)}><summary>{L("식당 더 보기 (종류·정렬)", "More places to eat")}</summary>
                 {eatMore && <NearbyEats lat={p.lat} lon={p.lon} lang={lang} r={p.type === "관광지" ? 800 : 400} limit={8} exclude={p.id} />}</details></>}
@@ -331,10 +400,10 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
         <div className="pp2-side"><PlaceData id={id} lang={lang} /></div>
       </div>
 
-      {/* 5. 다녀온 사람들 */}
+      {/* 6. 다녀온 사람들 */}
       {!stay && <PlaceTalk id={id} lang={lang} />}
 
-      {/* 6. 알고 가면 더 좋아요 (휴무·입장료·소식은 위로 옮겼으므로 뺀 나머지, 역사는 2줄) */}
+      {/* 7. 알고 가면 더 좋아요 */}
       {(about.length > 0 || p.stories?.length > 0 || p.trail_info?.length > 0) && (
         <details className="panel about pp2-know">
           <summary><h2 className="h3 pp2-h"><Icon name="story" />{L("알고 가면 더 좋아요", "Good to know")}</h2></summary>
@@ -347,7 +416,6 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
                 {p.trail_info?.map((t: any) => <p key={t.name} className="muted ic-row"><Icon name="trail" />{t.name} · {t.length_km}km · {t.duration}</p>)}</div>)}
           </div>
         </details>)}
-
     </section>
   );
 }
@@ -611,11 +679,8 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
             <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
           </button>))}
-        <button className="chip" aria-pressed={barOn} onClick={() => setBarOn(!barOn)}><span className="dot" style={{ background: "#C9302C" }}>!</span>{L("알려진 불편", "Reported barriers")}</button>
         <button className="chip go" onClick={locate}>{me ? L("내 위치 다시 찾기", "Update my location") : L("내 주변부터 보기", "Nearest first")}</button>
       </div>
-      {barOn && <p className="muted small"><Icon name="info" /> {L("2명 이상 알린 곳만 보여요. 사진은 공개하지 않아요.", "Only spots reported by 2+ people. Photos are never shown.")}
-        {bar.some((b) => b.sample) && L(" [가상] 표시는 점검용 가상 데이터예요.", " [Sample] items are test data.")} <a href="#/report">{L("불편 알리기", "Report a barrier")}</a></p>}
       {locMsg && <p className="muted small map-loc" role="status">{locMsg}</p>}
       {!d ? <Loading err={err} lang={lang} /> : (<>
         <KakaoMap pins={pins} dots cluster zoomOnPick focus={focus} start={{ lat: STN[0], lon: STN[1], level: 9 }} center={go?.c || null} centerLevel={go?.l ?? 5} centerKey={go?.k || 0} me={me}

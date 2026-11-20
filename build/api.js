@@ -1117,10 +1117,11 @@ export function makeApi(DATA) {
     if (/^\/api\/places\/[^/]+\/status$/.test(path)) return { by: "none", state: "none", count: 0 };
     if (path === "/api/place-notes" && method === "POST") return { ok: true, id: Math.random().toString(16).slice(2, 14), demo: true };
     if (path.startsWith("/api/admin/ai/")) {
-      demoCheck(q.__token, path === "/api/admin/ai/settings" && method === "POST" ? "accounts" : "reports");
+      const fromDoc = path === "/api/admin/ai/extract" || path === "/api/admin/ai/work";
+      demoCheck(q.__token, fromDoc ? "place" : path === "/api/admin/ai/settings" && method === "POST" ? "accounts" : "reports");
       if (path === "/api/admin/ai/proposals") return [];
       if (path === "/api/admin/ai/refresh") return { places: 0, new_proposals: 0, demo: true };
-      if (path === "/api/admin/ai/extract") return { ok: false, why: "데모에는 AI가 없어 자료를 읽을 수 없어요. 실제 사이트에서 써 주세요." };
+      if (fromDoc) return { ok: false, why: "데모에는 AI가 없어 자료를 읽을 수 없어요. 실제 사이트에서 써 주세요.", demo: true };
       if (path === "/api/admin/ai/settings") {
         const models = { fast: "claude-haiku-5-5", smart: "claude-sonnet-5-5" };
         const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["extract", "자료로 장소 정보 채우기 (관리자)", "fast"], ["triage", "불편 제보 정리 (사진 분석·분류)", "fast"], ["cluster", "비슷한 제보 묶음 요약", "fast"], ["report", "제보 기간 보고서 (시 담당자)", "smart"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];

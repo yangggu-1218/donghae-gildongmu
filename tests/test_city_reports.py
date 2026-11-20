@@ -176,8 +176,23 @@ check("가상은 실제 파일과 섞이지 않음", len(reports_store.real()) =
 check("몰리는 곳 3곳 (5·3·3건)", sorted(x["count"] for x in sm)[-3:] == [3, 3, 5], str(sorted(x["count"] for x in sm)))
 check("가상 제보는 실제 관광지 알림 못 올림", c.post(f"/api/admin/city/{next(x['id'] for x in sm if x.get('place_id'))}/notice", json={}, headers=H).status_code == 400)
 check("가상 제보는 최근 길 상태에 안 섞임", all(not r.get("sample") for r in reports_store.real()))
+pm2 = c.get("/api/reports/public-map").json()
+check("가상 제보는 공개 지도에 안 나감", not any(x.get("sample") for x in pm2), str(pm2)[:200])
+inq = c.get("/api/admin/inquiries", headers=H).json()
+real_inq = reports_store.root() / "inquiries.jsonl"
+mixed = real_inq.exists() and any(json.loads(l).get("sample") for l in real_inq.read_text(encoding="utf-8").splitlines() if l.strip())
+check("가상 문의 5건은 따로 파일 (관리자에게만 [가상])", sum(bool(x.get("sample")) for x in inq) == 5 and not mixed)
+check("가상 문의 처리도 가상 파일에만 저장", c.post("/api/admin/inquiries/sample00", json={"status": "답변 완료", "answer": "점검"}, headers=H).status_code == 200
+      and next(x for x in c.get("/api/admin/inquiries", headers=H).json() if x["id"] == "sample00")["answer"] == "점검")
+dash = c.get("/api/admin/dashboard", headers=H).json()
+check("한눈에 숫자는 진짜만, 가상은 따로", dash["reports"]["total"] == real_n and dash["reports"]["sample"] == 18 and dash["inquiries"]["sample"] == 5
+      and dash["inquiries"]["total"] == 0, str(dash["reports"]) + str(dash["inquiries"]))
 r = c.post("/api/admin/city-sample", json={"action": "clear"}, headers=H).json()
-check("가상 데이터 한 번에 지우기", r["cleared"] == 18 and not reports_store.sample_loaded() and len(reports_store.real()) == real_n)
+check("가상 데이터 한 번에 지우기", r["cleared"] == 18 and not reports_store.sample_loaded() and len(reports_store.real()) == real_n
+      and not any(x.get("sample") for x in c.get("/api/admin/inquiries", headers=H).json()))
+from app import main as main_mod  # noqa: E402
+main_mod._seed_samples()
+check("지운 뒤 서버를 다시 켜도 가상 데이터가 다시 안 들어감", not reports_store.sample_loaded() and not (reports_store.root() / "sample_inquiries.jsonl").exists())
 
 # ---------- 6. 백업 ----------
 z = c.get(f"/api/admin/city-backup?t={tok}")

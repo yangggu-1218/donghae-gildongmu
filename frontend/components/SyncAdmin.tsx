@@ -22,8 +22,6 @@ export function SyncAdmin({ tok, call, onExpired, can }: { tok: string; call: An
   return (
     <div className="sy">
       {d.demo && <p className="ca-warn" role="note"><Picto name="ask" size={18} /><span>데모 화면이에요. 서버가 없어 자동 갱신이 연결되어 있지 않아요.</span></p>}
-      <p className="muted small"><Icon name="info" /> 공식 API·공공데이터를 매일·매주 확인해요. 전화·주소·좌표(50m 안)·행사는 규칙대로 자동 반영하고, 나머지는 여기서 승인해야 사이트에 반영돼요. 이동약자 정보는 절대 자동으로 바꾸지 않아요.
-        {!d.token_set && <> <b>예약 실행 토큰(SYNC_TOKEN)이 서버에 없어 지금은 [지금 실행]으로만 돌아요.</b></>}</p>
       <div className="tabs ca-views" role="group" aria-label="자동 갱신 보기">
         {([["pending", `검수 대기 (${d.pending.length})`], ["log", "반영 기록"], ["src", "소스 상태"], ["set", "자동 갱신 설정"]] as const).map(([k, t]) =>
           <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{t}</button>)}

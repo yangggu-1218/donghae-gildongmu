@@ -921,7 +921,7 @@
     {
      "name": "주출입구",
      "grade": "G",
-     "note": "경사로와 점자 블록이 있어요",
+     "note": "경사로가 있어요",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
@@ -1563,7 +1563,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "보조견 동반이 가능해요. 휠체어 출입 정보는 아직 없어요.",
+   "tip_ko": "휠체어 출입 정보는 아직 없어요.",
    "tip_en": "Assistance dogs welcome; wheelchair access not yet recorded.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"

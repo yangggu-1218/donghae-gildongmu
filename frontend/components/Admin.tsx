@@ -12,12 +12,12 @@ import { SyncAdmin } from "@/components/SyncAdmin";
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
 // 위에 늘 보이는 탭 = 운영할 때 매일 쓰는 것. 가끔 쓰는 것은 [더 보기] 안에 (기능은 그대로)
-const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보·민원", "reports"], ["inquiries", "문의", "reports"], ["aiprops", "AI 제안", "reports"], ["aiset", "AI 설정", "reports"], ["sync", "자동 갱신", "place"],
-  ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
-const MAIN_TABS = new Set(["home", "place", "notice", "site", "reports", "inquiries", "aiprops"]);
+const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보·민원", "reports"], ["inquiries", "문의", "reports"], ["aiwork", "AI로 작업하기", "place"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
+  ["history", "변경 이력·백업", "history"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
+const MAIN_TABS = new Set(["home", "aiwork", "place", "notice", "site", "reports", "inquiries", "aiprops", "visits"]);
 type TabKey = (typeof TABS)[number][0];
 type User = { id: string; name: string; role: string; role_name: string; perms: string[]; must_change?: boolean; expires_at?: string };
-const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·백업·초기화", editor: "장소·알림·공지·행사·제보·현장 기록·되돌리기", surveyor: "현장 확인 기록 입력과 제보 검수만" };
+const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·백업·초기화", editor: "장소·알림·공지·행사·제보·되돌리기", surveyor: "현장 확인 기록 입력과 제보 검수만" };
 const LEVEL: Record<string, string> = { closed: "임시 휴무 (코스에서 빠짐)", warn: "주의 (공사·우회 등)", info: "안내" };
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const ACTION: Record<string, string> = { place: "장소 정보 수정", notice_add: "알림 올림", notice_remove: "알림 내림", banner: "공지 배너", event_add: "행사 추가",
@@ -54,6 +54,83 @@ function ImportBox({ pid, tok, onDraft }: { pid: string; tok: string; onDraft: (
       <input className="import-url" type="url" placeholder="정보가 공개된 링크 (https://…)" value={url} onChange={(e) => { setUrl(e.target.value); setFile(null); }} />
       <button type="button" className="chip go" disabled={busy || (!file && !/^https?:\/\/\S+/.test(url.trim()))} onClick={run}>{busy ? "읽는 중…" : "AI로 정리"}</button>
       {err && <p className="err small" role="alert">{err}</p>}
+    </div>
+  );
+}
+
+/* ---------- AI로 작업하기: 자료만 올리면 AI가 어느 관광지인지 찾고, 바뀐 칸만 골라 보여 준다 ---------- */
+// 장소를 먼저 고르지 않는다. 저장은 관리자가 고른 칸만 [장소 정보 고치기]와 같은 길로 (변경 이력·되돌리기 그대로)
+function AiWork({ places, tok, call, onExpired, go }: any) {
+  const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [r, setR] = useState<any>(null);
+  const [pick, setPick] = useState<Record<string, boolean>>({});
+  const [reason, setReason] = useState("");
+  const [saved, setSaved] = useState("");
+  const ready = !!file || /^https?:\/\/\S+/.test(url.trim());
+  async function run(placeId = "") {
+    setErr(""); setSaved(""); setBusy(true);
+    const fd = new FormData();
+    if (placeId) fd.append("place_id", placeId);
+    if (file) fd.append("file", file); else fd.append("url", url.trim());
+    try {
+      const x = await api.form("/api/admin/ai/work", fd, tok);
+      setR(x);
+      setPick(Object.fromEntries((x.changes || []).map((c: any) => [c.key, !c.access])));   // 이동약자 칸은 꼭 직접 확인하게 처음엔 안 고름
+      setReason(`AI로 작업하기: ${x.source || "자료"} (관리자 확인)`);
+      if (!x.ok) setErr(x.why || "AI가 자료를 읽지 못했어요.");
+    } catch (e: any) { if (e.status === 401) onExpired(); setErr(e.message || "자료를 읽지 못했어요."); }
+    setBusy(false);
+  }
+  const pid = r?.place?.place_id;
+  const chosen = (r?.changes || []).filter((c: any) => pick[c.key]);
+  async function save() {
+    const fields = Object.fromEntries(chosen.map((c: any) => [c.key, c.value]));
+    await call(() => api.post(`/api/admin/places/${pid}`, { fields, reason }, tok), `${r.place.name}: ${chosen.length}칸을 고쳤어요.`);
+    setSaved(`${r.place.name}에 ${chosen.length}칸을 반영했어요. [변경 이력]에서 되돌릴 수 있어요.`);
+    setR({ ...r, changes: (r.changes || []).filter((c: any) => !pick[c.key]) });
+  }
+  return (
+    <div className="aiw">
+      <div className="panel aiw-in">
+        <h2 className="h3"><Icon name="story" />자료로 장소 정보 고치기 <span className="via via-llm">AI</span></h2>
+        <p className="muted">공문·안내문(한글·PDF)이나 공개된 누리집 링크를 넣으면, AI가 <b>어느 관광지 자료인지</b> 알아내고 <b>지금 사이트와 달라진 칸</b>만 골라 보여 줘요. 저장은 고른 칸만, 관리자가 눌러야 돼요.</p>
+        <div className="aiw-drop">
+          <label className="aiw-file"><input type="file" accept=".hwp,.hwpx,.pdf,.txt" onChange={(e) => { setFile(e.target.files?.[0] || null); setUrl(""); setR(null); }} />
+            <Icon name="edit" /><span>{file ? file.name : "한글·PDF·글 파일 고르기"}</span></label>
+          <span className="muted">또는</span>
+          <input className="aiw-url" type="url" placeholder="정보가 공개된 링크 (https://…)" value={url} onChange={(e) => { setUrl(e.target.value); setFile(null); setR(null); }} aria-label="자료 링크" />
+          <button className="chip go" disabled={busy || !ready} onClick={() => run()}>{busy ? "AI가 읽는 중…" : "AI에게 맡기기"}</button>
+        </div>
+        {err && <p className="err" role="alert">{err}</p>}
+      </div>
+      {r?.place && <div className="panel aiw-place" role="status">
+        <p><span className="aiw-k">어느 관광지</span> {pid ? <b>{r.place.name}</b> : <b className="muted">찾지 못함</b>}
+          <small className="muted"> · {r.place.how === "rule" ? "이름으로 찾음" : r.place.how === "ai" ? "AI가 찾음" : r.place.how === "admin" ? "직접 고름" : ""} · {r.place.reason}</small></p>
+        <label className="aiw-other">다른 곳이면 고르기
+          <select value="" onChange={(e) => e.target.value && run(e.target.value)} disabled={busy}>
+            <option value="">장소 바꾸기…</option>
+            {places.filter((p: any) => p.type !== "숙박").map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}</option>)}</select></label>
+      </div>}
+      {r?.ok && <div className="panel aiw-res">
+        <h3 className="h3">바뀐 점 {r.changes?.length || 0}가지 {r.summary && <small className="muted">· {r.summary}</small>}</h3>
+        {r.changes?.length ? <table className="tbl aiw-tbl">
+          <thead><tr><th>반영</th><th>칸</th><th>지금 사이트</th><th>자료에 적힌 값</th></tr></thead>
+          <tbody>{r.changes.map((c: any) => <tr key={c.key} className={c.access ? "aiw-acc" : undefined}>
+            <td><input type="checkbox" checked={!!pick[c.key]} onChange={(e) => setPick({ ...pick, [c.key]: e.target.checked })} aria-label={`${c.label} 반영`} /></td>
+            <td><b>{c.label}</b>{c.access && <span className="badge b-unknown">이동약자 정보 · 직접 확인</span>}</td><td className="muted">{c.now}</td><td><b>{c.new}</b></td></tr>)}</tbody></table>
+          : <p className="muted">자료의 내용이 지금 사이트와 같아요. 고칠 것이 없어요.</p>}
+        {r.evidence?.length > 0 && <details><summary>근거 문장 {r.evidence.length}개</summary><ul className="ai-list">{r.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
+        {r.missing_ko?.length > 0 && <p className="muted small">자료에 없어 건드리지 않은 칸: {r.missing_ko.join(", ")}</p>}
+        {r.changes?.length > 0 && <div className="aiw-save">
+          <label>바꾸는 이유<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
+          <button className="chip go" disabled={!chosen.length || !reason.trim()} onClick={save}>고른 {chosen.length}칸 반영</button>
+          <button className="chip" onClick={() => go("place")}>장소 정보에서 직접 고치기</button>
+        </div>}
+      </div>}
+      {saved && <p className="ok" role="status">{saved}</p>}
     </div>
   );
 }
@@ -105,8 +182,8 @@ export function AdminPage({ lang }: { lang: Lang }) {
 
 function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; user: User; setUser: (u: User) => void; onLogout: () => void; onExpired: () => void }) {
   const can = (perm: string | null) => !perm || user.perms.includes(perm);
-  const tabs = TABS.filter(([, , perm]) => can(perm));
-  const [tab, setTab] = useState<TabKey>(user.must_change ? "me" : "home");
+  const tabs = TABS.filter(([k, , perm]) => (k === "visits" ? user.role === "surveyor" : can(perm)));   // 현장 확인 기록은 현장 조사원에게만
+  const [tab, setTab] = useState<TabKey>("home");
   const [db, setDb] = useState<any>(null);
   const [places, setPlaces] = useState<any[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
@@ -130,7 +207,9 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
           <button className="chip" onClick={onLogout}>로그아웃</button>
         </div>
       </div>
-      {user.must_change && tab !== "me" && <p className="admin-msg bad" role="alert">처음 받은 임시 비밀번호예요. [내 계정]에서 비밀번호를 바꿔 주세요. <button className="link-btn" onClick={() => setTab("me")}>지금 바꾸기</button></p>}
+      {/* '내 계정'은 [더 보기] 안에. 처음 받은 임시 비밀번호일 때는 바꾸는 칸을 맨 위에도 보여 준다 */}
+      {user.must_change && tab !== "me" && <div className="admin-msg bad" role="alert"><p>처음 받은 임시 비밀번호예요. 아래에서 비밀번호를 바꿔 주세요.</p>
+        <MyAccount tok={tok} user={user} call={call} onChanged={() => setUser({ ...user, must_change: false })} /></div>}
       <div className="tabs admin-tabs" role="group" aria-label="관리 메뉴">
         {tabs.filter(([k]) => MAIN_TABS.has(k)).map(([k, t]) => <button key={k} aria-pressed={tab === k} onClick={() => { setTab(k); setMsg(null); }}>{t}</button>)}
         <label className={`admin-more${MAIN_TABS.has(tab) ? "" : " on"}`}><span className="sr-only">더 보기</span>
@@ -142,19 +221,18 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
       {msg && <p role="status" className={`admin-msg ${msg.ok ? "ok" : "bad"}`}>{msg.ok ? "✓ " : "! "}{msg.text}{msg.link && <> · <a href={msg.link}>사이트에서 보기</a></>}</p>}
       {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey) => setTab(k)} can={can} onExpired={onExpired} />}
       {tab === "accounts" && can("accounts") && <Accounts tok={tok} call={call} me={user} />}
-      {tab === "me" && <MyAccount tok={tok} user={user} call={call} onChanged={() => setUser({ ...user, must_change: false })} />}
       {tab === "place" && <PlaceEditor places={places} db={db} tok={tok} call={call} />}
+      {tab === "aiwork" && <AiWork places={places} tok={tok} call={call} onExpired={onExpired} go={(k: TabKey) => setTab(k)} />}
       {tab === "notice" && <Notices places={places} db={db} tok={tok} call={call} name={name} />}
       {tab === "site" && <SiteEditor db={db} tok={tok} call={call} />}
       {tab === "reports" && <CityAdmin tok={tok} call={call} onExpired={onExpired} can={can} Legacy={<Reports tok={tok} call={call} onExpired={onExpired} canNotice={can("notice")} />} />}
       {tab === "inquiries" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
       {tab === "aiprops" && <AiProposals tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "sync" && <SyncAdmin tok={tok} call={call} onExpired={onExpired} can={can} />}
-      {tab === "aiset" && <AiSettings tok={tok} call={call} onExpired={onExpired} isOwner={can("accounts")} />}
-      {tab === "sources" && <SourcesPage lang="ko" />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}
+      {tab === "me" && <MyAccount tok={tok} user={user} call={call} onChanged={() => setUser({ ...user, must_change: false })} />}
+      {tab === "sources" && <SourcesPage lang="ko" />}
       {tab === "history" && <History db={db} tok={tok} call={call} name={name} canBackup={can("backup")} />}
-      {tab === "data" && <Probe tok={tok} />}
     </section>
   );
 }
@@ -199,14 +277,6 @@ function PlaceEditor({ places, db, tok, call }: any) {
       <label className="pick-place">고칠 장소
         <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
           {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
-      {pid && orig && <ImportBox pid={pid} tok={tok} onDraft={(r: any) => {
-        const x = r.fields || {};
-        const g: any = { ...f };
-        for (const k of ["open", "close", "last_entry", "phone", "fee", "intro_ko", "tip_ko", "carer_tip", "walk_load", "wheelchair", "entrance_step", "table", "indoor", "benches", "closed_day_nums"]) if (k in x) g[k] = x[k];
-        if (x.break_start) g.b0 = x.break_start; if (x.break_end) g.b1 = x.break_end;
-        setF(g); setAiFill(r);
-        if (!reason.trim()) setReason(`자료로 AI 정리: ${r.source} (관리자 확인 필요)`);
-      }} />}
       {aiFill && <div className="ai-fill" role="status">
         <p><b>AI가 {Object.keys(aiFill.fields).length}칸을 채웠어요.</b> 아래 칸을 확인하고 저장해 주세요. {aiFill.truncated && <span className="muted">(자료가 길어 앞부분만 읽었어요)</span>}</p>
         {aiFill.missing_ko.length > 0 && <p className="ai-missing">⚠ 자료에 없어 비워 둔 칸: {aiFill.missing_ko.map((m: string) => <span key={m} className="badge b-unknown">{m}</span>)}</p>}
@@ -353,7 +423,7 @@ function InquiryRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
   const [a, setA] = useState(r.answer || "");
   return (
     <li className="panel rv-row">
-      <p><b>[{r.category}]</b> {r.nick}{r.contact ? <small className="muted"> · {r.contact}</small> : null} <small className="muted">· {String(r.created_at).replace("T", " ").slice(0, 16)}</small></p>
+      <p>{r.sample && <span className="badge b-unknown">가상</span>} <b>[{r.category}]</b> {r.nick}{r.contact ? <small className="muted"> · {r.contact}</small> : null} <small className="muted">· {String(r.created_at).replace("T", " ").slice(0, 16)}</small></p>
       <p className="inq-text">{r.text}</p>
       <label>답변<textarea rows={3} value={a} onChange={(e) => setA(e.target.value)} placeholder="문의한 사람 화면 [내 문의]에 보여요" /></label>
       <div className="chips">
@@ -619,24 +689,28 @@ function Dashboard({ tok, user, go, can, onExpired }: { tok: string; user: User;
   const card = (k: TabKey, ic: string, title: string, big: React.ReactNode, sub: string, warn = false) => (
     <button className={`dash-card${warn ? " warn" : ""}`} onClick={() => go(k)} disabled={!can(TABS.find((t) => t[0] === k)?.[2] ?? null)}>
       <span className="dash-k"><Icon name={ic} />{title}</span><b>{big}</b><span className="muted small">{sub}</span></button>);
+  const exN: any[] = d.notices?.length ? [] : d.examples?.notices || [];
+  const exR: any[] = d.recent?.length ? [] : d.examples?.recent || [];
   return (<>
     <p className="dash-hello"><b>{user.name}</b>님, 안녕하세요. 오늘은 {d.today} 이에요. <span className="muted">({user.role_name}: {ROLE_INFO[user.role]})</span></p>
     <div className="dash-grid">
-      {card("reports", "camera", "새 제보", d.reports?.new ?? 0, `확인 중 ${d.reports?.doing ?? 0} · 전체 ${d.reports?.total ?? 0}`, (d.reports?.new ?? 0) > 0)}
-      {card("notice", "warn", "지금 걸린 알림", d.notices?.length ?? 0, d.banner ? `공지: ${d.banner.text.slice(0, 20)}` : "사이트 공지 없음")}
-      {card("visits", "walk", "현장 확인 기록", d.visits?.total ?? 0, d.visits?.last ? `마지막 ${d.visits.last}` : "아직 없음")}
+      {card("reports", "camera", "새 제보", d.reports?.new ?? 0, `확인 중 ${d.reports?.doing ?? 0} · 전체 ${d.reports?.total ?? 0}${d.reports?.sample ? ` · 가상 ${d.reports.sample}건 따로` : ""}`, (d.reports?.new ?? 0) > 0)}
+      {card("notice", "warn", "지금 걸린 알림", d.notices?.length || exN.length, d.notices?.length ? (d.banner ? `공지: ${d.banner.text.slice(0, 20)}` : "사이트 공지 없음") : exN.length ? "가상 예시 (사이트엔 안 보임)" : "사이트 공지 없음")}
+      {card("inquiries", "story", "새 문의", d.inquiries?.new ?? 0, `전체 ${d.inquiries?.total ?? 0}${d.inquiries?.sample ? ` · 가상 ${d.inquiries.sample}건 따로` : ""}`, (d.inquiries?.new ?? 0) > 0)}
       {card("place", "pin", "고친 장소", d.overrides ?? 0, "원본 위에 덮어쓴 곳")}
     </div>
     <div className="cards2">
       <div className="panel">
         <h2 className="h3">지금 사이트에 보이는 알림</h2>
         {d.notices?.length ? <ul className="plain">{d.notices.map((n: any) => <li key={n.id}><span className={`badge ${n.level === "closed" ? "g-R" : n.level === "warn" ? "g-Y" : "b-plain"}`}>{LEVEL[n.level]?.split(" ")[0]}</span> {n.name ? `${n.name} · ` : ""}{n.title}{n.end ? <small className="muted"> ~{n.end}</small> : null}</li>)}</ul>
+          : exN.length ? <ul className="plain">{exN.map((n: any) => <li key={n.id}><span className="badge b-unknown">가상</span> <span className={`badge ${n.level === "closed" ? "g-R" : "g-Y"}`}>{LEVEL[n.level]?.split(" ")[0]}</span> <b>{n.name}</b> {n.title}</li>)}</ul>
           : <p className="muted">걸려 있는 알림이 없어요.</p>}
         {d.events_week?.length > 0 && <><h3 className="h3" style={{ marginTop: 14 }}>이번 주 관리자 추가 행사</h3><ul className="plain">{d.events_week.map((e: any) => <li key={e.id}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}</li>)}</ul></>}
       </div>
       <div className="panel">
         <h2 className="h3">최근 변경</h2>
         {d.recent?.length ? <ul className="plain dash-recent">{d.recent.map((h: any) => <li key={h.id}><small className="muted">{h.at.slice(5, 16).replace("T", " ")}</small> <b>{h.who === "admin" ? "총괄 관리자" : h.who}</b> · {ACTION[h.action] || h.action}{h.reverted ? <small className="muted"> (되돌림)</small> : null}</li>)}</ul>
+          : exR.length ? <ul className="plain dash-recent">{exR.map((h: any) => <li key={h.id}><small className="muted">{h.at.slice(5, 16).replace("T", " ")}</small> <span className="badge b-unknown">가상</span> <b>{h.who}</b> · {h.summary}</li>)}</ul>
           : <p className="muted">아직 바꾼 것이 없어요.</p>}
         {can("history") && <button className="chip" onClick={() => go("history")}>변경 이력 전체 보기</button>}
       </div>

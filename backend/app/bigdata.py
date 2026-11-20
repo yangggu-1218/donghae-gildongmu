@@ -122,8 +122,7 @@ BF_TYPES = {"sight": "12", "culture": "14", "stay": "32", "food": "39", "shop": 
 BF_LABEL = {   # 화면에 보여 줄 항목 (값이 비어 있으면 숨김)
     "parking": "주차", "route": "접근로", "publictransport": "대중교통", "ticketoffice": "매표소", "wheelchair": "휠체어",
     "exit": "출입통로", "elevator": "엘리베이터", "restroom": "화장실", "room": "객실", "handicapetc": "지체장애 기타",
-    "braileblock": "점자블록", "helpdog": "보조견", "guidehuman": "안내요원", "audioguide": "오디오가이드",
-    "bigprint": "큰활자 홍보물", "brailepromotion": "점자 홍보물", "guidesystem": "유도안내설비", "blindhandicapetc": "시각장애 기타",
+    "guidehuman": "안내요원", "audioguide": "오디오가이드",
     "signguide": "수어 안내", "videoguide": "자막 비디오", "hearingroom": "객실(청각)", "hearinghandicapetc": "청각장애 기타",
     "stroller": "유모차", "lactationroom": "수유실", "babysparechair": "유아용 의자", "infantsfamilyetc": "영유아 기타",
 }

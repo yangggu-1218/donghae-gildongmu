@@ -24,11 +24,6 @@ export function SiteFooter({ lang, t }: { lang: Lang; t: (k: string) => string }
       <div className="wrap">
         <div className="sf-top">
           <a className="sf-admin" href="#/admin">{L("관리자", "Admin")}</a>
-          <nav className="sf-links" aria-label={L("안내", "Help")}>
-            <a href="#/community/ask">{L("이용 안내·자주 묻는 질문", "Help & FAQ")}</a>
-            <a href="#/transport">{L("찾아오시는 길", "Getting here")}</a>
-            <a href="#/community">{L("커뮤니티", "Community")}</a>
-          </nav>
         </div>
         <div className="sf-main">
           <div className="sf-left">

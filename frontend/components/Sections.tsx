@@ -63,25 +63,85 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
       ))}
       <div className="hero-in">
         <div className="hero-copy">
-          <h1 id="hero-h">{L("가기 전에, 갈 수 있는 길인지 먼저 알려 드려요", "Know the way is passable before you go")}</h1>
-          <p className="lead">{L(
-            "친구와도, 가족과도, 휠체어나 유모차와 함께여도 괜찮아요. 누구와 어떻게 다니는지 말하면 영업시간, 붐빔 예상, 길 상태까지 맞춘 동해 코스를 짜 드려요.",
-            "With friends, family, a wheelchair or a stroller. Say who you're with, and get a Donghae route checked for opening hours, crowds and path conditions.")}</p>
+          <p className="hero-eyebrow">{L("휠체어도, 유모차도, 부모님과도 —", "Wheelchair, stroller, or with parents —")}</p>
+          <h1 id="hero-h">{L("갈 수 있는 길만 골라 주는", "A Donghae trip planner")}<br /><em>{L("동해", "that checks")}</em> {L("여행 코스 AI", "the way first")}</h1>
+          <p className="lead">{L("누구와 어떻게 다니는지 말하면 영업시간·붐빔·길 상태까지 맞춘 코스를 짜 드려요.",
+            "Say who you're with, and get a route checked for opening hours, crowds and path conditions.")}</p>
           <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAsk(v.trim()); setV(""); } }}>
-            <img className="ask-dongi" src="/dongi/wave.webp" alt="" />
+            <svg className="ask-ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <label htmlFor="hero-ask" className="sr-only">{L("동이에게 말하기", "Talk to Dongi")}</label>
-            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("예: 엄마랑 가는데 무릎이 안 좋으세요", "e.g. Travelling with my mom, her knees hurt")} />
+            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("어떤 여행을 계획하고 계신가요?", "What kind of trip are you planning?")} />
             <MicButton lang={lang} className="ask-mic" disabled={busy} onText={(x) => { setV(x); setMicMsg(""); }} onError={setMicMsg} />
-            <button disabled={busy}>{L("코스 짜기", "Plan my route")}</button>
+            <button className="ask-go" disabled={busy} aria-label={L("코스 짜기", "Plan my route")}>
+              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
           </form>
           {micMsg && <p className="hero-msg" role="status">{micMsg}</p>}
-          <a className="hero-jump" href="#courses">{L("추천 코스로 바로 시작하기 ↓", "Or start from a suggested route ↓")}</a>
+          <ul className="hero-chips" aria-label={L("이렇게 시작해도 돼요", "Quick starts")}>
+            {HERO_CHIPS.map(([k, ko, en, say]) => (
+              <li key={k}><button type="button" disabled={busy} onClick={() => onAsk(say)}>{k === "day" ? <Icon name="cal" /> : <AccIcon k={k} size={20} />}{L(ko, en)}</button></li>))}
+          </ul>
         </div>
       </div>
       {slides.length > 1 && !still && (
         <button type="button" className="hero-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>
           {paused ? L("사진 다시 넘기기", "Play photos") : L("사진 멈추기", "Pause photos")}</button>
       )}
+    </section>
+  );
+}
+
+// 첫 화면 아래 빠른 시작: 누르면 동이에게 그 말로 바로 말을 건다 (말은 대화 규칙이 알아듣는 표현)
+const HERO_CHIPS: [string, string, string, string][] = [
+  ["지체장애", "휠체어", "Wheelchair", "휠체어로 다녀요"],
+  ["영유아가족", "유모차", "Stroller", "유모차를 끌고 가요"],
+  ["고령자", "부모님과", "With parents", "부모님과 가요. 오래 걷기 어려우세요"],
+  ["day", "당일 여행", "Day trip", "당일로 다녀와요"],
+];
+
+/* ---------------- 바로가기 띠: 첫 화면 사진 아래에 걸쳐 있는 흰 막대 ---------------- */
+/* ---------------- 코스 짜기 왼쪽 안내 (예전 '사용법' 띠를 늘 보이는 안내로) ---------------- */
+export function PlanAside({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  const steps: [string, string, string, string, string][] = [
+    ["chat", "조건 말하기", "Tell Dongi", "버튼을 누르거나 \"엄마랑, 무릎이 안 좋아요\"처럼 말해요", "Tap buttons or just say who's coming"],
+    ["map", "갈 수 있는 코스 받기", "Get a passable route", "그날 문 연 곳만, 길 상태를 확인한 순서로", "Only places open that day, in a checked order"],
+    ["star", "고치고 저장·공유", "Edit, save, share", "\"오르막 빼줘\" 한마디로 고치고 가족에게 보내요", "Say \"no hills\" to adjust, then share"],
+  ];
+  return (
+    <aside className="plan-aside" aria-labelledby="pa-h">
+      <img className="pa-dongi" src="/dongi/full-cheer.webp" alt="" />
+      <h3 id="pa-h">{L("말 한마디면 충분해요", "One sentence is enough")}</h3>
+      <ol>{steps.map(([ic, ko, en, dk, de], i) => <li key={ic}><img src={`/icons3d/${ic}.webp`} alt="" width="40" height="40" /><span><b>{i + 1}. {L(ko, en)}</b><small>{L(dk, de)}</small></span></li>)}</ol>
+      <a className="pa-more" href="#/places">{L("먼저 관광지 둘러보기", "Browse places first")}<span aria-hidden="true">›</span></a>
+    </aside>
+  );
+}
+
+export function QuickBar({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  // 그림: Microsoft Fluent Emoji 3D (MIT, public/icons3d/LICENSE-fluentui-emoji.txt)
+  const rows: [string, string, string, string, string][] = [
+    ["#plan", "pin", "코스 짜기", "Plan a route", "c1"],
+    ["#/places", "camera", "관광지", "Places", "c2"],
+    ["#courses", "star", "추천 코스", "Suggested", "c3"],
+    ["#/community/ask", "info", "이용 안내", "Help", "c4"],
+  ];
+  return (
+    <nav className="quickbar wrap" aria-label={L("바로가기", "Shortcuts")}>
+      <ul>{rows.map(([h, ic, ko, en, c]) => <li key={h}><a href={h}><img className="qb-3d" src={`/icons3d/${ic}.webp`} alt="" width="44" height="44" />{L(ko, en)}</a></li>)}</ul>
+    </nav>
+  );
+}
+
+/* ---------------- 동이 안내 띠 (첫 화면 맨 아래) ---------------- */
+export function DongiBanner({ lang }: { lang: Lang }) {
+  const L = pick(lang);
+  return (
+    <section className="dongi-banner wrap" aria-labelledby="db-h">
+      <img src="/dongi/full-captain.webp" alt="" />
+      <div><h2 id="db-h">{L("오늘의 코스는 어떠세요?", "How about a route for today?")}</h2>
+        <p>{L("동이가 함께 가는 분과 걸음에 맞춰 코스를 짜 드려요.", "Dongi plans around who you're with and how you get around.")}</p></div>
+      <a className="db-go" href="#plan">{L("코스 추천 받기", "Get a route")}<span aria-hidden="true">›</span></a>
     </section>
   );
 }
@@ -250,9 +310,6 @@ const BF: { k: string; ko: string; en: string; mode: string; opts: [string, stri
     ["주차여부", "주차여부", "Accessible parking", ["장애인 주차"]], ["대중교통", "대중교통", "Public transport", []], ["주 출입 접근로", "주 출입 접근로", "Step-free approach", ["출입구 턱 없음", "경사로"]],
     ["휠체어대여", "휠체어대여", "Wheelchair rental", ["휠체어 대여"]], ["출입통로", "출입통로", "Entrance", []], ["엘리베이터", "엘리베이터", "Elevator", ["엘리베이터"]],
     ["화장실", "화장실", "Accessible toilet", ["장애인 화장실"]], ["관람석(좌석)", "관람석(좌석)", "Seating", []], ["객실", "객실", "Rooms", []], ["지체장애 기타 상세", "지체장애 기타 상세", "Other", []]] },
-  { k: "시각장애", ko: "시각장애", en: "Low vision", mode: "none", opts: [
-    ["음성안내", "음성안내", "Audio guide", []], ["큰활자/점자 홍보물", "큰활자/점자 홍보물", "Large print / Braille", ["점자 안내"]], ["점자표지판", "점자표지판", "Braille signs", ["점자 안내"]],
-    ["시각장애 기타상세", "시각장애 기타상세", "Other", ["보조견 동반 가능"]]] },
   { k: "청각장애", ko: "청각장애", en: "Hearing", mode: "none", opts: [["청각장애 기타상세", "청각장애 기타상세", "Other", []]] },
   { k: "영유아가족", ko: "영유아 가족", en: "Families", mode: "stroller", opts: [
     ["유모차 대여", "유모차 대여", "Stroller rental", []], ["수유실", "수유실", "Nursing room", ["수유실"]], ["유아용 보조의자/침대", "유아용 보조의자/침대", "Baby chair / bed", []],
@@ -434,7 +491,6 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
           if (hasF(p, ["장애인 주차"])) ic.push(["p", <b key="p" className="pl2-P" aria-hidden="true">P</b>, "장애인 주차", "Accessible parking"]);
           if (hasF(p, ["장애인 화장실"])) ic.push(["t", <Icon key="t" name="toilet" />, "장애인 화장실", "Accessible toilet"]);
           if ((p.access_kto?.cats || []).includes("영유아가족")) ic.push(["s", <AccIcon key="s" k="영유아가족" size={18} />, "영유아 가족 편의", "Family facilities"]);
-          if ((p.access_kto?.cats || []).includes("시각장애")) ic.push(["v", <AccIcon key="v" k="시각장애" size={18} />, "시각장애 편의", "Low-vision support"]);
           if ((p.access_kto?.cats || []).includes("고령자")) ic.push(["o", <AccIcon key="o" k="고령자" size={18} />, "어르신 편의", "Senior support"]);
           return (
             <article key={p.id} className="pcard pl2-card">
@@ -504,20 +560,23 @@ export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: numb
   return (
     <section id="courses" className="sec wrap" aria-labelledby="courses-h">
       <div className="sec-head">
-        <h2 id="courses-h">{L("이렇게 다녀 보세요", "Routes to start from")}</h2>
-        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요.", "Start from one that fits and adjust it by talking to Dongi. These are sample routes.")}</p>
+        <h2 id="courses-h">{L("추천 코스", "Suggested routes")}</h2>
+        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요.", "Start from one that fits and adjust it by talking to Dongi.")}</p>
       </div>
-      <div className="cgrid">
+      <ul className="cgrid2">
         {PRESETS.map((c, i) => (
-          <article key={i} className="ccard">
-            <div className="ccard-ph"><PlacePhoto id={c.photo} lang={lang} /></div>
-            <h3>{L(c.t[0], c.t[1])}</h3>
-            <ul className="tags">{c.tags.map((x) => <li key={x[0]}>{L(x[0], x[1])}</li>)}</ul>
-            <p className="by">{L(c.by[0], c.by[1])}</p>
-            <button className="start" disabled={busy} onClick={() => onStart(i)}>{L("이 조건으로 코스 짜기", "Plan with these needs")}</button>
-          </article>
+          <li key={i}>
+            <button className="ccard2" disabled={busy} onClick={() => onStart(i)}>
+              <PlacePhoto id={c.photo} lang={lang} />
+              <span className="cc2-badge">{L("추천", "Pick")}</span>
+              <span className="cc2-t"><b>{L(c.t[0], c.t[1])}</b>
+                <span className="cc2-m"><Icon name="cal" />{L("당일", "Day trip")}<i aria-hidden="true">·</i>{c.tags.map((x) => L(x[0], x[1])).join(" · ")}</span></span>
+              <span className="cc2-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
+              <span className="sr-only">{L("이 조건으로 코스 짜기", "Plan with these needs")}</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

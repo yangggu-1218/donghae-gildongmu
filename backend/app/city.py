@@ -24,7 +24,7 @@ CATS_EN = {"step": "Step or stairs", "sidewalk": "Broken pavement", "ramp": "No 
            "toilet": "Toilet problem", "lift": "Lift out of order", "works": "Construction", "etc": "Other"}
 # 예전 제보 종류 → 새 분류
 OLD_KIND = {"계단": "step", "턱": "step", "경사": "ramp", "공사": "works", "화장실": "toilet", "길 상태": "sidewalk"}
-WHO = ["휠체어", "유모차", "걷기 힘듦", "시각"]
+WHO = ["휠체어", "유모차", "걷기 힘듦"]
 SEV = {"block": "지나갈 수 없음", "help": "도움이 있어야 지나감", "minor": "불편함"}
 PRI = {"urgent": "긴급", "high": "높음", "normal": "보통", "low": "낮음"}
 DEPTS = {"road": "도로 담당 (보도·턱·경사로)", "traffic": "교통 담당 (불법 주차)", "tour": "관광 담당 (관광지 시설)",
@@ -69,7 +69,7 @@ def rule_triage(category: str, who: list[str], note: str) -> dict:
 
 
 # ---------------- AI 정리 ----------------
-SYSTEM = """너는 동해시 '불편 제보'를 정리하는 도우미다. 이용자(휠체어·유모차·걷기 힘든 사람·시각장애인)가
+SYSTEM = """너는 동해시 '불편 제보'를 정리하는 도우미다. 이용자(휠체어·유모차·걷기 힘든 사람)가
 보낸 사진·글·선택지를 읽고, 시 담당자가 바로 처리할 수 있게 정리한다.
 
 지킬 것

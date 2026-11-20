@@ -29,7 +29,6 @@ export function CityAdmin({ tok, call, onExpired, can, Legacy }: { tok: string; 
   return (
     <div className="ca">
       {d.demo && <p className="ca-warn" role="note"><Picto name="ask" size={18} /><span>데모 화면이에요. 서버·AI가 연결되어 있지 않아 이 기기에서 보낸 제보만 '규칙'으로 보여요.</span></p>}
-      {!d.persistent && <p className="ca-warn" role="alert"><Picto name="warn" size={18} /><span>지금 저장소는 <b>재배포·재시작 때 지워질 수 있어요</b> (Render Free, 디스크 없음). 재배포 전에 [설정 › 백업 내려받기]를 해 두세요.</span></p>}
       {!d.ai && <p className="muted small"><Icon name="info" /> AI 연결 안 됨 — 새 제보는 이용자가 고른 종류로 '규칙' 정리돼요.</p>}
       <div className="ca-top">
         <div className="ca-kpi"><b>{openN.length}</b><small>처리할 곳</small></div>
@@ -209,11 +208,11 @@ function Settings({ d, tok, call, can, reload }: Any) {
         {can("accounts") && <button className="chip go" onClick={() => call(() => api.post("/api/admin/city-settings", { depts }, tok), "부서 이름을 저장했어요.").then(reload).catch(() => {})}>저장</button>}
       </section>
       <section className="panel">
-        <h3>가상 제보 (점검용)</h3>
-        <p className="muted small">가상 제보 18건(묵호항 보도 5건, 동해역 앞 횡단보도 3건, 추암 주차장 3건 등)을 넣어 화면을 확인해요. 실제 제보 파일과 따로 두고, 화면에 [가상]으로 보여요. 관광지 알림·최근 길 상태에는 쓰이지 않아요.</p>
+        <h3>가상 제보·문의 (점검용)</h3>
+        <p className="muted small">가상 제보 18건(묵호항 보도 5건, 동해역 앞 횡단보도 3건, 추암 주차장 3건 등)과 가상 문의 5건을 넣어 화면을 확인해요. 실제 제보·문의 파일과 따로 두고, 관리자 화면에만 [가상]으로 보여요. 공개 지도·관광지 알림·최근 길 상태에는 쓰이지 않아요. 모두 지우면 서버를 다시 켜도 다시 들어가지 않아요.</p>
         <div className="chips">
-          <button className="chip go" onClick={() => call(() => api.post("/api/admin/city-sample", { action: "load" }, tok), "가상 제보를 넣었어요.").then(reload).catch(() => {})}>{d.sample_loaded ? "가상 제보 다시 넣기" : "가상 제보 넣기"}</button>
-          {d.sample_loaded && <button className="chip" onClick={() => { if (confirm("가상 제보를 모두 지울까요? (실제 제보는 그대로예요)")) call(() => api.post("/api/admin/city-sample", { action: "clear" }, tok), "가상 제보를 모두 지웠어요.").then(reload).catch(() => {}); }}>가상 데이터 모두 지우기</button>}
+          <button className="chip go" onClick={() => call(() => api.post("/api/admin/city-sample", { action: "load" }, tok), "가상 제보·문의를 넣었어요.").then(reload).catch(() => {})}>{d.sample_loaded ? "가상 데이터 다시 넣기" : "가상 데이터 넣기"}</button>
+          {d.sample_loaded && <button className="chip" onClick={() => { if (confirm("가상 제보·문의를 모두 지울까요? (실제 제보·문의는 그대로예요)")) call(() => api.post("/api/admin/city-sample", { action: "clear" }, tok), "가상 제보·문의를 모두 지웠어요.").then(reload).catch(() => {}); }}>가상 데이터 모두 지우기</button>}
         </div>
       </section>
       <section className="panel">

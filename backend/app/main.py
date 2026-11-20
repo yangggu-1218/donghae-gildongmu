@@ -40,6 +40,7 @@ def load_places() -> dict[str, Place]:
     places = details.apply(places)        # 영업시간·어르신 접근성 상세, 식당·카페
     places = kto_access.apply(places)     # 한국관광공사 열린관광 이동약자 편의정보 (분류 아이콘·편의시설·출입구)
     places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
+    places = kto_access.drop_vision(places)   # 시각장애 편의 내용은 다루지 않음 (관리자 값까지 정리)
     public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
     return places
 
@@ -305,6 +306,39 @@ async def admin_ai_extract(place_id: str = Form(...), url: str = Form(""), file:
         else:
             raise ai_extract.BadInput("파일을 올리거나 링크를 넣어 주세요.")
         return await anyio.to_thread.run_sync(ai_extract.extract, p.model_dump(), kind, data, name)
+    except ai_extract.BadInput as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/admin/ai/work")
+async def admin_ai_work(url: str = Form(""), place_id: str = Form(""), file: UploadFile | None = File(None), x_admin_token: str | None = Header(None)):
+    """AI로 작업하기: 자료(한글·PDF·링크)만 주면 어느 장소인지 알아서 찾고, 지금 사이트 값과 달라진 칸만 돌려준다.
+    저장은 관리자가 고른 것만 [장소 정보 고치기]와 같은 길로 (이동약자 정보는 꼭 사람이 확인)."""
+    _admin(x_admin_token, "place")
+    try:
+        if file is not None and file.filename:
+            data = await file.read(ai_extract.MAX_FILE + 1)
+            if len(data) > ai_extract.MAX_FILE:
+                raise ai_extract.BadInput("파일이 너무 커요 (15MB까지).")
+            kind, name = ai_extract.kind_of(file.filename, data), file.filename
+        elif url.strip():
+            kind, data, name = await anyio.to_thread.run_sync(ai_extract.fetch_url, url.strip())
+        else:
+            raise ai_extract.BadInput("파일을 올리거나 링크를 넣어 주세요.")
+        pool = [p.model_dump() for p in PLACES.values() if p.type != "숙박"]
+        if place_id:
+            if place_id not in PLACES:
+                raise HTTPException(404, "알 수 없는 장소예요")
+            who = {"place_id": place_id, "name": PLACES[place_id].name_ko, "how": "admin", "reason": "관리자가 고른 장소", "candidates": []}
+        else:
+            who = await anyio.to_thread.run_sync(ai_extract.identify, kind, data, pool)
+        if not who.get("place_id"):
+            return {"ok": False, "why": who["reason"], "place": who, "source": name}
+        cur = PLACES[who["place_id"]].model_dump()
+        got = await anyio.to_thread.run_sync(ai_extract.extract, cur, kind, data, name)
+        if not got.get("ok"):
+            return {**got, "place": who, "source": name}
+        return {**got, "place": who, "changes": ai_extract.changes(cur, got.get("fields") or {})}
     except ai_extract.BadInput as e:
         raise HTTPException(400, str(e))
 
@@ -662,8 +696,8 @@ def reports_mine(ids: str = "", code: str = ""):
 
 @app.get("/api/reports/public-map")
 def reports_public_map():
-    """공개 지도 '알려진 불편': 2명 이상 알린 묶음만, 사진·개별 좌표 없이 (가상 제보는 sample 표시)."""
-    rows = [r for r in reports_store.all_rows(reports_store.sample_loaded()) if r["status"] not in ("반려", "중복")]
+    """공개 지도 '알려진 불편': 2명 이상 알린 묶음만, 사진·개별 좌표 없이. 가상 제보는 관리자 화면에서만 쓴다."""
+    rows = [r for r in reports_store.all_rows(False) if r["status"] not in ("반려", "중복")]
     out = []
     for c in city.clusters(rows, PLACES):
         if c["count"] >= 2 and c["lat"]:
@@ -885,11 +919,14 @@ def admin_city_settings(body: dict, x_admin_token: str | None = Header(None)):
 
 @app.post("/api/admin/city-sample")
 def admin_city_sample(body: dict, x_admin_token: str | None = Header(None)):
-    """가상 제보 넣기(load) / 모두 지우기(clear). 실제 제보 파일은 건드리지 않는다."""
+    """가상 제보·문의 넣기(load) / 모두 지우기(clear). 실제 제보·문의 파일은 건드리지 않는다."""
     _admin(x_admin_token, "reports")
     if body.get("action") == "load":
-        return {"ok": True, "loaded": reports_store.load_samples()}
+        n = reports_store.load_samples()
+        _load_sample_inquiries()
+        return {"ok": True, "loaded": n}
     if body.get("action") == "clear":
+        (REPORTS / "sample_inquiries.jsonl").unlink(missing_ok=True)
         return {"ok": True, "cleared": reports_store.clear_samples()}
     raise HTTPException(400, "action 은 load 또는 clear")
 
@@ -1038,16 +1075,36 @@ def admin_dashboard(x_admin_token: str | None = Header(None)):
     db = cms.load()
     day = _today()
     reps = reports_store.real()
+    inq = _real_inquiries()
     visits = _jsonl("visits.jsonl")
     week = (dt.date.fromisoformat(day) + dt.timedelta(days=7)).isoformat()
-    return {"today": day,
-            "reports": {"new": sum(r.get("status") == "접수" for r in reps), "doing": sum(r.get("status") in ("확인", "처리 중") for r in reps), "total": len(reps)},
+    return {"today": day,   # 숫자·경고 색은 진짜만, 가상은 따로 센다
+            "reports": {"new": sum(r.get("status") == "접수" for r in reps), "doing": sum(r.get("status") in ("확인", "처리 중") for r in reps), "total": len(reps),
+                        "sample": len(reports_store.samples())},
+            "inquiries": {"new": sum(r.get("status") == "접수" for r in inq), "total": len(inq), "sample": len(_jsonl("sample_inquiries.jsonl"))},
+            "examples": _dash_examples(db, day),
             "notices": [{**n, "name": PLACES[n["place_id"]].name_ko if n.get("place_id") in PLACES else None} for n in db["notices"] if cms.active(n, day)][:8],
             "banner": cms.site(day)["banner"],
             "overrides": len(db["overrides"]) + len(db["segments"]),
             "visits": {"total": len(visits), "last": max((v["date"] for v in visits if v.get("date")), default=None)},
             "events_week": [e for e in cms.events() if e.get("start", "") <= week and (e.get("end") or e.get("start", "")) >= day][:5],
             "recent": db["history"][:8]}
+
+
+def _dash_examples(db: dict, day: str) -> dict:
+    """알림·최근 변경이 하나도 없을 때만 보여 줄 가상 예시 (사이트에는 안 나가고, 화면에 '가상' 표시)."""
+    if os.getenv("SEED_SAMPLES", "1") == "0":
+        return {}
+    ex: dict = {}
+    if not any(cms.active(n, day) for n in db["notices"]):
+        ex["notices"] = [{"id": "ex1", "level": "warn", "title": "호수 전망 데크 보수 공사 (우회로 이용)", "name": "무릉별유천지", "start": day, "end": ""},
+                         {"id": "ex2", "level": "closed", "title": "내부 정비로 하루 휴관", "name": "천곡황금박쥐동굴", "start": day, "end": day}]
+    if not db["history"]:
+        now = dt.datetime.now().replace(microsecond=0)
+        ex["recent"] = [{"id": f"ex{i}", "at": (now - dt.timedelta(hours=h)).isoformat(), "who": w, "summary": t}
+                        for i, (h, w, t) in enumerate([(2, "편집자", "추암 촛대바위 운영시간 수정"), (5, "총괄 관리자", "무릉별유천지 임시 알림 올림"),
+                                                       (26, "현장 조사원", "묵호항 구간 정보 '주의'로 바꿈")])]
+    return ex
 
 
 @app.post("/api/admin/logout")
@@ -1204,6 +1261,45 @@ def admin_review(rid: str, body: dict, x_admin_token: str | None = Header(None))
 
 
 # ---------- 문의하기 (커뮤니티 > 문의) : 관리자 [문의] 탭에서 읽고 답한다 ----------
+SAMPLE_INQUIRIES = [   # 관리자 화면 점검용 가상 문의 (실제 사람 아님, sample=True)
+    ("휠씨", "이용 방법", "전동휠체어로 다니는데 코스에 충전할 수 있는 곳도 같이 넣어 줄 수 있나요?", 0, "접수", ""),
+    ("묵호여행", "장소 정보", "무릉별유천지 월요일에 쉬는 게 맞나요? 지난주 월요일에 갔는데 열려 있었어요.", 1, "확인 중", ""),
+    ("유모차맘", "접근성·길 정보", "추암 출렁다리까지 유모차로 갈 수 있는지 궁금해요. 계단이 있나요?", 2, "답변 완료",
+     "주차장에서 출렁다리 입구까지는 경사로로 갈 수 있어요. 다리 위는 흔들림이 있어 유모차는 천천히 밀어 주세요."),
+    ("동해시민", "오류 신고", "천곡동굴 전화번호가 예전 번호로 나와요.", 3, "확인 중", ""),
+    ("방문자", "기타", "부모님 모시고 가기 좋은 식당도 추천해 주시면 좋겠어요.", 5, "답변 완료", "코스를 짤 때 '부드러운 메뉴'를 고르면 어르신이 드시기 편한 식당을 먼저 넣어 드려요."),
+]
+
+
+def _load_sample_inquiries():
+    now = dt.datetime.now().replace(microsecond=0)
+    rows = [{"id": f"sample{i:02d}", "nick": n, "contact": "", "category": c, "text": t, "status": st, "answer": a,
+             "created_at": (now - dt.timedelta(days=d, hours=i * 3)).isoformat(), "sample": True,
+             **({"answered_at": (now - dt.timedelta(days=max(0, d - 1))).isoformat()} if a else {})}
+            for i, (n, c, t, d, st, a) in enumerate(SAMPLE_INQUIRIES)]
+    _save_jsonl("sample_inquiries.jsonl", rows)
+
+
+def _real_inquiries() -> list[dict]:
+    return [r for r in _jsonl("inquiries.jsonl") if not r.get("sample")]   # 예전에 진짜 파일에 섞여 들어간 가상 문의는 빼고 읽는다
+
+
+def _seed_samples():
+    """관리자 화면을 확인할 수 있게, 비어 있으면 가상 제보·문의를 넣는다.
+    SEED_SAMPLES=0 이거나 관리자가 [가상 데이터 모두 지우기]를 했으면 안 넣는다. 공개 화면에는 쓰지 않는다."""
+    if os.getenv("SEED_SAMPLES", "1") == "0" or reports_store.samples_cleared():
+        return
+    try:
+        if not reports_store.sample_loaded():
+            reports_store.load_samples()
+        if not (REPORTS / "sample_inquiries.jsonl").exists():
+            _load_sample_inquiries()
+    except Exception as e:   # 가상 데이터는 없어도 서비스는 돈다
+        print("가상 데이터 넣기 실패:", e)
+
+
+_seed_samples()
+
 INQ_CATS = {"이용 방법", "장소 정보", "접근성·길 정보", "오류 신고", "기타"}
 
 
@@ -1215,7 +1311,7 @@ def inquiry_new(body: dict):
     rec = {"id": uuid.uuid4().hex[:12], "nick": (body.get("nick") or "방문자").strip()[:20], "contact": (body.get("contact") or "").strip()[:60],
            "category": body.get("category") if body.get("category") in INQ_CATS else "기타", "text": text[:1000],
            "status": "접수", "answer": "", "created_at": dt.datetime.now().isoformat(timespec="seconds")}
-    rows = _jsonl("inquiries.jsonl"); rows.append(rec); _save_jsonl("inquiries.jsonl", rows)
+    rows = _real_inquiries(); rows.append(rec); _save_jsonl("inquiries.jsonl", rows)
     return {"ok": True, "id": rec["id"]}
 
 
@@ -1223,26 +1319,27 @@ def inquiry_new(body: dict):
 def inquiry_mine(ids: str = ""):
     """내가 보낸 문의의 처리 상태·답변 (문의 id는 그 기기에만 저장)."""
     want = set(ids.split(",")) - {""}
-    return [{k: r.get(k) for k in ("id", "category", "text", "status", "answer", "created_at", "answered_at")} for r in _jsonl("inquiries.jsonl") if r["id"] in want]
+    return [{k: r.get(k) for k in ("id", "category", "text", "status", "answer", "created_at", "answered_at")} for r in _real_inquiries() if r["id"] in want]
 
 
 @app.get("/api/admin/inquiries")
 def admin_inquiries(x_admin_token: str | None = Header(None)):
     _admin(x_admin_token, "reports")
-    return sorted(_jsonl("inquiries.jsonl"), key=lambda r: r["created_at"], reverse=True)
+    return sorted(_real_inquiries() + _jsonl("sample_inquiries.jsonl"), key=lambda r: r["created_at"], reverse=True)
 
 
 @app.post("/api/admin/inquiries/{iid}")
 def admin_inquiry(iid: str, body: dict, x_admin_token: str | None = Header(None)):
-    """문의 처리: status = 접수 / 확인 중 / 답변 완료, answer = 답변."""
+    """문의 처리: status = 접수 / 확인 중 / 답변 완료, answer = 답변. 진짜·가상 문의 각자 파일에 저장."""
     s = _admin(x_admin_token, "reports")
-    rows = _jsonl("inquiries.jsonl")
-    for r in rows:
-        if r["id"] == iid:
+    for name, rows in (("inquiries.jsonl", _real_inquiries()), ("sample_inquiries.jsonl", _jsonl("sample_inquiries.jsonl"))):
+        hit = [r for r in rows if r["id"] == iid]
+        for r in hit:
             r["status"] = body.get("status", r["status"])
             r["answer"] = (body.get("answer") if body.get("answer") is not None else r.get("answer", ""))[:1000]
             r["answered_at"] = dt.datetime.now().isoformat(timespec="seconds"); r["answered_by"] = _who(s)
-    _save_jsonl("inquiries.jsonl", rows)
+        if hit:
+            _save_jsonl(name, rows)
     return {"ok": True}
 
 
