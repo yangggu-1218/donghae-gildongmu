@@ -3741,3 +3741,11 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
 .ca2-ai .ca2-sum { font-weight: 600; font-size: 1em; }
 .ca2-ai .ca2-do { padding-top: 8px; border-top: 1px dashed var(--line); }
 @media (max-width: 900px) { .planner-shell .course-layout > .res-map { position: relative; top: auto; } }   /* 예전 sticky top 이 relative 로 바뀌며 77px 밀리던 것 */
+/* 내 일정 카드: 제목·날짜·키워드를 같은 왼쪽 선에 */
+.my-page .trip2-when .ic { margin-left: -3px; }
+.my-page .trip2-title, .my-page .trip2-title button { text-align: left; }
+@media (max-width: 600px) {
+  .my-page .trip2-main > .trip2-kw { grid-column: 2; }
+  .my-page .trip2-photo { grid-row: 1 / span 3; align-self: start; }
+  .my-page .trip2-act { grid-column: 1 / -1; }
+}

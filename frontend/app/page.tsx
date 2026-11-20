@@ -237,7 +237,19 @@ export default function Page() {
       const c = m && decodePlan(m[1]);
       if (c) {
         setLang("ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
-        let fromMy = false, myT = ""; try { fromMy = sessionStorage.getItem("gd-open-my") === "1"; myT = sessionStorage.getItem("gd-open-title") || ""; sessionStorage.removeItem("gd-open-my"); sessionStorage.removeItem("gd-open-title"); } catch { /* 무시 */ }
+        let fromMy = false, myT = "", saved: any = null;
+        try {
+          fromMy = sessionStorage.getItem("gd-open-my") === "1"; myT = sessionStorage.getItem("gd-open-title") || "";
+          saved = fromMy ? JSON.parse(sessionStorage.getItem("gd-open-res") || "null") : null;
+          ["gd-open-my", "gd-open-title", "gd-open-res"].forEach((k) => sessionStorage.removeItem(k));
+        } catch { /* 무시 */ }
+        // 내 일정에서 연 코스: 저장해 둔 코스 그대로 보여 준다 (다시 계산하지 않음)
+        if (saved?.course?.stops?.length) {
+          applyRes({ ...saved, action: saved.conditions?.order?.length ? "reorder" : "saved" });
+          if (myT) setMyTitle({ key: saved.course.stops.map((s: any) => s.id).join(",") + "ko", title: myT });
+          setBusy(false);
+          return;
+        }
         (c.order?.length ? api.reorder(c, c.order) : api.course(c)).then((r) => {
           applyRes(r); if (!fromMy) setSumOpen(true);
           if (fromMy && myT) setMyTitle({ key: r.course.stops.map((s: any) => s.id).join(",") + "ko", title: myT });
@@ -260,9 +272,13 @@ export default function Page() {
     const hash = encodePlan({ ...cond, lang }, course);
     const all = loadPlans(), prev = all.find((p) => p.hash === hash);   // 같은 일정을 다시 저장하면 이름·즐겨찾기는 그대로
     const plans = all.filter((p) => p.hash !== hash);
-    const ok = savePlans([{ id: prev?.id || Math.random().toString(16).slice(2, 10), title: prev?.title || "", date: course.date, start_time: course.start_time, start: startName,
+    const list: any[] = [{ id: prev?.id || Math.random().toString(16).slice(2, 10), title: prev?.title || "", date: course.date, start_time: course.start_time, start: startName,
       stops: course.stops.map((s) => name(s.id)), hash, saved_at: new Date().toISOString(),
-      ids: course.stops.map((s) => s.id), auto: shownTitle, kw: shownKw, fav: prev?.fav }, ...plans].slice(0, 20));
+      ids: course.stops.map((s) => s.id), auto: shownTitle, kw: shownKw, fav: prev?.fav,
+      res: { course, extras: Object.fromEntries(course.stops.map((s) => [s.id, extras[s.id]])), conditions: { ...cond, lang } } }, ...plans].slice(0, 20);
+    // 저장 공간이 모자라면 예전 일정의 '코스 그대로' 사본부터 덜어 낸다 (그 일정은 열 때 다시 계산)
+    let ok = savePlans(list);
+    if (!ok) ok = savePlans(list.map((p, i) => (i === 0 ? p : { ...p, res: undefined })));
     setSaved(ok);
   }
   function planDate(d: string) {
