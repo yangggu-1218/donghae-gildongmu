@@ -30,7 +30,7 @@ function Strip({ ids, places, lang }: { ids: string[]; places: Record<string, an
   const nm = (id: string) => (lang === "ko" ? places[id]?.name_ko : places[id]?.name_en || places[id]?.name_ko) || id;
   return (
     <ol className="cm-strip" aria-label={lang === "ko" ? "다녀온 순서" : "Route order"}>
-      {ids.map((id) => <li key={id} className={["식당", "카페"].includes(places[id]?.type) ? "eat" : ""}><span>{nm(id)}</span></li>)}
+      {ids.map((id, i) => <li key={id} className={["식당", "카페"].includes(places[id]?.type) ? "eat" : ""}><b aria-hidden="true">{i + 1}</b><span>{nm(id)}</span></li>)}
     </ol>
   );
 }
@@ -293,7 +293,7 @@ function Detail({ lang, p, places, helped, onHelp, onComment, onHide, onUse }: {
         <Strip ids={p.stops} places={places} lang={lang} />
         <div className="cm-actions">
           <button className="btn-go" onClick={() => onUse(p.stops)}><Icon name="route" />{L("이 코스로 짜 보기", "Plan this route")}</button>
-          <button className="chip" aria-pressed={helped} onClick={onHelp}>{L(`도움 됐어요 ${p.helpful}`, `Helpful ${p.helpful}`)}</button>
+          <button className="chip cm-help" aria-pressed={helped} onClick={onHelp}>{L(`도움 됐어요 ${p.helpful}`, `Helpful ${p.helpful}`)}</button>
         </div>
         <p className="cm-body">{p.body}</p>
         {p.tips.length > 0 && (<>

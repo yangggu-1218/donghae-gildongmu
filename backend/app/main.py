@@ -827,15 +827,17 @@ def admin_city_merge(cid: str, body: dict, x_admin_token: str | None = Header(No
     """묶음 합치기(into = 다른 묶음 id) 또는 한 제보 떼어 내기(split = 제보 id)."""
     _admin(x_admin_token, "reports")
     cls, _ = _cluster_view(True)
+    if body.get("split"):
+        rid = body["split"]
+        # 화면의 묶음 구성이 그사이 바뀌었어도(다른 제보를 떼었거나 새 제보가 붙어서) 묶음 번호와 상관없이 그 제보를 떼어 낸다
+        if not any(rid in x["members"] for x in cls):
+            raise HTTPException(404, "제보를 찾지 못했어요")
+        # 'solo-' 묶음: 묶음 이름이 된 첫 제보를 떼어도 실제로 떨어지고, 새 제보가 이 칸에 붙지 않는다
+        reports_store.update({rid}, lambda r: r.__setitem__("cluster_override", f"solo-{rid}"))
+        return {"ok": True}
     src = next((x for x in cls if x["id"] == cid), None)
     if not src:
         raise HTTPException(404, "묶음을 찾지 못했어요")
-    if body.get("split"):
-        rid = body["split"]
-        if rid not in src["members"]:
-            raise HTTPException(400, "이 묶음의 제보가 아니에요")
-        reports_store.update({rid}, lambda r: r.__setitem__("cluster_override", rid))
-        return {"ok": True}
     dst = next((x for x in cls if x["id"] == body.get("into")), None)
     if not dst or dst["id"] == cid:
         raise HTTPException(400, "합칠 묶음을 골라 주세요")

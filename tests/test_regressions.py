@@ -60,5 +60,16 @@ check("시간 때문이면 '문 연 식당 없음'이라고 하지 않음", not 
 # 4) 관리자용 검증 기록은 공개 응답에 없다
 check("공개 장소 응답에 verify 없음", "verify" not in c.get("/api/places/cave").json() and all("verify" not in x for x in c.get("/api/places").json()))
 
+# 5) 제보 묶음 [떼어 내기]: 묶음 이름이 된 첫 제보도 실제로 떨어지고, 화면이 옛 묶음 번호를 보내도 된다 (2026-11-21)
+cl = c.get("/api/admin/city?sample=1", headers=H).json()["clusters"]
+big = next((x for x in cl if x["count"] >= 3), None)
+if big:
+    anchor, other = big["id"], [r["id"] for r in big["reports"] if r["id"] != big["id"]][0]
+    r1 = c.post(f"/api/admin/city/{anchor}/merge", json={"split": anchor}, headers=H)
+    r2 = c.post(f"/api/admin/city/{anchor}/merge", json={"split": other}, headers=H)   # 옛 묶음 번호
+    after = {y["id"]: [r["id"] for r in y["reports"]] for y in c.get("/api/admin/city?sample=1", headers=H).json()["clusters"]}
+    check("첫 제보 떼어 내기", r1.status_code == 200 and after.get(f"solo-{anchor}") == [anchor], str(after)[:200])
+    check("옛 묶음 번호로도 떼어 내기", r2.status_code == 200 and after.get(f"solo-{other}") == [other], r2.text[:120])
+
 print(f"회귀 점검 실패 {len(fails)}건")
 sys.exit(1 if fails else 0)

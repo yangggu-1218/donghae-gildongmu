@@ -496,13 +496,14 @@ function InquiryRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
   const [s, setS] = useState(r.status || "접수");
   const [a, setA] = useState(r.answer || "");
   return (
-    <li className="panel rv-row">
-      <p>{r.sample && <span className="badge b-unknown">가상</span>} <b>[{r.category}]</b> {r.nick}{r.contact ? <small className="muted"> · {r.contact}</small> : null} <small className="muted">· {String(r.created_at).replace("T", " ").slice(0, 16)}</small></p>
+    <li className="panel rv-row inq-row">
+      <p className="inq-head">{r.sample && <span className="adm-badge p-sample">가상</span>}<b>[{r.category}]</b><span>{r.nick}</span>{r.contact ? <small className="muted">{r.contact}</small> : null}<small className="muted">{String(r.created_at).replace("T", " ").slice(0, 16)}</small></p>
       <p className="inq-text">{r.text}</p>
-      <label>답변<textarea rows={3} value={a} onChange={(e) => setA(e.target.value)} placeholder="문의한 사람 화면 [내 문의]에 보여요" /></label>
-      <div className="chips">
-        {["접수", "확인 중", "답변 완료"].map((x) => <button key={x} className="chip sm" aria-pressed={s === x} onClick={() => setS(x)}>{x}</button>)}
-        <button className="chip go" onClick={() => onSave({ status: s === "접수" && a.trim() ? "답변 완료" : s, answer: a })}>저장</button>
+      <label className="inq-answer"><span>답변 <small className="muted">문의한 사람 화면 [내 문의]에 보여요</small></span>
+        <textarea rows={3} value={a} onChange={(e) => setA(e.target.value)} placeholder="답변을 적어 주세요" /></label>
+      <div className="inq-foot">
+        <span className="adm-seg" role="group" aria-label="처리 상태">{["접수", "확인 중", "답변 완료"].map((x) => <button key={x} type="button" aria-current={s === x ? "page" : undefined} onClick={() => setS(x)}>{x}</button>)}</span>
+        <button className="adm-btn primary" onClick={() => onSave({ status: s === "접수" && a.trim() ? "답변 완료" : s, answer: a })}>저장</button>
       </div>
       {r.answered_by && <p className="muted small">마지막 처리: {r.answered_by} · {String(r.answered_at).replace("T", " ").slice(0, 16)}</p>}
     </li>

@@ -1051,12 +1051,6 @@ export default function Page() {
               {course.skipped.length > 0 && (
                 <div className="tl-skip"><b>{t("tl.skipped")}</b>
                   <ul>{course.skipped.map((x) => <li key={x.id}>{lang === "ko" ? `${x.name} — ${x.reason}` : `${name(x.id)} — closed or not open at that time`}</li>)}</ul></div>)}
-              {course.notes.filter((n) => !course.skipped.some((x) => n.startsWith(x.name))).map((n) => noteText(n, lang)).filter(Boolean).map((n) => <p key={n} className="muted">{n}</p>)}
-              {hint?.events?.length ? (
-                <div className={`tl-events${hint.onDay ? " on" : ""}`}>
-                  <b><Icon name="event" /> {t(hint.onDay ? "tl.eventsDay" : "tl.eventsSoon")}</b>
-                  <ul>{hint.events.map((e) => <li key={e.name}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}{e.venue ? ` · ${e.venue}` : ""}</li>)}</ul>
-                </div>) : null}
               {hint?.stay && <p className="muted"><Icon name="bed" /> {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
               <ReportBox stops={course.stops.map((s) => ({ id: s.id, name: name(s.id) }))} t={t} />
             </>

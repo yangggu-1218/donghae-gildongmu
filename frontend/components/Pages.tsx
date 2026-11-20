@@ -724,12 +724,6 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
             </li>); })}
         </ul>
         <Pager cur={cur} pages={pages} lang={lang} onGo={(n) => { setPg(n); document.getElementById("fac-list")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
-        {on.toilets && unmapped.length > 0 && (
-          <details className="panel">
-            <summary>{L(`지도 위치를 아직 못 정한 장애인 화장실 ${unmapped.length}곳 (주소로 보기)`, `${unmapped.length} accessible toilets without map position`)}</summary>
-            <ul className="plain">{unmapped.map((t: any) => <li key={t.name + t.road}>{nm(lang, t.name)} · {tr(lang, t.kind)} · {tr(lang, t.hours)}{t.diaper ? L(" · 기저귀 교환대", " · baby changing") : ""} <small className="muted">{ad(lang, t.road)}</small></li>)}</ul>
-          </details>
-        )}
         {on.lodging && <p className="muted small">{L("숙소 위치는 공공데이터 주소로 찾은 건물 위치예요. 장애인 객실 정보는 공공데이터에 없음. ", "Stay locations come from public address data; accessible rooms not yet checked. ")}<a href="#/stay">{L("숙소 목록으로 보기", "See the list")}</a></p>}
       </>)}
     </section>

@@ -122,7 +122,8 @@ function ClusterDetail({ c, d, tok, call, can, reload, onBack }: Any) {
         <Icon name="pin" /><span><b>위치</b> {where || "지도 위치만 있음"}</span>
         {c.lat && <span className="ca2-links"><a href={`https://map.kakao.com/link/map/${encodeURIComponent(c.title)},${c.lat},${c.lon}`} target="_blank" rel="noreferrer">지도 보기 ↗</a><a href={`https://map.kakao.com/link/roadview/${c.lat},${c.lon}`} target="_blank" rel="noreferrer">로드뷰 ↗</a></span>}
       </div>
-      {stepI >= 0 ? <ol className="ca2-steps" aria-label="처리 단계">{STEPS4.map((s, i) => <li key={s} className={i < stepI ? "done" : i === stepI ? "cur" : ""}><span>{i <= stepI ? "✓" : i + 1}</span>{s}</li>)}</ol>
+      {stepI >= 0 ? <ol className="ca2-steps" aria-label="처리 단계">{STEPS4.map((s, i) => <li key={s} className={i < stepI ? "done" : i === stepI ? "cur" : ""} aria-current={i === stepI ? "step" : undefined}>
+          {i > 0 && <i className="ca2-bar" aria-hidden="true" />}<span className="ca2-dot">{i <= stepI ? "✓" : i + 1}</span><b>{s}</b></li>)}</ol>
         : <p className="ca2-closed">처리 상태: <b>{c.status}</b></p>}
       <dl className="ca2-meta">
         <div><dt>담당</dt><dd>{String(c.dept_name || "").replace(/\s*\(.*\)\s*$/, "")}</dd></div>

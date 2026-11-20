@@ -3358,3 +3358,36 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
   .planner-bar { gap: 6px; }
   .res-map .map-size { min-height: 38px; }
 }
+/* 관리자 처리 단계 (다시 그림): 원+글자를 한 덩어리로, 단계 사이 선은 그 앞에 따로 */
+.ca2-steps { display: flex; align-items: center; gap: 0; }
+.ca2-steps li { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.ca2-steps li + li { flex: 1 1 0; }
+.ca2-steps li + li::before { content: none !important; }
+.ca2-steps .ca2-bar { flex: 1; height: 3px; min-width: 16px; margin: 0 12px; border-radius: 2px; background: var(--adm-line); }
+.ca2-steps li.done .ca2-bar, .ca2-steps li.cur .ca2-bar { background: #2462B4; }
+.ca2-steps .ca2-dot { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #D5DDE7; color: #fff; font-size: .82em; font-weight: 800; flex: none; }
+.ca2-steps li.done .ca2-dot, .ca2-steps li.cur .ca2-dot { background: #2462B4; }
+.ca2-steps li.cur .ca2-dot { box-shadow: 0 0 0 4px #D8E6F7; }
+.ca2-steps li b { font-weight: 700; color: #8A98AA; white-space: nowrap; }
+.ca2-steps li.done b, .ca2-steps li.cur b { color: var(--adm-navy); }
+.ca2-steps li > span:not(.ca2-dot) { display: none; }
+@media (max-width: 600px) { .ca2-steps .ca2-bar { margin: 0 6px; min-width: 8px; } .ca2-steps li b { font-size: .85em; } .ca2-steps .ca2-dot { width: 24px; height: 24px; } }
+/* 문의 답변 칸 */
+.inq-row { display: grid; gap: 10px; }
+.inq-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; }
+.inq-row .inq-text { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--mist); }
+.inq-answer { display: grid; gap: 6px; font-weight: 700; }
+.inq-answer small { font-weight: 500; margin-left: 4px; }
+.inq-answer textarea { width: 100%; box-sizing: border-box; min-height: 88px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; font: inherit; font-weight: 400; resize: vertical; background: var(--surface); color: var(--ink); }
+.inq-answer textarea:focus { outline: none; border-color: #2462B4; box-shadow: 0 0 0 3px #D8E6F7; }
+.inq-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+/* 다녀온 길: 다녀온 순서를 번호 알약으로, 사이는 › */
+.cm-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 6px; padding: 4px 0 0; }
+.cm-strip li { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 700; color: var(--sea-deep); }
+.cm-strip li::before { content: none !important; }
+.cm-strip li b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--sea); color: #fff; font-size: .8em; }
+.cm-strip li.eat b { background: var(--sun-deep); }
+.cm-strip li:not(:last-child)::after { content: "›" !important; position: static !important; width: auto !important; border: 0 !important; margin-left: 8px; color: var(--muted); font-weight: 700; }
+/* 다녀온 길 버튼 두 개 같은 높이 */
+.cm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cm-actions .btn-go, .cm-actions .cm-help { min-height: 48px; margin: 0; padding: 0 20px; box-sizing: border-box; border-width: 1.5px; font-size: 1em; }

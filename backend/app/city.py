@@ -166,6 +166,8 @@ def clusters(rows: list[dict], places: dict, radius: float = 30, days: int = 60)
         best = None
         if pos:
             for cid, g in groups.items():
+                if cid.startswith("solo-"):   # 담당자가 [떼어 내기]한 제보는 혼자 두고, 새 제보가 붙지 않게
+                    continue
                 last = g[-1]
                 if cat_of(last) != cat or bool(last.get("sample")) != bool(r.get("sample")):
                     continue
