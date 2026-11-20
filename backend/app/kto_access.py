@@ -96,7 +96,8 @@ def _load() -> list[dict]:
     for f in ("kto_access_a.json", "kto_access_b.json"):
         p = RAW / f
         if p.exists():
-            out += json.loads(p.read_text(encoding="utf-8"))
+            # 원본 문구 끝의 '_무장애 편의시설' 꼬리표는 화면에 보이지 않게 뺀다 (팀장 요청: '무장애' 표현 안 씀)
+            out += json.loads(p.read_text(encoding="utf-8").replace("_무장애 편의시설", "").replace("무장애", "이동약자"))
     return out
 
 
