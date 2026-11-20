@@ -29,7 +29,7 @@ type Near = { name: string; dist_m?: number; tel?: string; hours?: string; open_
 export type Nearby = { parking: Near; charger: Near & { spot?: string; weekday_hours?: string }; info_center: Near; medical: Record<"약국" | "의원" | "응급실", Near> };
 export type CourseRes = {
   course: Course; rain: boolean; summary: string; conditions: Conditions; extras: Record<string, Extra>; stay: any; move: any;
-  events: any[]; events_on_day: boolean; reply?: string; action?: string; target?: string | null; changed?: boolean;
+  events: any[]; events_on_day: boolean; planner?: { by: "ai" | "rule"; model?: string; summary?: string; problems?: string[] }; reply?: string; action?: string; target?: string | null; changed?: boolean;
 };
 
 // 공공데이터에서 붙는 장소별 정보 (backend/app/public_data.py)

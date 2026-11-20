@@ -368,7 +368,11 @@ export default function Page() {
       setHist([]); applyRes(r);
       if (!r.course.stops.length) say({ pose: "worry", text: lang === "ko" ? `${r.course.start_time} 출발이면 문을 연 곳이 거의 없어서 코스를 만들지 못했어요. 관광지는 대부분 오후 5~6시에 닫아요. 아래 [날짜·출발 바꾸기]에서 오전이나 이른 오후로 바꿔 보세요.`
         : `Almost nothing is open after ${r.course.start_time}. Most places close around 5-6 pm; try a morning or early-afternoon start.` });
-      else say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length, t: r.course.back_at }) });
+      else {
+        say({ pose: "happy", text: t("plan.done", { n: r.course.stops.length, t: r.course.back_at }) });
+        // ① AI 코스 설계 에이전트가 짰으면 어떻게 짰는지 한 줄 (규칙 코스면 말하지 않음)
+        if (r.planner?.by === "ai" && r.planner.summary) say({ pose: "neutral", via: "llm", text: (lang === "ko" ? "AI가 장소를 직접 찾아보고 시간을 맞춰 본 코스예요. " : "The AI searched places and checked the timing itself. ") + r.planner.summary });
+      }
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false); setStep(Q.length + 1);
   }

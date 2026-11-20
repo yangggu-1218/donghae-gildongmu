@@ -9,7 +9,7 @@ import { SourcesPage } from "@/components/Pages";
 
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
-const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보 검수", "reports"], ["inquiries", "문의", "reports"],
+const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보 검수", "reports"], ["inquiries", "문의", "reports"], ["aiprops", "AI 제안", "reports"], ["aiset", "AI 설정", "reports"],
   ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
 type TabKey = (typeof TABS)[number][0];
 type User = { id: string; name: string; role: string; role_name: string; perms: string[]; must_change?: boolean; expires_at?: string };
@@ -17,7 +17,7 @@ const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·
 const LEVEL: Record<string, string> = { closed: "임시 휴무 (코스에서 빠짐)", warn: "주의 (공사·우회 등)", info: "안내" };
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const ACTION: Record<string, string> = { place: "장소 정보 수정", notice_add: "알림 올림", notice_remove: "알림 내림", banner: "공지 배너", event_add: "행사 추가",
-  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경" };
+  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경", ai_models: "AI 모델 설정" };
 const STATUS = ["접수", "확인 중", "반영", "반려"];
 const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
@@ -112,6 +112,8 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
       {tab === "site" && <SiteEditor db={db} tok={tok} call={call} />}
       {tab === "reports" && <Reports tok={tok} call={call} onExpired={onExpired} canNotice={can("notice")} />}
       {tab === "inquiries" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
+      {tab === "aiprops" && <AiProposals tok={tok} call={call} onExpired={onExpired} can={can} />}
+      {tab === "aiset" && <AiSettings tok={tok} call={call} onExpired={onExpired} isOwner={can("accounts")} />}
       {tab === "sources" && <SourcesPage lang="ko" />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}
       {tab === "history" && <History db={db} tok={tok} call={call} name={name} canBackup={can("backup")} />}
@@ -308,6 +310,90 @@ function InquiryRow({ r, onSave }: { r: any; onSave: (b: any) => void }) {
       </div>
       {r.answered_by && <p className="muted small">마지막 처리: {r.answered_by} · {String(r.answered_at).replace("T", " ").slice(0, 16)}</p>}
     </li>
+  );
+}
+
+// ③ AI 제안: 제보·길 메모를 AI가 정리해 만든 '사이트 수정 제안'. 승인해야 반영되고, 변경 이력에서 되돌릴 수 있다.
+const PROP_KIND: Record<string, string> = { notice: "임시 알림 올리기", hours: "운영시간 바꾸기", facility_add: "편의시설 추가", facility_remove: "편의시설 삭제" };
+function AiProposals({ tok, call, onExpired, can }: any) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [show, setShow] = useState<"pending" | "all">("pending");
+  const [busy, setBusy] = useState(false);
+  const load = () => api.get("/api/admin/ai/proposals", tok).then(setRows).catch((e: any) => { if (e.status === 401) onExpired(); setRows([]); });
+  useEffect(() => { load(); }, []);
+  const refresh = async () => {
+    setBusy(true);
+    try { await call(() => api.post("/api/admin/ai/refresh", {}, tok), "최근 제보를 AI가 다시 정리했어요."); } catch { /* 위에 안내 */ }
+    setBusy(false); load();
+  };
+  const list = (rows || []).filter((r) => show === "all" || r.status === "pending");
+  return (
+    <div>
+      <p className="muted">이용자 제보와 길 메모를 AI가 장소마다 읽고 정리한 수정 제안이에요. <b>승인</b>해야 사이트에 반영되고, [변경 이력]에서 되돌릴 수 있어요. 근거 원문을 꼭 읽고 판단해 주세요.</p>
+      <div className="chips">
+        <button className="chip sm" aria-pressed={show === "pending"} onClick={() => setShow("pending")}>기다리는 제안</button>
+        <button className="chip sm" aria-pressed={show === "all"} onClick={() => setShow("all")}>전체</button>
+        <button className="chip" disabled={busy} onClick={refresh}>{busy ? "AI가 정리하는 중…" : "최근 제보 다시 정리"}</button>
+      </div>
+      <ul className="rv-list">
+        {list.map((r) => <AiPropRow key={r.id} r={r} canApply={can(r.type === "notice" ? "notice" : "place")}
+          onDecide={(approve: boolean, memo: string) => call(() => api.post(`/api/admin/ai/proposals/${r.id}`, { approve, memo }, tok), approve ? "승인해서 사이트에 반영했어요." : "반려했어요.").then(load).catch(() => {})} />)}
+        {rows && !list.length && <li className="muted">{show === "pending" ? "기다리는 제안이 없어요." : "아직 AI 제안이 없어요. 제보가 들어오면 장소 화면을 열거나 [최근 제보 다시 정리]를 누를 때 만들어져요."}</li>}
+      </ul>
+    </div>
+  );
+}
+function AiPropRow({ r, canApply, onDecide }: { r: any; canApply: boolean; onDecide: (a: boolean, m: string) => void }) {
+  const [memo, setMemo] = useState("");
+  const done = r.status !== "pending";
+  return (
+    <li className={`panel ai-prop${done ? " done" : ""}`}>
+      <p><b>{r.name}</b> · {PROP_KIND[r.type] || r.type} <small className="muted">· {String(r.created_at || "").replace("T", " ").slice(0, 16)}</small>
+        {done && <span className={`badge ${r.status === "approved" ? "g-G" : "b-unknown"}`} style={{ marginLeft: 8 }}>{r.status === "approved" ? "승인됨" : "반려됨"}</span>}</p>
+      <p><b>{r.title}</b>{r.type === "notice" && <small className="muted"> ({LEVEL[r.level] || r.level}, {r.end_date}까지)</small>}
+        {r.type === "hours" && <small className="muted"> ({r.open}~{r.close})</small>}</p>
+      {r.detail && <p>{r.detail}</p>}
+      <details open={!done}><summary>근거 제보 {r.evidence_rows?.length || 0}건</summary>
+        <ul className="ai-list">{(r.evidence_rows || []).map((e: any) => <li key={e.id}><small className="muted">{e.date} · {e.kind || "-"}</small> {e.note || "(내용 없음)"}{e.photo && <> · <a href={e.photo} target="_blank" rel="noreferrer">사진</a></>}</li>)}</ul>
+      </details>
+      {!done ? <div className="chips">
+        <input className="box" placeholder="메모 (선택)" value={memo} maxLength={200} onChange={(e) => setMemo(e.target.value)} />
+        <button className="chip go" disabled={!canApply} title={canApply ? "" : "이 제안을 반영할 권한이 없어요"} onClick={() => onDecide(true, memo)}>승인하고 반영</button>
+        <button className="chip" onClick={() => onDecide(false, memo)}>반려</button>
+      </div> : r.decided_by && <p className="muted small">처리: {r.decided_by} · {String(r.decided_at || "").replace("T", " ").slice(0, 16)}{r.memo ? ` · ${r.memo}` : ""}</p>}
+    </li>
+  );
+}
+
+// AI 설정: 작업마다 빠른 모델(Haiku)·똑똑한 모델(Sonnet) 고르기 + 이번 실행 동안 쓴 양. 바꾸기는 총괄 관리자만.
+function AiSettings({ tok, call, onExpired, isOwner }: any) {
+  const [d, setD] = useState<any>(null);
+  const [tiers, setTiers] = useState<Record<string, string>>({});
+  const load = () => api.get("/api/admin/ai/settings", tok).then((r: any) => { setD(r); setTiers(Object.fromEntries(r.tasks.map((t: any) => [t.key, t.tier]))); })
+    .catch((e: any) => { if (e.status === 401) onExpired(); });
+  useEffect(() => { load(); }, []);
+  if (!d) return <p className="muted">불러오는 중…</p>;
+  const price = (m: string) => { const p = d.price_per_mtok?.[m]; return p ? `$${p[0]} / $${p[1]}` : "-"; };
+  const total = Object.values(d.usage || {}).reduce((a: number, u: any) => a + (u.usd || 0), 0) as number;
+  return (
+    <div>
+      <p className="muted">{d.connected ? "Claude API 연결됨." : "Claude API 키가 없어 AI 기능이 꺼져 있어요(규칙으로 대신해요)."} 빠른 모델은 Haiku, 똑똑한 모델은 Sonnet이에요. Sonnet은 같은 양에 약 20배 비싸요.</p>
+      <table className="ai-models">
+        <thead><tr><th>작업</th><th>모델</th><th>이번 실행 사용</th></tr></thead>
+        <tbody>{d.tasks.map((t: any) => { const u = d.usage?.[t.key]; return (
+          <tr key={t.key}><td>{t.ko}{t.tier !== t.default && <small className="muted"> (기본: {t.default === "smart" ? "Sonnet" : "Haiku"})</small>}</td>
+            <td><select className="box" disabled={!isOwner} value={tiers[t.key] || t.tier} onChange={(e) => setTiers({ ...tiers, [t.key]: e.target.value })}>
+              <option value="fast">빠른 모델 (Haiku) · {price(d.models.fast)}</option>
+              <option value="smart">똑똑한 모델 (Sonnet) · {price(d.models.smart)}</option></select></td>
+            <td>{u ? `${u.calls}번 (대체 ${u.fallback}) · 약 $${u.usd}` : "-"}</td></tr>); })}</tbody>
+      </table>
+      <p className="muted small">가격은 100만 토큰당 (입력 / 출력) 달러. 사용량은 서버가 다시 시작되면 0부터 세요. 이번 실행 합계 약 ${total.toFixed(4)}.</p>
+      {Object.keys(d.last || {}).length > 0 && <details><summary>최근 AI 실패 이유</summary><ul className="ai-list">{Object.entries(d.last).map(([k, v]: any) => <li key={k}><b>{k}</b> {v.at} · {v.why}</li>)}</ul></details>}
+      {isOwner ? <button className="chip go" onClick={() => {
+        const changed = Object.fromEntries(Object.entries(tiers).filter(([k, v]) => v !== d.tasks.find((t: any) => t.key === k)?.default));
+        call(() => api.post("/api/admin/ai/settings", { tiers: changed }, tok), "AI 모델 설정을 저장했어요.").then(load).catch(() => {});
+      }}>저장</button> : <p className="muted small">모델 바꾸기는 총괄 관리자만 할 수 있어요.</p>}
+    </div>
   );
 }
 

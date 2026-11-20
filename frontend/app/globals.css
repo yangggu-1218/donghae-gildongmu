@@ -1707,3 +1707,30 @@ body.big .quick a, body.big .quick button { width: 88px; font-size: 14px; }
   .my-list > .trip:has(.trip-detail) > .trip-detail { grid-column: 2; grid-row: 1 / span 20; border-top: 0; border-left: 1px solid var(--line); padding: 0 0 0 24px; }
 }
 
+
+/* 편의시설 지도: 내 위치 빨간 점 */
+.me-dot { width: 18px; height: 18px; border-radius: 50%; background: #E0262B; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(224,38,43,.22), 0 1px 4px rgba(0,0,0,.4); }
+@media (prefers-reduced-motion: no-preference) { .me-dot { animation: me-pulse 2s ease-out infinite; } }
+@keyframes me-pulse { 0% { box-shadow: 0 0 0 0 rgba(224,38,43,.45), 0 1px 4px rgba(0,0,0,.4); } 100% { box-shadow: 0 0 0 14px rgba(224,38,43,0), 0 1px 4px rgba(0,0,0,.4); } }
+.map-loc { margin: 6px 0 8px; }
+
+/* ---------- AI 판정관 · 최근 길 상태 (docs/17_AI_FEATURES.md) ---------- */
+.ai-card { border: 1px solid var(--line); border-left: 4px solid var(--line-strong); border-radius: var(--r-m); padding: 12px 14px; margin: 10px 0 14px; background: var(--surface); }
+.ai-card.loading { background: var(--mist); border-left-color: var(--line); }
+.ai-judge.v-G { border-left-color: var(--go); }
+.ai-judge.v-Y, .ai-status.s-caution { border-left-color: var(--sun-deep); }
+.ai-judge.v-R, .ai-status.s-issue { border-left-color: var(--stop); }
+.ai-status { margin: 14px 0; }
+.ai-status.s-ok { border-left-color: var(--go); }
+.ai-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.ai-top .pp2-h { margin: 0 6px 0 0; }
+.ai-by { margin: 0; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.ai-top .ai-by { margin-left: auto; }
+.ai-head { margin: 8px 0 4px; font-weight: 600; line-height: 1.5; }
+.ai-sub { margin: 10px 0 4px; font-size: .95rem; }
+.ai-list { margin: 0; padding-left: 1.2em; line-height: 1.6; }
+.ai-list.warn li::marker { color: var(--stop); }
+.ai-prop { border: 1px solid var(--line); border-radius: var(--r-m); padding: 10px 12px; margin: 8px 0; }
+.ai-prop.done { opacity: .65; }
+.ai-models td, .ai-models th { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+.ai-models { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }

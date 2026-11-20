@@ -402,6 +402,8 @@ export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
     if (!nick.trim() || !text.trim()) return;
     try { localStorage.setItem("gd-nick", nick.trim()); } catch { /* */ }
     const s = load(); (s.notes[id] ||= []).unshift({ nick: nick.trim().slice(0, 20), date: today(), text: text.trim().slice(0, 300), tip }); save(s); setSt(s); setText(""); setTip(false);
+    // 서버에도 보내 '최근 길 상태' AI 요약의 재료로 쓴다 (닉네임은 보내지 않음). 실패해도 내 화면 기록은 남는다.
+    api.post("/api/place-notes", { place_id: id, text: text.trim().slice(0, 300), tip }).catch(() => { /* 오프라인·데모 */ });
   };
   return (
     <section className="panel cm-place" aria-labelledby="cm-pl-h">

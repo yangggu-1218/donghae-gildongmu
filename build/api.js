@@ -1100,6 +1100,22 @@ export function makeApi(DATA) {
   rebuild();
   function handle(method, path, q, body) {
     if (path === "/api/site") return cmsSite();
+    // AI 기능(판정관·코스 에이전트·길 상태·AI 제안)은 서버에서만 돈다. 데모에선 '없음'으로 답해 화면이 조용히 숨긴다.
+    if (path.startsWith("/api/ai/judge/")) return { by: "none" };
+    if (/^\/api\/places\/[^/]+\/status$/.test(path)) return { by: "none", state: "none", count: 0 };
+    if (path === "/api/place-notes" && method === "POST") return { ok: true, id: Math.random().toString(16).slice(2, 14), demo: true };
+    if (path.startsWith("/api/admin/ai/")) {
+      demoCheck(q.__token, path === "/api/admin/ai/settings" && method === "POST" ? "accounts" : "reports");
+      if (path === "/api/admin/ai/proposals") return [];
+      if (path === "/api/admin/ai/refresh") return { places: 0, new_proposals: 0, demo: true };
+      if (path === "/api/admin/ai/settings") {
+        const models = { fast: "claude-haiku-5-5", smart: "claude-sonnet-5-5" };
+        const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];
+        return { models, price_per_mtok: { "claude-haiku-5-5": [0.1, 0.5], "claude-sonnet-5-5": [2, 10] }, connected: false, usage: {}, last: {},
+          tasks: T.map(([key, ko, tier]) => ({ key, ko, tier, default: tier, model: models[tier] })) };
+      }
+      throw new Error("400:데모에서는 AI 제안을 처리할 수 없어요.");
+    }
     if (path.startsWith("/api/admin/reports") || path.startsWith("/api/admin/visits")) demoCheck(q.__token, permOf(path));
     if (path.startsWith("/api/admin/") && !path.startsWith("/api/admin/reports") && !path.startsWith("/api/admin/visits")) {
       const r = cmsAdmin(method, path, q, body || {}); if (r !== undefined) return r;

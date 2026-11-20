@@ -1,20 +1,16 @@
 """AI 작업 4가지. 모두 JSON만 받고, 서버가 검증한다. AI가 실패하거나 키가 없으면 규칙 기반으로 대신한다."""
 import json, os, re
 from pathlib import Path
-import httpx
+from . import ai
 
 PROMPTS = Path(__file__).parent / "prompts"
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-MODEL = os.getenv("LLM_MODEL", "claude-haiku-5-5")
+MODEL = os.getenv("LLM_MODEL") or ai.model_for("etc")   # 화면 표시용 (실제 모델은 ai.model_for)
 TIMEOUT = float(os.getenv("LLM_TIMEOUT") or 6)
 WORKSPACE = os.getenv("ANTHROPIC_WORKSPACE_ID", "")   # 키를 워크스페이스에 묶지 않았다면 필요
 
 
-def headers() -> dict:
-    h = {"x-api-key": API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}
-    if WORKSPACE:
-        h["anthropic-workspace-id"] = WORKSPACE
-    return h
+
 _cache: dict[str, dict] = {}   # 데모 안정성: 같은 입력은 같은 답
 
 # 서비스 실행 중 AI API를 몇 번 불렀는지 (심사·발표 때 /api/ai 로 보여 준다)
@@ -30,7 +26,7 @@ def count(task: str, ok: bool, tokens: int = 0):
 
 
 def status() -> dict:
-    return {"connected": bool(API_KEY), "model": MODEL, "provider": "Anthropic Claude API", "tasks": USAGE, "last_fail": LAST_FAIL,
+    return {"connected": bool(API_KEY), "model": ai.model_for("etc"), "models": ai.settings(), "usage": ai.USAGE, "last": ai.LAST, "provider": "Anthropic Claude API", "tasks": USAGE, "last_fail": LAST_FAIL,
             "runtime_features": ["대화형 동이(도구 호출)", "자유 입력 조건 해석", "말로 코스 수정", "추천 이유 생성",
                                  "제보 사진 분석(비전)", "무장애 메모 구조화"]}
 
@@ -61,28 +57,22 @@ def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None
     key = system[:40] + (user if isinstance(user, str) else json.dumps(user)[:2000])
     if key in _cache:
         return _cache[key]
-    try:
-        r = httpx.post(
-            "https://api.anthropic.com/v1/messages",
-            headers=headers(),
-            json={"model": MODEL, "max_tokens": max_tokens, "system": system,   # 이 모델은 temperature를 받지 않는다
-                  "messages": [{"role": "user", "content": user}]},
-            timeout=timeout or TIMEOUT,
-        )
-        r.raise_for_status()
-        out = r.json()
-        text = "".join(b.get("text", "") for b in out.get("content", []))
-        data = _first_json(text)
+    try:   # 공식 SDK 로 (backend/app/ai.py). 모델은 작업 'etc' 설정(기본 Haiku)
+        out = ai.create("etc", max_tokens=max_tokens, system=system, messages=[{"role": "user", "content": user}], timeout=timeout or TIMEOUT)
+        text = ai._text(out)
+        bad = ai._why_bad(out)
+        data = None if bad else _first_json(text)
         if data is None:
-            print(f"[llm] {task}: JSON을 못 읽음 (stop={out.get('stop_reason')}):", text[:300])
-            LAST_FAIL[task] = {"stop": out.get("stop_reason"), "head": text[:400], "tail": text[-200:]}
-        count(task, data is not None, sum((out.get("usage") or {}).get(k, 0) for k in ("input_tokens", "output_tokens")))
+            print(f"[llm] {task}: JSON을 못 읽음 (stop={out.stop_reason}):", text[:300])
+            LAST_FAIL[task] = {"stop": out.stop_reason, "head": text[:400], "tail": text[-200:]}
+        count(task, data is not None, (out.usage.input_tokens or 0) + (out.usage.output_tokens or 0))
+        ai._count("etc", ai.model_for("etc"), data is not None, out.usage, bad or "")
         if data is not None:
             _cache[key] = data
         return data
     except Exception as e:   # 시간 초과, 형식 오류 등 → 규칙 기반으로
         count(task, False)
-        print("[llm] fallback:", e, getattr(getattr(e, "response", None), "text", "")[:300])
+        print("[llm] fallback:", type(e).__name__, str(e)[:300])
         return None
 
 

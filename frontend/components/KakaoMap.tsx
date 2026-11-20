@@ -19,7 +19,10 @@ const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 
 // dots: 편의시설 지도용. 색 점 + 글자 하나, 누르면 onPick(i)
 // zoomOnPick: 점을 누르면 그 주변 약 500m가 보이게 확대 · focus: 바깥(목록)에서 고른 점 · center: 내 위치 등 기준점
-export default function KakaoMap({ pins, overview = false, dots = false, onPick, label, zoomOnPick = false, focus = null, center = null }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string; zoomOnPick?: boolean; focus?: number | null; center?: [number, number] | null }) {
+// cluster: 멀리 볼 때(레벨 6 이상, 축척 500m~) 가까이 모인 점을 'n곳' 숫자로 묶는다 · start: 처음 보여 줄 가운데·레벨 (없으면 점 전체가 보이게)
+// centerLevel·centerKey: center로 옮길 때의 레벨, 같은 곳이어도 다시 옮기기 · me: 내 위치 빨간 점
+// 카카오 지도 레벨과 축척 막대: 4=100m, 5=250m, 6=500m, 7=1km, 8=2km, 9=4km, 10=8km
+export default function KakaoMap({ pins, overview = false, dots = false, onPick, label, zoomOnPick = false, focus = null, center = null, cluster = false, start = null, centerLevel = 4, centerKey = 0, me = null }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string; zoomOnPick?: boolean; focus?: number | null; center?: [number, number] | null; cluster?: boolean; start?: { lat: number; lon: number; level: number } | null; centerLevel?: number; centerKey?: number; me?: [number, number] | null }) {
   const ref = useRef<HTMLDivElement>(null);
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
   const [failed, setFailed] = useState(false);   // 키가 틀렸거나 도메인이 등록되지 않으면 약도로 대신한다
@@ -28,7 +31,11 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
   const pinsRef = useRef(pins); pinsRef.current = pins;
   const pickRef = useRef(onPick); pickRef.current = onPick;
   const zoomRef = useRef(zoomOnPick); zoomRef.current = zoomOnPick;
-  const apiRef = useRef<{ focus: (i: number) => void; center: (lat: number, lon: number) => void } | null>(null);
+  const apiRef = useRef<{ focus: (i: number) => void; center: (lat: number, lon: number, level: number) => void; me: (p: [number, number] | null) => void } | null>(null);
+  const startRef = useRef(start); startRef.current = start;
+  const viewRef = useRef<{ c: any; l: number } | null>(null);   // 층을 켜고 끄면 지도를 새로 그려도 보던 자리·확대를 그대로
+  const centerRef = useRef<{ c: [number, number]; l: number } | null>(null);
+  const meRef = useRef(me); meRef.current = me;
 
   useEffect(() => {
     const pins = pinsRef.current;
@@ -37,7 +44,9 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
       const { maps } = window.kakao;
       const box = ref.current!;
       box.innerHTML = "";
-      const map = new maps.Map(box, { center: new maps.LatLng(pins[0].lat, pins[0].lon), level: 8 });
+      const v = viewRef.current, st = startRef.current;
+      const map = new maps.Map(box, { center: v ? v.c : st ? new maps.LatLng(st.lat, st.lon) : new maps.LatLng(pins[0].lat, pins[0].lon), level: v ? v.l : st ? st.level : 8 });
+      maps.event.addListener(map, "idle", () => { viewRef.current = { c: map.getCenter(), l: map.getLevel() }; });
       const bounds = new maps.LatLngBounds();
       // 위로 뜨는 카드, 아래로 뜨는 카드 (카카오 오버레이는 기준점을 나중에 바꿀 수 없어 둘을 둔다)
       const popUp = new maps.CustomOverlay({ map: null, position: map.getCenter(), yAnchor: 1, zIndex: 10, clickable: true });
@@ -83,6 +92,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         else { if (zoomRef.current) map.panTo(pos); show(p, pos, true); }
       };
       const path = pins.map((p) => new maps.LatLng(p.lat, p.lon));
+      const grouped: any[] = [];   // cluster일 때 묶음에 넣을 점들
       pins.forEach((p, i) => {
         const pos = path[i]; bounds.extend(pos);
         const bg = p.color || (p.grade ? COLOR[p.grade] : "#2462B4");
@@ -92,7 +102,8 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
           el.style.cssText = `width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;border:2px solid #fff;font:700 12px sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35)`;
           el.textContent = p.icon || "";
           hook(el, p, pos, i);
-          new maps.CustomOverlay({ map, position: pos, content: el, clickable: true });
+          if (cluster) grouped.push(new maps.CustomOverlay({ position: pos, content: el, clickable: true }));
+          else new maps.CustomOverlay({ map, position: pos, content: el, clickable: true });
           return;
         }
         if (overview) {   // 갈 수 있는 관광지 전체 보기: 번호·경로 없이 이름만
@@ -108,17 +119,37 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         new maps.CustomOverlay({ map, position: pos, content: el, clickable: true });
       });
       if (!overview && !dots) new maps.Polyline({ map, path, strokeWeight: 3, strokeColor: "#566275", strokeStyle: "shortdash" });
-      if (pins.length > 1) map.setBounds(bounds); else map.setLevel(4);
+      // 멀리 볼 때는 'n곳' 숫자로 묶고, 레벨 5(250m) 이하로 들어가면 하나하나 보인다. 숫자를 누르면 그 곳으로 확대
+      if (cluster && grouped.length) {
+        const cs = (w: number) => ({ width: `${w}px`, height: `${w}px`, background: "#1F3F6E", borderRadius: "50%", color: "#fff", textAlign: "center", lineHeight: "1", display: "flex", alignItems: "center", justifyContent: "center",
+          border: "3px solid #fff", font: `800 ${w > 56 ? 18 : 16}px sans-serif`, boxShadow: "0 2px 6px rgba(0,0,0,.35)", boxSizing: "border-box" });
+        const cl = new maps.MarkerClusterer({ map, averageCenter: true, minLevel: 6, gridSize: 64, minClusterSize: 3, disableClickZoom: false,
+          calculator: [10, 30], styles: [cs(52), cs(60), cs(68)] });
+        cl.setTexts((n: number) => (isEn() ? `${n}` : `${n}곳`));
+        cl.addMarkers(grouped);
+      }
+      if (!viewRef.current && !startRef.current) { if (pins.length > 1) map.setBounds(bounds); else map.setLevel(4); }
+      // 내 위치: 빨간 점 (묶음에 넣지 않고 늘 보이게)
+      let meO: any = null;
+      const placeMe = (p: [number, number] | null) => {
+        if (meO) { meO.setMap(null); meO = null; }
+        if (!p) return;
+        const d = document.createElement("div"); d.className = "me-dot"; d.setAttribute("role", "img"); d.setAttribute("aria-label", isEn() ? "You are here" : "내 위치");
+        meO = new maps.CustomOverlay({ map, position: new maps.LatLng(p[0], p[1]), content: d, zIndex: 20 });
+      };
       apiRef.current = {
         focus: (i: number) => { const p = pins[i]; if (p) { const z = zoomRef.current; zoomRef.current = true; zoomTo(p, path[i]); zoomRef.current = z; } },
-        center: (lat: number, lon: number) => { map.setLevel(4); map.setCenter(new maps.LatLng(lat, lon)); },
+        center: (lat: number, lon: number, level: number) => { map.setLevel(level); map.setCenter(new maps.LatLng(lat, lon)); },
+        me: placeMe,
       };
+      placeMe(meRef.current);
+      if (centerRef.current && !viewRef.current) apiRef.current.center(centerRef.current.c[0], centerRef.current.c[1], centerRef.current.l);
       // 숨겨진 칸(교통 탭 등)에서 만들어진 지도는 크기가 0이라 회색으로 깨진다 → 보이게 되면 다시 그리기
       let wasZero = box.clientWidth === 0;
       const ro = new ResizeObserver(() => {
         if (!box.clientWidth) { wasZero = true; return; }
         map.relayout();
-        if (wasZero) { wasZero = false; if (pins.length > 1) map.setBounds(bounds); else map.setCenter(path[0]); }
+        if (wasZero) { wasZero = false; const s0 = startRef.current; if (s0) { map.setLevel(s0.level); map.setCenter(new maps.LatLng(s0.lat, s0.lon)); } else if (pins.length > 1) map.setBounds(bounds); else map.setCenter(path[0]); }
       });
       ro.observe(box);
       cleanup = () => ro.disconnect();
@@ -127,9 +158,14 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
     const safeDraw = () => { try { draw(); } catch (e) { console.error(e); setFailed(true); } };
     loadKakao().then(safeDraw).catch(() => setFailed(true));
     return () => cleanup();
-  }, [key, sig, failed, overview, dots]);
+  }, [key, sig, failed, overview, dots, cluster]);
   useEffect(() => { if (focus != null) apiRef.current?.focus(focus); }, [focus]);
-  useEffect(() => { if (center) apiRef.current?.center(center[0], center[1]); }, [center?.[0], center?.[1]]);
+  useEffect(() => {
+    if (!center) return;
+    centerRef.current = { c: center, l: centerLevel };
+    apiRef.current?.center(center[0], center[1], centerLevel);
+  }, [center?.[0], center?.[1], centerLevel, centerKey]);
+  useEffect(() => { apiRef.current?.me(me); }, [me?.[0], me?.[1]]);
 
   if (!key || failed || !pins.length) return <Sketch pins={pins} overview={overview} dots={dots} onPick={onPick} />;
   return <div className="map" ref={ref} style={{ display: "block" }} role={dots ? undefined : "img"} aria-label={label || (overview ? "동해 관광지 지도" : "코스 지도. 아래 목록과 같은 내용입니다.")} />;
@@ -145,7 +181,7 @@ export function loadKakao(): Promise<void> {
     const go = () => window.kakao.maps.load(() => res());
     if (window.kakao?.maps) { go(); return; }
     const s = document.createElement("script");
-    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=services`;
+    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=services,clusterer`;
     s.onload = () => (window.kakao?.maps ? go() : rej(new Error("sdk")));
     s.onerror = () => { kakaoP = null; rej(new Error("sdk")); };
     document.head.appendChild(s);

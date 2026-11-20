@@ -13,6 +13,7 @@ import { tr, dot, SOURCE_NOTES_EN, nm, ad } from "@/lib/ko2en";
 import { Icon } from "@/components/Icon";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { PlaceTalk } from "@/components/Community";
+import { AiJudge, AiStatus } from "@/components/AiCards";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -227,6 +228,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           <b>{x.level === "closed" ? L("임시 휴무", "Temporarily closed") : x.level === "warn" ? L("주의", "Caution") : L("안내", "Notice")}</b> {x.title}
           <small>{x.start || ""}{x.end ? ` ~ ${x.end}` : ""}</small>{x.body && <p>{x.body}</p>}
         </div>))}
+      {p.type !== "숙박" && <AiStatus id={id} lang={lang} />}
 
       {/* 2. 이용 안내 + 사진 */}
       <div className="pp2-row two">
@@ -257,6 +259,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           <h2 className="h3 pp2-h"><Icon name="walk" />{L("이동 및 접근성", "Getting around & access")}</h2>
           <span className="muted small">{L(`${MODES.find((m) => m[0] === mode)?.[1]} 기준`, `For: ${MODES.find((m) => m[0] === mode)?.[2]}`)}</span>
         </div>
+        {p.type !== "숙박" && <AiJudge id={id} mode={mode} lang={lang} />}
         {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
         {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 길 판정은 아직 팀이 현장에서 직접 재 보기 전이에요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
         <ol className="pp2-segs">
@@ -515,7 +518,12 @@ export function MapPage({ lang }: { lang: Lang }) {
   const d = d0 ? { ...d0, medical: med?.items || d0.medical } : null;
   const [on, setOn] = useState<Record<string, boolean>>({ lodging: false, medical: false, parking: false, info_centers: false, toilets: true, chargers: true });
   const [focus, setFocus] = useState<number | null>(null);   // 목록을 누르면 지도에서 그 점을 500m 정도로 확대
+  // 처음: 동해역 가운데·축척 4km. 지도를 열면 바로 내 위치를 찾아 250m로 확대하고 빨간 점, 목록은 가까운 순.
+  // 동해에서 25km 넘게 떨어져 있으면(예: 서울) 동해역 기준으로 두고 그렇게 알려 준다. 위치를 못 쓰면 동해역에서 가까운 순
+  const STN: [number, number] = [37.4995, 129.124];
   const [me, setMe] = useState<[number, number] | null>(null);
+  const [locMsg, setLocMsg] = useState("");
+  const [go, setGo] = useState<{ c: [number, number]; l: number; k: number } | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const items = useMemo(() => {
     if (!d) return [];
@@ -534,19 +542,27 @@ export function MapPage({ lang }: { lang: Lang }) {
           : l.k === "lodging" ? [tr(lang, r.kind), r.tel].filter(Boolean).join(" · ")
           : l.k === "medical" && r.open_now != null ? [tr(lang, r.kind), r.open_now ? L(`지금 진료·영업 중 (~${r.until})`, `Open now (until ${r.until})`) : L("지금은 문 닫음", "Closed now"), r.tel].filter(Boolean).join(" · ")
           : [tr(lang, r.kind), r.open ? `${r.open}~${r.close}` : "", r.tel].filter(Boolean).join(" · ");
-        const dm = me ? Math.round(Math.hypot((r.lat - me[0]) * 111000, (r.lon - me[1]) * 88000)) : null;
+        const o = me || STN;
+        const dm = Math.round(Math.hypot((r.lat - o[0]) * 111000, (r.lon - o[1]) * 88000));
         out.push({ id: `${l.k}:${r.name}`, layer: l, name: nm(lang, r.name), lat: r.lat, lon: r.lon, desc, road: r.road ? ad(lang, r.road) : nm(lang, r.spot || ""), dm });
       }
     }
-    return me ? out.sort((a, b) => a.dm - b.dm) : out;
+    return out.sort((a, b) => a.dm - b.dm);   // 늘 가까운 순 (내 위치, 없으면 동해역에서)
   }, [d0, med, on, me, lang]);
   const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon), sub: x.desc, addr: x.road }));
   const unmapped = (d?.toilets || []).filter((t: any) => !t.lat);
   function locate() {
-    navigator.geolocation?.getCurrentPosition((p) => setMe([p.coords.latitude, p.coords.longitude]), () => setMe([37.5245, 129.1143]));
+    if (!navigator.geolocation) { setLocMsg(L("이 기기에서는 위치를 쓸 수 없어 동해역에서 가까운 순으로 보여 드려요.", "Location isn't available; sorted from Donghae Station.")); return; }
+    setLocMsg(L("내 위치를 찾는 중이에요…", "Finding your location…"));
+    navigator.geolocation.getCurrentPosition((p) => {
+      const here: [number, number] = [p.coords.latitude, p.coords.longitude];
+      const far = Math.hypot((here[0] - STN[0]) * 111, (here[1] - STN[1]) * 88) > 25;
+      if (far) { setMe(null); setGo({ c: STN, l: 9, k: Date.now() }); setLocMsg(L("지금 동해 밖에 계셔서 동해역을 가운데로, 동해역에서 가까운 순으로 보여 드려요.", "You're outside Donghae, so the map and list use Donghae Station.")); return; }
+      setMe(here); setGo({ c: here, l: 5, k: Date.now() }); setLocMsg("");
+    }, () => setLocMsg(L("위치를 가져오지 못했어요. 위치 권한을 허용하면 내 주변부터 보여 드려요. 지금은 동해역에서 가까운 순이에요.", "Couldn't get your location; sorted from Donghae Station.")), { timeout: 8000, enableHighAccuracy: true });
   }
-  // 처음 열 때 한 번 내 위치에서 가까운 순으로 (위치를 못 쓰면 그대로, PASS-015 의견)
-  useEffect(() => { navigator.geolocation?.getCurrentPosition((p) => setMe([p.coords.latitude, p.coords.longitude]), () => {}, { timeout: 8000 }); }, []);
+  // 편의시설 지도를 열면 바로 내 위치를 찾는다
+  useEffect(() => { locate(); }, []);
   return (
     <section className="sec wrap">
       <Head mascot="full-basic" lang={lang} photo="dokkaebi" title={L("편의시설 지도", "Facilities map")} sub={L("보고 싶은 것만 켜세요. 점을 누르면 아래 목록에서 자세히 보여요.", "Turn layers on and tap a dot for details.")} />
@@ -557,8 +573,10 @@ export function MapPage({ lang }: { lang: Lang }) {
           </button>))}
         <button className="chip go" onClick={locate}>{me ? L("내 위치 다시 찾기", "Update my location") : L("내 주변부터 보기", "Nearest first")}</button>
       </div>
+      {locMsg && <p className="muted small map-loc" role="status">{locMsg}</p>}
       {!d ? <Loading err={err} lang={lang} /> : (<>
-        <KakaoMap pins={pins} dots zoomOnPick focus={focus} center={me} onPick={(i) => { setSel(items[i].id); setFocus(null); }}
+        <KakaoMap pins={pins} dots cluster zoomOnPick focus={focus} start={{ lat: STN[0], lon: STN[1], level: 9 }} center={go?.c || null} centerLevel={go?.l ?? 5} centerKey={go?.k || 0} me={me}
+          onPick={(i) => { setSel(items[i].id); setFocus(null); }}
           label={L("편의시설 지도. 아래 목록과 같은 내용입니다.", "Facilities map; same as the list below.")} />
         <ul className="fac-list">
           {items.map((x, i) => (

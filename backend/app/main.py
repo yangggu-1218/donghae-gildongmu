@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import trip_days, Place, Conditions, ChatEdit
-from . import cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
+from . import ai, ai_course, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -36,6 +36,7 @@ def load_places() -> dict[str, Place]:
 
 
 PLACES = load_places()
+ai.set_overrides(cms.load().get("ai_models"))   # 관리자 화면 [AI 설정]에서 고른 모델 등급
 # 제보·현장 기록은 서버를 다시 켜도 남는 곳에 (배포 때 REPORTS_DIR=/var/data/reports 처럼 디스크 경로로)
 REPORTS = Path(os.getenv("REPORTS_DIR") or DATA / "reports")
 REPORTS.mkdir(parents=True, exist_ok=True)
@@ -86,15 +87,21 @@ def course(c: Conditions):
         if c.rain is None and extra.get("rain"):
             c.rain = True
     rain = engine.rain_for(c)
-    result = engine.plan(PLACES, c, rain)
-    stops = [{"id": s.id, "name": PLACES[s.id].name_ko if c.lang == "ko" else PLACES[s.id].name_en,
-              "grade": s.grade, "facilities": PLACES[s.id].facilities,
-              "tip": PLACES[s.id].tip_ko if c.lang == "ko" else PLACES[s.id].tip_en} for s in result.stops]
-    # 장소별 이유·한 줄 요약은 화면의 '동이 브리핑'(/api/brief)이 따로 받아 온다 → 코스는 바로 돌려준다
-    for st in stops:
-        nxt = next(x for x in result.stops if x.id == st["id"])
-        nxt.why = st["tip"] or ""
-    return course_payload(result, c, rain, "")
+    result, planner = plan_course(c, rain, c.memo)
+    for s in result.stops:   # AI가 쓴 '고른 이유'가 없으면 장소 한 줄 설명
+        if not s.why:
+            p = PLACES[s.id]
+            s.why = (p.tip_ko if c.lang == "ko" else p.tip_en) or ""
+    return {**course_payload(result, c, rain, ""), "planner": planner}
+
+
+def plan_course(c: Conditions, rain: bool, hint: str = ""):
+    """① AI 코스 설계 에이전트가 먼저, 안 되면 규칙 엔진 (AI_COURSE=0 이면 규칙만)."""
+    if os.getenv("AI_COURSE", "1") != "0":
+        got = ai_course.plan(PLACES, c, rain, hint)
+        if got:
+            return got
+    return engine.plan(PLACES, c, rain), {"by": "rule"}
 
 
 @app.post("/api/edit")
@@ -158,6 +165,110 @@ def medical():
     if live:
         return {"sample": False, "source": "국립중앙의료원 약국·병의원 정보 (공공데이터포털)", "items": live}
     return {"sample": False, "source": "국립중앙의료원 약국·병의원 정보 (2026-11-20 저장본, 운영시간 없음)", "items": pages.facilities()["medical"], "why": public_apis.MED_DIAG if public_apis.KEY else "서버에 DATA_GO_KR_KEY 없음"}
+
+
+# ---------- AI 기능 (docs/17_AI_FEATURES.md) ----------
+def _recent_reports(pid: str, days: int = 90) -> list[dict]:
+    """그 장소의 최근 제보·길 메모 (반려 제외, 최신순)."""
+    since = (dt.datetime.now() - dt.timedelta(days=days)).isoformat(timespec="seconds")
+    rows = [r for r in _jsonl("reports.jsonl") if r.get("place_id") == pid and r.get("status") != "반려" and (r.get("created_at") or "") >= since]
+    return sorted(rows, key=lambda r: r.get("created_at") or "", reverse=True)
+
+
+@app.get("/api/ai/judge/{pid}")
+def ai_judge_place(pid: str, mode: str = "wheel", lang: str = "ko"):
+    """② AI 접근성 판정관: 근거를 읽고 이 사람 기준으로 판정 + 근거·확신도·주의·물어볼 것."""
+    p = PLACES.get(pid)
+    if not p:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    return ai_judge.judge(p, mode, "en" if lang == "en" else "ko", _recent_reports(pid))
+
+
+@app.post("/api/place-notes")
+def place_note(body: dict):
+    """커뮤니티 '한 줄 후기·길 메모'를 서버에도 저장 → ③ 최근 길 상태 요약의 재료. 닉네임·연락처는 저장하지 않는다."""
+    pid, text = body.get("place_id"), " ".join(str(body.get("text") or "").split())
+    if pid not in PLACES:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    if not 2 <= len(text) <= 300:
+        raise HTTPException(400, "2~300자로 적어 주세요")
+    rec = {"id": uuid.uuid4().hex[:12], "place_id": pid, "kind": "길 메모" if body.get("tip") else "한 줄 후기", "note": text,
+           "status": "접수", "source": "커뮤니티", "created_at": dt.datetime.now().isoformat(timespec="seconds"), "photo": None}
+    with (REPORTS / "reports.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return {"ok": True, "id": rec["id"]}
+
+
+@app.get("/api/places/{pid}/status")
+def place_status(pid: str):
+    """③ 최근 길 상태 (AI 요약). 제보가 없으면 state=none. 제안은 관리자 [AI 제안]으로만 보낸다."""
+    p = PLACES.get(pid)
+    if not p:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    out = ai_stat.summarize(p, _recent_reports(pid))
+    ai_stat.save_proposals(pid, out.pop("proposals", []) or [])
+    return out
+
+
+@app.get("/api/admin/ai/proposals")
+def admin_ai_proposals(x_admin_token: str | None = Header(None)):
+    """AI 제안 목록 (근거 제보 원문 포함)."""
+    _admin(x_admin_token, "reports")
+    reps = {r["id"]: r for r in _jsonl("reports.jsonl")}
+    out = []
+    for x in ai_stat.proposals():
+        out.append({**x, "name": PLACES[x["place_id"]].name_ko if x["place_id"] in PLACES else x["place_id"],
+                    "evidence_rows": [{"id": e, "date": (reps.get(e, {}).get("created_at") or "")[:10], "kind": reps.get(e, {}).get("kind"),
+                                       "note": reps.get(e, {}).get("note"), "photo": reps.get(e, {}).get("photo")} for e in x.get("evidence", [])]})
+    return out
+
+
+@app.post("/api/admin/ai/proposals/{prop_id}")
+def admin_ai_decide(prop_id: str, body: dict, x_admin_token: str | None = Header(None)):
+    """AI 제안 승인/반려. 승인하면 알림·운영시간·편의시설이 바로 바뀌고 변경 이력에 남는다(되돌리기 가능)."""
+    s = _admin(x_admin_token, "reports")
+    approve = bool(body.get("approve"))
+    if approve:
+        x = next((p for p in ai_stat.proposals() if p["id"] == prop_id), None)
+        if x and not cms.can(s, "notice" if x.get("type") == "notice" else "place"):
+            raise HTTPException(403, "이 제안을 반영할 권한이 없어요")
+    return _guard(lambda: ai_stat.decide(prop_id, approve, PLACES, _who(s), str(body.get("memo") or "")))
+
+
+@app.post("/api/admin/ai/refresh")
+def admin_ai_refresh(x_admin_token: str | None = Header(None)):
+    """최근 90일 제보가 있는 장소를 모두 다시 정리해 새 제안을 만든다."""
+    _admin(x_admin_token, "reports")
+    pids = sorted({r["place_id"] for r in _jsonl("reports.jsonl") if r.get("place_id") in PLACES})
+    done, new = 0, 0
+    for pid in pids:
+        reps = _recent_reports(pid)
+        if not reps:
+            continue
+        out = ai_stat.summarize(PLACES[pid], reps)
+        new += ai_stat.save_proposals(pid, out.get("proposals", []) or [])
+        done += 1
+    return {"places": done, "new_proposals": new}
+
+
+@app.get("/api/admin/ai/settings")
+def admin_ai_settings(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "reports")
+    return {**ai.settings(), "connected": ai.available(), "usage": ai.USAGE, "last": ai.LAST}
+
+
+@app.post("/api/admin/ai/settings")
+def admin_ai_settings_set(body: dict, x_admin_token: str | None = Header(None)):
+    """작업별 모델 등급 (fast=Haiku / smart=Sonnet). 총괄 관리자만."""
+    s = _admin(x_admin_token, "accounts")
+    tiers = {k: v for k, v in (body.get("tiers") or {}).items() if k in ai.TASKS and v in ai.MODELS}
+    with cms._lock:
+        db = cms.load()
+        db["ai_models"] = tiers
+        cms._log(db, "ai_models", "settings", None, tiers, "AI 모델 설정", _who(s))
+        cms.save(db)
+    ai.set_overrides(tiers)
+    return ai.settings()
 
 
 @app.get("/api/sources")

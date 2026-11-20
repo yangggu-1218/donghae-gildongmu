@@ -6,9 +6,8 @@ import json, os, re, datetime as dt
 from pathlib import Path
 from typing import Callable
 
-import httpx
 
-from . import edits, engine, llm, public_data
+from . import ai, edits, engine, llm, public_data
 from .schemas import DAY_OPTS, Conditions, Place
 
 PROMPT = (Path(__file__).parent / "prompts" / "talk.md").read_text(encoding="utf-8")
@@ -135,13 +134,24 @@ class Session:
             if food:
                 self.c.lunch = food
         rain = engine.rain_for(self.c)
-        res = engine.plan(P, self.c, rain)
+        res = self._plan(rain)
         if fresh and sum(1 for s in res.stops if s.kind == "sight") < 2 and self.course_ids:
             # 조건이 까다로워 갈 곳이 모자라면 앞 코스의 절반만 빼고 다시
             back = [i for i in self.course_ids if i in P and P[i].type not in ("식당", "카페")][1::2]
             self.c.exclude = [x for x in self.c.exclude if x not in back]
-            res = engine.plan(P, self.c, rain)
+            res = self._plan(rain)
         return self._course_result(res)
+
+    def _plan(self, rain):
+        """① AI 코스 설계 에이전트가 먼저 (키가 있을 때), 안 되면 규칙 엔진."""
+        if os.getenv("AI_COURSE", "1") != "0":
+            from . import ai_course
+            got = ai_course.plan(self.places, self.c, rain, getattr(self, "hint", ""))
+            if got:
+                self.planner = got[1]
+                return got[0]
+        self.planner = {"by": "rule"}
+        return engine.plan(self.places, self.c, rain)
 
     def transit(self):
         ids = self.course_ids or []
@@ -234,7 +244,7 @@ class Session:
 
     def result(self, reply: str, via: str) -> dict:
         pose = "happy" if self.course else ("ask" if reply.rstrip().endswith("?") else "neutral")
-        return {"reply": reply, "pose": pose, "via": via, "conditions": self.c.model_dump(), "state": self.state,
+        return {"reply": reply, "pose": pose, "via": via, "conditions": self.c.model_dump(), "state": self.state, "planner": getattr(self, "planner", None),
                 "course": self.course.model_dump() if self.course else None, "cards": self.cards}
 
 
@@ -251,7 +261,7 @@ def days_from(low: str):
 
 
 def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
-    if not llm.API_KEY:
+    if not ai.available():
         llm.count("talk", False)
         return None
     msgs = [{"role": "user" if h.get("me") else "assistant", "content": h["text"]} for h in history[-10:] if h.get("text")]
@@ -272,27 +282,28 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
         merged[-1]["content"] += "\n" + user
     else:
         merged.append({"role": "user", "content": user})
-    try:
+    try:   # 공식 SDK (backend/app/ai.py). 모델은 작업 'talk' 설정(기본 Haiku), TALK_MODEL 환경 변수가 있으면 그것
         for _ in range(5):   # 도구 호출은 최대 5번
-            r = httpx.post("https://api.anthropic.com/v1/messages",
-                           headers=llm.headers(),
-                           json={"model": TALK_MODEL, "max_tokens": 1500, "system": system_for(s.places), "tools": CACHED_TOOLS, "messages": merged},
-                           timeout=TALK_TIMEOUT)
-            r.raise_for_status()
-            out = r.json()
-            llm.count("talk", True, sum((out.get("usage") or {}).get(k, 0) for k in ("input_tokens", "output_tokens")))
-            merged.append({"role": "assistant", "content": out["content"]})
-            uses = [b for b in out["content"] if b.get("type") == "tool_use"]
-            text = "".join(b.get("text", "") for b in out["content"] if b.get("type") == "text").strip()
+            out = ai.create("talk", model=os.getenv("TALK_MODEL") or None, max_tokens=1500, system=system_for(s.places),
+                            tools=CACHED_TOOLS, messages=merged, timeout=TALK_TIMEOUT)
+            bad = ai._why_bad(out)
+            ai._count("talk", ai.model_for("talk"), not bad, out.usage, bad or "")
+            if bad:
+                llm.count("talk", False)
+                return None
+            llm.count("talk", True, (out.usage.input_tokens or 0) + (out.usage.output_tokens or 0))
+            merged.append({"role": "assistant", "content": out.content})   # 생각 블록까지 그대로 돌려준다
+            uses = [b for b in out.content if b.type == "tool_use"]
+            text = ai._text(out)
             if not uses:
                 return s.result(text or _after(s), "llm")
             merged.append({"role": "user", "content": [
-                {"type": "tool_result", "tool_use_id": u["id"], "content": json.dumps(s.call(u["name"], u.get("input") or {}), ensure_ascii=False)}
+                {"type": "tool_result", "tool_use_id": u.id, "content": json.dumps(s.call(u.name, dict(u.input or {})), ensure_ascii=False, default=str)}
                 for u in uses]})
         return s.result(_after(s), "llm")   # 도구를 다섯 번 써도 말이 없으면 지금 상태로 마무리
-    except Exception as e:
+    except Exception as e:   # noqa: BLE001 — 실패하면 규칙 경로로
         llm.count("talk", False)
-        print("[talk] llm fallback:", e, getattr(getattr(e, "response", None), "text", "")[:300])
+        print("[talk] llm fallback:", type(e).__name__, str(e)[:300])
     return None
 
 
@@ -413,4 +424,5 @@ def _made(s: Session, L: dict, again: bool = False) -> str:
 def talk(places: dict[str, Place], body: dict) -> dict:
     s = Session(places, body)
     msg = (body.get("message") or "").strip()[:500]
+    s.hint = msg
     return _llm(s, msg, body.get("history") or []) or _rule(Session(places, body), msg)

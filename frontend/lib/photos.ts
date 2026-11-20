@@ -403,6 +403,84 @@ export const PHOTOS: Record<string, Photo> = {
     "author": "팀 제공",
     "license": "출처 확인 중",
     "page": ""
+  },
+  "bongjeong_lotus": {
+    "src": "/photos/500px-bongjeong_lotus.webp",
+    "author": "한국관광공사",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bongjeong_lotus_2": {
+    "src": "/photos/500px-bongjeong_lotus_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bongjeong_lotus_3": {
+    "src": "/photos/500px-bongjeong_lotus_3.webp",
+    "author": "namgil kim (사진에 표시)",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "culture_center": {
+    "src": "/photos/500px-culture_center.webp",
+    "author": "한국관광공사",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "culture_center_2": {
+    "src": "/photos/500px-culture_center_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bukpyeong_church": {
+    "src": "/photos/500px-bukpyeong_church.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "bukpyeong_church_2": {
+    "src": "/photos/500px-bukpyeong_church_2.webp",
+    "author": "Wood Honey (사진에 표시)",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mukho_market": {
+    "src": "/photos/500px-mukho_market.webp",
+    "author": "한국관광공사",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "mukho_market_2": {
+    "src": "/photos/500px-mukho_market_2.webp",
+    "author": "한국관광공사",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gawon": {
+    "src": "/photos/500px-gawon.webp",
+    "author": "동해시청 (사진에 표시)",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "gawon_2": {
+    "src": "/photos/500px-gawon_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "yakcheon": {
+    "src": "/photos/500px-yakcheon.webp",
+    "author": "한국관광공사",
+    "license": "출처 확인 중",
+    "page": ""
+  },
+  "yakcheon_2": {
+    "src": "/photos/500px-yakcheon_2.webp",
+    "author": "팀 제공",
+    "license": "출처 확인 중",
+    "page": ""
   }
 };
 
@@ -411,6 +489,12 @@ export const photoAt = (id: string, w: 500 | 960 | 1920) => (PHOTOS[id] ? PHOTOS
 
 // 장소 상세에 더 보여 줄 사진과 설명
 export const GALLERY: Record<string, [string, string, string][]> = {
+  bongjeong_lotus: [["bongjeong_lotus_2", "'봉정연당' 표지판과 여름 홍련 단지", "The Bongjeong lotus pond sign and summer lotuses"], ["bongjeong_lotus_3", "7월 말 활짝 핀 연꽃", "Lotuses in full bloom in late July"]],
+  culture_center: [["culture_center_2", "동해문화원 정면 (입구 계단 옆에 장애인 리프트)", "Front of the Cultural Center (wheelchair lift by the steps)"]],
+  bukpyeong_church: [["bukpyeong_church_2", "성당 안 (1958년 지은 시멘트 블록 성당)", "Inside the 1958 cement-block church"]],
+  mukho_market: [["mukho_market_2", "시장 앞 횟집·건어물 거리", "Raw-fish and dried-seafood shops by the market"]],
+  gawon: [["gawon_2", "가원습지 생태자연공원 입구 표지와 산책로", "Park entrance sign and path"]],
+  yakcheon: [["yakcheon_2", "여름에 여는 야외 온천풀장", "Outdoor hot-spring pool, open in summer"]],
   chuam_bridge: [["chuam_bridge_2", "바다 위 출렁다리와 촛대바위 쪽 해안", "The suspension bridge over the sea"]],
   nature_park: [["nature_park_2", "조명이 켜진 동굴 안 관람로 (난간 있음)", "Lit walkway inside the cave, with handrails"]],
   hanseom: [["hanseom_2", "바다를 향한 조타륜 전망 데크", "Ship-wheel lookout deck over the sea"], ["hanseom_3", "바다로 이어지는 옛 군사 터널", "Old military tunnel opening to the sea"]],
