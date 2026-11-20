@@ -1,6 +1,6 @@
 {
  "as_of": "2025-06-25",
- "source": "전국공중화장실표준데이터(공공데이터포털) — 동해시 중 장애인용 변기가 있는 곳",
+ "source": "전국공중화장실표준데이터(공공데이터포털) — 동해시 중 장애인용 변기가 있는 곳 (칸 수·기저귀 교환대·비상벨은 2026-11-21 팀 제공 CSV)",
  "items": [
   {
    "name": "가원습지생태자연공원",
@@ -10,7 +10,13 @@
    "accessible": true,
    "lat": 37.473023,
    "lon": 129.10728,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "강원도동해교육지원청",
@@ -20,7 +26,13 @@
    "accessible": true,
    "lat": 37.525141,
    "lon": 129.117384,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "근로복지공단 동해병원 본관1층 화장실",
@@ -30,7 +42,13 @@
    "accessible": true,
    "lat": 37.532251,
    "lon": 129.106036,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": true,
+   "hours_detail": "07:00~22:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "근로자종합복지회관",
@@ -40,7 +58,13 @@
    "accessible": true,
    "lat": 37.51495486,
    "lon": 129.1050133,
-   "coord_from": "parking:근로자종합복지회관"
+   "coord_from": "parking:근로자종합복지회관",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "냉천공원",
@@ -50,7 +74,13 @@
    "accessible": true,
    "lat": 37.519244,
    "lon": 129.119226,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "농업기술센터",
@@ -60,7 +90,13 @@
    "accessible": true,
    "lat": 37.539539,
    "lon": 129.095608,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "대진해변",
@@ -70,7 +106,13 @@
    "accessible": true,
    "lat": 37.580806,
    "lon": 129.110482,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "도째비골 스카이밸리 화장실",
@@ -80,7 +122,13 @@
    "accessible": true,
    "lat": 37.55483008,
    "lon": 129.1184699,
-   "coord_from": "attractions:묵호등대"
+   "coord_from": "attractions:묵호등대",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해(동해)휴게소",
@@ -90,7 +138,13 @@
    "accessible": true,
    "lat": 37.60182,
    "lon": 129.074191,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": "00:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해경찰서",
@@ -100,7 +154,13 @@
    "accessible": true,
    "lat": 37.524715,
    "lon": 129.116809,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해고용센터 1층 화장실",
@@ -110,7 +170,13 @@
    "accessible": true,
    "lat": 37.485284,
    "lon": 129.111102,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "평일(09:00∼18:00)",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해교육도서관",
@@ -120,7 +186,13 @@
    "accessible": true,
    "lat": 37.538723,
    "lon": 129.109818,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해꿈빛마루도서관",
@@ -130,7 +202,13 @@
    "accessible": true,
    "lat": 37.523882,
    "lon": 129.118211,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 9,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": "09:00~22:00(휴관일 제외)",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해동인병원",
@@ -140,7 +218,13 @@
    "accessible": true,
    "lat": 37.530588,
    "lon": 129.107133,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해무릉건강숲",
@@ -150,7 +234,13 @@
    "accessible": true,
    "lat": 37.46510515,
    "lon": 129.0313086,
-   "coord_from": "attractions:동해무릉건강숲"
+   "coord_from": "attractions:동해무릉건강숲",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해문화원",
@@ -160,7 +250,13 @@
    "accessible": true,
    "lat": 37.526916,
    "lon": 129.114504,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해북삼동우체국",
@@ -170,7 +266,13 @@
    "accessible": true,
    "lat": 37.492643,
    "lon": 129.10716,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해북평동우체국",
@@ -180,7 +282,13 @@
    "accessible": true,
    "lat": 37.483413,
    "lon": 129.125381,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 1,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해삼화동우체국",
@@ -190,7 +298,13 @@
    "accessible": true,
    "lat": 37.486876,
    "lon": 129.067804,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해송정동우체국",
@@ -200,7 +314,13 @@
    "accessible": true,
    "lat": 37.500365,
    "lon": 129.127147,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 1,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시립발한도서관",
@@ -210,7 +330,13 @@
    "accessible": true,
    "lat": 37.548216,
    "lon": 129.105835,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 7,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~22:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시립북삼도서관",
@@ -220,7 +346,13 @@
    "accessible": true,
    "lat": 37.49271,
    "lon": 129.104419,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": "09:00~22:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시문화예술회관",
@@ -230,7 +362,13 @@
    "accessible": true,
    "lat": 37.526405,
    "lon": 129.115246,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시보건소(묵호건강증진센터)",
@@ -240,7 +378,13 @@
    "accessible": true,
    "lat": 37.549514,
    "lon": 129.108144,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시보건소(북삼건강생활지원센터)",
@@ -250,7 +394,13 @@
    "accessible": true,
    "lat": 37.488548,
    "lon": 129.10269,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시장애인보호작업장",
@@ -260,7 +410,13 @@
    "accessible": true,
    "lat": 37.475348,
    "lon": 129.138653,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시청 본관",
@@ -270,7 +426,13 @@
    "accessible": true,
    "lat": 37.5248901,
    "lon": 129.1144001,
-   "coord_from": "heritage:동해 만재 홍락섭 전적류"
+   "coord_from": "heritage:동해 만재 홍락섭 전적류",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해시청 신관",
@@ -280,7 +442,13 @@
    "accessible": true,
    "lat": 37.5248901,
    "lon": 129.1144001,
-   "coord_from": "heritage:동해 만재 홍락섭 전적류"
+   "coord_from": "heritage:동해 만재 홍락섭 전적류",
+   "dis_stalls": 11,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해역",
@@ -290,7 +458,13 @@
    "accessible": true,
    "lat": 37.4995,
    "lon": 129.124,
-   "coord_from": "start:동해역"
+   "coord_from": "start:동해역",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": "09:00~21:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해우체국",
@@ -300,7 +474,13 @@
    "accessible": true,
    "lat": 37.523806,
    "lon": 129.116019,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 국민체육센터",
@@ -310,7 +490,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 4,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 동해체육관",
@@ -320,7 +506,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 보조구장 외부",
@@ -330,7 +522,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 생활체육공원",
@@ -340,7 +538,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 전용구장 내부",
@@ -350,7 +554,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 종합경기장 건물내부",
@@ -360,7 +570,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 14,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해웰빙레포츠타운 하키장",
@@ -370,7 +586,13 @@
    "accessible": true,
    "lat": 37.5160465,
    "lon": 129.1021986,
-   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운"
+   "coord_from": "wheelchair_chargers:동해웰빙레포츠타운",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해자유무역지역관리원청사동",
@@ -380,7 +602,13 @@
    "accessible": true,
    "lat": 37.480903,
    "lon": 129.153051,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해지방해양수산청 민원화장실",
@@ -390,7 +618,13 @@
    "accessible": true,
    "lat": 37.528129,
    "lon": 129.117191,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해지사 1층 남/여 화장실",
@@ -400,7 +634,13 @@
    "accessible": true,
    "lat": 37.522445,
    "lon": 129.118361,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "정시(09:00∼18:00)",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동해해양경찰서 민원동 화장실",
@@ -410,7 +650,13 @@
    "accessible": true,
    "lat": 37.539515,
    "lon": 129.105989,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동호농산물시장",
@@ -420,7 +666,13 @@
    "accessible": true,
    "lat": 37.545342,
    "lon": 129.101697,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "동호동행정복지센터",
@@ -430,7 +682,13 @@
    "accessible": true,
    "lat": 37.545845,
    "lon": 129.100226,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "망상 제2캠핑장 7호화장실",
@@ -440,7 +698,13 @@
    "accessible": true,
    "lat": 37.59160593,
    "lon": 129.0923204,
-   "coord_from": "attractions:망상제2오토캠핑장"
+   "coord_from": "attractions:망상제2오토캠핑장",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "망상리조트 자동차캠핑장",
@@ -450,7 +714,13 @@
    "accessible": true,
    "lat": 37.60042576,
    "lon": 129.0784636,
-   "coord_from": "attractions:망상오토캠핑리조트&망상해변한옥마을[해안]"
+   "coord_from": "attractions:망상오토캠핑리조트&망상해변한옥마을[해안]",
+   "dis_stalls": 1,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "망상리조트 커뮤니티하우스",
@@ -460,7 +730,13 @@
    "accessible": true,
    "lat": 37.60042576,
    "lon": 129.0784636,
-   "coord_from": "attractions:망상오토캠핑리조트&망상해변한옥마을[해안]"
+   "coord_from": "attractions:망상오토캠핑리조트&망상해변한옥마을[해안]",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "망상컨벤션센터",
@@ -470,7 +746,13 @@
    "accessible": true,
    "lat": 37.595938,
    "lon": 129.084688,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 5,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "망상해변내 5호",
@@ -480,7 +762,13 @@
    "accessible": true,
    "lat": 37.591764,
    "lon": 129.090424,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 1,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": true,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "무릉계곡 관리동",
@@ -490,7 +778,13 @@
    "accessible": true,
    "lat": 37.46346963,
    "lon": 129.0193942,
-   "coord_from": "attractions:무릉계곡"
+   "coord_from": "attractions:무릉계곡",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": false,
+   "hours_detail": "09:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호119안전센터",
@@ -500,7 +794,13 @@
    "accessible": true,
    "lat": 37.551606,
    "lon": 129.110674,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호동행정복지센터",
@@ -510,7 +810,13 @@
    "accessible": true,
    "lat": 37.558701,
    "lon": 129.114261,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호등대 공용화장실",
@@ -520,7 +826,13 @@
    "accessible": true,
    "lat": 37.55483008,
    "lon": 129.1184699,
-   "coord_from": "attractions:묵호등대"
+   "coord_from": "attractions:묵호등대",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호역",
@@ -530,7 +842,13 @@
    "accessible": true,
    "lat": 37.548,
    "lon": 129.116,
-   "coord_from": "start:묵호역"
+   "coord_from": "start:묵호역",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~21:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호우체국",
@@ -540,7 +858,13 @@
    "accessible": true,
    "lat": 37.548749,
    "lon": 129.108313,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호할복장",
@@ -550,7 +874,13 @@
    "accessible": true,
    "lat": 37.552069,
    "lon": 129.114406,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호항 북방파제",
@@ -560,7 +890,13 @@
    "accessible": true,
    "lat": 37.547648,
    "lon": 129.117435,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "묵호항매립지(묵호수변공원)",
@@ -570,7 +906,13 @@
    "accessible": true,
    "lat": 37.550945,
    "lon": 129.117389,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북평공단2공원(공단내)",
@@ -580,7 +922,13 @@
    "accessible": true,
    "lat": 37.472273,
    "lon": 129.14101,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북평민속장 (파출소)",
@@ -590,7 +938,13 @@
    "accessible": true,
    "lat": 37.483554,
    "lon": 129.126409,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북평민속장주차장",
@@ -600,7 +954,13 @@
    "accessible": true,
    "lat": 37.483277,
    "lon": 129.129555,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북평산단1공원(발전소)",
@@ -610,7 +970,13 @@
    "accessible": true,
    "lat": 37.48411,
    "lon": 129.147344,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북평우시장",
@@ -620,7 +986,13 @@
    "accessible": true,
    "lat": 37.480616,
    "lon": 129.127805,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북평동행정복지센터",
@@ -630,7 +1002,13 @@
    "accessible": true,
    "lat": 37.48374976,
    "lon": 129.1250999,
-   "coord_from": "wheelchair_chargers:북평동행정복지센터"
+   "coord_from": "wheelchair_chargers:북평동행정복지센터",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "발한중앙시장",
@@ -640,7 +1018,13 @@
    "accessible": true,
    "lat": 37.5508,
    "lon": 129.108533,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "부곡동행정복지센터",
@@ -650,7 +1034,13 @@
    "accessible": true,
    "lat": 37.535771,
    "lon": 129.106323,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북삼119안전센터",
@@ -660,7 +1050,13 @@
    "accessible": true,
    "lat": 37.48926,
    "lon": 129.106862,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "북삼동행정복지센터",
@@ -670,7 +1066,13 @@
    "accessible": true,
    "lat": 37.489414,
    "lon": 129.107598,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "삼화동행정복지센터",
@@ -680,7 +1082,13 @@
    "accessible": true,
    "lat": 37.488454,
    "lon": 129.067583,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "용산서원",
@@ -690,7 +1098,13 @@
    "accessible": true,
    "lat": 37.48928414,
    "lon": 129.098695,
-   "coord_from": "heritage:용산서원학규현판"
+   "coord_from": "heritage:용산서원학규현판",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "일출공원가리비",
@@ -700,7 +1114,13 @@
    "accessible": true,
    "lat": 37.556452,
    "lon": 129.120774,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 3,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "자매공원",
@@ -710,7 +1130,13 @@
    "accessible": true,
    "lat": 37.561059,
    "lon": 129.101804,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "전천 이원교차로",
@@ -720,7 +1146,13 @@
    "accessible": true,
    "lat": 37.481405,
    "lon": 129.103512,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 1,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "전천 청운교",
@@ -730,7 +1162,13 @@
    "accessible": true,
    "lat": 37.483219,
    "lon": 129.103553,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "전천 파크골프장",
@@ -740,7 +1178,13 @@
    "accessible": true,
    "lat": 37.483349,
    "lon": 129.115464,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "남자화장실+여자화장실",
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "종합버스터미널",
@@ -750,7 +1194,13 @@
    "accessible": true,
    "lat": 37.5276909,
    "lon": 129.1040551,
-   "coord_from": "parking:공영터미널"
+   "coord_from": "parking:공영터미널",
+   "dis_stalls": 2,
+   "diaper": true,
+   "diaper_at": "여자화장실",
+   "bell": true,
+   "hours_detail": "05:00~24:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "천곡동행정복지센터",
@@ -760,7 +1210,13 @@
    "accessible": true,
    "lat": 37.522898,
    "lon": 129.116231,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "천곡천연동굴",
@@ -770,7 +1226,13 @@
    "accessible": true,
    "lat": 37.51752144,
    "lon": 129.1104801,
-   "coord_from": "attractions:천곡황금박쥐동굴"
+   "coord_from": "attractions:천곡황금박쥐동굴",
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "보건소화장실",
@@ -780,7 +1242,13 @@
    "accessible": true,
    "lat": 37.522868,
    "lon": 129.117109,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 2,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25"
   },
   {
    "name": "해오름스포츠센터",
@@ -790,7 +1258,45 @@
    "accessible": true,
    "lat": 37.488471,
    "lon": 129.139687,
-   "coord_from": "도로명주소 → 카카오 주소 검색"
+   "coord_from": "도로명주소 → 카카오 주소 검색",
+   "dis_stalls": 6,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": true,
+   "hours_detail": "주중06:00~20:00 / 주말 07:00~18:00 ※ 매주 월요일 휴관",
+   "data_as_of": "2025-06-25"
+  },
+  {
+   "name": "앙바엑스포 전시관",
+   "road": "동해시 동해대로 6270-53",
+   "kind": "개방화장실",
+   "hours": "24시간",
+   "accessible": true,
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": null,
+   "data_as_of": "2025-06-25",
+   "lat": null,
+   "lon": null,
+   "coord_from": null
+  },
+  {
+   "name": "상하수도사업소",
+   "road": "동해시 새골길 50",
+   "kind": "개방화장실",
+   "hours": "09:00~18:00",
+   "accessible": true,
+   "dis_stalls": 3,
+   "diaper": false,
+   "diaper_at": null,
+   "bell": false,
+   "hours_detail": "09:00~18:00",
+   "data_as_of": "2025-06-25",
+   "lat": null,
+   "lon": null,
+   "coord_from": null
   }
  ],
  "coord_note": "원자료에 좌표가 없는 56곳은 도로명주소를 카카오 주소 검색으로 좌표 변환(2026-11-16)"
