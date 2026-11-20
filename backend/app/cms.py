@@ -298,7 +298,7 @@ def set_place(pid: str, fields: dict, segments: list | None, reason: str, curren
     """장소 정보 덮어쓰기. current = 지금 사이트에 보이는 값(이력의 '이전 값'으로 남긴다)."""
     touched = {f for f in fields if f in FIELDS} | ({"segments"} if segments is not None else set())
     if touched & ACCESS and len(reason.strip()) < 4:
-        raise ValueError("걷기·휠체어·구간 정보를 바꿀 때는 근거(측정값, 확인한 날짜 등)를 적어 주세요.")
+        raise ValueError("걷기·휠체어·구간 정보를 바꿀 때는 바꾼 이유(측정값, 확인한 날짜 등)를 적어 주세요.")
     with _lock:
         db = load()
         ov = db["overrides"].setdefault(pid, {})

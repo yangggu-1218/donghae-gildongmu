@@ -588,7 +588,7 @@ export function makeApi(DATA) {
     const n = ids.length;
     const reason = !changed && same0 ? (en ? "The current order already keeps opening hours with the least travel." : "지금 순서가 이미 운영시간을 지키면서 이동이 가장 적은 순서예요. 바꿀 필요가 없어요.")
       : !changed ? (en ? "Checked with real routes: your current order is better, so nothing changes." : "추천 순서를 실제 길찾기로 다시 재 보니 지금 순서가 더 나아서 그대로 두었어요.")
-      : (en ? "Opening hours first, then the shortest travel among all possible orders." : "운영시간·휴무를 먼저 지키고, 그 안에서 이동이 가장 짧은 순서를 찾았어요. [이 일정 적용하기]를 눌러야 바뀌어요.");
+      : (en ? "Opening hours first, then the shortest travel among all possible orders." : "운영시간·휴무를 먼저 지키고, 그 안에서 이동이 가장 짧은 순서를 찾았어요.");
     let method = opt.method === "exact"
       ? (en ? `Compared every possible order (${fact(n - locked.length)}) with branch-and-bound using estimated stop-to-stop times.`
         : `가능한 순서 ${comma(fact(n - locked.length))}가지를 모두 따져(분기한정) 후보를 골랐어요. 후보끼리는 장소 사이 추정 이동시간으로 비교했어요.`)
@@ -857,6 +857,8 @@ export function makeApi(DATA) {
       reply = c.lang === "ko" ? `${josa(p.name_ko, "은는")} ${hard} 지금 이동 조건(${c.move.join(", ") || "없음"})으로는 넣지 못했어요. 코스는 그대로 뒀어요.`
         : `I couldn't add ${p.name_en || p.name_ko} with your mobility needs. The course is unchanged.`;
     } else if (changed) {
+      if (r.action === "indoor" && res.stops.some((s) => s.kind === "sight" && !PLACES[s.id].indoor))
+        reply = c.lang === "ko" ? "이동 조건에 맞는 실내 관광지가 적어 바깥 장소도 함께 넣었어요." : "Few indoor places fit your needs, so some outdoor stops remain.";
       reply += diffReply(ids, res.stops.map((s) => s.id), res.skipped, c.lang === "ko");
       if (c.lang === "ko") reply += res.notes.filter((n) => n.startsWith("점심 전까지") || n.startsWith("점심때까지")).map((n) => " " + n).join("");
     }

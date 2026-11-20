@@ -10,7 +10,7 @@ type Props = { opt: OptimizeRes; before: Stop[]; name: (id: string) => string; l
 const SRC: Record<string, [string, string]> = {
   kakao: ["카카오 자동차 길찾기 (실제 경로)", "Kakao driving (real route)"],
   transit: ["ODsay 대중교통 길찾기 (실제 경로)", "ODsay transit (real route)"],
-  estimate: ["추정값 (실제 길찾기 못 불러옴)", "Estimate (no real route data)"],
+  estimate: ["예상 이동시간", "Expected travel time"],
 };
 
 export function OptimizeCompare({ opt, before, name, lang, onApply, onKeep }: Props) {
@@ -27,7 +27,7 @@ export function OptimizeCompare({ opt, before, name, lang, onApply, onKeep }: Pr
     return `${d < 0 ? (ko ? "감소 " : "−") : (ko ? "증가 " : "+")}${unit(Math.abs(d))}`;
   };
   const after = opt.result.course.stops;
-  const mark = (m: RouteMetric) => (real(m) ? (ko ? "실제" : "real") : (ko ? "추정" : "est."));
+  const mark = (m: RouteMetric) => (real(m) ? (ko ? "실제" : "real") : (ko ? "예상" : "exp."));
   const distRow = bothReal && opt.before.distance_m != null && opt.after.distance_m != null;
   const close = (fn: () => void) => { ref.current?.close(); fn(); };
   return (
@@ -72,7 +72,6 @@ export function OptimizeCompare({ opt, before, name, lang, onApply, onKeep }: Pr
         {opt.unknown.length > 0 && <li><b>{ko ? "운영시간 확인 필요" : "Hours unconfirmed"}</b> {opt.unknown.map(name).join(", ")} <small className="muted">{ko ? "— 상시 개방으로 보지 않았어요. 방문 전 전화로 확인하세요." : "— not treated as always open; call ahead."}</small></li>}
         {opt.access.map((a) => <li key={a}><b>{ko ? "접근성" : "Access"}</b> {a}</li>)}
       </ul>
-      <p className="muted small">{opt.method}</p>
 
       <div className="opt-act">
         {opt.changed && <button className="chip go" onClick={() => close(onApply)}>{ko ? "이 일정 적용하기" : "Apply this order"}</button>}

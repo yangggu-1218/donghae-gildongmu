@@ -154,7 +154,7 @@ function ClusterDetail({ c, d, tok, call, can, reload, onBack }: Any) {
         <label>심각도<select value={e.severity} onChange={(x) => setE({ ...e, severity: x.target.value })}>{Object.entries(d.sev).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
         <label>담당 부서<select value={e.dept} onChange={(x) => setE({ ...e, dept: x.target.value })}>{Object.entries(d.depts).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
         <label>우선순위{c.priority_rule && c.priority_rule !== e.priority && <small> 제안: {d.pri[c.priority_rule]}</small>}<select value={e.priority} onChange={(x) => setE({ ...e, priority: x.target.value })}>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-        <label className="wide">이용자에게 보일 답변 <small>[내 제보]에 보여요</small><textarea rows={2} value={e.reply} onChange={(x) => setE({ ...e, reply: x.target.value })} placeholder="예: 현장 확인했어요. 12월 첫 주에 보도블록을 바꿔요." /></label>
+        <label className="wide">이용자에게 보일 답변 <small>[내 제보]에 보여요</small><textarea rows={2} value={e.reply} onChange={(x) => setE({ ...e, reply: x.target.value })} placeholder="답변을 적어 주세요" /></label>
         <label className="wide">내부 메모 {e.status === "반려" && <b className="err">(반려 사유 필수)</b>}<input value={e.memo} onChange={(x) => setE({ ...e, memo: x.target.value })} placeholder="담당자끼리만 보여요" /></label>
       </div>
       <div className="ca2-actions">

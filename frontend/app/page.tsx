@@ -555,8 +555,8 @@ export default function Page() {
       applyRes(r); setFresh([]);
       const closed = r.course.stops.map((s, i) => (s.open_state === "closed" ? `${i + 1}. ${name(s.id)}` : "")).filter(Boolean);
       showToast(lang === "ko"
-        ? `${r.course.drive_source === "estimate" ? "순서를 바꿨어요. 실제 길찾기를 불러오지 못해 이동시간은 추정값이에요." : "순서를 바꾸고 실제 경로로 이동시간을 다시 계산했어요."}${closed.length ? ` ${closed.join(", ")}은(는) 그 시각에 운영하지 않아요.` : ""}`
-        : `${r.course.drive_source === "estimate" ? "Order changed. Travel times are estimates." : "Order changed and travel times recalculated."}${closed.length ? ` Not open then: ${closed.join(", ")}.` : ""}`);
+        ? `${"순서를 바꾸고 방문 시각을 다시 계산했어요."}${closed.length ? ` ${closed.join(", ")}은(는) 그 시각에 운영하지 않아요.` : ""}`
+        : `${"Order changed and times recalculated."}${closed.length ? ` Not open then: ${closed.join(", ")}.` : ""}`);
     } catch {
       setCourse(prev.course); setRouteErr(ids);
     } finally { setRouting(false); setBusy(false); }
@@ -651,7 +651,7 @@ export default function Page() {
       const fd = new FormData(); fd.append("photo", f); fd.append("move", (cond.move || []).join(",")); fd.append("lang", lang);
       const r = await fetch("/api/photo-check", { method: "POST", body: fd }).then((x) => x.json());
       if (r?.by === "ai") say({ pose: r.verdict === "R" ? "worry" : r.verdict === "G" ? "happy" : "neutral", text: r.title, photo: r, via: "llm" });
-      else say({ pose: "worry", text: lang === "ko" ? "지금은 사진을 볼 수 없어요. AI가 연결된 서버에서만 돼요. 잠시 뒤 다시 보내 주세요." : "I can't read photos right now (needs the AI server). Please try again later." });
+      else say({ pose: "worry", text: typeof r?.detail === "string" ? r.detail : lang === "ko" ? "지금은 사진을 볼 수 없어요. 잠시 뒤 다시 보내 주세요." : "I can't read photos right now. Please try again later." });
     } catch { say({ pose: "worry", text: t("error.server") }); }
     setBusy(false);
   }
@@ -855,6 +855,10 @@ export default function Page() {
           {site?.notices?.map((n: any) => <p key={n.id} className={`site-note ${n.level}`}><b>{n.title}</b> {n.body}</p>)}
         </div>) : null}
       <main>
+      {/* 없는 주소: 빈 화면 대신 안내 (QA 2026-11-21) */}
+      {!["", "plan", "places", "place", "map", "community", "my", "events", "transport", "stay", "guide", "report", "login", "me", "admin"].includes(route[0]) && (
+        <section className="sec wrap"><div className="panel empty"><img src="/dongi/surprise.webp" alt="" />
+          <div><p><b>{lang === "ko" ? "찾는 페이지가 없어요" : "Page not found"}</b></p><a className="btn-go" href="#/">{lang === "ko" ? "처음으로" : "Home"}</a></div></div></section>)}
       {route[0] === "place" && route[1] && <PlacePage id={route[1]} lang={lang} onAdd={addWish} wished={(cond.wish || []).includes(route[1])} />}
       {route[0] === "places" && <Places lang={lang} zone0={route[1]} wish={cond.wish || []} onAdd={addWish} gradeLabel={(g) => t(`grade.${g}`)} />}
       {route[0] === "transport" && <TransportPage lang={lang} />}
@@ -1128,7 +1132,7 @@ export default function Page() {
                         <div className="add-pane panel">
                           <label><span className="sr-only">{addOpen === "place" ? (lang === "ko" ? "넣을 장소 찾기" : "Find a place") : (lang === "ko" ? "숙소 찾기" : "Find your stay")}</span>
                             <input type="search" autoFocus value={addQ} onChange={(e) => setAddQ(e.target.value)}
-                              placeholder={addOpen === "place" ? (lang === "ko" ? "넣을 장소 이름 (예: 논골담길, 카페)" : "Place name") : (lang === "ko" ? "숙소 이름이나 주소 (예: 망상, 호텔)" : "Stay name or address")} /></label>
+                              placeholder={addOpen === "place" ? (lang === "ko" ? "넣을 장소 이름" : "Place name") : (lang === "ko" ? "숙소 이름이나 주소" : "Stay name or address")} /></label>
                           <ul className="add-list">
                             {cands.map((p: any) => addOpen === "place"
                               ? <li key={p.id}><button disabled={busy} onClick={() => { setAddOpen(""); edit("add", p.id, lang === "ko" ? `${p.name_ko} 넣어 줘` : `Add ${p.name_en || p.name_ko}`); }}>
@@ -1140,7 +1144,7 @@ export default function Page() {
                           {addOpen === "stay" && <p className="muted small" role="status">{stayMsg || (lang === "ko" ? "숙소는 코스의 마지막 도착지로 지도와 길찾기에 붙어요. 동해시 숙박 공공데이터예요." : "Your stay becomes the last stop on the map and directions.")}</p>}
                         </div>);
                     })()}
-                    {stay && stayMin != null && <p className="muted">{lang === "ko" ? `마지막 장소에서 숙소까지 차로 약 ${stayMin}분 (추정)` : `Last stop to lodging: about ${stayMin} min by car (estimate)`}</p>}
+                    {stay && stayMin != null && <p className="muted">{lang === "ko" ? `마지막 장소에서 숙소까지 차로 약 ${stayMin}분` : `Last stop to lodging: about ${stayMin} min by car`}</p>}
                     {stay && kakaoRoute && <a className="chip" href={kakaoRoute} target="_blank" rel="noreferrer">{lang === "ko" ? "숙소까지 카카오 길찾기" : "Directions to lodging"}</a>}
                   </div>
                   <p className="rc-info"><Icon name="info" /><span>{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")

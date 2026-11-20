@@ -18,6 +18,13 @@ export type SavedPlan = { id: string; title: string; date: string; start_time: s
   ids?: string[]; auto?: string; kw?: Keyword[];   // ids·auto(코스 이름)·kw(편의 키워드)는 2026-11-21부터 저장
   res?: { course: any; extras: Record<string, any>; conditions: any } };   // 저장한 코스 그대로 (자세히 보기에서 다시 계산하지 않고 이걸 보여 줌)
 export function loadPlans(): SavedPlan[] { try { return JSON.parse(localStorage.getItem("gd-plans") || "[]"); } catch { return []; } }
+// 저장한 일정 이름 (붙인 이름 → 코스 이름 → 'OO 외 n곳') — 커뮤니티·내 정보에서도 같은 이름으로
+export const planName = (p: SavedPlan) => p.title || p.auto || `${p.stops[0] || "동해"} 외 ${Math.max(0, p.stops.length - 1)}곳`;
+// 저장한 일정 열기: 저장해 둔 코스를 그대로 (다시 계산하지 않음)
+export function openSavedPlan(p: SavedPlan) {
+  try { sessionStorage.setItem("gd-open-my", "1"); sessionStorage.setItem("gd-open-title", p.title || ""); if (p.res) sessionStorage.setItem("gd-open-res", JSON.stringify(p.res)); } catch { /* 무시 */ }
+  location.hash = `#plan=${p.hash}`;
+}
 export function savePlans(v: SavedPlan[]) { try { localStorage.setItem("gd-plans", JSON.stringify(v)); return true; } catch { return false; } }
 
 const todayIso = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
@@ -124,10 +131,7 @@ function TripCard({ p, lang, places, onFav, onRename, onDelete }: { p: SavedPlan
   const photo = repPhoto(stops);
   const dd = dayDiff(p.date);
   const wd = new Date(p.date + "T00:00:00").getDay();
-  const open = () => {
-    try { sessionStorage.setItem("gd-open-my", "1"); sessionStorage.setItem("gd-open-title", p.title || ""); if (p.res) sessionStorage.setItem("gd-open-res", JSON.stringify(p.res)); } catch { /* 무시 */ }
-    location.hash = `#plan=${p.hash}`;
-  };
+  const open = () => openSavedPlan(p);
   async function share() {
     const url = `${location.origin}${location.pathname}#plan=${p.hash}`;
     const text = `${title} · ${p.date} ${p.start_time}\n${p.stops.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n${url}`;

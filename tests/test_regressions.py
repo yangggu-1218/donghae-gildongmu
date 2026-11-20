@@ -117,5 +117,18 @@ try:   # ODsay 없이 대중교통 구간을 흉내 내 '내린 정류장 → �
 finally:
     public_apis.odsay_available, public_apis.transit_leg = _av, _tl
 
+# 9) 전수 QA(2026-11-21)에서 고친 것
+r = c.post("/api/photo-check", files={"photo": ("a.jpg", b"not an image", "image/jpeg")})
+check("QA: 깨진 사진은 서버 오류 대신 400 안내", r.status_code == 400 and "사진" in r.json().get("detail", ""), r.text[:120])
+check("QA: 부서 설정 잘못된 형식도 서버 오류 없음", c.post("/api/admin/city-settings", json={"depts": "x"}, headers=H).status_code == 200)
+check("QA: 자동 갱신 규칙 잘못된 형식은 400", c.post("/api/admin/sync/rules", json={"rules": "x"}, headers=H).status_code == 400)
+base_w = {"who": "혼자", "move": ["휠체어"], "style": ["바다 보기"], "days": "당일", "start": "동해역", "memo": "", "wish": [], "lang": "ko",
+          "date": "2026-11-24", "start_time": "10:00", "flat_only": True}
+cr = c.post("/api/course", json=base_w).json()
+ed = c.post("/api/edit", json={"conditions": cr["conditions"], "course_ids": [s["id"] for s in cr["course"]["stops"]], "action": "indoor", "target": None}).json()
+outdoor = [s["id"] for s in ed["course"]["stops"] if s["kind"] == "sight" and not PLACES[s["id"]].indoor]
+check("QA: '실내로'인데 바깥 장소가 남으면 그렇게 말함", (not outdoor) or ed["reply"].startswith("이동 조건에 맞는 실내 관광지가 적어"), ed["reply"][:80])
+check("QA: 없는 장소 주소는 404", c.get("/api/places/no-such-place").status_code == 404)
+
 print(f"회귀 점검 실패 {len(fails)}건")
 sys.exit(1 if fails else 0)

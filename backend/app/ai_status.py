@@ -152,7 +152,7 @@ def decide(prop_id: str, approve: bool, places: dict[str, Place], who: str, memo
         raise ValueError("장소를 찾을 수 없어요.")
     applied = None
     if approve:
-        reason = f"AI 제안 승인 (근거 제보 {', '.join(pr['evidence'])}){' · ' + memo if memo else ''}"
+        reason = f"AI 제안 승인 (참고 제보 {', '.join(pr['evidence'])}){' · ' + memo if memo else ''}"
         if pr["type"] == "notice":
             applied = cms.add_notice({"place_id": p.id, "level": pr["level"], "title": pr["title"], "body": pr["detail"],
                                       "start": dt.date.today().isoformat(), "end": pr.get("end_date")}, reason)

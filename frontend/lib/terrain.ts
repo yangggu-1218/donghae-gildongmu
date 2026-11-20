@@ -16,9 +16,6 @@ export function terrainText(t: Terrain | undefined | null, lang: string): string
   return ko ? `${h} · 평평한 지형이에요.` : `${h}; flat ground.`;
 }
 
-export const TERRAIN_NOTE = (lang: string) => lang === "ko"
-  ? "국토지리정보원 90m 지형 자료로 본 추정이에요. 짧은 경사로·계단·턱은 이 자료에 보이지 않아요."
-  : "Estimate from 90 m terrain data (NGII). Short ramps, steps and curbs aren't visible in it.";
 
 // 걷는 구간(내린 정류장 → 장소) 오르막: 5m 미만이면 말하지 않음
 export function climbText(c: Climb | undefined | null, lang: string): string {

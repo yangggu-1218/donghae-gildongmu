@@ -27,7 +27,6 @@ export const tr = (lang: string, s?: string | null) => (s == null ? "" : lang ==
 // 출처 페이지의 판정 메모 (서버는 한국어로만 준다)
 export const SOURCE_NOTES_EN = [
   "Grades are calculated from measurements when we have them; otherwise we use what was recorded on the site survey. With no information, a place is marked 'Caution'.",
-  "Restaurants, cafes, pharmacies and clinics marked '(예시)' and hours marked 'sample' have not been checked yet.",
   "Public lodging data has no coordinates or room accessibility, so accessible rooms are marked 'not checked'.",
   "Accessible toilets are shown on the map only when their address matches another public dataset (attractions, car parks, chargers).",
 ];

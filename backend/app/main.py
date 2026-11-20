@@ -179,7 +179,7 @@ def optimize(body: dict):
         reason = "Checked with real routes: your current order is better, so nothing changes." if en else "추천 순서를 실제 길찾기로 다시 재 보니 지금 순서가 더 나아서 그대로 두었어요."
     else:
         reason = ("Opening hours first, then the shortest travel among all possible orders." if en
-                  else "운영시간·휴무를 먼저 지키고, 그 안에서 이동이 가장 짧은 순서를 찾았어요. [이 일정 적용하기]를 눌러야 바뀌어요.")
+                  else "운영시간·휴무를 먼저 지키고, 그 안에서 이동이 가장 짧은 순서를 찾았어요.")
     import math as _m
     if opt["method"] == "exact":
         method = (f"Compared every possible order ({_m.factorial(n - len(locked))}) with branch-and-bound using estimated stop-to-stop times."
@@ -681,7 +681,10 @@ def brief(body: dict):
 @app.post("/api/photo-check")
 async def photo_check(photo: UploadFile = File(...), move: str = Form(""), lang: str = Form("ko")):
     """사진으로 물어보기: 사진은 저장하지 않고(위치 정보도 지운 사본만) AI에게 한 번 보여 준 뒤 버린다."""
-    img = Image.open(io.BytesIO(await photo.read())).convert("RGB")
+    try:   # 사진이 아니거나 깨진 파일이면 서버 오류 대신 안내 (QA 2026-11-21)
+        img = Image.open(io.BytesIO(await photo.read())).convert("RGB")
+    except Exception:
+        raise HTTPException(400, "사진을 읽지 못했어요. 다른 사진으로 다시 보내 주세요.")
     img.thumbnail((1024, 1024)); buf = io.BytesIO(); img.save(buf, "JPEG", quality=80)
     return llm.photo_check(buf.getvalue(), [m for m in move.split(",") if m], lang)
 
@@ -1027,7 +1030,8 @@ def admin_city_export(t: str = "", sample: int = 0):
 def admin_city_settings(body: dict, x_admin_token: str | None = Header(None)):
     """부서 이름 바꾸기 (총괄 관리자). 키는 그대로, 보이는 이름만."""
     s = _admin(x_admin_token, "accounts")
-    depts = {k: str(v).strip()[:40] for k, v in (body.get("depts") or {}).items() if k in city.DEPTS and str(v).strip()}
+    raw = body.get("depts") if isinstance(body.get("depts"), dict) else {}   # 잘못된 형식은 빈 값으로 (QA)
+    depts = {k: str(v).strip()[:40] for k, v in raw.items() if k in city.DEPTS and str(v).strip()}
     with cms._lock:
         db = cms.load()
         before = (db.get("city") or {}).get("depts")
@@ -1109,7 +1113,10 @@ def admin_sync_revert(cid: str, x_admin_token: str | None = Header(None)):
 def admin_sync_rules(body: dict, x_admin_token: str | None = Header(None)):
     """[자동 갱신 설정] 항목별 auto·review·off (총괄 관리자만, 이동약자 정보는 auto 불가)."""
     s = _admin(x_admin_token, "accounts")
-    return sync_mod.set_rules(body.get("rules") or {}, _who(s))
+    rules = body.get("rules")
+    if not isinstance(rules, dict):
+        raise HTTPException(400, "설정 형식이 올바르지 않아요")
+    return sync_mod.set_rules(rules, _who(s))
 
 
 def _admin(token: str | None, perm: str | None = None) -> dict:

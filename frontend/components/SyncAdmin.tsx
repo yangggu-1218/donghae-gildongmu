@@ -63,14 +63,14 @@ function Pending({ c, tok, call, reload }: Any) {
   return (
     <li className="panel sy-item">
       <div className="sy-top"><b>{c.place_name || (c.field === "closure" ? c.new?.name : "새 항목")}</b><span className="muted">{c.group_ko}{c.field.startsWith("access.") ? ` (${c.field.slice(7)})` : ""}</span>
-        <span className={`badge ${k[1]}`}>{k[0]}</span><span className="badge b-plain" title="코드가 계산: 출처 등급 + 같은 값을 낸 출처 수 + 근거 + 최신성">신뢰도 {c.confidence}</span></div>
+        <span className={`badge ${k[1]}`}>{k[0]}</span><span className="badge b-plain" title="코드가 계산: 출처 등급 + 같은 값을 낸 출처 수 + 출처 문장 + 최신성">신뢰도 {c.confidence}</span></div>
       {c.kind === "mismatch" ? <div className="sy-opts" role="radiogroup" aria-label="출처별 값">
         <p className="small muted">지금 값: {fmt(c.old)}</p>
         {c.options.map((o: Any) => <label key={o.source} className="day"><input type="radio" name={`m-${c.id}`} checked={val === fmt(o.value)} onChange={() => setVal(fmt(o.value))} />
           <b>{fmt(o.value)}</b> <small className="muted">— {o.source}</small>{o.url && <> <a href={o.url} target="_blank" rel="noreferrer">원문</a></>}</label>)}
       </div> : <p className="sy-diff"><span className="sy-old">{fmt(c.old)}</span> <span aria-hidden="true">→</span> <b className="sy-new">{fmt(c.new)}</b>
         {c.moved_m != null && <small className="muted"> ({c.moved_m}m 이동)</small>}{c.kind === "conflict" && <small> · 관리자 값: <b>{fmt(c.admin_value)}</b></small>}</p>}
-      {c.evidence && <p className="sy-ev"><small>근거</small> <mark>{c.evidence}</mark></p>}
+      {c.evidence && <p className="sy-ev"><small>출처 문장</small> <mark>{c.evidence}</mark></p>}
       <p className="small muted">{c.source_name}{c.url && <> · <a href={c.url} target="_blank" rel="noreferrer">원문 보기</a></>} · {c.reason}</p>
       {c.site_check && <p className="small"><Picto name="warn" size={16} /> 현장 확인 필요 — 승인하기 전에 현장·전화로 확인해 주세요.</p>}
       {edit && c.kind !== "mismatch" && <label className="sy-edit">고칠 값<input className="box" value={val} onChange={(e) => setVal(e.target.value)} /></label>}

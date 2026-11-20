@@ -321,7 +321,7 @@ def apply(places: dict[str, Place], c: Conditions, ids: list[str], text: str = "
         if t: c.start_time = t
         if not (d or t):
             changed = False
-            reply = "날짜나 시간을 알아듣지 못했어요. 예: '토요일 오전 10시'" if ko else "I couldn't read the date or time."
+            reply = "날짜나 시간을 알아듣지 못했어요. '토요일 오전 10시'처럼 말해 주세요." if ko else "I couldn't read the date or time."
         else:
             day = _dt.date.fromisoformat(c.date) if c.date else today()
             wd = "일월화수목금토"[day.isoweekday() % 7]
@@ -368,6 +368,10 @@ def run(places: dict[str, Place], c: Conditions, ids: list[str], text: str = "",
         reply = (f"{josa(p.name_ko, '은는')} {hard} 지금 이동 조건({', '.join(c.move) or '없음'})으로는 넣지 못했어요. 코스는 그대로 뒀어요."
                  if c.lang == "ko" else f"I couldn't add {p.name_en or p.name_ko} with your mobility needs. The course is unchanged.")
     elif changed:
+        # '실내로' 했는데 이동 조건 때문에 바깥 장소가 남으면 그대로 말한다 (QA 2026-11-21)
+        if r["action"] == "indoor" and any(s.kind == "sight" and not places[s.id].indoor for s in res.stops):
+            reply = ("이동 조건에 맞는 실내 관광지가 적어 바깥 장소도 함께 넣었어요." if c.lang == "ko"
+                     else "Few indoor places fit your needs, so some outdoor stops remain.")
         reply += diff_reply(ids, [s.id for s in res.stops], places, res.skipped, c.lang == "ko")
         if c.lang == "ko":
             reply += "".join(" " + n for n in res.notes if n.startswith(("점심 전까지", "점심때까지")))

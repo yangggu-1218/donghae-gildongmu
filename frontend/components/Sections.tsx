@@ -69,7 +69,7 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
             <svg className="ask-ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <label htmlFor="hero-ask" className="sr-only">{L("AI 동이에게 여행 조건 말하기", "Tell AI Dongi about your trip")}</label>
             <span className="via via-llm ask-ai" aria-hidden="true">AI</span>
-            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("AI 동이에게 말해 보세요 (예: 유모차 탄 아기랑 바다 보러 가고 싶어)", "Tell AI Dongi (e.g. sea views with a baby in a stroller)")} />
+            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("유모차 탄 아기랑 바다 보러 가고 싶어", "Tell AI Dongi (e.g. sea views with a baby in a stroller)")} />
             <MicButton lang={lang} className="ask-mic" disabled={busy} onText={(x) => { setV(x); setMicMsg(""); }} onError={setMicMsg} />
             <button className="ask-go" disabled={busy} aria-label={L("코스 짜기", "Plan my route")}>
               <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Head } from "@/components/Pages";
 import { Icon } from "@/components/Icon";
-import { loadPlans } from "@/components/MyTrips";
+import { loadPlans, planName, openSavedPlan } from "@/components/MyTrips";
 import { allPosts, load as loadCm, AVATAR, TEST_NICK } from "@/lib/community";
 import { api } from "@/lib/api";
 
@@ -143,7 +143,7 @@ export function ProfilePage({ lang, wish, places, onRemoveWish }: { lang: Lang; 
         {tabs.map(([k, ko, en, n]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{n != null && <b>{n}</b>}<span>{L(ko, en)}</span></button>)}
       </div>
       <div className="panel pf-body" role="tabpanel">
-        {tab === "trips" && (plans.length ? <ul className="pf-list">{plans.slice(0, 8).map((p) => <li key={p.id}><a href={`#plan=${p.hash}`}><b>{p.title}</b><small className="muted">{p.date} {p.start_time} · {p.stops.map(nm).join(" → ")}</small></a></li>)}</ul>
+        {tab === "trips" && (plans.length ? <ul className="pf-list">{plans.slice(0, 8).map((p) => <li key={p.id}><a href={`#plan=${p.hash}`} onClick={(e) => { e.preventDefault(); openSavedPlan(p); }}><b>{planName(p)}</b><small className="muted">{p.date} {p.start_time} · {p.stops.map(nm).join(" → ")}</small></a></li>)}</ul>
           : <p className="muted">{L("저장한 코스가 없어요. 코스를 짠 뒤 [내 일정에 저장]을 눌러 보세요.", "No saved trips yet.")} <a href="#plan">{L("코스 짜러 가기", "Plan a trip")}</a></p>)}
         {tab === "trips" && plans.length > 0 && <a className="link-btn" href="#/my">{L("내 일정 전체 보기", "See all trips")}</a>}
         {tab === "wish" && (wish.length ? <ul className="pf-list">{wish.map((id) => <li key={id}><a href={`#/place/${id}`}><b>{nm(id)}</b></a><button className="chip sm" onClick={() => onRemoveWish(id)}>{L("빼기", "Remove")}</button></li>)}</ul>

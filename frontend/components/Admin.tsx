@@ -187,7 +187,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
       <div className="pe-top">
         <label className="pick-place">고칠 장소
           <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
-            {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}{needsVisit(p) ? " · 언덕·답사 필요" : ""}</option>)}</select></label>
+            {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (가상)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}{needsVisit(p) ? " · 언덕·답사 필요" : ""}</option>)}</select></label>
         <div className="pe-mode" role="tablist" aria-label="고치는 방법">
           <button type="button" role="tab" aria-selected={mode === "manual"} className={`pe-mode-btn${mode === "manual" ? " on" : ""}`} disabled={!pid} onClick={() => go("manual")}>
             <Icon name="edit" /><span><b>수동 변경</b><small>칸을 직접 고치기</small></span></button>
@@ -218,7 +218,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
         <Field label="소개" wide><textarea rows={2} value={f.intro_ko} onChange={(e) => set("intro_ko", e.target.value)} /></Field>
         <Field label="한 줄 팁" wide><input value={f.tip_ko} onChange={(e) => set("tip_ko", e.target.value)} /></Field>
 
-        <h2 className="h3">걷기·접근성 <span className="muted small">(바꾸면 근거 필수)</span></h2>
+        <h2 className="h3">걷기·접근성 <span className="muted small">(바꾸면 이유 필수)</span></h2>
         <Field label="걷기 정보"><select value={f.walk_load} onChange={(e) => set("walk_load", e.target.value)}>{["평지", "완만한경사", "급경사", "확인 전"].map((x) => <option key={x}>{x}</option>)}</select></Field>
         <Field label="휠체어"><select value={f.wheelchair} onChange={(e) => set("wheelchair", e.target.value)}>{["가능", "일부", "불가", "확인 전"].map((x) => <option key={x}>{x}</option>)}</select></Field>
         <Field label="출입구 턱"><select value={f.entrance_step} onChange={(e) => set("entrance_step", e.target.value)}><option value="">모름</option><option value="yes">있음</option><option value="no">없음</option></select></Field>
@@ -240,8 +240,8 @@ function PlaceEditor({ places, db, tok, call }: any) {
           </table></div>
           <button type="button" className="chip" onClick={() => setSegs([...segs, { name: "", source: "현장 답사" }])}>구간 추가</button>
         </div>
-        <Field label={access ? "바꾼 이유·근거 (필수: 측정값, 확인한 날짜, 확인한 사람)" : "바꾼 이유 (선택)"} wide>
-          <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="예: 11/20 현장 측정 — 매표소 앞 경사 4°, 정일환 확인" /></Field>
+        <Field label={access ? "바꾼 이유 (필수: 측정값, 확인한 날짜, 확인한 사람)" : "바꾼 이유 (선택)"} wide>
+          <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="측정값·확인한 날짜·확인한 사람" /></Field>
         <div className="wide save-row">
           <button className="chip go" disabled={!changed || (access && reason.trim().length < 4)}>저장하고 바로 반영</button>
           <span className="muted small">{changed ? `바뀐 항목 ${changed}개` : "바뀐 것이 없어요"}</span>
@@ -316,7 +316,7 @@ function AiQuick({ pid, name, f, tok, onFill, feeDone }: any) {
           <li key={c.key}><label><input type="checkbox" checked={!!pick[c.key]} onChange={(e) => setPick({ ...pick, [c.key]: e.target.checked })} />
             <b>{c.label}</b>{c.access && <span className="badge b-unknown">이동약자 정보 · 직접 확인</span>}</label>
             <span className="muted small">지금: {c.now}</span><span className="small">자료: <b>{c.new}</b></span></li>))}</ul>}
-        {r.evidence?.length > 0 && <details><summary className="small">근거 문장 {r.evidence.length}개</summary><ul className="ai-list">{r.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
+        {r.evidence?.length > 0 && <details><summary className="small">참고한 문장 {r.evidence.length}개</summary><ul className="ai-list">{r.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
         {r.changes?.length > 0 && <button type="button" className="chip go" disabled={!chosen.length}
           onClick={() => { const m = `AI가 고른 ${chosen.length}칸을 넣었어요. 아래에서 확인하고 [저장하고 바로 반영]을 눌러 주세요.`; onFill(Object.assign({}, ...chosen.map(toForm)), m); setDone(m); setPick({}); }}>고른 {chosen.length}칸 폼에 넣기</button>}
       </div>}
@@ -399,7 +399,7 @@ function NoticeForm({ places, tok, call, levels, title }: any) {
       {levels.length > 1 && <Field label="종류"><select value={n.level} onChange={(e) => setN({ ...n, level: e.target.value })}>{levels.map((k: string) => <option key={k} value={k}>{LEVEL[k]}</option>)}</select></Field>}
       <Field label="시작일"><input type="date" value={n.start} onChange={(e) => setN({ ...n, start: e.target.value })} /></Field>
       <Field label="끝일 (비우면 계속)"><input type="date" value={n.end} onChange={(e) => setN({ ...n, end: e.target.value })} /></Field>
-      <Field label="제목" wide><input value={n.title} maxLength={80} placeholder="예: 데크 보수로 휠체어는 해안 쪽 우회" onChange={(e) => setN({ ...n, title: e.target.value })} /></Field>
+      <Field label="제목" wide><input value={n.title} maxLength={80} placeholder="알릴 내용" onChange={(e) => setN({ ...n, title: e.target.value })} /></Field>
       <Field label="내용" wide><textarea rows={2} value={n.body} onChange={(e) => setN({ ...n, body: e.target.value })} /></Field>
       <button className="chip go" disabled={!n.title.trim()}>올리고 바로 반영</button>
     </form>
@@ -411,7 +411,7 @@ function BannerForm({ db, tok, call }: any) {
   return (
     <form className="panel visit-form" onSubmit={(ev) => { ev.preventDefault(); call(() => api.post("/api/admin/banner", b, tok), "첫 화면 공지를 바꿨어요.", "#/"); }}>
       <h2 className="h3">모든 화면 위 공지 {db?.banner && <span className="badge b-open">게시 중</span>}</h2>
-      <Field label="공지 문구" wide><input value={b.text} maxLength={200} placeholder="예: 11/21~22 도째비페스타로 묵호항 주변 주차가 어려워요" onChange={(x) => setB({ ...b, text: x.target.value })} /></Field>
+      <Field label="공지 문구" wide><input value={b.text} maxLength={200} placeholder="공지 내용" onChange={(x) => setB({ ...b, text: x.target.value })} /></Field>
       <Field label="종류"><select value={b.level} onChange={(x) => setB({ ...b, level: x.target.value })}><option value="info">안내</option><option value="warn">주의</option></select></Field>
       <Field label="이 날까지 보이기 (비우면 계속)"><input type="date" value={b.until || ""} onChange={(x) => setB({ ...b, until: x.target.value })} /></Field>
       <div className="wide save-row"><button className="chip go" disabled={!b.text.trim()}>게시</button></div>
@@ -553,7 +553,7 @@ function AiPropRow({ r, canApply, onDecide }: { r: any; canApply: boolean; onDec
       <p><b>{r.title}</b>{r.type === "notice" && <small className="muted"> ({LEVEL[r.level] || r.level}, {r.end_date}까지)</small>}
         {r.type === "hours" && <small className="muted"> ({r.open}~{r.close})</small>}</p>
       {r.detail && <p>{r.detail}</p>}
-      <details open={!done}><summary>근거 제보 {r.evidence_rows?.length || 0}건</summary>
+      <details open={!done}><summary>참고한 제보 {r.evidence_rows?.length || 0}건</summary>
         <ul className="ai-list">{(r.evidence_rows || []).map((e: any) => <li key={e.id}><small className="muted">{e.date} · {e.kind || "-"}</small> {e.note || "(내용 없음)"}{e.photo && <> · <a href={e.photo} target="_blank" rel="noreferrer">사진</a></>}</li>)}</ul>
       </details>
       {r.sample ? <p className="muted small">화면 확인용 가상 제안이라 승인·반려할 수 없어요.</p> : !done ? <div className="chips">
@@ -621,7 +621,7 @@ function Visits({ places, tok, call, me }: any) {
       <h2 className="h3">현장 확인 기록 추가</h2>
       <Field label="장소"><select value={f.place_id} onChange={(e) => setF({ ...f, place_id: e.target.value, segment: "" })}><option value="">고르세요</option>
         {places.filter((p: any) => !p.sample).map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}</option>)}</select></Field>
-      <Field label="구간"><input list="segs" value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })} placeholder="예: 주차장 → 매표소" />
+      <Field label="구간"><input list="segs" value={f.segment} onChange={(e) => setF({ ...f, segment: e.target.value })} placeholder="구간 (출발 → 도착)" />
         <datalist id="segs">{seg.map((s: any) => <option key={s.name} value={s.name} />)}</datalist></Field>
       <Field label="날짜"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
       <Field label="확인한 사람"><input value={f.who} onChange={(e) => setF({ ...f, who: e.target.value })} placeholder={me?.name} /></Field>
@@ -633,7 +633,7 @@ function Visits({ places, tok, call, me }: any) {
       <Field label="장애인 화장실"><select value={f.toilet} onChange={(e) => setF({ ...f, toilet: e.target.value })}>{["", "있음", "없음", "있지만 사용 어려움"].map((s) => <option key={s} value={s}>{s || "-"}</option>)}</select></Field>
       <Field label="메모" wide><textarea rows={2} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
       <button className="chip go" disabled={!f.place_id}>저장</button>
-      <p className="wide muted small">측정값을 장소 판정에 쓰려면 [장소 정보] 탭의 구간 표에 같은 값을 넣고 근거에 이 기록 날짜를 적어 주세요.</p>
+      <p className="wide muted small">측정값을 장소 판정에 쓰려면 [장소 정보] 탭의 구간 표에 같은 값을 넣고 바꾼 이유에 이 기록 날짜를 적어 주세요.</p>
     </form>
     <div className="tbl-wrap"><table className="tbl">
       <thead><tr><th>날짜</th><th>장소·구간</th><th>측정</th><th>화장실</th><th>확인</th><th>메모</th></tr></thead>
@@ -701,7 +701,7 @@ function History({ db, tok, call, name, canBackup }: any) {
     {people.length > 1 && <label className="who-filter">누가 바꿨는지 골라 보기
       <select value={who} onChange={(e) => setWho(e.target.value)}><option value="">모두</option>{people.map((p) => <option key={p}>{p}</option>)}</select></label>}
     <div className="tbl-wrap"><table className="tbl">
-      <thead><tr><th>언제</th><th>누가</th><th>무엇을</th><th>내용</th><th>근거·이유</th><th /></tr></thead>
+      <thead><tr><th>언제</th><th>누가</th><th>무엇을</th><th>내용</th><th>이유</th><th /></tr></thead>
       <tbody>{shown.map((h) => (
         <tr key={h.id} className={h.reverted ? "reverted" : ""}>
           <td><small>{h.at.slice(5, 16).replace("T", " ")}</small></td><td><small>{h.who === "admin" ? "총괄 관리자" : h.who}</small></td><td>{ACTION[h.action] || h.action}</td><td>{what(h)}</td><td><small>{h.reason}</small></td>
@@ -806,8 +806,8 @@ function Accounts({ tok, call, me }: { tok: string; call: any; me: User }) {
     </div>
     <form className="panel visit-form" onSubmit={(e) => { e.preventDefault(); save(() => api.post("/api/admin/accounts", f, tok), `${f.name} 계정을 만들었어요. 임시 비밀번호를 직접 전해 주세요(처음 로그인하면 바꾸라고 나와요).`).then(() => setF(blank)); }}>
       <h2 className="h3">새 계정 만들기</h2>
-      <Field label="아이디 (영문·숫자)"><input value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="off" placeholder="예: kim.editor" /></Field>
-      <Field label="이름"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="예: 김동해" /></Field>
+      <Field label="아이디 (영문·숫자)"><input value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="off" placeholder="영문·숫자 아이디" /></Field>
+      <Field label="이름"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="이름" /></Field>
       <Field label="역할"><select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}><option value="editor">편집자</option><option value="surveyor">현장 조사원</option></select></Field>
       <Field label="임시 비밀번호 (8자 이상, 글자+숫자)"><span className="pw-row"><input value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" />
         <button type="button" className="chip" onClick={() => setF({ ...f, password: temp() })}>만들어 주기</button></span></Field>

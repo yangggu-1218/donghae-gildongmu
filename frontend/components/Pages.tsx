@@ -50,7 +50,8 @@ function More({ n, total, open, onToggle, lang }: { n: number; total: number; op
 function useLoad<T>(fn: () => Promise<T>, deps: any[]): [T | null, boolean] {
   const [v, setV] = useState<T | null>(null);
   const [err, setErr] = useState(false);
-  useEffect(() => { let on = true; setErr(false); fn().then((x) => on && setV(x)).catch(() => on && setErr(true)); return () => { on = false; }; }, deps);
+  // 불러오기에 실패하면 앞 화면의 값을 지운다 (없는 장소 주소로 오면 앞 장소가 그대로 보이던 것, QA 2026-11-21)
+  useEffect(() => { let on = true; setErr(false); fn().then((x) => on && setV(x)).catch(() => { if (on) { setErr(true); setV(null); } }); return () => { on = false; }; }, deps);
   return [v, err];
 }
 const Loading = ({ err, lang }: { err: boolean; lang: Lang }) =>
@@ -181,7 +182,9 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const [mainPh, setMainPh] = useState<string | null>(null);   // 작은 사진을 누르면 큰 사진으로
   const [routeOpen, setRouteOpen] = useState(false);            // '상세 동선 보기'
   useEffect(() => { setMainPh(null); setRouteOpen(false); }, [id]);
-  if (!p) return <section className="sec wrap"><Loading err={err} lang={lang} /></section>;
+  if (!p) return <section className="sec wrap">{err
+    ? <div className="panel empty"><div><p><b>{L("찾는 장소가 없어요", "Place not found")}</b></p><a className="btn-go" href="#/places">{L("관광지 목록으로", "Back to places")}</a></div></div>
+    : <Loading err={err} lang={lang} />}</section>;
   const name = lang === "ko" ? p.name_ko : p.name_en || p.name_ko;
   const zone = ZONES.find((z) => z.k === p.zone);
   const today = { open: L("지금 운영 중", "Open now"), always: L("상시 개방", "Always open"), closed: L("오늘 쉬는 날", "Closed today"),
@@ -285,7 +288,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   ];
 
   const moreBtn = !stay && !noPath ? <button className="pp4-more" aria-expanded={routeOpen} aria-controls="pp4-route-more" onClick={() => setRouteOpen(!routeOpen)}>
-    {routeOpen ? L("상세 동선 접기", "Hide details") : L(segs.length ? "상세 동선 보기" : "판정 근거 보기", segs.length ? "Path details" : "Why this verdict")}<span aria-hidden="true">{routeOpen ? "‹" : "›"}</span></button> : null;
+    {routeOpen ? L("상세 동선 접기", "Hide details") : L(segs.length ? "상세 동선 보기" : "판정 자세히 보기", segs.length ? "Path details" : "Why this verdict")}<span aria-hidden="true">{routeOpen ? "‹" : "›"}</span></button> : null;
   return (
     <section className="sec wrap place-page pp2 pp4">
       {/* 0. 중요한 소식 (임시 알림 + 공사·휴관 소식) — 맨 위 얇은 띠 */}
@@ -565,7 +568,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
               <KakaoMap pins={pinsP} dots label={L("공영주차장 지도", "Public parking map")} />
               <div className="tr-filter">
                 <button className="chip" aria-pressed={freeOnly} onClick={() => setFreeOnly(!freeOnly)}>{L("장애인 차량 면제만", "Disabled permit free only")}</button>
-                <label><span className="sr-only">{L("주차장 찾기", "Find a car park")}</span><input type="search" value={pq} onChange={(e) => setPq(e.target.value)} placeholder={L("이름·주소로 찾기 (예: 추암)", "Search (e.g. Chuam)")} /></label>
+                <label><span className="sr-only">{L("주차장 찾기", "Find a car park")}</span><input type="search" value={pq} onChange={(e) => setPq(e.target.value)} placeholder={L("이름·주소로 찾기", "Search (e.g. Chuam)")} /></label>
               </div>
               <ul className="tr-list">
                 {shownP.map((r: any) => (
@@ -892,7 +895,7 @@ export function StayPage({ lang }: { lang: Lang }) {
       </div>
       <form className="psearch" role="search" onSubmit={(e) => e.preventDefault()}>
         <label htmlFor="stay-q">{L("숙소 찾기", "Find lodging")}</label>
-        <input id="stay-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름·종류·주소로 찾기 (예: 호텔, 펜션)", "Search by name, type or address")} />
+        <input id="stay-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름·종류·주소로 찾기", "Search by name, type or address")} />
       </form>
       <div className="chips stay-kinds" role="group" aria-label={L("숙소 종류", "Type")}>
         <button className="chip" aria-pressed={!kind} onClick={() => setKind("")}>{L("모두", "All")} <small>{all.length}</small></button>
@@ -932,7 +935,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
     [L("동해에 저상버스가 있나요?", "Are there low-floor buses?"), L("아직 없어요. 휠체어로 시내를 다닐 때는 휠체어 차량(1577-2014)이나 택시를 이용하세요. 시티투어 버스도 접이식 휠체어만 실을 수 있어요.", "Not yet. Use the wheelchair vehicle service or a taxi.")],
     [L("전동휠체어 배터리가 걱정돼요.", "Worried about wheelchair battery?"), L("동해시에 전동휠체어 급속충전기가 5곳 있어요. [편의시설 지도]에서 위치와 운영 시간을 보고, 코스 카드의 '근처 충전기'도 확인하세요.", "There are 5 fast chargers; see the facilities map.")],
     [L("코스가 마음에 안 들어요.", "I don't like my route."), L("코스 아래 [다른 곳으로 새로 짜기]·[더 느긋하게]·[더 알차게]를 눌러 보세요. 마음에 안 들면 [되돌리기]로 돌아가요. 동이에게 \"오르막 빼줘\"처럼 말해도 돼요.", "Try 'different places', 'more relaxed' or 'fit in more', or just tell Dongi.")],
-    [L("타자 치기가 어려워요.", "Typing is hard for me."), L("입력칸 옆 마이크 버튼을 누르고 말하면 글자로 바꿔 줘요. 장소 이름을 조금 틀리게 써도(예: 촛데바위) 알아들어요.", "Tap the microphone and speak. Small typos in place names are understood.")],
+    [L("타자 치기가 어려워요.", "Typing is hard for me."), L("입력칸 옆 마이크 버튼을 누르고 말하면 글자로 바꿔 줘요. 장소 이름을 조금 틀리게 써도 알아들어요.", "Tap the microphone and speak. Small typos in place names are understood.")],
     [L("가족에게 일정을 보내고 싶어요.", "How do I share my plan?"), L("[큰 글씨 요약 일정표]에서 [가족에게 보내기]나 [인쇄]를 누르세요. [내 일정]에 저장한 코스도 보낼 수 있어요.", "Use the large-print summary or My trips → Share.")],
     [L("내 위치를 저장하나요?", "Is my location stored?"), L("가까운 안내소·주차장을 찾을 때 한 번만 쓰고 저장하지 않아요.", "Used once to find nearby help or parking; never stored.")],
   ];
@@ -957,7 +960,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
       <div className="panel emer">
         <h2 className="h3">{L("급할 때", "Emergency")}</h2>
         <p><b>119</b> {L("응급·구조", "Emergency")} · <b>1330</b> {L("관광통역안내 (24시간)", "Tourist hotline (24h)")} · <b>112</b> {L("경찰", "Police")}</p>
-        <p className="muted">{L("화면 위 [긴급·도움] 버튼을 누르면 지금 위치에서 가까운 안내소·충전기·병원을 보여 주고, 119·1330은 눌러서 바로 전화할 수 있어요.", "Tap [Help now] at the top for nearby help; tap 119 or 1330 to call.")}</p>
+        <p className="muted">{L("오른쪽 아래 동이를 누른 뒤 [긴급·도움]을 누르면 지금 위치에서 가까운 안내소·충전기·병원을 보여 주고, 119·1330은 눌러서 바로 전화할 수 있어요.", "Tap Dongi at the bottom right, then [Help now] for nearby help; tap 119 or 1330 to call.")}</p>
       </div>
       <div className="faq">
         {faq.map(([q, a]) => <details key={q} className="panel"><summary>{q}</summary><p>{a}</p></details>)}
@@ -1008,7 +1011,7 @@ export function SourcesPage({ lang }: { lang: Lang }) {
           <h2 className="h3">{L("판정 기준", "Grading rules")}</h2>
           <div className="tbl-wrap"><table className="tbl">
             <thead><tr><th>{L("항목", "Item")}</th>{([["G", "1 매우 쉬움"], ["G", "2 쉬움"], ["Y", "3 주의"], ["Y", "4 보조 필요"], ["R", "5 통행 불가"]] as const).map(([g, t]) =>
-              <th key={t}><span className={`badge g-${g}`}>{t}</span></th>)}<th>{L("근거", "Basis")}</th></tr></thead>
+              <th key={t}><span className={`badge g-${g}`}>{t}</span></th>)}<th>{L("기준 출처", "Basis")}</th></tr></thead>
             <tbody>{d.criteria.map((c: any) => <tr key={c.item}><td>{tr(lang, c.item)}</td>{["l1", "l2", "l3", "l4", "l5"].map((k) => <td key={k}>{c[k] ? tr(lang, c[k]) : "—"}</td>)}<td><small>{tr(lang, c.law)}</small></td></tr>)}</tbody>
           </table></div>
           <ul className="plain">{(lang === "ko" ? d.notes : SOURCE_NOTES_EN).map((n: string) => <li key={n} className="muted">{n}</li>)}</ul>
@@ -1032,10 +1035,10 @@ export function SourcesPage({ lang }: { lang: Lang }) {
         <div className="panel">
           <h2 className="h3">{L("지도·길 자료", "Map & path data")}</h2>
           <ul className="plain">
-            <li>{L("관광지 주변 보행로 노면·폭, 코스 준비 중 예시 지도: ", "Path surfaces/widths near places and the sample planning map: ")}<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap {L("기여자", "contributors")}</a> (ODbL)</li>
+            <li>{L("관광지 주변 보행로 노면·폭, 코스 준비 화면 지도: ", "Path surfaces/widths near places and the sample planning map: ")}<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap {L("기여자", "contributors")}</a> (ODbL)</li>
             <li>{L("지도 화면·길찾기: 카카오맵", "Maps and directions: Kakao Map")}</li>
             <li>{L("대중교통 길찾기: ODsay LAB", "Public transit routes: ODsay LAB")}</li>
-            <li>{L("장소 지형(해발·언덕 위인지)·걷는 구간 오르막 추정: 국토지리정보원 수치표고모델(DEM) 90m — 짧은 경사로·계단은 보이지 않아 접근성 판정에는 쓰지 않음", "Terrain and uphill estimates: NGII DEM 90 m (not used for access grades)")}</li>
+            <li>{L("장소 지형(해발·언덕 위인지)·걷는 구간 오르막: 국토지리정보원 수치표고모델(DEM) 90m (접근성 판정에는 쓰지 않음)", "Terrain and uphill estimates: NGII DEM 90 m (not used for access grades)")}</li>
           </ul>
         </div>
         <div className="panel">

@@ -35,7 +35,7 @@ TASKS: dict[str, dict] = {
     "triage": {"tier": "fast", "ko": "불편 제보 정리 (사진 분석·분류)", "effort": "low"},
     "cluster": {"tier": "fast", "ko": "비슷한 제보 묶음 요약", "effort": "low"},
     "report": {"tier": "smart", "ko": "제보 기간 보고서 (시 담당자)", "effort": "medium"},
-    "etc": {"tier": "fast", "ko": "브리핑·사진 분석·조건 해석", "effort": "low"},
+    "etc": {"tier": "fast", "ko": "코스 이름·사진 분석·조건 해석", "effort": "low"},
 }
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 PRICE = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0)}   # $ / 1M 토큰 (입력, 출력)
