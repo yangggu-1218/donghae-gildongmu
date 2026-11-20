@@ -1,19 +1,20 @@
 """동해 길동무 API 서버.
 실행: cd backend && uvicorn app.main:app --reload --port 8000
 키가 없어도 data/places.json(없으면 data/places_seed.json) 예시 데이터로 동작한다."""
-import io, json, os, uuid, datetime as dt
+import io, json, os, re, uuid, datetime as dt
 import anyio
 from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-from fastapi import Header, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Header, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import trip_days, Place, Conditions, ChatEdit
-from . import ai, ai_course, ai_extract, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
+from . import ai, ai_course, ai_extract, city, reports_store, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -179,7 +180,12 @@ def medical():
 def _recent_reports(pid: str, days: int = 90) -> list[dict]:
     """그 장소의 최근 제보·길 메모 (반려 제외, 최신순)."""
     since = (dt.datetime.now() - dt.timedelta(days=days)).isoformat(timespec="seconds")
-    rows = [r for r in _jsonl("reports.jsonl") if r.get("place_id") == pid and r.get("status") != "반려" and (r.get("created_at") or "") >= since]
+    p = PLACES.get(pid)
+    def here(r):   # 그 장소로 보낸 제보 + 장소 300m 안 위치로 보낸 불편 제보
+        if r.get("place_id") == pid:
+            return True
+        return bool(p and p.lat and r.get("place_id") is None and r.get("lat") is not None and city.meters((r["lat"], r["lon"]), (p.lat, p.lon)) <= 300)
+    rows = [r for r in reports_store.real() if here(r) and r.get("status") not in ("반려", "중복") and (r.get("created_at") or "") >= since]
     return sorted(rows, key=lambda r: r.get("created_at") or "", reverse=True)
 
 
@@ -506,27 +512,382 @@ async def photo_check(photo: UploadFile = File(...), move: str = Form(""), lang:
     return llm.photo_check(buf.getvalue(), [m for m in move.split(",") if m], lang)
 
 
+# ---------- 불편 제보 (이용자 → 시 담당자, docs/19_CITY_REPORTS.md) ----------
+_REPORT_HITS: dict[str, list[float]] = {}
+REPORT_PER_HOUR = int(os.getenv("REPORT_PER_HOUR") or 10)   # 같은 접속 주소에서 1시간에 보낼 수 있는 제보 수 (스팸 방지, AI와 별개)
+
+
+def _exif_gps(img) -> tuple[float, float] | None:
+    """'사진 찍은 위치 쓰기'에 동의했을 때만 부른다. 좌표만 읽고 사진은 위치 정보 없이 다시 저장한다."""
+    try:
+        g = img.getexif().get_ifd(0x8825)
+
+        def deg(v, ref):
+            d, m, s_ = (float(x) for x in v)
+            x = d + m / 60 + s_ / 3600
+            return -x if ref in ("S", "W") else x
+        lat, lon = deg(g[2], g[1]), deg(g[4], g[3])
+        return (lat, lon) if 36.5 < lat < 38.5 and 128.0 < lon < 130.5 else None   # 동해시 근처만
+    except Exception:  # noqa: BLE001 — 위치가 없거나 형식이 다르면 안 쓴다
+        return None
+
+
+def _city_cfg() -> dict:
+    c = cms.load().get("city") or {}
+    return {"depts": {**city.DEPTS, **(c.get("depts") or {})}}
+
+
+def _code() -> str:
+    import secrets
+    return "DH-" + str(secrets.randbelow(90000) + 10000)
+
+
+def today_kst() -> str:
+    return (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)).date().isoformat()
+
+
 @app.post("/api/reports")
-async def report(place_id: str = Form(...), kind: str = Form(...), note: str = Form(""), photo: UploadFile | None = File(None)):
-    if place_id not in PLACES:
+async def report(request: Request, place_id: str = Form(""), kind: str = Form(""), note: str = Form(""), photo: UploadFile | None = File(None),
+                 photos: list[UploadFile] | None = File(None), category: str = Form(""), who: str = Form(""), lat: str = Form(""), lon: str = Form(""),
+                 loc_how: str = Form(""), use_exif: str = Form(""), contact: str = Form(""), consent: str = Form(""), source: str = Form("")):
+    """불편 제보. 예전 방식(place_id·kind·note·photo)도 그대로 받는다.
+    사진은 다시 저장하며 위치 정보(EXIF)를 지운다. 연락처는 동의했을 때만 따로 저장(AI에 보내지 않음)."""
+    import time as _t
+    ip = sitelock._ip(request)
+    hits = [x for x in _REPORT_HITS.get(ip, []) if _t.time() - x < 3600]
+    if REPORT_PER_HOUR > 0 and len(hits) >= REPORT_PER_HOUR:
+        raise HTTPException(429, "잠시 뒤에 다시 보내 주세요. (1시간에 보낼 수 있는 제보 수를 넘었어요)")
+    if place_id and place_id not in PLACES:
         raise HTTPException(404, "알 수 없는 장소예요")
+    try:
+        la, lo = (float(lat), float(lon)) if lat and lon else (None, None)
+    except ValueError:
+        la = lo = None
+    if la is not None and not (36.5 < la < 38.5 and 128.0 < lo < 130.5):
+        raise HTTPException(400, "동해시 근처 위치만 받을 수 있어요")
+    cat = category if category in city.CATS else city.OLD_KIND.get(kind, "sidewalk" if place_id else "etc")
+    whos = [w for w in who.split(",") if w in city.WHO]
+    files = [f for f in ([photo] if photo and photo.filename else []) + list(photos or []) if f and f.filename][:3]
+    if not (note.strip() or files or category or kind):
+        raise HTTPException(400, "사진이나 한마디, 종류 중 하나는 알려 주세요")
+    imgs = []
+    for f in files:
+        try:
+            img = Image.open(io.BytesIO(await f.read(12 * 1024 * 1024)))
+            img.load()
+        except Exception:  # noqa: BLE001
+            raise HTTPException(400, "사진을 열지 못했어요. JPG·PNG 사진을 올려 주세요.")
+        if use_exif == "1" and la is None:
+            g = _exif_gps(img)
+            if g:
+                la, lo, loc_how = g[0], g[1], "exif"
+        imgs.append(img)
+    if not place_id and la is None:
+        raise HTTPException(400, "어디인지 알려 주세요 (내 위치·지도·관광지)")
     rid = uuid.uuid4().hex[:12]
-    rec = {"id": rid, "place_id": place_id, "kind": kind, "note": note[:300], "status": "접수",
-           "created_at": dt.datetime.now().isoformat(timespec="seconds"), "photo": None}
-    if photo:
-        img = Image.open(io.BytesIO(await photo.read())).convert("RGB")   # 다시 저장하면서 위치 정보(EXIF)를 지운다
+    names, jpegs = [], []
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    for i, img in enumerate(imgs):
+        img = img.convert("RGB")                       # 다시 저장하면서 위치 정보(EXIF)를 지운다
         img.thumbnail((1600, 1600))
-        out = REPORTS / f"{rid}.jpg"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        img.save(out, "JPEG", quality=85)
-        rec["photo"] = out.name
-        # AI 비전 분석: 관리자 검수용 제안 (판정은 사람이 확인한 뒤에만 바뀐다)
+        name = f"{rid}{'' if i == 0 else f'_{i}'}.jpg"
+        img.save(REPORTS / name, "JPEG", quality=85)
+        names.append(name)
         small = img.copy(); small.thumbnail((1024, 1024)); buf = io.BytesIO(); small.save(buf, "JPEG", quality=80)
-        rec["ai"] = llm.analyze_photo(buf.getvalue(), PLACES[place_id].name_ko, kind, note)
-    log = REPORTS / "reports.jsonl"
-    with log.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-    return {"ok": True, "id": rid, "ai": rec.get("ai")}
+        jpegs.append(buf.getvalue())
+    pname = PLACES[place_id].name_ko if place_id else ""
+    depts = _city_cfg()["depts"]
+    tri = await anyio.to_thread.run_sync(lambda: city.triage(cat, whos, note, pname, jpegs, depts))
+    rec = {"id": rid, "code": _code(), "source": source if source in ("불편 알리기", "코스 결과", "동이 대화") else ("불편 알리기" if category else "제보"),
+           "place_id": place_id or None, "lat": la, "lon": lo,
+           "loc_how": loc_how if loc_how in ("gps", "map", "place", "exif") else ("place" if place_id else ""),
+           "kind": kind or city.CATS[cat], "category": cat, "who": whos, "note": " ".join(note.split())[:500], "status": "접수",
+           "created_at": dt.datetime.now().isoformat(timespec="seconds"), "photo": names[0] if names else None, "photos": names,
+           "triage": tri, "ai": city.legacy_ai(tri), "history": [{"status": "접수", "at": reports_store.now(), "by": "제보"}], "reply": "",
+           "has_contact": bool(contact.strip() and consent == "1")}
+    if rec["has_contact"]:
+        reports_store.add_contact(rid, contact.strip())
+    reports_store.append(rec)
+    _REPORT_HITS[ip] = hits + [_t.time()]
+    same = next((c for c in city.clusters(reports_store.real(), PLACES) if rid in c["members"]), None)
+    if same and same["count"] > 1 and same["status"] in ("확인", "처리 중"):
+        reply = next((r.get("reply") for r in reports_store.real() if r["id"] in same["members"] and r.get("reply")), "")
+        def follow(r):
+            r["status"] = same["status"]; r["reply"] = reply
+            r["history"].append({"status": same["status"], "at": reports_store.now(), "by": "같은 곳 제보 묶음"})
+        reports_store.update({rid}, follow)
+        rec["status"] = same["status"]
+    return {"ok": True, "id": rid, "code": rec["code"], "ai": rec["ai"], "status": rec["status"],
+            "triage": {k: tri.get(k) for k in ("by", "category", "severity", "summary")}, "same": (same or {}).get("count", 1)}
+
+
+def _public_report(r: dict) -> dict:
+    """이용자에게 보여 줄 것만 (사진·연락처·AI 내부 값 없음)."""
+    return {"id": r["id"], "code": r.get("code"), "category": city.cat_of(r), "status": r["status"], "created_at": r.get("created_at"),
+            "place": PLACES[r["place_id"]].name_ko if r.get("place_id") in PLACES else "", "note": (r.get("note") or "")[:120],
+            "summary": (r.get("triage") or {}).get("summary", ""), "reply": r.get("reply", ""), "after_photo": bool(r.get("after_photo")),
+            "steps": [{"status": h.get("status"), "at": h.get("at")} for h in r.get("history", []) if h.get("status")], "sample": bool(r.get("sample"))}
+
+
+@app.get("/api/reports/mine")
+def reports_mine(ids: str = "", code: str = ""):
+    """내 제보: 이 기기에 저장한 제보 id 들, 또는 접수번호(DH-12345)로 찾기."""
+    want = set(ids.split(",")) - {""}
+    code = code.strip().upper()
+    rows = reports_store.all_rows(True)
+    return [_public_report(r) for r in rows if r["id"] in want or (code and r.get("code") == code)][:30]
+
+
+@app.get("/api/reports/public-map")
+def reports_public_map():
+    """공개 지도 '알려진 불편': 2명 이상 알린 묶음만, 사진·개별 좌표 없이 (가상 제보는 sample 표시)."""
+    rows = [r for r in reports_store.all_rows(reports_store.sample_loaded()) if r["status"] not in ("반려", "중복")]
+    out = []
+    for c in city.clusters(rows, PLACES):
+        if c["count"] >= 2 and c["lat"]:
+            out.append({**{k: c[k] for k in ("id", "count", "category", "severity", "status", "lat", "lon", "sample")},
+                        "near": (c.get("near") or {}).get("name") or c.get("landmark") or "", "label": city.CATS[c["category"]], "label_en": city.CATS_EN[c["category"]]})
+    return out
+
+
+@app.get("/api/reports/after/{rid}")
+def report_after_photo(rid: str):
+    """고친 뒤 사진(담당자가 올린 것)은 공개해도 된다 — 이용자 [내 제보]에서 보인다."""
+    r = next((r for r in reports_store.all_rows(True) if r["id"] == rid), None)
+    if not r or not r.get("after_photo") or not (REPORTS / r["after_photo"]).exists():
+        raise HTTPException(404, "사진이 없어요")
+    return FileResponse(REPORTS / r["after_photo"], media_type="image/jpeg")
+
+
+# ---------- 관리자 [제보·민원] ----------
+def _cluster_view(include_sample: bool) -> tuple[list[dict], dict]:
+    rows = reports_store.all_rows(include_sample)
+    by_id = {r["id"]: r for r in rows}
+    cls = city.clusters(rows, PLACES)
+    depts = _city_cfg()["depts"]
+    for c in cls:
+        members = [by_id[i] for i in c["members"]]
+        pname = PLACES[c["place_id"]].name_ko if c.get("place_id") in PLACES else ""
+        c.update(city.cluster_summary(c, members, pname))
+        c.update(place_name=pname, dept_name=depts.get(c["dept"], c["dept"]), category_name=city.CATS[c["category"]],
+                 severity_name=city.SEV[c["severity"]], priority_name=city.PRI[c["priority"]])
+    return cls, by_id
+
+
+def _find_cluster(cid: str) -> dict:
+    cls, _ = _cluster_view(True)
+    c = next((x for x in cls if x["id"] == cid), None)
+    if not c:
+        raise HTTPException(404, "묶음을 찾지 못했어요")
+    return c
+
+
+@app.get("/api/admin/city")
+def admin_city(sample: int = 1, x_admin_token: str | None = Header(None)):
+    """묶음 목록 (+ 각 묶음의 개별 제보). 사진은 관리자 토큰이 있어야 열린다."""
+    _admin(x_admin_token, "reports")
+    inc = bool(sample) and reports_store.sample_loaded()
+    cls, by_id = _cluster_view(inc)
+    keys = ("id", "code", "source", "category", "who", "note", "status", "created_at", "photos", "reply", "has_contact",
+            "triage", "final", "sample", "lat", "lon", "loc_how", "history", "after_photo", "notice_id")
+    for c in cls:
+        c["reports"] = [{**{k: r.get(k) for k in keys}, "category_name": city.CATS[city.cat_of(r)]}
+                        for r in sorted((by_id[i] for i in c["members"]), key=lambda r: r.get("created_at") or "", reverse=True)]
+    order = {"urgent": 0, "high": 1, "normal": 2, "low": 3}
+    cls.sort(key=lambda c: (c["status"] in ("완료", "반려", "중복"), order.get(c["priority"], 9), -c["count"], c["first_at"]))
+    return {"clusters": cls, "cats": city.CATS, "sev": city.SEV, "pri": city.PRI, "depts": _city_cfg()["depts"], "statuses": reports_store.STATUSES,
+            "sample_loaded": reports_store.sample_loaded(), "persistent": reports_store.persistent(), "ai": ai.available()}
+
+
+@app.get("/api/admin/city-photo/{name}")
+def admin_city_photo(name: str, t: str = ""):
+    """제보 사진은 담당자만 (img 태그라 토큰을 주소로 받는다)."""
+    _admin(t, "reports")
+    if not re.fullmatch(r"[0-9a-f]{12}(_\d|_after)?\.jpg", name) or not (REPORTS / name).exists():
+        raise HTTPException(404, "사진이 없어요")
+    return FileResponse(REPORTS / name, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+
+@app.get("/api/admin/city-contact/{rid}")
+def admin_city_contact(rid: str, x_admin_token: str | None = Header(None)):
+    """제보자가 동의하고 남긴 연락처 (보는 것도 이력에 남긴다)."""
+    s = _admin(x_admin_token, "reports")
+    c = reports_store.contact_of(rid)
+    if c:
+        with cms._lock:
+            db = cms.load(); cms._log(db, "contact_view", rid, None, None, "제보자 연락처 확인", _who(s)); cms.save(db)
+    return {"contact": c}
+
+
+@app.post("/api/admin/city/{cid}")
+def admin_city_update(cid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """묶음 처리: status·reply(이용자에게 보일 답변)·memo, 분류 고치기(category·severity·dept·priority). 묶음의 모든 제보에 적용."""
+    s = _admin(x_admin_token, "reports")
+    c = _find_cluster(cid)
+    st = body.get("status")
+    if st and st not in reports_store.STATUSES:
+        raise HTTPException(400, "처리 상태가 올바르지 않아요")
+    if st == "반려" and not str(body.get("memo") or body.get("reply") or "").strip():
+        raise HTTPException(400, "반려할 때는 사유를 적어 주세요")
+    allowed = {"category": city.CATS, "severity": city.SEV, "dept": _city_cfg()["depts"], "priority": city.PRI}
+    fix = {k: body[k] for k in allowed if body.get(k) and body[k] in allowed[k]}
+    who = _who(s)
+
+    def apply(r):
+        if fix:
+            r["final"] = {**(r.get("final") or {}), **fix, "by": who, "at": reports_store.now()}
+        if st and st != r["status"]:
+            r["status"] = st
+            r.setdefault("history", []).append({"status": st, "at": reports_store.now(), "by": who, "memo": str(body.get("memo") or "")[:300]})
+        if body.get("reply") is not None:
+            r["reply"] = str(body.get("reply") or "")[:500]
+        if body.get("memo"):
+            r["memo"] = str(body["memo"])[:300]
+    return {"ok": True, "updated": reports_store.update(set(c["members"]), apply)}
+
+
+@app.post("/api/admin/city/{cid}/merge")
+def admin_city_merge(cid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """묶음 합치기(into = 다른 묶음 id) 또는 한 제보 떼어 내기(split = 제보 id)."""
+    _admin(x_admin_token, "reports")
+    cls, _ = _cluster_view(True)
+    src = next((x for x in cls if x["id"] == cid), None)
+    if not src:
+        raise HTTPException(404, "묶음을 찾지 못했어요")
+    if body.get("split"):
+        rid = body["split"]
+        if rid not in src["members"]:
+            raise HTTPException(400, "이 묶음의 제보가 아니에요")
+        reports_store.update({rid}, lambda r: r.__setitem__("cluster_override", rid))
+        return {"ok": True}
+    dst = next((x for x in cls if x["id"] == body.get("into")), None)
+    if not dst or dst["id"] == cid:
+        raise HTTPException(400, "합칠 묶음을 골라 주세요")
+    reports_store.update(set(src["members"]) | set(dst["members"]), lambda r: r.__setitem__("cluster_override", dst["id"]))
+    return {"ok": True}
+
+
+@app.post("/api/admin/city/{cid}/after-photo")
+async def admin_city_after(cid: str, photo: UploadFile = File(...), x_admin_token: str | None = Header(None)):
+    """고친 뒤 사진: 이용자 [내 제보]에 보인다 (위치 정보 지움)."""
+    _admin(x_admin_token, "reports")
+    c = _find_cluster(cid)
+    try:
+        img = Image.open(io.BytesIO(await photo.read(12 * 1024 * 1024))).convert("RGB")
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "사진을 열지 못했어요")
+    img.thumbnail((1600, 1600))
+    name = f"{c['members'][0]}_after.jpg"
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    img.save(REPORTS / name, "JPEG", quality=85)
+    reports_store.update(set(c["members"]), lambda r: r.__setitem__("after_photo", name))
+    return {"ok": True}
+
+
+@app.post("/api/admin/city/{cid}/notice")
+def admin_city_notice(cid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """[여행 정보에 알리기]: 관광지 임시 알림으로 올린다 (기존 알림·이력·되돌리기 그대로)."""
+    _admin(x_admin_token, "notice")
+    c = _find_cluster(cid)
+    if not c.get("place_id"):
+        raise HTTPException(400, "관광지와 이어진 묶음만 알림으로 올릴 수 있어요")
+    if c["sample"]:
+        raise HTTPException(400, "가상 제보로는 실제 사이트 알림을 올리지 않아요")
+    rec = _guard(lambda: cms.add_notice({"place_id": c["place_id"], "level": body.get("level") or "warn",
+                                         "title": str(body.get("title") or c.get("title") or "")[:80], "body": str(body.get("body") or c.get("summary") or ""),
+                                         "start": body.get("start") or today_kst(), "end": body.get("end") or None, "from_report": cid},
+                                        f"제보 묶음 {cid} ({c['count']}건)"))
+    reports_store.update(set(c["members"]), lambda r: r.__setitem__("notice_id", rec["id"]))
+    refresh()
+    return {"ok": True, "notice": rec}
+
+
+@app.get("/api/admin/city-summary")
+def admin_city_summary(start: str = "", end: str = "", sample: int = 1, ai_text: int = 0, x_admin_token: str | None = Header(None)):
+    """기간 요약: 숫자는 서버가 계산, ai_text=1 이면 AI 보고서 문장(Sonnet)까지."""
+    _admin(x_admin_token, "reports")
+    end = end or today_kst()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end):
+        raise HTTPException(400, "기간을 바르게 골라 주세요")
+    start = start or (dt.date.fromisoformat(end) - dt.timedelta(days=6)).isoformat()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start) or start > end:
+        raise HTTPException(400, "기간을 바르게 골라 주세요")
+    inc = bool(sample) and reports_store.sample_loaded()
+    cls, _ = _cluster_view(inc)
+    st = city.stats(reports_store.all_rows(inc), cls, start, end, _city_cfg()["depts"])
+    by = {c["id"]: c for c in cls}
+    hot, stale = [by[i] for i in st["hot"]], [by[i] for i in st["stale"]]
+    keys = ("id", "title", "count", "category_name", "status", "age_days", "severity_name", "dept_name", "place_name", "sample", "lat", "lon")
+    out = {"stats": st, "hot": [{k: c.get(k) for k in keys} for c in hot], "stale": [{k: c.get(k) for k in keys} for c in stale]}
+    if ai_text:
+        out["report"] = city.period_report(st, hot, stale)
+    return out
+
+
+@app.get("/api/admin/city-export.csv")
+def admin_city_export(t: str = "", sample: int = 0):
+    """CSV 내려받기 (외부 민원 시스템으로 옮기기 쉽게). 연락처·사진은 넣지 않는다."""
+    _admin(t, "reports")
+    import csv
+    rows = reports_store.all_rows(bool(sample) and reports_store.sample_loaded())
+    cid = {m: c["id"] for c in city.clusters(rows, PLACES) for m in c["members"]}
+    depts = _city_cfg()["depts"]
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["접수번호", "접수일시", "묶음", "상태", "분류", "심각도", "담당 부서", "우선순위", "위도", "경도", "가까운 관광지", "누가 불편", "내용", "AI 요약", "정리", "답변", "가상"])
+    for r in sorted(rows, key=lambda r: r.get("created_at") or ""):
+        cat = city.cat_of(r)
+        w.writerow([r.get("code") or r["id"], r.get("created_at"), cid.get(r["id"]), r["status"], city.CATS[cat],
+                    city.SEV.get(city.val(r, "severity", "minor"), ""), depts.get(city.val(r, "dept", city.CAT_DEPT[cat]), ""),
+                    city.PRI.get(city.val(r, "priority", ""), ""), r.get("lat") or "", r.get("lon") or "",
+                    PLACES[r["place_id"]].name_ko if r.get("place_id") in PLACES else "", ",".join(r.get("who") or []), city.scrub(r.get("note") or ""),
+                    (r.get("triage") or {}).get("summary", ""), "담당자" if r.get("final") else (r.get("triage") or {}).get("by", ""),
+                    r.get("reply", ""), "가상" if r.get("sample") else ""])
+    return Response("﻿" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=reports_{today_kst()}.csv"})
+
+
+@app.post("/api/admin/city-settings")
+def admin_city_settings(body: dict, x_admin_token: str | None = Header(None)):
+    """부서 이름 바꾸기 (총괄 관리자). 키는 그대로, 보이는 이름만."""
+    s = _admin(x_admin_token, "accounts")
+    depts = {k: str(v).strip()[:40] for k, v in (body.get("depts") or {}).items() if k in city.DEPTS and str(v).strip()}
+    with cms._lock:
+        db = cms.load()
+        before = (db.get("city") or {}).get("depts")
+        db["city"] = {**(db.get("city") or {}), "depts": depts}
+        cms._log(db, "city_settings", "depts", before, depts, "제보 담당 부서 이름", _who(s))
+        cms.save(db)
+    return _city_cfg()
+
+
+@app.post("/api/admin/city-sample")
+def admin_city_sample(body: dict, x_admin_token: str | None = Header(None)):
+    """가상 제보 넣기(load) / 모두 지우기(clear). 실제 제보 파일은 건드리지 않는다."""
+    _admin(x_admin_token, "reports")
+    if body.get("action") == "load":
+        return {"ok": True, "loaded": reports_store.load_samples()}
+    if body.get("action") == "clear":
+        return {"ok": True, "cleared": reports_store.clear_samples()}
+    raise HTTPException(400, "action 은 load 또는 clear")
+
+
+@app.get("/api/admin/city-backup")
+def admin_city_backup(t: str = ""):
+    """제보 백업 zip (제보·연락처·사진). 디스크가 없는 요금제에서는 재배포 전에 꼭 내려받기."""
+    _admin(t, "backup")
+    return Response(reports_store.backup_zip(), media_type="application/zip",
+                    headers={"Content-Disposition": f"attachment; filename=reports_backup_{today_kst()}.zip"})
+
+
+@app.post("/api/admin/city-restore")
+async def admin_city_restore(file: UploadFile = File(...), x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "backup")
+    try:
+        n = reports_store.restore_zip(await file.read(200 * 1024 * 1024))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"백업 파일을 열지 못했어요 ({type(e).__name__})")
+    return {"ok": True, "files": n}
 
 
 def _admin(token: str | None, perm: str | None = None) -> dict:
@@ -613,11 +974,11 @@ def admin_dashboard(x_admin_token: str | None = Header(None)):
     _admin(x_admin_token)
     db = cms.load()
     day = _today()
-    reps = _jsonl("reports.jsonl")
+    reps = reports_store.real()
     visits = _jsonl("visits.jsonl")
     week = (dt.date.fromisoformat(day) + dt.timedelta(days=7)).isoformat()
     return {"today": day,
-            "reports": {"new": sum(r.get("status") == "접수" for r in reps), "doing": sum(r.get("status") == "확인 중" for r in reps), "total": len(reps)},
+            "reports": {"new": sum(r.get("status") == "접수" for r in reps), "doing": sum(r.get("status") in ("확인", "처리 중") for r in reps), "total": len(reps)},
             "notices": [{**n, "name": PLACES[n["place_id"]].name_ko if n.get("place_id") in PLACES else None} for n in db["notices"] if cms.active(n, day)][:8],
             "banner": cms.site(day)["banner"],
             "overrides": len(db["overrides"]) + len(db["segments"]),
@@ -751,9 +1112,9 @@ def admin_report(x_admin_token: str | None = Header(None)):
 def admin_reports(x_admin_token: str | None = Header(None)):
     """이용자 제보 전체 (최신순) — AI 사진 분석 결과 포함, 사람이 검수한다."""
     _admin(x_admin_token, "reports")
-    rows = _jsonl("reports.jsonl")
+    rows = reports_store.real()
     for r in rows:
-        r["name"] = PLACES[r["place_id"]].name_ko if r["place_id"] in PLACES else r["place_id"]
+        r["name"] = PLACES[r["place_id"]].name_ko if r.get("place_id") in PLACES else (r.get("place_id") or "위치 제보")
     return sorted(rows, key=lambda r: r["created_at"], reverse=True)
 
 
@@ -761,18 +1122,21 @@ def admin_reports(x_admin_token: str | None = Header(None)):
 def admin_review(rid: str, body: dict, x_admin_token: str | None = Header(None)):
     """제보 검수: status = 접수 / 확인 중 / 반영 / 반려."""
     s = _admin(x_admin_token, "reports")
-    rows = _jsonl("reports.jsonl")
+    rows = reports_store.real()
     for r in rows:
         if r["id"] == rid:
-            r["status"] = body.get("status", r["status"])
+            st = reports_store.OLD.get(body.get("status") or "", body.get("status")) or r["status"]
+            if st != r["status"]:
+                r.setdefault("history", []).append({"status": st, "at": reports_store.now(), "by": _who(s)})
+            r["status"] = st
             r["memo"] = (body.get("memo") or r.get("memo") or "")[:300]
             r["reviewed_at"] = dt.datetime.now().isoformat(timespec="seconds")
             r["reviewed_by"] = _who(s)
             n = body.get("notice")   # [반영] + 알림으로 올리기 → 사이트에 바로 보인다
-            if r["status"] == "반영" and n and n.get("level") and cms.can(s, "notice"):
+            if r["status"] == "완료" and n and n.get("level") and cms.can(s, "notice") and r.get("place_id"):
                 rec = _guard(lambda: cms.add_notice({**n, "place_id": r["place_id"], "from_report": rid}, f"제보 {rid} 반영"))
                 r["notice_id"] = rec["id"]
-    _save_jsonl("reports.jsonl", rows)
+    reports_store.save_real(rows)
     return {"ok": True}
 
 

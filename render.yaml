@@ -24,6 +24,8 @@ services:
         value: /var/data/cms.json
       - key: REPORTS_DIR
         value: /var/data/reports
+      - key: STORAGE_PERSISTENT
+        value: "1"          # 디스크를 붙였으니 제보가 남는다 (Free 요금제에서는 이 값을 빼야 관리자 화면에 경고가 보임)
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: DATA_GO_KR_KEY

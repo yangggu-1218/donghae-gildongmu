@@ -13,6 +13,7 @@ import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
 import { buildQuestions, applyExtra, summarize, ExtraQ, ExtraAns } from "@/lib/followup";
 import { MyPage, loadPlans, savePlans } from "@/components/MyTrips";
+import { ReportForm, MyReports } from "@/components/CityReport";
 import { Icon } from "@/components/Icon";
 import { CommunityPage } from "@/components/Community";
 import { SiteFooter } from "@/components/Footer";
@@ -600,6 +601,7 @@ export default function Page() {
               <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}>{t(k)}</a>)}
           </nav>
           <div className="tools">
+            <a className="box cr-btn" href="#/report" aria-label={t("cr.open")} title={t("cr.open")}><Icon name="flag" /><span aria-hidden="true">{t("cr.open")}</span></a>
             <button className="sos" onClick={openSafety}>{t("tool.safety")}</button>
             <button className="box bigt" aria-pressed={big} onClick={toggleBig}><span className="long">{big ? t("tool.bigOn") : t("tool.big")}</span><span className="short" aria-hidden="true">{big ? t("tool.bigOnShort") : t("tool.bigShort")}</span></button>
             <label className="sr-only" htmlFor="lang">{t("tool.lang")}</label>
@@ -621,6 +623,17 @@ export default function Page() {
       {route[0] === "transport" && <TransportPage lang={lang} />}
       {route[0] === "map" && <MapPage lang={lang} />}
       {route[0] === "my" && <MyPage lang={lang} />}
+      {route[0] === "report" && (
+        <section className="sec wrap cr-page">
+          <div className="page-head"><nav className="crumb"><a href="#/">{lang === "ko" ? "처음" : "Home"}</a> › {t("cr.open")}</nav>
+            <h1>{t("cr.title")}</h1><p className="muted">{t("cr.sub")}</p></div>
+          <div className="cr-cols">
+            <div className="panel"><ReportForm key={`${route[1] || "-"}:${Object.keys(places).length > 0}`} t={t} lang={lang} placeId={route[1] && places[route[1]] ? route[1] : ""}
+              places={Object.values(places).filter((p: any) => p.lat && p.type !== "숙박").map((p: any) => ({ id: p.id, name: lang === "ko" ? p.name_ko : p.name_en || p.name_ko }))
+                .sort((a: any, b: any) => a.name.localeCompare(b.name, "ko"))} /></div>
+            <MyReports t={t} />
+          </div>
+        </section>)}
       {route[0] === "events" && <EventsPage lang={lang} onPlanDate={planDate} />}
       {route[0] === "stay" && <StayPage lang={lang} />}
       {route[0] === "guide" && <CommunityPage lang={lang} sub="ask" onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
@@ -922,6 +935,7 @@ export default function Page() {
           <div className="sheet-body">
           <div className="sheet-hello"><img src="/dongi/full-lifeguard.webp" alt="" /><p className="bubble"><b>{t("dongi")}</b>{t("safety.say")}</p></div>
           <p className="sheet-call"><a className="chip go" href="tel:119"><b>119</b>&nbsp;{t("safety.119")}</a><a className="chip" href="tel:1330"><b>1330</b>&nbsp;{t("safety.1330")}</a></p>
+          <p className="sheet-cr"><a className="chip" href="#/report" onClick={() => setSafety(null)}><Icon name="flag" />&nbsp;{t("cr.open")}</a> <small className="muted">{t("cr.sub")}</small></p>
           {safety.help?.length > 0 && <h3>{t("safety.help")}</h3>}
           {safety.help?.map((c: any) => <SheetRow key={c.name} title={[c.name, c.languages?.length ? t("safety.langs", { l: c.languages.join(", ") }) : ""]}
             info={[c.status === "check" ? "" : c.hours || "", km(c.dist_m)]} tel={c.tel} state={c.status === "check" ? "check" : c.status === "open" ? "open" : "closed"} lang={lang} />)}
@@ -1025,44 +1039,15 @@ function HelpCard({ c, t, onSafety, lang = "ko" }: { c: { kind: string; data: an
 
 // 현장 제보: 사진을 올리면 서버가 AI 비전으로 장애물을 찾아 '검수용 제안'을 돌려준다
 function ReportBox({ stops, t }: { stops: { id: string; name: string }[]; t: (k: string, v?: Record<string, string | number>) => string }) {
+  // 코스 결과 아래 '현장 제보': 불편 알리기 폼과 같은 것 (코스에 든 장소 중에서 고르기, docs/19_CITY_REPORTS.md)
   const [open, setOpen] = useState(false);
-  const [pid, setPid] = useState(stops[0]?.id || "");
-  const [kind, setKind] = useState("길 상태");
-  const [note, setNote] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [res, setRes] = useState<any>(null);
-  async function send(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setRes(null);
-    const fd = new FormData(); fd.append("place_id", pid); fd.append("kind", kind); fd.append("note", note); if (file) fd.append("photo", file);
-    try { const r = await fetch("/api/reports", { method: "POST", body: fd }); setRes(await r.json()); } catch { setRes({ error: true }); }
-    setBusy(false);
-  }
+  const lang = (typeof document !== "undefined" && document.documentElement.lang === "en" ? "en" : "ko") as "ko" | "en";
   if (!open) return <button className="chip" onClick={() => setOpen(true)}><Icon name="camera" />&nbsp;{t("rep.open")}</button>;
   return (
-    <form className="stop" style={{ display: "block" }} onSubmit={send}>
+    <div className="stop cr-inline" style={{ display: "block" }}>
       <b>{t("rep.title")}</b>
-      <p className="muted">{t("rep.help")}</p>
-      <div className="chips" style={{ flexWrap: "wrap" }}>
-        <label className="sr-only" htmlFor="rep-place">{t("rep.place")}</label>
-        <select id="rep-place" className="box" value={pid} onChange={(e) => setPid(e.target.value)}>{stops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-        <label className="sr-only" htmlFor="rep-kind">{t("rep.kind")}</label>
-        <select id="rep-kind" className="box" value={kind} onChange={(e) => setKind(e.target.value)}>{["길 상태", "계단", "턱", "경사", "공사", "화장실"].map((k) => <option key={k}>{k}</option>)}</select>
-      </div>
-      <p><input id="rep-photo" type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] || null)} aria-label={t("rep.photo")} /></p>
-      <p><input id="rep-note" className="box" style={{ width: "100%" }} placeholder={t("rep.note")} value={note} onChange={(e) => setNote(e.target.value)} /></p>
-      <button className="chip go" disabled={busy || !file}>{busy ? t("rep.busy") : t("rep.send")}</button>
-      {res?.ai && (res.ai.by === "ai" ? (
-        <div className="stop" style={{ display: "block", marginTop: 10 }}>
-          <p className="via via-llm">{t("rep.ai")}</p>
-          <p>{res.ai.summary}</p>
-          <ul className="muted">{res.ai.obstacles.map((o: any, i: number) => <li key={i}><b>{o.type}</b> {o.detail}</li>)}</ul>
-          {res.ai.suggested_grade && <p className="muted">{t("rep.grade")}: <span className={`badge g-${res.ai.suggested_grade}`}>{t(`grade.${res.ai.suggested_grade}`)}</span></p>}
-          <p className="muted">{t("rep.review")}</p>
-        </div>) : <p className="muted">{t("rep.noai")}</p>)}
-      {res?.ok && !res.ai && <p className="muted">{t("rep.thanks")}</p>}
-      {res?.error && <p className="muted">{t("error.server")}</p>}
-    </form>
+      <ReportForm t={t} lang={lang} places={stops} placeId={stops[0]?.id || ""} source="코스 결과" compact />
+    </div>
   );
 }
 

@@ -210,6 +210,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           <div className="chips">
             <button className={`chip ${wished ? "" : "go"}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}>{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
             <a className="chip" href="#/map">{L("편의시설 지도에서 보기", "Open facilities map")}</a>
+            <a className="chip" href={`#/report/${p.id}`}><Icon name="flag" />&nbsp;{L("이곳 불편 알리기", "Report a barrier here")}</a>
           </div>
         </div>
         <div className="pp2-hero-img">
@@ -521,9 +522,21 @@ export function MapPage({ lang }: { lang: Lang }) {
   const [locMsg, setLocMsg] = useState("");
   const [go, setGo] = useState<{ c: [number, number]; l: number; k: number } | null>(null);
   const [sel, setSel] = useState<string | null>(null);
+  // 알려진 불편 (2명 이상 알린 곳, 사진 없음 — docs/19_CITY_REPORTS.md)
+  const [bar, setBar] = useState<any[]>([]);
+  const [barOn, setBarOn] = useState(false);
+  useEffect(() => { if (barOn && !bar.length) api.get("/api/reports/public-map").then(setBar).catch(() => {}); }, [barOn]);
+  const SEVC: Record<string, string> = { block: "#C9302C", help: "#E07A00", minor: "#B08A00" };
+  const ST_EN: Record<string, string> = { "접수": "Received", "확인": "Checked", "처리 중": "In progress", "완료": "Fixed" };
   const items = useMemo(() => {
     if (!d) return [];
     const out: any[] = [];
+    if (barOn) for (const b of bar) {
+      const o = me || STN;
+      out.push({ id: `bar:${b.id}`, layer: { k: "barriers", color: SEVC[b.severity] || "#C9302C", icon: "!" }, name: `${b.sample ? L("[가상] ", "[Sample] ") : ""}${L(b.label, b.label_en)}${b.near ? ` · ${b.near}` : ""}`,
+        lat: b.lat, lon: b.lon, desc: `${L(`${b.count}명이 알림`, `${b.count} reports`)} · ${L(b.status, ST_EN[b.status] || b.status)}`, road: "",
+        dm: Math.round(Math.hypot((b.lat - o[0]) * 111000, (b.lon - o[1]) * 88000)) });
+    }
     for (const l of LAYERS) {
       if (!on[l.k]) continue;
       const seen = new Set<string>();
@@ -544,7 +557,7 @@ export function MapPage({ lang }: { lang: Lang }) {
       }
     }
     return out.sort((a, b) => a.dm - b.dm);   // 늘 가까운 순 (내 위치, 없으면 동해역에서)
-  }, [d0, med, on, me, lang]);
+  }, [d0, med, on, me, lang, bar, barOn]);
   const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon), sub: x.desc, addr: x.road }));
   const unmapped = (d?.toilets || []).filter((t: any) => !t.lat);
   function locate() {
@@ -567,8 +580,11 @@ export function MapPage({ lang }: { lang: Lang }) {
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
             <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
           </button>))}
+        <button className="chip" aria-pressed={barOn} onClick={() => setBarOn(!barOn)}><span className="dot" style={{ background: "#C9302C" }}>!</span>{L("알려진 불편", "Reported barriers")}</button>
         <button className="chip go" onClick={locate}>{me ? L("내 위치 다시 찾기", "Update my location") : L("내 주변부터 보기", "Nearest first")}</button>
       </div>
+      {barOn && <p className="muted small"><Icon name="info" /> {L("2명 이상 알린 곳만 보여요. 사진은 공개하지 않아요.", "Only spots reported by 2+ people. Photos are never shown.")}
+        {bar.some((b) => b.sample) && L(" [가상] 표시는 점검용 가상 데이터예요.", " [Sample] items are test data.")} <a href="#/report">{L("불편 알리기", "Report a barrier")}</a></p>}
       {locMsg && <p className="muted small map-loc" role="status">{locMsg}</p>}
       {!d ? <Loading err={err} lang={lang} /> : (<>
         <KakaoMap pins={pins} dots cluster zoomOnPick focus={focus} start={{ lat: STN[0], lon: STN[1], level: 9 }} center={go?.c || null} centerLevel={go?.l ?? 5} centerKey={go?.k || 0} me={me}

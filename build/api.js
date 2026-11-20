@@ -1111,7 +1111,7 @@ export function makeApi(DATA) {
       if (path === "/api/admin/ai/extract") return { ok: false, why: "데모에는 AI가 없어 자료를 읽을 수 없어요. 실제 사이트에서 써 주세요." };
       if (path === "/api/admin/ai/settings") {
         const models = { fast: "claude-haiku-5-5", smart: "claude-sonnet-5-5" };
-        const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["extract", "자료로 장소 정보 채우기 (관리자)", "fast"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];
+        const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["extract", "자료로 장소 정보 채우기 (관리자)", "fast"], ["triage", "불편 제보 정리 (사진 분석·분류)", "fast"], ["cluster", "비슷한 제보 묶음 요약", "fast"], ["report", "제보 기간 보고서 (시 담당자)", "smart"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];
         return { models, price_per_mtok: { "claude-haiku-5-5": [0.1, 0.5], "claude-sonnet-5-5": [2, 10] }, connected: false, usage: {}, last: {},
           tasks: T.map(([key, ko, tier]) => ({ key, ko, tier, default: tier, model: models[tier] })) };
       }
@@ -1121,13 +1121,48 @@ export function makeApi(DATA) {
     if (path.startsWith("/api/admin/") && !path.startsWith("/api/admin/reports") && !path.startsWith("/api/admin/visits")) {
       const r = cmsAdmin(method, path, q, body || {}); if (r !== undefined) return r;
     }
+    // 불편 제보 (docs/19_CITY_REPORTS.md): 데모에는 서버·AI가 없어 이용자가 고른 종류로 '규칙' 정리하고 이 기기에만 저장한다
+    const CR_CATS = { step: "턱·계단", sidewalk: "깨진 보도·바닥", ramp: "경사로 없음·가파름", parking: "불법 주차·길 막힘", toilet: "화장실 문제", lift: "엘리베이터·리프트 고장", works: "공사·통제", etc: "기타" };
+    const CR_OLD = { "계단": "step", "턱": "step", "경사": "ramp", "공사": "works", "화장실": "toilet", "길 상태": "sidewalk" };
+    const CR_DEPT = { step: "road", sidewalk: "road", ramp: "road", parking: "traffic", toilet: "toilet", lift: "facility", works: "road", etc: "etc" };
+    const CR_DEPTS = { road: "도로 담당 (보도·턱·경사로)", traffic: "교통 담당 (불법 주차)", tour: "관광 담당 (관광지 시설)", toilet: "화장실 관리 담당", facility: "건물·편의시설 담당 (엘리베이터·리프트)", etc: "민원 총괄 (분류 필요)" };
+    const crPublic = (r) => ({ id: r.id, code: r.code, category: r.category, status: r.status, created_at: r.created_at, place: PLACES[r.place_id] ? PLACES[r.place_id].name_ko : "",
+      note: (r.note || "").slice(0, 120), summary: "", reply: r.reply || "", after_photo: false, steps: r.history || [], sample: false });
     if (path === "/api/reports") {
-      if (!PLACES[body.place_id]) throw new Error("404");
-      const rec = { id: Math.random().toString(16).slice(2, 14), place_id: body.place_id, kind: body.kind, note: (body.note || "").slice(0, 300),
-        status: "접수", created_at: new Date().toISOString().slice(0, 19), photo: body.photo || null, ai: null };
+      if (body.place_id && !PLACES[body.place_id]) throw new Error("404");
+      if (!body.place_id && !(body.lat && body.lon)) throw new Error("400:어디인지 알려 주세요 (내 위치·지도·관광지)");
+      const cat = CR_CATS[body.category] ? body.category : (CR_OLD[body.kind] || (body.place_id ? "sidewalk" : "etc"));
+      const rec = { id: Math.random().toString(16).slice(2, 14), code: "DH-" + (10000 + Math.floor(Math.random() * 90000)), place_id: body.place_id || null,
+        lat: body.lat ? +body.lat : null, lon: body.lon ? +body.lon : null, kind: body.kind || CR_CATS[cat], category: cat, who: String(body.who || "").split(",").filter(Boolean),
+        note: (body.note || "").slice(0, 500), status: "접수", created_at: new Date().toISOString().slice(0, 19), photo: null, ai: null,
+        history: [{ status: "접수", at: nowIso() }], reply: "" };
       adminSet("reports", [...adminGet("reports"), rec]);
-      return { ok: true, id: rec.id, ai: null, demo: true };
+      return { ok: true, id: rec.id, code: rec.code, ai: null, status: "접수", triage: { by: "rule", category: cat }, same: 1, demo: true };
     }
+    if (path === "/api/reports/mine") {
+      const want = String(q.ids || "").split(","), code = String(q.code || "").trim().toUpperCase();
+      return adminGet("reports").filter((r) => want.includes(r.id) || (code && r.code === code)).map(crPublic);
+    }
+    if (path === "/api/reports/public-map") return [];
+    if (path === "/api/admin/city" || path === "/api/admin/city-summary") {
+      demoCheck(q.__token, "reports");
+      const reps = adminGet("reports");
+      const cls = reps.map((r) => { const cat = CR_CATS[r.category] ? r.category : (CR_OLD[r.kind] || "etc"); const p = PLACES[r.place_id];
+        return { id: r.id, count: 1, category: cat, category_name: CR_CATS[cat], severity: "minor", severity_name: "불편함", status: r.status === "확인 중" ? "확인" : r.status === "반영" ? "완료" : r.status,
+          priority: "normal", priority_name: "보통", priority_rule: "normal", dept: CR_DEPT[cat], dept_name: CR_DEPTS[CR_DEPT[cat]], who: r.who || [], lat: r.lat || (p && p.lat), lon: r.lon || (p && p.lon),
+          place_id: r.place_id, place_name: p ? p.name_ko : "", title: `${p ? p.name_ko + " " : ""}${CR_CATS[cat]}`, summary: r.note || CR_CATS[cat], action: "", by: "rule",
+          first_at: r.created_at, last_at: r.created_at, age_days: 0, sla_days: 14, stale: false, overdue: false, sample: false, privacy: false, edited: false, members: [r.id],
+          reports: [{ ...r, category_name: CR_CATS[cat], code: r.code || r.id, source: "데모", photos: [], triage: { by: "rule", summary: r.note || CR_CATS[cat] } }] }; });
+      if (path === "/api/admin/city-summary") {
+        const n = cls.length;
+        return { stats: { start: q.start || "", end: q.end || "", received: n, resolved: cls.filter((c) => c.status === "완료").length, avg_days: null, open: n, open_clusters: n,
+          by_category: {}, by_dept: {}, by_status: {}, hot: [], stale: [], with_sample: false }, hot: [], stale: [],
+          report: q.ai_text === "1" ? { by: "rule", headline: `데모에는 AI가 연결되어 있지 않아요 (이 기기 제보 ${n}건)`, highlights: [], hotspots: [], delayed: [], by_dept: [], next: [] } : undefined };
+      }
+      return { clusters: cls, cats: CR_CATS, sev: { block: "지나갈 수 없음", help: "도움이 있어야 지나감", minor: "불편함" }, pri: { urgent: "긴급", high: "높음", normal: "보통", low: "낮음" },
+        depts: CR_DEPTS, statuses: ["접수", "확인", "처리 중", "완료", "반려", "중복"], sample_loaded: false, persistent: true, ai: false, demo: true };
+    }
+    if (path.startsWith("/api/admin/city")) { demoCheck(q.__token, "reports"); throw new Error("400:데모에서는 제보 처리·가상 데이터·백업을 할 수 없어요. 서버가 있는 실제 사이트에서 써 주세요."); }
     if (path === "/api/inquiries" && method === "POST") {
       const text = (body.text || "").trim();
       if (text.length < 5) throw new Error("400:문의 내용을 5자 이상 적어 주세요");

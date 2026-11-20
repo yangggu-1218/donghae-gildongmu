@@ -1,7 +1,7 @@
-# HANDOVER — 동해 길동무 (2026-11-20 기준)
+# HANDOVER — 동해 길동무 (2026-11-21 기준)
 
 다음에 이 프로젝트를 이어받는 사람(또는 Claude 세션)이 이 파일 하나로 상황을 알 수 있게 정리했어요.
-자세한 변경 내용은 `docs/12_CHANGELOG.md`, AI 기능 설계는 `docs/17_AI_FEATURES.md`, 멘토링 준비는 `docs/18_MENTORING_PREP.md`.
+자세한 변경 내용은 `docs/12_CHANGELOG.md`, AI 기능 설계는 `docs/17_AI_FEATURES.md`, 멘토링 준비는 `docs/18_MENTORING_PREP.md`, **시(市)를 위한 불편 제보 기능은 `docs/19_CITY_REPORTS.md`**.
 
 ## 0. 기본 정보
 
@@ -29,6 +29,8 @@ export AI_COURSE=0; (cd build && HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http:
 py scripts/eval_talk.py            # → 실패 0건
 py tests/test_admin_accounts.py    # → 관리자 점검 실패 0건
 unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가짜 Claude, 비용 없음)
+py tests/test_city_reports.py   # → 제보 점검 실패 0건 (가짜 Claude, 임시 폴더)
+py scripts/make_sample_reports.py   # 가상 제보 18건 원본 다시 만들기 (data/sample_reports/)
 ```
 배포: Render 대시보드 → 서비스 srv-dbs8ak142hec738upbpg → Manual Deploy → **Clear build cache & deploy** → Events에서 "Deploy live" 확인.
 
@@ -44,7 +46,8 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 | 11-20 | 4d02613 | **AI 기능 3가지**(코스 설계 에이전트·접근성 판정관·최근 길 상태+관리자 승인), Sonnet 선택, 지도 숫자 묶음·내 위치, 새 6곳 사진 13장·소개 |
 | 11-20 | 3d5d520 | 묵호등대 운영시간 09:00~17:00, 개인 촬영자 사진 2장 사용 허락 반영 |
 | 11-20 | 6406f23 (push·배포 전) | **AI 요청 수 제한**(같은 주소 10분 20번·하루 $2, 넘으면 규칙으로) + **사용량 파일**(`ai_usage.json`, 날짜별) + 관리자 [AI 설정]에 오늘 사용량·한도 표시 |
-| 11-21 | (6406f23 다음 커밋, push·배포 전) | **정보 밀도·픽토그램**(AI 판정 카드·관광지 상세 줄이기), 코스 전 대화 메신저형, 긴급·도움 하나로, 빠른 메뉴·챗봇 단추 접힘, 관리자 탭 7개+[더 보기], **자료로 채우기(AI: 한글·PDF·링크 → 장소 정보 초안)**, 반응형 점검 — 자세히는 CHANGELOG 11-21 |
+| 11-21 | 77a14a7 (push·배포 전) | **정보 밀도·픽토그램**(AI 판정 카드·관광지 상세 줄이기), 코스 전 대화 메신저형, 긴급·도움 하나로, 빠른 메뉴·챗봇 단추 접힘, 관리자 탭 7개+[더 보기], **자료로 채우기(AI: 한글·PDF·링크 → 장소 정보 초안)**, 반응형 점검 — 자세히는 CHANGELOG 11-21 |
+| 11-21 | (77a14a7 다음 커밋, push·배포 전) | **시(市)를 위한 기능 — 투트랙**: 이용자 '불편 알리기'(위치·그림 단추·사진 3장·접수번호·[내 제보]) → AI 제보 정리(Haiku: 사진 분석·분류·부서·우선순위) → 규칙 묶기 → 관리자 **[제보·민원]**(묶음 목록·처리 상태·분류 고치기·몰리는 곳 지도·기간 요약 + AI 보고서(Sonnet)·CSV·백업) → 이용자 답변·관광지 임시 알림. 공개 지도 '알려진 불편'. 가상 제보 18건 — 자세히는 `docs/19_CITY_REPORTS.md`, CHANGELOG 11-21 |
 
 ### AI 기능 (4d02613) 핵심
 - 공통 모듈 `backend/app/ai.py`: 작업별 모델(기본 Haiku 5.5, 코스 설계·판정은 Sonnet 5.5), Sonnet은 서버 측 대체(fallbacks) 켬, 결과 캐시, 사용량·비용 집계
@@ -87,6 +90,11 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 3. ~~AI 사용량은 메모리에만~~ → 11-20 `ai_usage.json`에 남김(`CMS_FILE` 옆). 단 Render Free는 디스크가 없어 **재배포 때는 여전히 0부터** (2번과 함께 해결)
 4. ~~AI 요청 수 제한 없음~~ → 11-20 넣음 (`backend/app/ai.py`의 `gate`). 같은 접속 주소 10분에 20번, 하루 추정 $2. 값은 Render 환경변수 `AI_RATE_PER_IP`·`AI_RATE_WINDOW`·`AI_DAILY_USD`로 바꿈. 접속 주소는 `x-forwarded-for` 첫 값이라 꾸며 낼 수 있음 → 진짜 방어선은 하루 비용 상한
 
+5. **제보 기능은 저장이 특히 중요** (11-21) — 지금(Free)은 관리자 [제보·민원] 맨 위에 '지워질 수 있어요' 경고가 뜨고 [설정·백업]에서 zip으로 내려받기·올리기를 할 수 있음. 권장: Render Starter + 디스크(월 약 $7.25)로 바꾸고 환경변수 `STORAGE_PERSISTENT=1`. 정식 운영은 시 서버·DB로 — `backend/app/reports_store.py`만 바꾸면 됨 (`docs/19_CITY_REPORTS.md` 5장)
+6. **제보 기능 실제 AI 미확인** (11-21) — 로컬에 키가 없어 가짜 Claude 점검(50가지)만 함. 배포 뒤 사진 1장으로 제보해 [제보·민원]에 'AI' 정리가 뜨는지, [기간 요약 › AI 보고서 만들기]가 Sonnet으로 나오는지, [AI 설정]의 비용 확인
+7. 제보 연락처 자동 삭제(`reports_store.purge_contacts`)는 함수만 있고 **자동으로 부르지는 않음** — 하루 한 번 부르는 방법(서버 시작 때·관리자 단추) 정하기
+8. 부서 이름은 예시(도로·교통·관광·화장실 관리·건물 편의시설·민원 총괄) — 시 실제 부서명으로 관리자 [제보·민원 › 설정·백업]에서 바꾸기(총괄 관리자)
+
 ## 4. 남은 할 일
 
 - [x] 실제 사이트에서 AI 판정·코스 확인 + 비용 확인 (11-20). 길 상태 요약은 제보가 쌓이면 확인
@@ -94,7 +102,9 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 - [ ] 저장소 문제 결정(유료 디스크 vs DB) — 멘토링 뒤
 - [ ] 일반 이용자 로그인·커뮤니티 글을 서버 저장으로(지금은 브라우저 localStorage에만)
 - [x] AI API 요청 수 제한, 사용량을 파일에 남기기 (11-20 커밋, 아직 push·배포 전 — 팀장이 "올려 줘" 하면 push·배포 후 실제 사이트 [AI 설정]에서 '오늘' 줄 확인)
-- [ ] 테스트 자동 실행(GitHub Actions)
+- [ ] 테스트 자동 실행(GitHub Actions) — 이제 점검 5가지(대화·관리자·AI·제보·서버/데모 비교)
+- [ ] 제보 기능 2차(`docs/19_CITY_REPORTS.md`): 사진 속 얼굴·번호판 가리기(모자이크), 동이 대화에서 '여기 턱이 높아요' → 폼 채워 열기, 외부 민원 시스템 연동(지금은 CSV), 연락처 자동 삭제 일정
+- [ ] 배포 뒤: 관리자 [제보·민원 › 설정]에서 가상 제보를 넣어 시연하고, 끝나면 [가상 데이터 모두 지우기]
 - [ ] 아직 '예시' 길 정보인 장소들 현장 확인
 - [ ] 대회 뒤: `DEMO_LOGIN`을 "0"으로 (`SITE_PASSWORD`는 11-20에 이미 지움), '출처 확인 중' 사진들 출처 확인(`docs/09_ASSET_LICENSES.md`)
 - [ ] 구조도 이미지 만들기 (팀장이 GPT로, 프롬프트는 `docs/18_MENTORING_PREP.md` 9장)

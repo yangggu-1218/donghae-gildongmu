@@ -22,7 +22,7 @@ const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 // cluster: 멀리 볼 때(레벨 6 이상, 축척 500m~) 가까이 모인 점을 'n곳' 숫자로 묶는다 · start: 처음 보여 줄 가운데·레벨 (없으면 점 전체가 보이게)
 // centerLevel·centerKey: center로 옮길 때의 레벨, 같은 곳이어도 다시 옮기기 · me: 내 위치 빨간 점
 // 카카오 지도 레벨과 축척 막대: 4=100m, 5=250m, 6=500m, 7=1km, 8=2km, 9=4km, 10=8km
-export default function KakaoMap({ pins, overview = false, dots = false, onPick, label, zoomOnPick = false, focus = null, center = null, cluster = false, start = null, centerLevel = 4, centerKey = 0, me = null }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string; zoomOnPick?: boolean; focus?: number | null; center?: [number, number] | null; cluster?: boolean; start?: { lat: number; lon: number; level: number } | null; centerLevel?: number; centerKey?: number; me?: [number, number] | null }) {
+export default function KakaoMap({ pins, overview = false, dots = false, onPick, label, zoomOnPick = false, focus = null, center = null, cluster = false, start = null, centerLevel = 4, centerKey = 0, me = null, onMapClick }: { onMapClick?: (lat: number, lon: number) => void; pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string; zoomOnPick?: boolean; focus?: number | null; center?: [number, number] | null; cluster?: boolean; start?: { lat: number; lon: number; level: number } | null; centerLevel?: number; centerKey?: number; me?: [number, number] | null }) {
   const ref = useRef<HTMLDivElement>(null);
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
   const [failed, setFailed] = useState(false);   // 키가 틀렸거나 도메인이 등록되지 않으면 약도로 대신한다
@@ -36,6 +36,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
   const viewRef = useRef<{ c: any; l: number } | null>(null);   // 층을 켜고 끄면 지도를 새로 그려도 보던 자리·확대를 그대로
   const centerRef = useRef<{ c: [number, number]; l: number } | null>(null);
   const meRef = useRef(me); meRef.current = me;
+  const clickRef = useRef(onMapClick); clickRef.current = onMapClick;   // 지도에서 콕 찍어 위치 고르기 (불편 제보)
 
   useEffect(() => {
     const pins = pinsRef.current;
@@ -47,6 +48,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
       const v = viewRef.current, st = startRef.current;
       const map = new maps.Map(box, { center: v ? v.c : st ? new maps.LatLng(st.lat, st.lon) : new maps.LatLng(pins[0].lat, pins[0].lon), level: v ? v.l : st ? st.level : 8 });
       maps.event.addListener(map, "idle", () => { viewRef.current = { c: map.getCenter(), l: map.getLevel() }; });
+      if (clickRef.current) maps.event.addListener(map, "click", (e: any) => clickRef.current?.(e.latLng.getLat(), e.latLng.getLng()));
       const bounds = new maps.LatLngBounds();
       // 위로 뜨는 카드, 아래로 뜨는 카드 (카카오 오버레이는 기준점을 나중에 바꿀 수 없어 둘을 둔다)
       const popUp = new maps.CustomOverlay({ map: null, position: map.getCenter(), yAnchor: 1, zIndex: 10, clickable: true });

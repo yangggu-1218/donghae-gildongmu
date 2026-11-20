@@ -32,6 +32,9 @@ TASKS: dict[str, dict] = {
     "status": {"tier": "fast", "ko": "최근 길 상태 요약", "effort": "low"},
     "talk": {"tier": "fast", "ko": "대화형 동이", "effort": "low"},
     "extract": {"tier": "fast", "ko": "자료로 장소 정보 채우기 (관리자)", "effort": "low"},
+    "triage": {"tier": "fast", "ko": "불편 제보 정리 (사진 분석·분류)", "effort": "low"},
+    "cluster": {"tier": "fast", "ko": "비슷한 제보 묶음 요약", "effort": "low"},
+    "report": {"tier": "smart", "ko": "제보 기간 보고서 (시 담당자)", "effort": "medium"},
     "etc": {"tier": "fast", "ko": "브리핑·사진 분석·조건 해석", "effort": "low"},
 }
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
