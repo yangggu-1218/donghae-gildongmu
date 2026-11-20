@@ -6,13 +6,13 @@ export type Climb = { up_m: number; down_m: number; dist_m: number; max_deg: num
 export function terrainText(t: Terrain | undefined | null, lang: string): string {
   if (!t || t.elev_m == null) return "";
   const ko = lang === "ko";
-  const h = ko ? `해발 약 ${t.elev_m}m` : `about ${t.elev_m} m above sea level`;
+  const h = ko ? `해발 ${t.elev_m}m` : `about ${t.elev_m} m above sea level`;
   if (t.kind === "hill" && t.rise_m >= 25)
-    return ko ? `${h} · 주변 낮은 곳보다 약 ${t.rise_m}m 높은 언덕 위예요. 걸어서 오면 오르막이 있어요.` : `${h}, on a hill about ${t.rise_m} m above the low ground nearby. Expect an uphill walk.`;
+    return ko ? `${h} · 주변 낮은 곳보다 ${t.rise_m}m 높은 언덕 위예요. 걸어서 오면 오르막이 있어요.` : `${h}, on a hill about ${t.rise_m} m above the low ground nearby. Expect an uphill walk.`;
   if (t.kind === "hill")
-    return ko ? `${h} · 주변 지형이 비탈져요(지형 경사 약 ${Math.round(t.slope_deg)}°).` : `${h}; the surrounding ground slopes (about ${Math.round(t.slope_deg)}°).`;
+    return ko ? `${h} · 주변 지형이 비탈져요(지형 경사 ${Math.round(t.slope_deg)}°).` : `${h}; the surrounding ground slopes (about ${Math.round(t.slope_deg)}°).`;
   if (t.kind === "gentle")
-    return ko ? `${h} · 완만한 경사 지형이에요${t.rise_m >= 10 ? `(주변보다 약 ${t.rise_m}m 높음)` : ""}.` : `${h}; gently sloping ground.`;
+    return ko ? `${h} · 완만한 경사 지형이에요${t.rise_m >= 10 ? `(주변보다 ${t.rise_m}m 높음)` : ""}.` : `${h}; gently sloping ground.`;
   return ko ? `${h} · 평평한 지형이에요.` : `${h}; flat ground.`;
 }
 
@@ -23,7 +23,7 @@ export const TERRAIN_NOTE = (lang: string) => lang === "ko"
 // 걷는 구간(내린 정류장 → 장소) 오르막: 5m 미만이면 말하지 않음
 export function climbText(c: Climb | undefined | null, lang: string): string {
   if (!c || c.up_m < 5) return "";
-  return lang === "ko" ? `걷는 길 오르막 약 ${c.up_m}m` : `uphill walk ~${c.up_m} m`;
+  return lang === "ko" ? `걷는 길 오르막 ${c.up_m}m` : `uphill walk ~${c.up_m} m`;
 }
 
 // 관리자: 언덕 지형인데 현장 답사 구간이 없는 곳
