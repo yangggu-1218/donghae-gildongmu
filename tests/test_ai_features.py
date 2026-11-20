@@ -121,5 +121,35 @@ r = c.post("/api/talk", json={"message": "부모님과 가요", "history": [], "
 del os.environ["AI_COURSE"]
 check("대화형 동이 (SDK)", r["via"] == "llm" and r["conditions"]["who"] == "부모님과", str(r)[:150])
 
+# ---------- 요청 수 제한·사용량 파일 ----------
+ai.RATE_PER_IP, ai.DAILY_USD = 2, 1000.0
+ai._hits.clear()
+f = FakeClaude(json_msg(good), json_msg(good), json_msg(good)); ai.set_client(f)
+A = {"x-forwarded-for": "203.0.113.7"}
+r1 = c.get("/api/ai/judge/mureung?mode=wheel&lang=en", headers=A).json()
+r2 = c.get("/api/ai/judge/mureung?mode=stroller", headers=A).json()
+r3 = c.get("/api/ai/judge/mureung?mode=stroller&lang=en", headers=A).json()
+check("같은 주소 한도 넘으면 규칙으로", r1["by"] == "ai" and r2["by"] == "ai" and r3["by"] == "rule" and len(f.calls) == 2, f"{r1['by']},{r2['by']},{r3['by']},{len(f.calls)}")
+check("한도 이유가 실패 기록에 남음", "요청 한도" in ai.LAST.get("judge", {}).get("why", ""), str(ai.LAST.get("judge")))
+r4 = c.get("/api/ai/judge/mureung?mode=stroller&lang=en", headers={"x-forwarded-for": "198.51.100.9"}).json()
+check("다른 주소는 막히지 않음", r4["by"] == "ai" and len(f.calls) == 3)
+r5 = c.get("/api/ai/judge/mureung?mode=stroller", headers=A).json()
+check("저장해 둔 답은 한도와 상관없이 보여 줌", r5["by"] == "ai" and len(f.calls) == 3)
+ai.RATE_PER_IP = 1000
+ai.DAILY_USD = 0.0001   # 오늘 이미 쓴 비용이 상한을 넘은 상태
+f = FakeClaude(json_msg(final)); ai.set_client(f)
+r = c.post("/api/course", json={"who": "친구", "date": "2026-11-22"}).json()
+check("하루 비용 한도 넘으면 AI 안 부르고 규칙 코스", r["planner"]["by"] == "rule" and not f.calls and len(r["course"]["stops"]) > 0)
+check("막힌 횟수 집계", ai.today_usage().get("limited", 0) >= 2, str(ai.today_usage()))
+ai.DAILY_USD = 1000.0
+s = c.get("/api/admin/ai/settings", headers=H).json()
+check("관리자 설정에 한도·오늘 사용량", s["limits"]["per_ip"] == 1000 and s["limits"]["today"]["usd"] > 0 and s["limits"]["daily"], str(s.get("limits"))[:200])
+saved = json.loads((tmp / "ai_usage.json").read_text(encoding="utf-8"))
+check("사용량을 파일에 남김 (CMS_FILE 옆)", saved["usage"]["judge"]["calls"] == ai.USAGE["judge"]["calls"] and ai._today() in saved["daily"])
+before = json.dumps(ai.USAGE, sort_keys=True)
+ai.USAGE.clear(); ai.DAILY.clear(); ai.LAST.clear()
+ai._load_usage()
+check("다시 켜면 파일에서 이어 셈", json.dumps(ai.USAGE, sort_keys=True) == before and ai.DAILY)
+
 ai.set_client(None)
 print(f"AI 점검 실패 {len(fails)}건")

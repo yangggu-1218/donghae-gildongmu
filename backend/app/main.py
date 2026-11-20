@@ -18,6 +18,13 @@ DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
 from . import sitelock
 app.middleware("http")(sitelock.middleware)   # SITE_PASSWORD 가 있으면 비밀번호 화면부터
+
+
+@app.middleware("http")
+async def _ai_client_ip(request, call_next):
+    """AI 요청 한도를 접속 주소별로 세려고 주소를 기억해 둔다 (backend/app/ai.py gate)."""
+    ai.CLIENT_IP.set(sitelock._ip(request))
+    return await call_next(request)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
                    allow_methods=["*"], allow_headers=["*"])
 
@@ -254,7 +261,7 @@ def admin_ai_refresh(x_admin_token: str | None = Header(None)):
 @app.get("/api/admin/ai/settings")
 def admin_ai_settings(x_admin_token: str | None = Header(None)):
     _admin(x_admin_token, "reports")
-    return {**ai.settings(), "connected": ai.available(), "usage": ai.USAGE, "last": ai.LAST}
+    return {**ai.settings(), "connected": ai.available(), "usage": ai.USAGE, "last": ai.LAST, "limits": ai.limits()}
 
 
 @app.post("/api/admin/ai/settings")

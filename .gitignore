@@ -8,3 +8,7 @@ data/reports/
 data/places.json
 data/review_memos.csv
 data/cms/
+
+# AI 사용량 기록 (서버가 쓰는 파일)
+data/ai_usage.json
+data/ai_usage.tmp

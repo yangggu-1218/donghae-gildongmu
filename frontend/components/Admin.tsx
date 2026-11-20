@@ -379,7 +379,7 @@ function AiSettings({ tok, call, onExpired, isOwner }: any) {
     <div>
       <p className="muted">{d.connected ? "Claude API 연결됨." : "Claude API 키가 없어 AI 기능이 꺼져 있어요(규칙으로 대신해요)."} 빠른 모델은 Haiku, 똑똑한 모델은 Sonnet이에요. Sonnet은 같은 양에 약 20배 비싸요.</p>
       <table className="ai-models">
-        <thead><tr><th>작업</th><th>모델</th><th>이번 실행 사용</th></tr></thead>
+        <thead><tr><th>작업</th><th>모델</th><th>쌓인 사용량</th></tr></thead>
         <tbody>{d.tasks.map((t: any) => { const u = d.usage?.[t.key]; return (
           <tr key={t.key}><td>{t.ko}{t.tier !== t.default && <small className="muted"> (기본: {t.default === "smart" ? "Sonnet" : "Haiku"})</small>}</td>
             <td><select className="box" disabled={!isOwner} value={tiers[t.key] || t.tier} onChange={(e) => setTiers({ ...tiers, [t.key]: e.target.value })}>
@@ -387,7 +387,15 @@ function AiSettings({ tok, call, onExpired, isOwner }: any) {
               <option value="smart">똑똑한 모델 (Sonnet) · {price(d.models.smart)}</option></select></td>
             <td>{u ? `${u.calls}번 (대체 ${u.fallback}) · 약 $${u.usd}` : "-"}</td></tr>); })}</tbody>
       </table>
-      <p className="muted small">가격은 100만 토큰당 (입력 / 출력) 달러. 사용량은 서버가 다시 시작되면 0부터 세요. 이번 실행 합계 약 ${total.toFixed(4)}.</p>
+      <p className="muted small">가격은 100만 토큰당 (입력 / 출력) 달러. 사용량은 파일에 남아 서버를 다시 켜도 이어 세요(디스크가 없는 요금제에선 재배포 때 0부터). 쌓인 합계 약 ${total.toFixed(4)}.</p>
+      {d.limits && <div className="ai-limits">
+        <p><b>오늘({d.limits.today.date})</b> AI 작업 {d.limits.today.calls}번 · 약 ${Number(d.limits.today.usd).toFixed(4)}
+          {d.limits.daily_usd > 0 ? ` / 하루 상한 $${d.limits.daily_usd}` : " (하루 상한 없음)"}
+          {d.limits.today.limited > 0 && <> · <b>한도에 막혀 규칙으로 답한 횟수 {d.limits.today.limited}번</b></>}</p>
+        <p className="muted small">요청 수 제한: 같은 접속 주소에서 {d.limits.window_sec / 60}분에 AI 작업 {d.limits.per_ip > 0 ? `${d.limits.per_ip}번까지` : "제한 없음"}. 한도를 넘으면 AI 대신 규칙으로 답해요(화면은 그대로 동작). 바꾸려면 서버 환경 변수 AI_RATE_PER_IP · AI_RATE_WINDOW · AI_DAILY_USD.</p>
+        {Object.keys(d.limits.daily || {}).length > 1 && <details><summary>최근 날짜별 사용량</summary><ul className="ai-list">{Object.entries(d.limits.daily).reverse().map(([k, v]: any) =>
+          <li key={k}>{k} · {v.calls}번 · 약 ${Number(v.usd).toFixed(4)}{v.limited ? ` · 막힘 ${v.limited}번` : ""}</li>)}</ul></details>}
+      </div>}
       {Object.keys(d.last || {}).length > 0 && <details><summary>최근 AI 실패 이유</summary><ul className="ai-list">{Object.entries(d.last).map(([k, v]: any) => <li key={k}><b>{k}</b> {v.at} · {v.why}</li>)}</ul></details>}
       {isOwner ? <button className="chip go" onClick={() => {
         const changed = Object.fromEntries(Object.entries(tiers).filter(([k, v]) => v !== d.tasks.find((t: any) => t.key === k)?.default));

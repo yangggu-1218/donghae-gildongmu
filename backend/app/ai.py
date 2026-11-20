@@ -8,10 +8,13 @@
 """
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import json
 import os
+import threading
 import time
+from pathlib import Path
 from typing import Any, Callable
 
 try:
@@ -35,8 +38,103 @@ PRICE = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "cl
 
 _override: dict[str, str] = {}      # 관리자 화면에서 고른 등급 {작업: "fast"|"smart"}
 _client = None
-USAGE: dict[str, dict] = {}         # 작업별 호출·성공·대체·토큰·추정 비용 (서버를 켠 뒤부터)
+USAGE: dict[str, dict] = {}         # 작업별 호출·성공·대체·토큰·추정 비용 (파일에 남겨 재시작해도 이어 셈)
 LAST: dict[str, dict] = {}          # 작업별 마지막 실패 이유 (점검용, 키·개인정보 없음)
+DAILY: dict[str, dict] = {}         # 날짜별 {calls, usd, limited} (최근 60일)
+
+# ---------- 요청 수 제한 (사이트 잠금을 풀어 누구나 부를 수 있으므로) ----------
+# 막히면 AI 대신 규칙으로 답한다 (화면은 그대로 동작). 값을 0 으로 두면 그 제한은 끈다.
+RATE_PER_IP = int(os.getenv("AI_RATE_PER_IP") or 20)        # 같은 접속 주소에서 RATE_WINDOW 초 동안 AI 작업 수
+RATE_WINDOW = int(os.getenv("AI_RATE_WINDOW") or 600)
+DAILY_USD = float(os.getenv("AI_DAILY_USD") or 2.0)         # 하루(한국 시간) 추정 비용 상한, 달러
+CLIENT_IP: contextvars.ContextVar[str] = contextvars.ContextVar("ai_client_ip", default="")   # main.py 미들웨어가 넣는다
+_hits: dict[str, list[float]] = {}
+_lock = threading.Lock()
+
+
+class Limited(RuntimeError):
+    """요청 한도에 걸림 → 부르는 쪽은 규칙으로 대신한다."""
+
+
+def _today() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 9 * 3600))   # 한국 시간 기준 날짜
+
+
+def today_usage() -> dict:
+    return DAILY.get(_today(), {"calls": 0, "usd": 0.0, "limited": 0})
+
+
+def gate(task: str) -> None:
+    """AI 작업 하나를 시작해도 되는지. 안 되면 Limited 를 올린다 (사용량에는 '대체'로 남긴다).
+    도구를 여러 번 쓰는 작업(코스 설계·대화)도 한 번으로 센다."""
+    why = ""
+    with _lock:
+        if DAILY_USD > 0 and today_usage()["usd"] >= DAILY_USD:
+            why = f"오늘 AI 비용 한도(${DAILY_USD}) 도달"
+        ip = CLIENT_IP.get()
+        if not why and ip and RATE_PER_IP > 0:
+            now = time.time()
+            xs = [t for t in _hits.get(ip, []) if now - t < RATE_WINDOW]
+            if len(xs) >= RATE_PER_IP:
+                why = f"같은 접속 주소 요청 한도({RATE_PER_IP}번/{RATE_WINDOW // 60}분) 도달"
+            else:
+                xs.append(now)
+            _hits[ip] = xs
+            if len(_hits) > 5000:   # 오래된 주소 정리
+                for k in [k for k, v in _hits.items() if not v or now - v[-1] >= RATE_WINDOW]:
+                    _hits.pop(k, None)
+        if why:
+            day = DAILY.setdefault(_today(), {"calls": 0, "usd": 0.0, "limited": 0})
+            day["limited"] = day.get("limited", 0) + 1
+    if why:
+        _count(task, model_for(task), False, note=why)
+        raise Limited(why)
+
+
+def limits() -> dict:
+    return {"per_ip": RATE_PER_IP, "window_sec": RATE_WINDOW, "daily_usd": DAILY_USD, "today": {"date": _today(), **today_usage()},
+            "daily": dict(sorted(DAILY.items())[-14:]), "file": str(USAGE_FILE) if USAGE_FILE else ""}
+
+
+# ---------- 사용량 파일 ----------
+def _usage_path() -> Path | None:
+    if os.getenv("AI_USAGE_FILE") == "0":
+        return None
+    if os.getenv("AI_USAGE_FILE"):
+        return Path(os.environ["AI_USAGE_FILE"])
+    base = Path(os.environ["CMS_FILE"]).parent if os.getenv("CMS_FILE") else Path(__file__).resolve().parents[2] / "data"
+    return base / "ai_usage.json"   # 배포 땐 CMS_FILE 과 같은 디스크(/var/data)에
+
+
+USAGE_FILE = _usage_path()
+
+
+def _load_usage():
+    if not USAGE_FILE or not USAGE_FILE.exists():
+        return
+    try:
+        d = json.loads(USAGE_FILE.read_text(encoding="utf-8"))
+        USAGE.update(d.get("usage") or {}); LAST.update(d.get("last") or {}); DAILY.update(d.get("daily") or {})
+    except Exception as e:   # noqa: BLE001 — 깨진 파일이면 0부터
+        print("[ai] 사용량 파일을 못 읽음:", type(e).__name__, e)
+
+
+def _save_usage():
+    if not USAGE_FILE:
+        return
+    try:
+        for k in sorted(DAILY)[:-60]:
+            DAILY.pop(k, None)
+        USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = USAGE_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"usage": USAGE, "last": LAST, "daily": DAILY, "saved_at": time.strftime("%Y-%m-%d %H:%M:%S")},
+                                  ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(tmp, USAGE_FILE)
+    except Exception as e:   # noqa: BLE001 — 저장 실패해도 서비스는 계속
+        print("[ai] 사용량 파일 저장 실패:", type(e).__name__, e)
+
+
+_load_usage()
 
 
 def available() -> bool:
@@ -81,18 +179,24 @@ def settings() -> dict:
 
 
 def _count(task: str, model: str, ok: bool, usage=None, note: str = ""):
-    u = USAGE.setdefault(task, {"calls": 0, "ok": 0, "fallback": 0, "input_tokens": 0, "output_tokens": 0, "usd": 0.0, "model": model})
-    u["calls"] += 1
-    u["ok" if ok else "fallback"] += 1
-    u["model"] = model
-    if usage is not None:
-        i = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_creation_input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0)
-        o = getattr(usage, "output_tokens", 0) or 0
-        u["input_tokens"] += i; u["output_tokens"] += o
-        pi, po = PRICE.get(model, (0, 0))
-        u["usd"] = round(u["usd"] + i / 1e6 * pi + o / 1e6 * po, 4)
-    if not ok and note:
-        LAST[task] = {"model": model, "why": note[:300], "at": time.strftime("%Y-%m-%d %H:%M:%S")}
+    with _lock:
+        u = USAGE.setdefault(task, {"calls": 0, "ok": 0, "fallback": 0, "input_tokens": 0, "output_tokens": 0, "usd": 0.0, "model": model})
+        day = DAILY.setdefault(_today(), {"calls": 0, "usd": 0.0, "limited": 0})
+        u["calls"] += 1
+        u["ok" if ok else "fallback"] += 1
+        u["model"] = model
+        if usage is not None:
+            i = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_creation_input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0)
+            o = getattr(usage, "output_tokens", 0) or 0
+            u["input_tokens"] += i; u["output_tokens"] += o
+            pi, po = PRICE.get(model, (0, 0))
+            cost = i / 1e6 * pi + o / 1e6 * po
+            u["usd"] = round(u["usd"] + cost, 4)
+            day["calls"] += 1
+            day["usd"] = round(day["usd"] + cost, 4)
+        if not ok and note:
+            LAST[task] = {"model": model, "why": note[:300], "at": time.strftime("%Y-%m-%d %H:%M:%S")}
+        _save_usage()
 
 
 def create(task: str, **kw):
@@ -137,7 +241,11 @@ def ask_json(task: str, system: str, user: Any, schema: dict, max_tokens: int = 
     key = cache_key or hashlib.sha256(json.dumps([task, model, system, user, schema], ensure_ascii=False, sort_keys=True, default=str).encode()).hexdigest()
     hit = _json_cache.get(key)
     if hit and time.time() - hit[0] < ttl:
-        return hit[1]
+        return hit[1]                      # 저장해 둔 답은 한도에 세지 않는다
+    try:
+        gate(task)
+    except Limited:
+        return None
     try:
         msg = create(task, max_tokens=max_tokens, system=system, messages=[{"role": "user", "content": user}],
                      output_config={"format": {"type": "json_schema", "schema": schema}})
@@ -165,6 +273,10 @@ def run_tools(task: str, system: str, messages: list, tools: list, call: Callabl
     model = model_for(task)
     if not available():
         _count(task, model, False, note="키 없음")
+        return None
+    try:
+        gate(task)
+    except Limited:
         return None
     msgs = list(messages)
     usage_total = None

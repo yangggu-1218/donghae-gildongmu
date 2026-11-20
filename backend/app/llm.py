@@ -58,6 +58,7 @@ def _ask_json(system: str, user, task: str = "etc", timeout: float | None = None
     if key in _cache:
         return _cache[key]
     try:   # 공식 SDK 로 (backend/app/ai.py). 모델은 작업 'etc' 설정(기본 Haiku)
+        ai.gate("etc")   # 요청 한도에 걸리면 Limited → 아래 except 에서 규칙으로
         out = ai.create("etc", max_tokens=max_tokens, system=system, messages=[{"role": "user", "content": user}], timeout=timeout or TIMEOUT)
         text = ai._text(out)
         bad = ai._why_bad(out)

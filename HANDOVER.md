@@ -43,6 +43,7 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 | 11-20 | c1595d8 | 개발자 테스트 피드백(BUG 6건·IMP) 반영 |
 | 11-20 | 4d02613 | **AI 기능 3가지**(코스 설계 에이전트·접근성 판정관·최근 길 상태+관리자 승인), Sonnet 선택, 지도 숫자 묶음·내 위치, 새 6곳 사진 13장·소개 |
 | 11-20 | 3d5d520 | 묵호등대 운영시간 09:00~17:00, 개인 촬영자 사진 2장 사용 허락 반영 |
+| 11-20 | (0f4308f 다음 커밋, push·배포 전) | **AI 요청 수 제한**(같은 주소 10분 20번·하루 $2, 넘으면 규칙으로) + **사용량 파일**(`ai_usage.json`, 날짜별) + 관리자 [AI 설정]에 오늘 사용량·한도 표시 |
 
 ### AI 기능 (4d02613) 핵심
 - 공통 모듈 `backend/app/ai.py`: 작업별 모델(기본 Haiku 5.5, 코스 설계·판정은 Sonnet 5.5), Sonnet은 서버 측 대체(fallbacks) 켬, 결과 캐시, 사용량·비용 집계
@@ -74,14 +75,14 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 - `docs/18_MENTORING_PREP.md` — 멘토링 준비: 2분 소개, 기술 구조, 약점 8가지, 질문 14개, 시간 배분, 예상 질문. 8장에 **소프트웨어 전공 멘토께 보여 드릴 기술 설명 순서(5~7분)**, 9장에 **구조도 이미지용 GPT 프롬프트**
 - `HANDOVER.md` — 이 파일
 
-**아직 커밋 안 한 것**: 위 두 문서. 그 밖에 `build/package-lock.json`, `data/cache/`, `frontend/tsconfig.tsbuildinfo`는 일부러 커밋하지 않음.
+**커밋은 했지만 아직 push·배포 안 한 것**: (위 두 문서는 0f4308f로 커밋됨) AI 요청 수 제한·사용량 파일 작업 — `backend/app/ai.py`·`llm.py`·`talk.py`·`main.py`, `frontend/components/Admin.tsx`, `tests/test_ai_features.py`, `.gitignore`, `.env.example`, `docs/12_CHANGELOG.md`, 빌드 결과 `web/index.html`·`docs/index.html`, 이 파일. 그 밖에 `build/package-lock.json`, `data/cache/`, `frontend/tsconfig.tsbuildinfo`는 일부러 커밋하지 않음.
 
 ## 3. 해결 중인 에러·확인 못 한 것
 
 1. ~~실제 사이트 AI 확인~~ → **11-20 확인 완료**: 판정관(무릉별유천지·휠체어) Sonnet, 10초, 'Y·확신 보통'·근거 3개, 약 $0.014(20원). AI 코스(부모님·오래 걷기 어려움) Sonnet, 14초, 4곳(도째비골→망상→식당→카페)·고른 이유, 약 $0.022(30원). 남은 확인: 코스 사용량이 '1회 호출'로만 잡혀 에이전트가 도구를 실제로 몇 번 썼는지는 서버 기록으로 한 번 볼 것
 2. **저장이 날아갈 위험 (중요)** — `render.yaml`은 Starter 요금제+디스크(`/var/data`)를 가정하지만 실제 서비스는 **Free 요금제**라 디스크가 없음. 관리자 수정(cms.json)·제보·AI 제안이 재배포·재시작 때 사라질 수 있음. 해결: Render 유료 디스크 또는 외부 DB(Postgres 등)로 옮기기 — 멘토링에서 물어볼 질문 A1
-3. AI 사용량(USAGE)은 서버 메모리에만 있어 재시작하면 0부터 셈
-4. AI API 요청 수 제한이 없음 → 반복 호출 시 비용 증가 가능(사이트 잠금을 풀었으므로 누구나 부를 수 있음 — 비용을 [AI 설정]에서 지켜볼 것)
+3. ~~AI 사용량은 메모리에만~~ → 11-20 `ai_usage.json`에 남김(`CMS_FILE` 옆). 단 Render Free는 디스크가 없어 **재배포 때는 여전히 0부터** (2번과 함께 해결)
+4. ~~AI 요청 수 제한 없음~~ → 11-20 넣음 (`backend/app/ai.py`의 `gate`). 같은 접속 주소 10분에 20번, 하루 추정 $2. 값은 Render 환경변수 `AI_RATE_PER_IP`·`AI_RATE_WINDOW`·`AI_DAILY_USD`로 바꿈. 접속 주소는 `x-forwarded-for` 첫 값이라 꾸며 낼 수 있음 → 진짜 방어선은 하루 비용 상한
 
 ## 4. 남은 할 일
 
@@ -89,7 +90,7 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 - [ ] **모델 원칙 바꾸기 — 팀장이 "나중에" 하기로 함**: "최대한 Haiku, 어려운 처리(여러 단계로 스스로 찾고 점검하는 코스 설계)만 Sonnet". 할 일은 `backend/app/ai.py`의 TASKS에서 `judge`를 `fast`로, `build/api.js`의 데모 목록도 같이, `tests/test_ai_features.py`의 Sonnet 확인 대상을 `course`로, `docs/17_AI_FEATURES.md` 표 수정. (관리자 [AI 설정]에서 화면으로 바꿀 수도 있음)
 - [ ] 저장소 문제 결정(유료 디스크 vs DB) — 멘토링 뒤
 - [ ] 일반 이용자 로그인·커뮤니티 글을 서버 저장으로(지금은 브라우저 localStorage에만)
-- [ ] AI API 요청 수 제한, 사용량을 파일에 남기기
+- [x] AI API 요청 수 제한, 사용량을 파일에 남기기 (11-20 커밋, 아직 push·배포 전 — 팀장이 "올려 줘" 하면 push·배포 후 실제 사이트 [AI 설정]에서 '오늘' 줄 확인)
 - [ ] 테스트 자동 실행(GitHub Actions)
 - [ ] 아직 '예시' 길 정보인 장소들 현장 확인
 - [ ] 대회 뒤: `DEMO_LOGIN`을 "0"으로 (`SITE_PASSWORD`는 11-20에 이미 지움), '출처 확인 중' 사진들 출처 확인(`docs/09_ASSET_LICENSES.md`)

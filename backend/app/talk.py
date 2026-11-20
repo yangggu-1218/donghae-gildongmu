@@ -283,6 +283,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
     else:
         merged.append({"role": "user", "content": user})
     try:   # 공식 SDK (backend/app/ai.py). 모델은 작업 'talk' 설정(기본 Haiku), TALK_MODEL 환경 변수가 있으면 그것
+        ai.gate("talk")   # 요청 한도에 걸리면 Limited → 아래 except 에서 규칙으로
         for _ in range(5):   # 도구 호출은 최대 5번
             out = ai.create("talk", model=os.getenv("TALK_MODEL") or None, max_tokens=1500, system=system_for(s.places),
                             tools=CACHED_TOOLS, messages=merged, timeout=TALK_TIMEOUT)
