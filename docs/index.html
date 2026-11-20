@@ -3762,6 +3762,7 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
 .ca2-ai b { color: var(--sea-deep); font-weight: 800; }
 .ca2-ai .ca2-sum { font-weight: 600; font-size: 1em; }
 .ca2-ai .ca2-do { padding-top: 8px; border-top: 1px dashed var(--line); }
+@media (max-width: 900px) { .planner-shell .course-layout > .res-map { position: relative; top: auto; } }   /* 예전 sticky top 이 relative 로 바뀌며 77px 밀리던 것 */
 
 .demo-note { background: var(--glow); color: var(--ink); border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.5; }
 .demo-note .in { max-width: 1160px; margin: 0 auto; padding-block: 8px; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }

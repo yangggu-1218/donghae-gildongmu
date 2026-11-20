@@ -3740,3 +3740,4 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
 .ca2-ai b { color: var(--sea-deep); font-weight: 800; }
 .ca2-ai .ca2-sum { font-weight: 600; font-size: 1em; }
 .ca2-ai .ca2-do { padding-top: 8px; border-top: 1px dashed var(--line); }
+@media (max-width: 900px) { .planner-shell .course-layout > .res-map { position: relative; top: auto; } }   /* 예전 sticky top 이 relative 로 바뀌며 77px 밀리던 것 */
