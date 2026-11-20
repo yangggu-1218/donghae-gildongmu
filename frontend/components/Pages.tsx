@@ -317,13 +317,13 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           {(hours || fee || p.phone) && <dl className="pp4-info">
             {hours && <div><dt><Icon name="time" />{L("운영시간", "Hours")}</dt><dd>{hours}{p.today !== "unknown" && p.today !== "always" && <span className={`pp4-today ${p.today === "open" || p.today === "always" ? "on" : ""}`}>{today}</span>}</dd></div>}
             {hours && <div><dt><Icon name="cal" />{L("휴무", "Closed")}</dt><dd>{p.closed_days || L("정기 휴무 없음", "None")}</dd></div>}
-            {fee && <div><dt><Icon name="ticket" />{L("입장료", "Admission")}</dt><dd title={fee}>{fee}</dd></div>}
+            {fee && <div><dt><Icon name="ticket" />{L("입장료", "Admission")}</dt><dd title={fee} className="pp4-fee">{fee.split(/\s+·\s+/).map((x, i) => <span key={i}>{x}</span>)}</dd></div>}
             {p.phone && <div><dt><Icon name="phone" />{L("문의", "Phone")}</dt><dd><a href={`tel:${p.phone}`}>{p.phone}</a></dd></div>}
           </dl>}
           <div className="pp4-acts">
             <button className={`pp4-btn main${wished ? " on" : ""}`} aria-pressed={!!wished} onClick={() => onAdd(p.id)}><Icon name="bookmark" />{wished ? L("담았어요 (다시 누르면 빼기)", "Added (tap to remove)") : L("코스에 담기", "Add to route")}</button>
             {p.lat && <a className="pp4-btn" href={`https://map.kakao.com/link/to/${encodeURIComponent(p.name_ko)},${p.lat},${p.lon}`} target="_blank" rel="noreferrer"><Icon name="navi" />{L("길찾기", "Directions")}<span className="sr-only">{L(" (카카오맵, 새 창)", " (Kakao Map, new tab)")}</span></a>}
-            <a className="pp4-report" href={`#/report/${p.id}`}><Icon name="flag" />{L("이곳 불편 알리기", "Report a barrier")}</a>
+            <a className="pp4-btn" href={`#/report/${p.id}`}><Icon name="flag" />{L("불편 알리기", "Report a barrier")}</a>
           </div>
         </div>
         <div className="pp4-photos">
@@ -371,20 +371,8 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
         {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("이동약자 편의정보 자세히", "Accessibility details")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
       </section>
 
-      {/* 3. 위치 및 주변 편의시설 | 방문 전 확인 */}
-      <div className="pp4-row">
-        <section className="panel pp4-near" aria-labelledby="pp4-near-h">
-          <h2 id="pp4-near-h" className="h3 pp4-h"><Icon name="pin" />{L("위치 및 주변 편의시설", "Location & nearby")}</h2>
-          <div className="pp4-near-in">
-            {pins.length > 0 && <div className="pp4-map"><KakaoMap pins={pins} dots label={L(`${name} 주변 지도`, "Nearby map")} /></div>}
-            <div>
-              {near.length > 0 ? <dl className="pp4-dist">{near.map(([ic, k, nm, m]) => (
-                <div key={k}><dt><Icon name={ic} />{k}</dt><dd><span className="pp4-nm">{nm}</span>{m != null && <b>{dist(m)}</b>}</dd></div>))}</dl>
-                : <p className="muted small">{L("1.5km 안에 위치가 확인된 장애인 화장실이 없어요.", "No mapped accessible toilet within 1.5 km.")}</p>}
-              <a className="pp4-maplink" href="#/map">{L("편의시설 지도 보기", "Open facilities map")}<span aria-hidden="true">›</span></a>
-            </div>
-          </div>
-        </section>
+      {/* 3. 방문 전 확인 ('위치 및 주변 편의시설' 칸은 팀장 요청으로 뺌 2026-11-21 — 편의시설은 [편의시설 지도]에서) */}
+      <div className="pp4-row one">
         <section className="panel pp4-before" aria-labelledby="pp4-before-h">
           <h2 id="pp4-before-h" className="h3 pp4-h"><Picto name="tip" size={24} />{L("방문 전 확인", "Before you go")}</h2>
           <div className="pp4-before-in">

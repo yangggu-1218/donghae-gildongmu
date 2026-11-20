@@ -151,7 +151,8 @@ export default function Page() {
     setMapStop(id);
     setMapMode("edit");
     setSettingsOpen(id === "@start");
-    if (scheduleRef.current) scheduleRef.current.scrollTop = 0;
+    // 오른쪽 목록에 모든 장소가 보이므로, 고른 장소가 보이게만 살짝 스크롤
+    requestAnimationFrame(() => scheduleRef.current?.querySelector(`[data-course-stop="${id}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
   const hadCourse = useRef(false);
   // 사용법 안내: ×로 닫으면 이 기기에서는 다시 안 띄운다 (코스를 만든 뒤에도 숨김)
@@ -927,8 +928,6 @@ export default function Page() {
                     onEdit={(action, id) => edit(action, id, t(action === "remove" ? "edit.removeSay" : "edit.replaceSay",
                       { n: course.stops.findIndex((s) => s.id === id) + 1, p: name(id) }))} />
                     : <KakaoMap pins={pins} />}
-                  <p className="muted small route-note">{course.drive_source === "transit" ? t("sum.transitSource") : course.drive_source === "kakao" ? t("sum.driveSource")
-                    : (lang === "ko" ? "이동시간은 거리로 어림한 값이에요. 실제 길은 [카카오맵으로 경로 보기]에서 확인해 주세요." : "Driving times are distance-based estimates. Check the real route in Kakao Map.")}</p>
                 </div>
                 <section ref={scheduleRef} className="course-schedule" aria-label={lang === "ko" ? "일정 편집" : "Itinerary editor"}>
                   <div className="workspace-tabs">
@@ -938,14 +937,10 @@ export default function Page() {
                   {settingsOpen ? <TripSettings key={JSON.stringify(cond) + dayNo} conditions={{ ...cond, lang }} busy={busy} t={t}
                     onApply={applySettings} onCancel={() => setSettingsOpen(false)} /> : <>
                   <h3 className="sr-only">{lang === "ko" ? "장소별 일정" : "Visit schedule"}</h3>
-                  {!!course.stops.length && <nav className="stop-pager" aria-label={lang === "ko" ? "방문 장소 전환" : "Browse stops"}>
-                    <button className="chip" disabled={!stopIndex || busy} onClick={() => selectMapStop(course.stops[stopIndex - 1].id)}>{lang === "ko" ? "‹ 이전 장소" : "‹ Previous"}</button>
-                    <b>{stopIndex + 1} / {course.stops.length}</b>
-                    <button className="chip" disabled={stopIndex + 1 >= course.stops.length || busy} onClick={() => selectMapStop(course.stops[stopIndex + 1].id)}>{lang === "ko" ? "다음 장소 ›" : "Next ›"}</button>
-                  </nav>}
-                  <div className="tl">
-                    {course.stops.map((s, i) => i === stopIndex && (
-                      <div key={s.id} data-course-stop={s.id} data-selected={s.id === mapStop}>
+                  {/* 코스 전체를 한 번에: 장소마다 이동 한 줄 + 짧은 카드 (팀장 요청 2026-11-21, 예전 '이전/다음 장소' 넘김 대신) */}
+                  <ol className="tl tl-all">
+                    {course.stops.map((s, i) => (
+                      <li key={s.id} data-course-stop={s.id} data-selected={s.id === mapStop}>
                         <p className="muted tl-drive">{course.drive_source === "transit" ? legText(course.transit_legs?.[i], s.drive_min) : t(course.drive_source === "kakao" ? "result.kakaoDrive" : "result.estDrive", { m: s.drive_min })}</p>
                         <StopCard s={brief?.why[s.id] ? { ...s, why: brief.why[s.id] } : s} i={i} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
                           onMap={routePoints.length ? () => { selectMapStop(s.id); setSmallPane("map"); } : undefined} showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
@@ -954,18 +949,17 @@ export default function Page() {
                           crowd={crowdMap[s.id]?.find((c) => c.date === course.date.replaceAll("-", ""))?.rate ?? null}>
                           <details className="tl-more"><summary>{lang === "ko" ? "이야기·걷기길·택시 더 보기" : "Stories, trails, taxis"}</summary>
                             <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} /></details></StopCard>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                  <p className="muted">{course.back_drive_min != null && <>{course.drive_source === "transit" ? legText(course.transit_legs?.[course.stops.length], course.back_drive_min) : t("result.kakaoDrive", { m: course.back_drive_min })} · </>}{t("result.back", { s: startName, t: course.back_at })}</p>
-                  {lang === "ko" && (() => {   // 쓸 수 있는 시간과 예상 소요 비교 (7-3), 대중교통이면 이동시간 기준을 밝힘
+                  </ol>
+                  {(() => {
                     const hm = (x: string) => { const [h, m] = x.split(":").map(Number); return h * 60 + m; };
                     const used = hm(course.back_at) - hm(course.start_time || "10:00");
-                    const budget = ans.time?.[0] ? BUDGET[ans.time[0]] : null;
-                    const f = (m: number) => `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}`;
-                    return <p className={`muted small${budget && used > budget ? " warn-txt" : ""}`}>
-                      {`예상 소요 ${f(used)}${budget ? ` (설정 ${ans.time![0]}${used > budget ? " 초과" : ""})` : ""} · ${course.drive_source === "transit" ? "이동은 ODsay 대중교통 기준(배차 대기 미포함)" : course.drive_source === "kakao" ? "이동은 카카오 자동차 기준" : "이동은 차량 기준 추정"}, 머무는 시간 포함, 휴식 미포함`}
-                      {cond.start !== "자가용" && course.drive_source !== "transit" && " · 버스 시간표·환승·정류장 도보 미포함"}</p>;
+                    const f = (m: number) => lang === "ko" ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}` : `${Math.floor(m / 60)}h ${m % 60}m`;
+                    return <>
+                      {course.back_drive_min != null && <p className="muted tl-drive">{course.drive_source === "transit" ? legText(course.transit_legs?.[course.stops.length], course.back_drive_min) : t("result.kakaoDrive", { m: course.back_drive_min })}</p>}
+                      <p className="tl-back"><b>{t("result.back", { s: startName, t: course.back_at })}</b><span className="muted"> · {lang === "ko" ? "총" : "Total"} {f(used)}</span></p>
+                    </>;
                   })()}
                   <RouteCosts course={course} lang={lang} />
                   </>}
@@ -979,7 +973,6 @@ export default function Page() {
                 </div>
                 <div className="chips">
                   <button className="chip" onClick={startOver} disabled={busy}>{lang === "ko" ? "처음부터 새로 짜기" : "Start over"}</button>
-                  <button className="chip" onClick={() => { try { sessionStorage.setItem("gd-share", JSON.stringify({ stops: course.stops.map((s) => s.id), kind: cond.move.length ? "easy" : "free", move: cond.move.filter((m) => ["휠체어", "유모차", "오래 걷기 어려움"].includes(m)), who: cond.who })); } catch { /* */ } location.hash = "#/community/new"; }}>{lang === "ko" ? "다녀와서 후기 올리기" : "Share after the trip"}</button>
                 </div>
               </div>
               {brief && (

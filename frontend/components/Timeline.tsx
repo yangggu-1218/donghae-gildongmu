@@ -78,16 +78,17 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
   return (
     <>
       <article className="stop-overview" aria-label={`${i + 1}. ${name}`}>
-        <div className="stop-identity"><PlacePhoto id={s.id} lang={lang as "ko" | "en"} small />
-          <div><span>{s.arrive} – {s.depart}</span><h4>{name}</h4></div></div>
-        <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
-          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}</div>
-        {s.notice && <p role="note">{s.notice}</p>}
-                <div className="stop-actions">
-          <button type="button" className="chip go" onClick={() => dialog.current?.showModal()}>{lang === "ko" ? "장소 상세 보기" : "Stop details"}</button>
-          {onMap && <button type="button" className="chip" onClick={onMap}>{lang === "ko" ? "지도에서 보기" : "Show on map"}</button>}
-          <button className="chip" disabled={busy} onClick={onRemove}>{t("tl.remove")}</button>
-          <button className="chip" disabled={busy} onClick={onReplace}>{t("tl.replace")}</button>
+        <div className="stop-identity"><span className="so-n" aria-hidden="true">{i + 1}</span><PlacePhoto id={s.id} lang={lang as "ko" | "en"} small />
+          <div className="so-main"><span>{s.arrive} – {s.depart}</span>
+            <h4><button type="button" className="so-title" onClick={() => dialog.current?.showModal()}>{name}</button></h4>
+            <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
+              {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}</div></div></div>
+        {s.notice && <p role="note" className="so-note">{s.notice}</p>}
+        <div className="stop-actions">
+          <button type="button" className="chip sm go" onClick={() => dialog.current?.showModal()}>{lang === "ko" ? "상세" : "Details"}</button>
+          {onMap && <button type="button" className="chip sm" onClick={onMap}>{lang === "ko" ? "지도" : "Map"}</button>}
+          <button className="chip sm" disabled={busy} onClick={onRemove}>{lang === "ko" ? "빼기" : "Remove"}</button>
+          <button className="chip sm" disabled={busy} onClick={onReplace}>{lang === "ko" ? "바꾸기" : "Replace"}</button>
         </div>
       </article>
       <dialog className="stop-detail-dialog" ref={dialog} aria-label={name}>

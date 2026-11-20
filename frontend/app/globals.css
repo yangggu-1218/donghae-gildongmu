@@ -2246,6 +2246,23 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .map-toolbar .map-size { margin-inline-start: auto; }
 .route-view .route-caption { margin: 0; font-size: .85em; }
 .stop-overview { background: var(--surface); border: 1px solid var(--line); padding: 12px; border-radius: var(--r-m); }
+/* 코스 결과 오른쪽: 장소 전체를 한 번에 (짧은 카드 + 사이사이 이동 한 줄) */
+.tl-all { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.tl-all > li { display: grid; gap: 4px; }
+.tl-all .stop-overview { padding: 10px 12px; transition: border-color .15s, box-shadow .15s; }
+.tl-all > li[data-selected="true"] .stop-overview { border-color: var(--sea); box-shadow: 0 0 0 2px var(--sea-soft); }
+.tl-all .stop-identity { align-items: flex-start; gap: 10px; }
+.tl-all .stop-identity .ph-s { width: 56px; height: 56px; }
+.so-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--sea-deep); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .85em; margin-top: 2px; }
+.so-main { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.so-main > span { font-size: .9em; }
+.so-title { all: unset; cursor: pointer; font: inherit; font-weight: 700; color: var(--ink); }
+.so-title:hover, .so-title:focus-visible { text-decoration: underline; }
+.tl-all .tl-badges { margin: 2px 0 0; }
+.so-note { margin: 6px 0 0; font-size: .9em; }
+.tl-all .stop-actions { margin-top: 6px; gap: 4px; }
+.tl-all .tl-drive { margin: 4px 0 0 14px; padding-left: 12px; border-left: 2px dotted var(--line-strong); font-size: .85em; }
+.tl-back { margin: 6px 0 0; }
 .stop-identity { display: flex; gap: 12px; align-items: center; }
 .stop-identity h4 { margin: 1px 0; font-size: 1.15em; line-height: 1.3; }
 .stop-identity span { font-weight: 650; font-variant-numeric: tabular-nums; color: var(--sea-deep); }
@@ -2748,3 +2765,6 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .mpicto { display: inline-grid; place-items: center; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface), 0 1px 3px rgba(0,0,0,.25); vertical-align: middle; }
 .layers .chip .mpicto { margin-right: 6px; }
 .fac-item .mpicto { margin-right: 10px; }
+/* 관광지 상세 (2026-11-21): 방문 전 확인 한 칸만, 입장료는 '·' 대신 줄을 나눠서 */
+.pp4-row.one { grid-template-columns: minmax(0, 1fr); }
+.pp4-info dd.pp4-fee { display: grid; gap: 2px; -webkit-line-clamp: unset; overflow: visible; }

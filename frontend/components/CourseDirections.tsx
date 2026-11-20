@@ -114,7 +114,6 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
           onClick={e => { setStep(g); e.currentTarget.closest(".res-map")?.querySelector(".map")?.scrollIntoView({ block: "center" }); }}>{g.text}</button></li>)}</ol>
       </details>)}
     </details>}
-    <a className="chip" href={legUrl || active.url} target="_blank" rel="noreferrer">
-      {legUrl ? (ko ? "카카오맵에서 이 구간 보기" : "Open this leg in Kakao Map") : (ko ? "카카오맵으로 경로 보기" : "Open route in Kakao Map")}</a></div>
+    </div>
   </div>;
 }

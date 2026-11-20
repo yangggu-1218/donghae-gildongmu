@@ -320,7 +320,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, facilit
     const en = typeof document !== "undefined" && document.documentElement.lang === "en";
     return <>{mapView}<small className="route-caption">{key && !failed && drivingPath && drivingPath.length > 1
       ? (en ? "Kakao driving route" : "카카오 자동차 경로")
-      : (en ? "Dotted line shows the order of visits." : "점선은 방문 순서를 표시해요.")}</small></>;
+      : null}</small></>;
   }
   const index = detail ? pins.indexOf(detail) : -1;
   const overlay = sdk?.overlays[index];
