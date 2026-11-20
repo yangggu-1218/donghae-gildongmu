@@ -3470,3 +3470,9 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
   .tl-all .stop-overview { padding-left: 30px; }
   .drag-h { width: 26px; left: 1px; }
 }
+/* 지형 참고 안내 (DEM 90m) */
+.pp4-terrain { margin: 6px 0 0; }
+.pp4-terrain b { margin-right: 6px; }
+.pe-terrain { margin: 8px 0 0; padding: 8px 12px; border-radius: var(--r-m); background: var(--mist); }
+.pe-terrain.warn { background: var(--warn-bg); color: var(--warn); }
+.pe-terrain b { margin-right: 6px; }

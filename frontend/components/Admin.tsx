@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Icon } from "@/components/Icon";
+import { terrainText, needsVisit } from "@/lib/terrain";
 import { SourcesPage } from "@/components/Pages";
 import { CityAdmin } from "@/components/CityAdmin";
 import { SyncAdmin } from "@/components/SyncAdmin";
@@ -186,7 +187,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
       <div className="pe-top">
         <label className="pick-place">고칠 장소
           <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
-            {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
+            {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}{needsVisit(p) ? " · 언덕·답사 필요" : ""}</option>)}</select></label>
         <div className="pe-mode" role="tablist" aria-label="고치는 방법">
           <button type="button" role="tab" aria-selected={mode === "manual"} className={`pe-mode-btn${mode === "manual" ? " on" : ""}`} disabled={!pid} onClick={() => go("manual")}>
             <Icon name="edit" /><span><b>수동 변경</b><small>칸을 직접 고치기</small></span></button>
@@ -194,7 +195,9 @@ function PlaceEditor({ places, db, tok, call }: any) {
             <Icon name="story" /><span><b>AI 자동 변경</b><small>자료 읽기·글 다듬기</small></span></button>
         </div>
       </div>
-      {!pid && <p className="muted small pe-hint">장소를 고른 뒤 [수동 변경] 또는 [AI 자동 변경]을 누르세요.</p>}
+      {!pid && <p className="muted small pe-hint">장소를 고른 뒤 [수동 변경] 또는 [AI 자동 변경]을 누르세요.{places.some(needsVisit) ? ` 언덕 지형인데 현장 답사 구간이 없는 곳 ${places.filter(needsVisit).length}곳은 목록에 '언덕·답사 필요'로 표시돼요.` : ""}</p>}
+      {pid && (() => { const pl = places.find((x: any) => x.id === pid); return pl?.terrain?.elev_m != null ? <p className={`small pe-terrain${needsVisit(pl) ? " warn" : ""}`}><b>지형(DEM 90m 추정)</b> {terrainText(pl.terrain, "ko")}
+        {needsVisit(pl) ? " 언덕 지형인데 현장 답사 구간이 없어요. 가는 길 경사·계단을 현장에서 재 주세요." : ""}</p> : null; })()}
       {pid && orig && <div className="pe-pane" ref={paneRef}>
       {filled && mode === "manual" && <p className="ok pe-filled" role="status">{filled} <button type="button" className="link-btn" onClick={() => go("ai")}>AI 자동 변경으로 돌아가기</button></p>}
       <form className="visit-form" hidden={mode !== "manual"} onSubmit={(e) => { e.preventDefault();

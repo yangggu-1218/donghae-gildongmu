@@ -86,6 +86,7 @@ class Place(BaseModel):
     fee_detail: dict = Field(default_factory=dict)   # 공식 확인 요금 {"어른": "5,000원", ..., "주차": "..."} (없으면 표시 안 함)
     verify: dict = Field(default_factory=dict)       # 관리자용 검증 기록 {"url", "checked", "confidence"}
     osm: dict = Field(default_factory=dict)          # 주변 보행로 노면·폭 (OpenStreetMap, data/public/osm_paths.json) — 참고 정보, 판정에는 안 씀
+    terrain: dict = Field(default_factory=dict)      # 해발·언덕 위인지 (국토지리정보원 DEM 90m, terrain.py) — 참고 안내, 판정에는 안 씀
 
     @property
     def verified(self) -> bool:

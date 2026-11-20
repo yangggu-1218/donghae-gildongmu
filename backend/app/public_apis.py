@@ -170,9 +170,11 @@ def transit_leg(a, b, speed_mps: float) -> dict | None:
                 lines += [ln.get("name") for ln in (s.get("lane") or [])[:1] if ln.get("name")]
         info = p.get("info") or {}
         rides = int(info.get("busTransitCount") or 0) + int(info.get("subwayTransitCount") or 0)
+        last_ride = [s for s in subs if s.get("trafficType") in (1, 2)][-1:]
+        alight = [float(last_ride[0]["endY"]), float(last_ride[0]["endX"])] if last_ride and last_ride[0].get("endY") else None   # 마지막에 내리는 정류장 (걷는 구간 오르막 계산용)
         TRANSIT_STATS["ok"] += 1
         return {"mode": "transit", "min": ride + walk_min, "ride_min": ride, "walk_m": walk_m, "walk_min": walk_min,
-                "transfers": max(0, rides - 1), "lines": lines[:4], "payment": info.get("payment")}
+                "transfers": max(0, rides - 1), "lines": lines[:4], "payment": info.get("payment"), "alight": alight}
     except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError, TimeoutError, AttributeError) as e:
         TRANSIT_STATS["fail"] += 1
         TRANSIT_STATS["last_error"] = type(e).__name__

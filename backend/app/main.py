@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import trip_days, Place, Conditions, ChatEdit
-from . import ai, ai_course, ai_extract, city, reports_store, sync as sync_mod, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
+from . import ai, ai_course, ai_extract, city, reports_store, sync as sync_mod, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod, terrain
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -42,6 +42,8 @@ def load_places() -> dict[str, Place]:
     places = cms.apply(places)            # 관리자가 바꾼 값 (덮어쓰기·임시 알림)
     places = kto_access.drop_vision(places)   # 시각장애 편의 내용은 다루지 않음 (관리자 값까지 정리)
     public_data.link_eateries(places)     # 인허가 식당 목록에서 이미 아는 식당 표시
+    for p in places.values():             # 지형 참고 안내 (DEM 90m, 관리자가 바꾼 좌표 기준). 판정에는 쓰지 않음
+        p.terrain = terrain.place_terrain(p.lat, p.lon) if p.lat is not None and p.lon is not None else {}
     return places
 
 

@@ -304,6 +304,10 @@ def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course,
         stop.open_state = state if state in ("always", "unknown", "closed") else "open"
     names = [c.start, *[places[s.id].name_ko for s in result.stops], c.start]
     result.drive_source = "transit"
+    from . import terrain   # 걷는 구간(내린 정류장 → 장소, 걸어서만 가는 구간) 오르막 참고 (DEM 90m 추정, 판정에는 안 씀)
+    for leg, a, b in zip(legs, pts, pts[1:]):
+        w0 = a if leg["mode"] == "walk" else leg.get("alight")
+        leg["climb"] = terrain.climb(w0, b) if w0 else None
     result.transit_legs = [{**leg, "from": a, "to": b} for leg, a, b in zip(legs, names, names[1:])]
     result.back_drive_min = legs[-1]["min"]
     result.back_at = hhmm(clock + result.back_drive_min)

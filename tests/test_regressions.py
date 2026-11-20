@@ -97,5 +97,25 @@ ol = c.post("/api/optimize", json={"conditions": base, "order": bad, "locked": [
 check("최적화: 고정한 장소는 제자리", ol["order_after"][0] == "chotdae", str(ol["order_after"]))
 check("최적화: 한 곳이면 400", c.post("/api/optimize", json={"conditions": base, "order": ["chotdae"]}).status_code == 400)
 
+# 8) 지형 참고 안내 (DEM 90m): 장소 지형, 걷는 구간 오르막. 판정에는 쓰지 않음 (2026-11-21)
+from app import terrain, public_apis
+lh, port, beach = PLACES["mukho_lighthouse"], PLACES["mukho_port"] if "mukho_port" in PLACES else None, PLACES["mangsang"]
+check("지형: 묵호등대는 언덕 위", lh.terrain.get("kind") == "hill" and lh.terrain.get("rise_m", 0) >= 25, str(lh.terrain))
+check("지형: 망상해변은 평지", beach.terrain.get("kind") == "flat", str(beach.terrain))
+check("지형: 좌표 있는 장소는 모두 값이 있음", all(x.terrain for x in PLACES.values() if x.lat is not None))
+cl = terrain.climb((37.5490, 129.1170), (lh.lat, lh.lon))
+check("지형: 묵호항 → 등대 걷는 길 오르막", cl and cl["up_m"] >= 25, str(cl))
+check("지형: 격자 밖은 None", terrain.elev(35.0, 127.0) is None and terrain.climb((35.0, 127.0), (35.01, 127.01)) is None)
+check("지형: 접근성 판정은 지형과 무관", engine.grade_place(lh, "wheel") == engine.grade_place(lh.model_copy(update={"terrain": {}}), "wheel"))
+_av, _tl = public_apis.odsay_available, public_apis.transit_leg
+try:   # ODsay 없이 대중교통 구간을 흉내 내 '내린 정류장 → 장소' 오르막이 붙는지
+    public_apis.odsay_available = lambda: True
+    public_apis.transit_leg = lambda a, b, sp: {"mode": "transit", "min": 20, "ride_min": 12, "walk_m": 400, "walk_min": 8, "transfers": 0, "lines": ["버스 1"], "payment": 1500, "alight": [37.5490, 129.1170]}
+    rr = engine.schedule_order(PLACES, Conditions(start="동해역", date="2026-11-24", start_time="10:00", order=["mukho_lighthouse"]), ["mukho_lighthouse"])
+    lg = (rr.transit_legs or [{}])[0]
+    check("지형: 대중교통 걷는 구간에 오르막 붙음", rr.drive_source == "transit" and (lg.get("climb") or {}).get("up_m", 0) >= 25, str(lg.get("climb")))
+finally:
+    public_apis.odsay_available, public_apis.transit_leg = _av, _tl
+
 print(f"회귀 점검 실패 {len(fails)}건")
 sys.exit(1 if fails else 0)

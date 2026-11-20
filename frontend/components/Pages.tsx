@@ -15,6 +15,7 @@ import { PICTO } from "@/lib/mapPicto";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { PlaceTalk } from "@/components/Community";
 import { AiJudge, AiStatus, useJudge, verdictText } from "@/components/AiCards";
+import { terrainText, TERRAIN_NOTE } from "@/lib/terrain";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -373,6 +374,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           {moreBtn}
         </div>}
         {segs.length === 0 && moreBtn && <div className="pp4-route">{moreBtn}</div>}
+        {p.terrain?.elev_m != null && <p className="small pp4-terrain"><b>{L("지형", "Terrain")}</b> {terrainText(p.terrain, lang)} <span className="muted" title={TERRAIN_NOTE(lang)}>{L("(지형 자료 추정)", "(terrain estimate)")}</span></p>}
         {p.osm?.surface_m && Object.keys(p.osm.surface_m).length > 0 && <p className="muted small pp4-osm">
           {L("주변 250m 보행로 노면", "Nearby path surfaces")}: {Object.entries(p.osm.surface_m).map(([k, m]: any) => `${k} 약 ${m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`}`).join(" · ")}
           {p.osm.min_width_m ? ` · ${L("가장 좁은 폭", "narrowest")} ${p.osm.min_width_m}m` : ""}</p>}
@@ -1033,6 +1035,7 @@ export function SourcesPage({ lang }: { lang: Lang }) {
             <li>{L("관광지 주변 보행로 노면·폭, 코스 준비 중 예시 지도: ", "Path surfaces/widths near places and the sample planning map: ")}<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap {L("기여자", "contributors")}</a> (ODbL)</li>
             <li>{L("지도 화면·길찾기: 카카오맵", "Maps and directions: Kakao Map")}</li>
             <li>{L("대중교통 길찾기: ODsay LAB", "Public transit routes: ODsay LAB")}</li>
+            <li>{L("장소 지형(해발·언덕 위인지)·걷는 구간 오르막 추정: 국토지리정보원 수치표고모델(DEM) 90m — 짧은 경사로·계단은 보이지 않아 접근성 판정에는 쓰지 않음", "Terrain and uphill estimates: NGII DEM 90 m (not used for access grades)")}</li>
           </ul>
         </div>
         <div className="panel">

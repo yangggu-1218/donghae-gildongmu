@@ -26,6 +26,7 @@ import { PlanningWait } from "@/components/PlanningWait";
 import { api, getJSON, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays, OptimizeRes } from "@/lib/api";
 import { OptimizeCompare } from "@/components/OptimizeCompare";
 import { useDragSort } from "@/lib/useDragSort";
+import { climbText } from "@/lib/terrain";
 
 type Lang = "ko" | "en";
 type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule"; got?: string[]; img?: string; photo?: any };
@@ -653,9 +654,10 @@ export default function Page() {
     setStay({ name: r.name, addr: r.road || "", ...pt }); setAddOpen(""); setStayMsg(""); setMapMode("edit");
   };
   // 대중교통 구간 한 줄: '대중교통 24분 · 버스 12-4 · 걷기 350m(9분) · 환승 1번' (ODsay, 걷는 시간은 이동 조건 속도)
+  // 걷는 구간 오르막(내린 정류장 → 장소, DEM 90m 지형 추정)도 덧붙인다
   const legText = (leg: any, m: number) => !leg ? t("result.transit", { m }) : leg.mode === "walk"
-    ? (lang === "ko" ? `걸어서 ${leg.walk_min}분 (${leg.walk_m}m)` : `Walk ${leg.walk_min} min (${leg.walk_m} m)`)
-    : [t("result.transit", { m }), ...(leg.lines || []), leg.walk_m ? (lang === "ko" ? `걷기 ${leg.walk_m}m(${leg.walk_min}분)` : `walk ${leg.walk_m} m`) : "", leg.transfers ? (lang === "ko" ? `환승 ${leg.transfers}번` : `${leg.transfers} transfer(s)`) : ""].filter(Boolean).join(" · ");
+    ? [lang === "ko" ? `걸어서 ${leg.walk_min}분 (${leg.walk_m}m)` : `Walk ${leg.walk_min} min (${leg.walk_m} m)`, climbText(leg.climb, lang)].filter(Boolean).join(" · ")
+    : [t("result.transit", { m }), ...(leg.lines || []), leg.walk_m ? (lang === "ko" ? `걷기 ${leg.walk_m}m(${leg.walk_min}분)` : `walk ${leg.walk_m} m`) : "", climbText(leg.climb, lang), leg.transfers ? (lang === "ko" ? `환승 ${leg.transfers}번` : `${leg.transfers} transfer(s)`) : ""].filter(Boolean).join(" · ");
   const q = Q[step];
   const shareUrl = typeof window !== "undefined" && course ? `${location.origin}${location.pathname}#plan=${encodePlan({ ...cond, lang }, course)}` : "";
   const startName = cond.start === "자가용" ? (lang === "ko" ? "동해역 (자가용 기준점)" : "Donghae Station (car)") : t(`opt.${cond.start}`);
