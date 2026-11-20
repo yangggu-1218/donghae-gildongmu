@@ -419,7 +419,7 @@ export const PHOTOS: Record<string, Photo> = {
   "bongjeong_lotus_3": {
     "src": "/photos/500px-bongjeong_lotus_3.webp",
     "author": "namgil kim (사진에 표시)",
-    "license": "출처 확인 중",
+    "license": "촬영자 사용 허락 받음 (2026-11-20)",
     "page": ""
   },
   "culture_center": {
@@ -443,7 +443,7 @@ export const PHOTOS: Record<string, Photo> = {
   "bukpyeong_church_2": {
     "src": "/photos/500px-bukpyeong_church_2.webp",
     "author": "Wood Honey (사진에 표시)",
-    "license": "출처 확인 중",
+    "license": "촬영자 사용 허락 받음 (2026-11-20)",
     "page": ""
   },
   "mukho_market": {
