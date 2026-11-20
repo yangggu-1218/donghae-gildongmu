@@ -52,7 +52,7 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
     return routes;
   }, [points]);
   const pins = useMemo(() => points.slice(0, -1).map((p, i) => ({ ...p,
-    icon: i === 0 ? (ko ? "출발·도착" : "Start/End") : (ko ? "경유" : "Via"),   // 첫 점은 출발역이자 돌아오는 곳
+    icon: i === 0 ? (ko ? "출발" : "Start") : (ko ? "경유" : "Via"),   // 첫 점은 출발역이자 돌아오는 곳 (핀 폭 34px라 두 글자만)
   })), [points, ko]);
   const guides = useMemo(() => course.driving_guides?.flat() ?? [], [course.driving_guides]);
   // 각 구간의 목적지를 일정 선택과 공유한다. 마지막 목적지는 복귀역이다.

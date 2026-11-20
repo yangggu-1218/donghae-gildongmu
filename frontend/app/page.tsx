@@ -138,6 +138,17 @@ export default function Page() {
   const [route, setRoute] = useState<string[]>([""]);
   const [saved, setSaved] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
+  // '다른 시각' 목록: 넓은 화면은 5개씩 보이는 목록(스크롤), 휴대폰은 기기 기본 선택기(iOS 휠·안드로이드 창)
+  const [timeOpen, setTimeOpen] = useState(false);
+  const timeRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!timeOpen) return;
+    const off = (e: MouseEvent) => { if (!timeRef.current?.contains(e.target as Node)) setTimeOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setTimeOpen(false); };
+    document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
+    requestAnimationFrame(() => timeRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "center" }));
+    return () => { document.removeEventListener("mousedown", off); document.removeEventListener("keydown", esc); };
+  }, [timeOpen]);
   // 더 자세히 묻기: offer = "조금만 더 여쭤봐도 될까요?" 대기, xq = 이번 사람에게 고른 추가 질문, xi = 지금 몇 번째
   const [offer, setOffer] = useState(false);
   const [xq, setXq] = useState<ExtraQ[] | null>(null);
@@ -644,6 +655,7 @@ export default function Page() {
     const far = !strip.includes(d0);
     const times3 = nextTimes(d0, plusDays(0));
     const otherOn = !!cond.start_time && !times3.includes(cond.start_time);
+    const otherList = Array.from(new Set([...OTHER_TIMES, ...(otherOn && cond.start_time ? [cond.start_time] : [])])).sort();
     return (
       <div className="when when2">
         <p className="when-k">{lang === "ko" ? "날짜 및 시간" : "Date & time"}</p>
@@ -664,11 +676,19 @@ export default function Page() {
         <div className="trow2" role="group" aria-label={t("when.time")}>
           <span className="when-sub">{t("when.time")}</span>
           {times3.map((h) => <button key={h} type="button" className="tpill" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
-          <select className={`tpill tsel${otherOn ? " on" : ""}`} aria-label={t("when.other")} value={otherOn ? cond.start_time : ""}
-            onChange={(e) => e.target.value && setCond({ ...cond, start_time: e.target.value })}>
-            <option value="">{t("when.other")}</option>
-            {Array.from(new Set([...OTHER_TIMES, ...(otherOn && cond.start_time ? [cond.start_time] : [])])).sort().map((h) => <option key={h} value={h}>{h}</option>)}
-          </select>
+          <span className="tsel-wrap" ref={timeRef}>
+            <select className={`tpill tsel tsel-native${otherOn ? " on" : ""}`} aria-label={t("when.other")} value={otherOn ? cond.start_time : ""}
+              onChange={(e) => e.target.value && setCond({ ...cond, start_time: e.target.value })}>
+              <option value="">{t("when.other")}</option>
+              {otherList.map((h) => <option key={h} value={h}>{h}</option>)}
+            </select>
+            <button type="button" className={`tpill tsel tsel-btn${otherOn ? " on" : ""}`} aria-haspopup="listbox" aria-expanded={timeOpen} onClick={() => setTimeOpen(!timeOpen)}>
+              {otherOn ? cond.start_time : t("when.other")}</button>
+            {timeOpen && <ul className="tsel-list" role="listbox" aria-label={t("when.other")}>
+              {otherList.map((h) => <li key={h} role="option" aria-selected={cond.start_time === h}>
+                <button type="button" onClick={() => { setCond({ ...cond, start_time: h }); setTimeOpen(false); }}>{h}</button></li>)}
+            </ul>}
+          </span>
         </div>
         <div className="wrow2" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
           {!wxOf(d0) && <span className="wline">{!wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>}
@@ -787,8 +807,7 @@ export default function Page() {
           <button className="chip" aria-pressed={smallPane === "map"} onClick={() => setSmallPane("map")}>{lang === "ko" ? "경로 지도" : "Map"}</button>
           <button className="chip" aria-pressed={smallPane === "schedule"} onClick={() => setSmallPane("schedule")}>{lang === "ko" ? "일정·설정" : "Itinerary"}</button>
         </div></div>}
-      {planning && !course && <PlanningWait lang={lang} conditions={previewConditions} places={places}
-        start={{ lat: (KAKAO_START[cond.start] || KAKAO_START["동해역"])[0], lon: (KAKAO_START[cond.start] || KAKAO_START["동해역"])[1], label: cond.start === "자가용" ? t("opt.동해역") : t(`opt.${cond.start}`) }} />}
+      {planning && !course && <PlanningWait lang={lang} />}
       <div hidden={planning && !course} className={`grid${course ? " has-course" : ""}`}>
         {!course && <PlanAside lang={lang} />}
         <section id="chat-panel" className={`panel chat${course ? (chatOpen ? " widget open" : " widget") : ""}`} aria-label={t("nav.plan")}
@@ -1033,21 +1052,6 @@ export default function Page() {
                   <b><Icon name="event" /> {t(hint.onDay ? "tl.eventsDay" : "tl.eventsSoon")}</b>
                   <ul>{hint.events.map((e) => <li key={e.name}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}{e.venue ? ` · ${e.venue}` : ""}</li>)}</ul>
                 </div>) : null}
-              {hint?.move && (
-                <div className="stop" style={{ display: "block" }}>
-                  <b>{t("x.tourTitle")}</b>
-                  {hint.move.taxi && <p className="muted">{t("x.taxiStart", { s: startName, n: hint.move.taxi.spaces })}</p>}
-                  {hint.move.mobility_center && (<>
-                    <p className="muted"><Icon name="wheel" /> {t("x.mobility", { n: hint.move.mobility_center.wheelchair_vehicles, t: hint.move.mobility_center.tel, f: hint.move.mobility_center.fare })}</p>
-                    <p className="muted">{t("x.mobilityWho")}</p>
-                  </>)}
-                  {hint.move.rentals?.[0] && <p className="muted"><Icon name="car" /> {t("x.rental", { n: hint.move.rentals[0].name, h: hint.move.rentals[0].weekday })} · {hint.move.rentals[0].tel}</p>}
-                  {hint.move.city_tour?.covers.length > 0 && (<>
-                    <p className="muted">{t("x.tour", { ...hint.move.city_tour, m: hint.move.city_tour.interval_min, n: hint.move.city_tour.covers.length })}</p>
-                    {cond.move.length > 0 && <p className="muted">{t("x.tourWheel", { c: hint.move.city_tour.contact })}</p>}
-                  </>)}
-                </div>
-              )}
               {hint?.stay && <p className="muted"><Icon name="bed" /> {t("x.stay", { z: hint.stay.zone_name, n: hint.stay.count })}</p>}
               <ReportBox stops={course.stops.map((s) => ({ id: s.id, name: name(s.id) }))} t={t} />
             </>
