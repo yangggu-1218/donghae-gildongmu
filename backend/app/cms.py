@@ -31,7 +31,7 @@ FIELDS = {
     "facilities": "strs",   # 편의시설 이름 목록 (AI 제안 승인으로도 바뀜)
 }
 ACCESS = {"walk_load", "wheelchair", "entrance_step", "table", "indoor", "benches", "segments"}   # 근거 필수
-SEG_FIELDS = ("name", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "rise_m", "width_m", "surface", "note", "source")
+SEG_FIELDS = ("name", "grade", "optional", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "rise_m", "width_m", "surface", "note", "source", "checked_at")
 LEVELS = ("closed", "warn", "info")
 NONE = "__없음__"   # 임시 휴무 / 주의(공사·우회) / 안내
 
@@ -272,8 +272,13 @@ def _seg_clean(s: dict) -> dict:
             v = float(v)
         elif k == "steps":
             v = int(v)
-        elif k == "alt_route":
+        elif k == "optional":
             v = bool(v)
+        elif k == "grade":
+            if v not in ("G", "Y", "R"):
+                continue
+        elif k == "alt_route":
+            v = str(v)[:80]   # 스키마는 글자(예: '엘리베이터')
         else:
             v = str(v)[:200]
         out[k] = v

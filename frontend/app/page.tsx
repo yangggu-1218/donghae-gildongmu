@@ -506,7 +506,11 @@ export default function Page() {
         setBusy(false); return;
       }
       if (r.course) { if (course) snapshot(); applyRes(r, before); setStep(Q.length + 1); }
-      else { setCond(r.conditions); if (!course) setStep((n) => Math.max(n, r.state.move_known ? 3 : r.state.who_known ? 2 : n)); }
+      else { setCond(r.conditions); if (!course) { const iOf = (k: string) => Q.findIndex((x) => x.k === k);   // 대화로 알게 된 것 다음 질문으로
+          const mv: string[] = r.conditions.move || [];   // 엔진 이동 조건 → 화면 선택지 ('필요한 것' 선택지가 맞게)
+          const ui = mv.includes("휠체어") ? ["휠체어"] : mv.includes("유모차") ? ["보행보조기·유모차"] : mv.length ? ["거동 불편 어르신"] : ["일반"];
+          if (r.state.move_known) setAns((a) => ({ ...a, move: a.move || ui, ...(r.state.who_known && r.conditions.who ? { who: a.who || [r.conditions.who] } : {}) }));
+          setStep((n) => Math.max(n, r.state.move_known ? iOf(mv.length ? "need" : "meal") : r.state.who_known ? iOf("move") : n)); } }
       if (/충전|주차|charger|parking/i.test(msg) && course) setNearOverride(true);
       // 코스 없이 화장실·충전기·주차·안내소만 물으면 편의시설 지도의 그 층으로 (gangRG님)
       const facilityRoutes: Record<string, string> = { toilets: "toilets", charger: "chargers", parking: "parking", info_center: "info_centers" };

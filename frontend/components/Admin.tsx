@@ -138,7 +138,8 @@ function PlaceEditor({ places, db, tok, call }: any) {
   const [orig, setOrig] = useState<any>(null);
   useEffect(() => {
     if (!pid) return;
-    api.place(pid).then((p: any) => {
+    api.place(pid).then((p0: any) => {
+      const p = { ...p0, segments: p0.segments_raw || p0.segments };   // 표시용이 아닌 원본 구간(측정값·등급·선택 구간)으로 편집
       setOrig(p); setReason("");
       setF({ open: p.open || "", close: p.close || "", b0: p.break_time?.[0] || "", b1: p.break_time?.[1] || "", closed_day_nums: p.closed_day_nums || [],
         last_entry: p.last_entry || "", stay_min: p.stay_min, phone: p.phone || "", fee: p.fee || "", intro_ko: p.intro_ko || "", tip_ko: p.tip_ko || "",
@@ -310,6 +311,8 @@ const NH_KINDS = [["urgent", "긴급 알림 (휴무·주의)"], ["general", "일
 const NH_NAME: Record<string, string> = { urgent: "긴급 알림", general: "일반 공지", event: "행사 안내" };
 function NoticeHub({ places, db, tok, call, name, can }: any) {
   const [kind, setKind] = useState<"urgent" | "general" | "event">(can("notice") ? "urgent" : "general");
+  const [smp, setSmp] = useState<any>({ notices: [], events: [] });   // 가상 알림·행사 (관리자 화면에만, 사이트에는 안 나감)
+  useEffect(() => { api.get("/api/admin/samples", tok).then(setSmp).catch(() => {}); }, [db]);   // eslint-disable-line
   const rows: any[] = [
     ...(db?.banner ? [{ k: "general", id: "banner", title: db.banner.text, where: "모든 화면 위 공지", period: db.banner.until ? `~ ${db.banner.until}` : "계속", level: db.banner.level, perm: "site",
       del: () => call(() => api.post("/api/admin/banner", {}, tok), "공지를 내렸어요.") }] : []),
@@ -318,6 +321,10 @@ function NoticeHub({ places, db, tok, call, name, can }: any) {
       del: () => call(() => api.post(`/api/admin/notices/${x.id}/delete`, {}, tok), "알림을 내렸어요.") })),
     ...(db?.events || []).map((x: any) => ({ k: "event", id: x.id, title: x.name, where: x.venue, period: `${x.start}${x.end && x.end !== x.start ? ` ~ ${x.end}` : ""}`,
       body: x.access ? `휠체어 접근: ${x.access}` : "", perm: "site", del: () => call(() => api.post(`/api/admin/events/${x.id}/delete`, {}, tok), "행사를 지웠어요.") })),
+    ...(smp.notices || []).map((x: any) => ({ k: x.level === "info" ? "general" : "urgent", id: x.id, title: x.title, body: x.body, where: x.name || "사이트 전체",
+      period: `${x.start || "지금"} ~ ${x.end || "계속"}`, level: x.level, sample: true })),
+    ...(smp.events || []).map((x: any) => ({ k: "event", id: x.id, title: x.name, where: x.venue, period: `${x.start}${x.end && x.end !== x.start ? ` ~ ${x.end}` : ""}`,
+      body: x.access ? `휠체어 접근: ${x.access}` : "", sample: true })),
   ];
   const order = { urgent: 0, general: 1, event: 2 } as Record<string, number>;
   rows.sort((a, b) => order[a.k] - order[b.k]);
@@ -335,11 +342,12 @@ function NoticeHub({ places, db, tok, call, name, can }: any) {
     <ul className="rv-list">
       {rows.map((r) => (
         <li key={r.k + r.id} className={`panel notice-${r.k === "urgent" ? r.level : "info"}`}>
-          <div className="seg-top"><span className={`badge ${r.k === "urgent" ? "b-urgent" : "b-plain"}`}>{NH_NAME[r.k]}{r.k === "urgent" ? ` · ${LEVEL[r.level]?.split(" ")[0] || ""}` : ""}</span>
+          <div className="seg-top">{r.sample && <span className="badge b-unknown">가상</span>}<span className={`badge ${r.k === "urgent" ? "b-urgent" : "b-plain"}`}>{NH_NAME[r.k]}{r.k === "urgent" ? ` · ${({ closed: "휴무", warn: "주의" } as Record<string, string>)[r.level] || ""}` : ""}</span>
             <b>{r.title}</b><small className="muted">{r.where} · {r.period}</small></div>
           {r.body && <p>{r.body}</p>}
           {r.past && <p className="muted small">기간이 지나 사이트에는 안 보여요.</p>}
-          {can(r.perm) && <button className="chip" onClick={r.del}>{r.k === "event" ? "삭제" : "내리기"}</button>}
+          {r.sample ? <p className="muted small">관리자 화면 점검용 — 사이트·코스에는 안 보여요. [받은 글 › 불편 제보·민원 › 설정·백업]에서 한 번에 지워요.</p>
+            : can(r.perm) && <button className="chip" onClick={r.del}>{r.k === "event" ? "삭제" : "내리기"}</button>}
         </li>))}
       {!rows.length && <li className="muted">등록된 공지·알림·행사가 없어요.</li>}
     </ul>
@@ -505,7 +513,7 @@ function AiPropRow({ r, canApply, onDecide }: { r: any; canApply: boolean; onDec
   const done = r.status !== "pending";
   return (
     <li className={`panel ai-prop${done ? " done" : ""}`}>
-      <p><b>{r.name}</b> · {PROP_KIND[r.type] || r.type} <small className="muted">· {String(r.created_at || "").replace("T", " ").slice(0, 16)}</small>
+      <p>{r.sample && <span className="badge b-unknown">가상</span>} <b>{r.name}</b> · {PROP_KIND[r.type] || r.type} <small className="muted">· {String(r.created_at || "").replace("T", " ").slice(0, 16)}</small>
         {done && <span className={`badge ${r.status === "approved" ? "g-G" : "b-unknown"}`} style={{ marginLeft: 8 }}>{r.status === "approved" ? "승인됨" : "반려됨"}</span>}</p>
       <p><b>{r.title}</b>{r.type === "notice" && <small className="muted"> ({LEVEL[r.level] || r.level}, {r.end_date}까지)</small>}
         {r.type === "hours" && <small className="muted"> ({r.open}~{r.close})</small>}</p>
@@ -513,7 +521,7 @@ function AiPropRow({ r, canApply, onDecide }: { r: any; canApply: boolean; onDec
       <details open={!done}><summary>근거 제보 {r.evidence_rows?.length || 0}건</summary>
         <ul className="ai-list">{(r.evidence_rows || []).map((e: any) => <li key={e.id}><small className="muted">{e.date} · {e.kind || "-"}</small> {e.note || "(내용 없음)"}{e.photo && <> · <a href={e.photo} target="_blank" rel="noreferrer">사진</a></>}</li>)}</ul>
       </details>
-      {!done ? <div className="chips">
+      {r.sample ? <p className="muted small">화면 확인용 가상 제안이라 승인·반려할 수 없어요.</p> : !done ? <div className="chips">
         <input className="box" placeholder="메모 (선택)" value={memo} maxLength={200} onChange={(e) => setMemo(e.target.value)} />
         <button className="chip go" disabled={!canApply} title={canApply ? "" : "이 제안을 반영할 권한이 없어요"} onClick={() => onDecide(true, memo)}>승인하고 반영</button>
         <button className="chip" onClick={() => onDecide(false, memo)}>반려</button>

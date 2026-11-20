@@ -187,7 +187,20 @@ check("가상 문의 처리도 가상 파일에만 저장", c.post("/api/admin/i
 dash = c.get("/api/admin/dashboard", headers=H).json()
 check("한눈에 숫자는 진짜만, 가상은 따로", dash["reports"]["total"] == real_n and dash["reports"]["sample"] == 18 and dash["inquiries"]["sample"] == 5
       and dash["inquiries"]["total"] == 0, str(dash["reports"]) + str(dash["inquiries"]))
+# 관리자 화면용 가상 알림·행사·AI 제안·현장 기록 (사이트·코스에는 안 나감)
+smp = c.get("/api/admin/samples", headers=H).json()
+check("가상 알림·행사가 관리자 화면에", len(smp["notices"]) == 3 and len(smp["events"]) == 2, str(smp)[:200])
+site_txt = json.dumps(c.get("/api/site").json(), ensure_ascii=False) + json.dumps(c.get("/api/places/mukho_lighthouse").json().get("notices", []), ensure_ascii=False)
+check("가상 알림은 사이트·장소 페이지에 안 나감", "[가상]" not in site_txt, site_txt[:200])
+ev_txt = json.dumps(c.get("/api/events").json(), ensure_ascii=False) if c.get("/api/events").status_code == 200 else ""
+check("가상 행사는 행사 달력에 안 나감", "[가상]" not in ev_txt)
+props = c.get("/api/admin/ai/proposals", headers=H).json()
+check("가상 AI 제안 3건이 목록에", sum(bool(x.get("sample")) for x in props) == 3)
+check("가상 AI 제안은 반영 못 함", c.post("/api/admin/ai/proposals/sap1", json={"approve": True}, headers=H).status_code == 400)
+vs = c.get("/api/admin/visits", headers=H).json()
+check("가상 현장 기록이 목록에, 장소 페이지 '현장 확인'에는 안 씀", sum(bool(x.get("sample")) for x in vs) == 2 and not c.get("/api/places/mangsang").json().get("last_visit"))
 r = c.post("/api/admin/city-sample", json={"action": "clear"}, headers=H).json()
+check("가상 관리 데이터도 함께 지움", not c.get("/api/admin/samples", headers=H).json()["notices"])
 check("가상 데이터 한 번에 지우기", r["cleared"] == 18 and not reports_store.sample_loaded() and len(reports_store.real()) == real_n
       and not any(x.get("sample") for x in c.get("/api/admin/inquiries", headers=H).json()))
 from app import main as main_mod  # noqa: E402

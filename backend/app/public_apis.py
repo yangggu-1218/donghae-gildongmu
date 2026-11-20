@@ -109,7 +109,7 @@ def driving_route(points):
 # 키(ODSAY_API_KEY)가 있고 출발이 역·터미널일 때 구간마다 부른다. 실패하면 None → 엔진은 추정(차량 기준) 그대로.
 # 걷는 부분은 ODsay 시간 대신 이용자 속도(1.0 / 이동 조건이 있으면 0.7 m/s)로 다시 계산한다. 배차 대기 시간은 모른다(미포함).
 ODSAY = "https://api.odsay.com/v1/api/searchPubTransPathT"
-TRANSIT_STATS = {"calls": 0, "ok": 0, "fail": 0, "walk_only": 0, "last_error": ""}
+TRANSIT_STATS = {"calls": 0, "ok": 0, "fail": 0, "walk_only": 0, "last_error": "", "last_detail": ""}
 
 
 def odsay_available() -> bool:
@@ -147,6 +147,7 @@ def transit_leg(a, b, speed_mps: float) -> dict | None:
                 m = round(_km(a, b) * 1000 * 1.3)
                 wm = math.ceil(m / speed_mps / 60)
                 return {"mode": "walk", "min": wm, "ride_min": 0, "walk_m": m, "walk_min": wm, "transfers": 0, "lines": [], "payment": 0}
+            TRANSIT_STATS["last_detail"] = _redact(f"{code} {(err[0] if isinstance(err, list) and err else err).get('message') or (err[0] if isinstance(err, list) and err else err).get('msg') or ''}")
             raise ValueError(f"odsay error {code}")
         p = j["result"]["path"][0]
         subs = p["subPath"]
@@ -167,12 +168,23 @@ def transit_leg(a, b, speed_mps: float) -> dict | None:
     except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError, TimeoutError, AttributeError) as e:
         TRANSIT_STATS["fail"] += 1
         TRANSIT_STATS["last_error"] = type(e).__name__
+        if isinstance(e, httpx.HTTPStatusError):
+            TRANSIT_STATS["last_detail"] = _redact(f"HTTP {e.response.status_code} {e.response.text[:160]}")
         return None
 
 
 # ---------- 국토교통부 TAGO 버스정류소정보: 좌표 근처 정류장 (DATA_GO_KR_KEY, 활용신청 필요) ----------
 TAGO_STOPS = "https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList"
-TAGO_STATS = {"calls": 0, "ok": 0, "fail": 0, "last_error": ""}
+TAGO_STATS = {"calls": 0, "ok": 0, "fail": 0, "last_error": "", "last_detail": ""}
+
+
+def _redact(text: str) -> str:
+    """점검용 오류 문구에서 키 값을 지운다."""
+    out = str(text)
+    for k in (os.getenv("ODSAY_API_KEY", ""), KEY, unquote(KEY) if KEY else ""):
+        if k and len(k) > 6:
+            out = out.replace(k, "***")
+    return out[:200]
 
 
 @lru_cache(maxsize=256)
@@ -180,21 +192,31 @@ def _tago_near(lat: float, lon: float, day: str) -> tuple:
     TAGO_STATS["calls"] += 1
     r = httpx.get(TAGO_STOPS, params={"serviceKey": unquote(KEY), "gpsLati": lat, "gpsLong": lon, "numOfRows": 10, "pageNo": 1, "_type": "json"}, timeout=3)
     r.raise_for_status()
-    items = (r.json()["response"]["body"].get("items") or {})
+    try:
+        body = r.json()
+    except ValueError:
+        TAGO_STATS["last_detail"] = _redact(r.text[:200])   # 키 문제면 XML 오류(SERVICE_KEY_IS_NOT_REGISTERED 등)가 온다
+        raise
+    head = body.get("response", {}).get("header", {})
+    if str(head.get("resultCode", "00")) not in ("00", "0"):
+        TAGO_STATS["last_detail"] = _redact(f"{head.get('resultCode')} {head.get('resultMsg')}")
+        raise ValueError("tago error")
+    items = (body["response"]["body"].get("items") or {})
     it = items.get("item", []) if isinstance(items, dict) else []
     return tuple((str(x.get("nodenm") or ""), float(x["gpslati"]), float(x["gpslong"]), str(x.get("nodeid") or "")) for x in ([it] if isinstance(it, dict) else it))
 
 
 def bus_stops_near(lat, lon, limit: int = 2) -> list[dict]:
     """가까운 버스 정류장 (반경 약 500m, 가까운 순). 키가 없거나 실패하면 []."""
-    if not KEY or lat is None:
-        return []
+    if not KEY or lat is None or time.monotonic() < TAGO_STATS.get("pause_until", 0):
+        return []   # 실패한 뒤 10분은 부르지 않는다 (상세 화면이 느려지지 않게)
     try:
         rows = _tago_near(round(lat, 5), round(lon, 5), dt.date.today().isoformat())
         TAGO_STATS["ok"] += 1
     except (httpx.HTTPError, KeyError, ValueError, TypeError, AttributeError) as e:
         TAGO_STATS["fail"] += 1
         TAGO_STATS["last_error"] = type(e).__name__
+        TAGO_STATS["pause_until"] = time.monotonic() + 600
         return []
     out = sorted(({"name": n, "lat": la, "lon": lo, "id": i, "dist_m": _dist_m(lat, lon, la, lo)} for n, la, lo, i in rows if n), key=lambda x: x["dist_m"])
     return out[:limit]

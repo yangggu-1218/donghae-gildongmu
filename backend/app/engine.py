@@ -441,14 +441,18 @@ def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course
         end = tt + (q15(tt + p.stay_min) - tt)
         return q15(end + drive_min((p.lat, p.lon), start)) - t0 <= c.budget_min
 
+    budget_cut = [False]   # 마지막 first_open 에서 쓸 수 있는 시간 때문에 뺀 곳이 있었는지
+
     def first_open(cands, kind):
         """지금 위치에서 가까운 순으로, 도착 시각에 영업 중이고 쓸 수 있는 시간 안에 드는 첫 곳."""
         best = None
+        budget_cut[0] = False
         for p in cands:
             if p.id in seen:
                 continue
             dm = drive(cur_id, cur, p)
             if not fits(p, dm):
+                budget_cut[0] = True
                 if (p.id in c.must or p.id in c.wish) and not any(s["id"] == p.id for s in skipped):
                     skipped.append({"id": p.id, "name": p.name_ko, "reason": "쓸 수 있는 시간 초과"})
                 continue
@@ -477,7 +481,7 @@ def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course
             if pick:
                 visit(pick, "lunch")
             else:
-                notes.append("방문 시각에 문을 연 식당을 찾지 못했어요. 시작 시간을 바꿔 보세요.")
+                notes.append("쓸 수 있는 시간 안에 식사를 넣기 어려워 식당은 뺐어요." if budget_cut[0] else "방문 시각에 문을 연 식당을 찾지 못했어요. 시작 시간을 바꿔 보세요.")
             continue
         if need_cafe and not need_lunch and sum(1 for s in stops if s.kind == "sight") >= 2:
             pick = first_open(cafes, "cafe")

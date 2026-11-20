@@ -212,12 +212,12 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   // 판정 한 줄: AI(또는 구간 계산) 판정 + 조심할 곳 하나. 없으면 가장 어려운 구간, 그것도 없으면 '길 정보 없음'
   const limited = segs.filter((s) => s.optional && s.grade !== "G");   // 빠져도 되는 구간(전망 지점 등)
   const worst = segs.filter((s) => s.grade !== "G" && !s.optional).sort((a, b) => (a.grade === "R" ? -1 : 1) - (b.grade === "R" ? -1 : 1))[0];
-  const jv = j.state === "ok" && j.d ? j.d.verdict : worst ? worst.grade : segs.length ? "G" : "U";
   const scopeBad = (p.access_scope || {})[mode] && /불가|입구까지/.test((p.access_scope || {})[mode].level) ? (p.access_scope || {})[mode].note : "";
+  const jv = scopeBad ? "R" : j.state === "ok" && j.d ? j.d.verdict : worst ? worst.grade : segs.length ? "G" : "U";   // 출처가 '관람 불가'면 항상 어려움
   const extra = scopeBad || (j.state === "ok" && j.d?.cautions?.[0]) || (worst ? `${worst.name} ${L(GRADE[worst.grade as "G" | "Y" | "R"][1] === "Caution" ? "주의" : "어려움", GRADE[worst.grade as "G" | "Y" | "R"][1])}`
     : limited[0] ? L(`일부 구간 제한: ${limited[0].name}`, `Limited: ${limited[0].name}`) : "");
   const scope = (p.access_scope || {})[mode];   // 출처에 적힌 접근 범위 (입구까지 / 관람 구역 등)
-  const noPath = stay || (!segs.length && (j.state !== "ok" || jv === "U"));
+  const noPath = stay || (!segs.length && !scopeBad && (j.state !== "ok" || jv === "U"));
   const surveyed = !!p.last_visit;
   const sample = p.access_source === "예시" || segs.some((s) => s.source === "예시");
 

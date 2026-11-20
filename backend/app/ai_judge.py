@@ -87,7 +87,7 @@ def judge(p: Place, mode: str, lang: str, reports: list[dict]) -> dict:
     mode = mode if mode in MODE_KO else "wheel"
     today = dt.date.today().isoformat()
     ev = evidence(p, mode, reports, today)
-    rule = engine.grade_place(p, mode) if p.segments else None
+    rule = engine.grade_place(p, mode) if p.segments or p.access_scope.get(mode) else None   # 출처의 접근 범위(관람 불가)도 규칙 판정
     has_any = bool(ev["segments"] or ev["kto_barrier_free"] or ev["recent_reports_90d"] or ev["summary_fields"]["wheelchair"] not in ("확인 전", None))
     user = {"user": MODE_KO[mode] if lang == "ko" else MODE_EN[mode], "lang": lang, "today": today, "evidence": ev}
     data = ai.ask_json("judge", SYSTEM, json.dumps(user, ensure_ascii=False), SCHEMA, max_tokens=4000, ttl=12 * 3600) if has_any else None
@@ -104,8 +104,8 @@ def judge(p: Place, mode: str, lang: str, reports: list[dict]) -> dict:
         }
         if not out["reasons"] and out["verdict"] != "U":   # 근거 없는 판정은 믿지 않는다
             out.update(verdict="U", confidence="low")
-        if rule and out["verdict"] in engine.RANK and engine.RANK[out["verdict"]] < engine.RANK[rule]:
-            out["verdict"] = rule                           # 안전: AI가 자료 판정보다 후하게 올리지 못한다
+        if rule and (out["verdict"] not in engine.RANK or engine.RANK[out["verdict"]] < engine.RANK[rule]):
+            out["verdict"] = rule                           # 안전: AI가 자료 판정보다 후하게(또는 '판단 불가'로) 바꾸지 못한다
     else:
         ko = lang == "ko"
         out = {"by": "rule", "model": None, "verdict": rule or "U", "confidence": "low" if not rule else "medium",

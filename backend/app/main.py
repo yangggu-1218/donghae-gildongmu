@@ -63,12 +63,13 @@ def refresh():
 def health():
     return {"ok": True, "places": len(PLACES), "verified": sum(p.verified for p in PLACES.values()),
             "official_coords": sum(bool(p.coord_source) for p in PLACES.values()),
-            "llm": bool(llm.API_KEY), "ai": llm.status(), "public_api": bool(public_apis.KEY), "public_files": public_data.sources()}
+            "llm": bool(llm.API_KEY), "ai": llm.status(), "public_api": bool(public_apis.KEY), "public_files": public_data.sources(),
+            "routes": {"kakao": public_apis.ROUTE_STATS, "odsay": {**public_apis.TRANSIT_STATS, "key": public_apis.odsay_available()}, "tago": public_apis.TAGO_STATS}}   # 키 값 없음, 오류 문구만
 
 
 @app.get("/api/places")
 def places(mode: str = "none"):
-    return [{**p.model_dump(), "verified": p.verified, "grade": engine.grade_place(p, mode) if p.verified else None} for p in PLACES.values()]
+    return [{**p.model_dump(exclude={"verify"}), "verified": p.verified, "grade": engine.grade_place(p, mode) if p.verified else None} for p in PLACES.values()]
 
 
 @app.get("/api/places/{pid}")
@@ -77,7 +78,9 @@ def place_detail(pid: str, lang: str = "ko", mode: str = "wheel"):
     p = PLACES.get(pid)
     if not p:
         raise HTTPException(404, "알 수 없는 장소예요")
-    return {**p.model_dump(), "verified": p.verified, **extras(p, lang), **pages.place_page(p, lang, mode), "last_visit": last_visit(pid)}
+    out = {**p.model_dump(exclude={"verify"}), "verified": p.verified, **extras(p, lang), **pages.place_page(p, lang, mode), "last_visit": last_visit(pid)}
+    out["segments_raw"] = [s.model_dump() for s in p.segments]   # 표시용 segments 와 달리 측정값·등급·선택 구간 그대로 (관리자 편집용)
+    return out
 
 
 def extras(p: Place, lang: str = "ko") -> dict:
@@ -257,13 +260,16 @@ def admin_ai_proposals(x_admin_token: str | None = Header(None)):
         out.append({**x, "name": PLACES[x["place_id"]].name_ko if x["place_id"] in PLACES else x["place_id"],
                     "evidence_rows": [{"id": e, "date": (reps.get(e, {}).get("created_at") or "")[:10], "kind": reps.get(e, {}).get("kind"),
                                        "note": reps.get(e, {}).get("note"), "photo": reps.get(e, {}).get("photo")} for e in x.get("evidence", [])]})
-    return out
+    return out + [{**x, "name": PLACES[x["place_id"]].name_ko if x["place_id"] in PLACES else x["place_id"], "evidence_rows": []}
+                  for x in _sample_admin().get("proposals", [])]   # 가상 제안 (반영 불가)
 
 
 @app.post("/api/admin/ai/proposals/{prop_id}")
 def admin_ai_decide(prop_id: str, body: dict, x_admin_token: str | None = Header(None)):
     """AI 제안 승인/반려. 승인하면 알림·운영시간·편의시설이 바로 바뀌고 변경 이력에 남는다(되돌리기 가능)."""
     s = _admin(x_admin_token, "reports")
+    if any(x["id"] == prop_id for x in _sample_admin().get("proposals", [])):
+        raise HTTPException(400, "가상 제안은 화면 확인용이라 반영·반려할 수 없어요. [제보·민원 › 설정·백업]에서 가상 데이터를 지울 수 있어요.")
     approve = bool(body.get("approve"))
     if approve:
         x = next((p for p in ai_stat.proposals() if p["id"] == prop_id), None)
@@ -938,9 +944,11 @@ def admin_city_sample(body: dict, x_admin_token: str | None = Header(None)):
     if body.get("action") == "load":
         n = reports_store.load_samples()
         _load_sample_inquiries()
+        _load_sample_admin()
         return {"ok": True, "loaded": n}
     if body.get("action") == "clear":
         (REPORTS / "sample_inquiries.jsonl").unlink(missing_ok=True)
+        (REPORTS / SAMPLE_ADMIN).unlink(missing_ok=True)
         return {"ok": True, "cleared": reports_store.clear_samples()}
     raise HTTPException(400, "action 은 load 또는 clear")
 
@@ -1294,6 +1302,50 @@ def _load_sample_inquiries():
     _save_jsonl("sample_inquiries.jsonl", rows)
 
 
+# 관리자 화면 점검용 가상 알림·행사·AI 제안·현장 기록. 공개 화면·코스 엔진·장소 페이지는 이 파일을 읽지 않는다.
+SAMPLE_ADMIN = "sample_admin.json"
+
+
+def _load_sample_admin():
+    t = dt.date.today()
+    d = lambda n: (t + dt.timedelta(days=n)).isoformat()   # noqa: E731
+    now = dt.datetime.now().replace(microsecond=0).isoformat()
+    data = {
+        "notices": [
+            {"id": "snt1", "place_id": "mukho_lighthouse", "level": "closed", "title": "[가상] 내부 정비로 하루 휴관", "body": "관리자 화면 점검용", "start": d(1), "end": d(1)},
+            {"id": "snt2", "place_id": "mureung", "level": "warn", "title": "[가상] 호수 전망 데크 보수 — 휠체어는 방문자센터 쪽 우회로", "body": "", "start": d(0), "end": d(14)},
+            {"id": "snt3", "place_id": "", "level": "info", "title": "[가상] 주말 동해역 셔틀버스 증편 안내", "body": "", "start": d(0), "end": d(7)}],
+        "events": [
+            {"id": "sev1", "name": "[가상] 무릉별유천지 야간 개장", "start": d(3), "end": d(5), "venue": "무릉별유천지", "tel": "", "url": "", "kind": "행사", "access": "휠체어 관람석·장애인 화장실"},
+            {"id": "sev2", "name": "[가상] 묵호항 수산물 장터", "start": d(8), "end": d(8), "venue": "묵호항", "tel": "", "url": "", "kind": "행사", "access": ""}],
+        "proposals": [
+            {"id": "sap1", "place_id": "mukho_port", "type": "notice", "level": "warn", "title": "[가상] 묵호항 보도 파손 — 휠체어 주의", "detail": "가상 제보 5건을 묶은 점검용 제안", "end_date": d(14), "evidence": [], "status": "pending", "created_at": now},
+            {"id": "sap2", "place_id": "chotdae", "type": "facility_add", "facility": "휠체어 대여", "title": "[가상] 편의시설 추가: 휠체어 대여", "detail": "", "evidence": [], "status": "pending", "created_at": now},
+            {"id": "sap3", "place_id": "cave", "type": "hours", "open": "09:00", "close": "18:00", "title": "[가상] 운영시간 09:00~18:00", "detail": "", "evidence": [], "status": "pending", "created_at": now}],
+        "visits": [
+            {"id": "svs1", "place_id": "mangsang", "name": "망상해변", "date": d(-3), "who": "[가상] 현장 조사원", "segment": "주차장 → 해변", "slope_deg": 2.5, "curb_cm": 1, "width_m": 1.5, "surface": "데크", "toilet": "있음", "note": "점검용 가상 기록"},
+            {"id": "svs2", "place_id": "chotdae", "name": "추암해변·촛대바위", "date": d(-6), "who": "[가상] 현장 조사원", "segment": "촛대바위 전망 지점", "steps": 24, "surface": "계단", "note": "점검용 가상 기록"}],
+    }
+    for rows in data.values():
+        for r in rows:
+            r["sample"] = True
+    (REPORTS / SAMPLE_ADMIN).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+def _sample_admin() -> dict:
+    f = REPORTS / SAMPLE_ADMIN
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
+@app.get("/api/admin/samples")
+def admin_samples(x_admin_token: str | None = Header(None)):
+    """관리자 [공지·알림]에 함께 보여 줄 가상 알림·행사 (사이트에는 안 나감)."""
+    _admin(x_admin_token)
+    d = _sample_admin()
+    return {"notices": [{**n, "name": PLACES[n["place_id"]].name_ko if n.get("place_id") in PLACES else None} for n in d.get("notices", [])],
+            "events": d.get("events", [])}
+
+
 def _real_inquiries() -> list[dict]:
     return [r for r in _jsonl("inquiries.jsonl") if not r.get("sample")]   # 예전에 진짜 파일에 섞여 들어간 가상 문의는 빼고 읽는다
 
@@ -1308,6 +1360,8 @@ def _seed_samples():
             reports_store.load_samples()
         if not (REPORTS / "sample_inquiries.jsonl").exists():
             _load_sample_inquiries()
+        if not (REPORTS / SAMPLE_ADMIN).exists():
+            _load_sample_admin()
     except Exception as e:   # 가상 데이터는 없어도 서비스는 돈다
         print("가상 데이터 넣기 실패:", e)
 
@@ -1361,7 +1415,7 @@ def admin_inquiry(iid: str, body: dict, x_admin_token: str | None = Header(None)
 def admin_visits(x_admin_token: str | None = Header(None)):
     """현장 확인 기록 (팀 답사)."""
     _admin(x_admin_token, "visits")
-    return sorted(_jsonl("visits.jsonl"), key=lambda r: r["date"], reverse=True)
+    return sorted(_jsonl("visits.jsonl") + _sample_admin().get("visits", []), key=lambda r: r["date"], reverse=True)   # 가상 기록은 장소 페이지 '현장 확인'에 안 쓰임
 
 
 @app.post("/api/admin/visits")

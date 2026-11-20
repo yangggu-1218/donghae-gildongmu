@@ -208,7 +208,7 @@ function Settings({ d, tok, call, can, reload }: Any) {
       </section>
       <section className="panel">
         <h3>가상 제보·문의 (점검용)</h3>
-        <p className="muted small">가상 제보 18건(묵호항 보도 5건, 동해역 앞 횡단보도 3건, 추암 주차장 3건 등)과 가상 문의 5건을 넣어 화면을 확인해요. 실제 제보·문의 파일과 따로 두고, 관리자 화면에만 [가상]으로 보여요. 공개 지도·관광지 알림·최근 길 상태에는 쓰이지 않아요. 모두 지우면 서버를 다시 켜도 다시 들어가지 않아요.</p>
+        <p className="muted small">가상 제보 18건(묵호항 보도 5건, 동해역 앞 횡단보도 3건, 추암 주차장 3건 등)·가상 문의 5건과 가상 알림·행사·AI 제안·현장 확인 기록을 넣어 관리자 화면을 확인해요. 실제 제보·문의 파일과 따로 두고, 관리자 화면에만 [가상]으로 보여요. 공개 지도·관광지 알림·최근 길 상태에는 쓰이지 않아요. 모두 지우면 서버를 다시 켜도 다시 들어가지 않아요.</p>
         <div className="chips">
           <button className="chip go" onClick={() => call(() => api.post("/api/admin/city-sample", { action: "load" }, tok), "가상 제보·문의를 넣었어요.").then(reload).catch(() => {})}>{d.sample_loaded ? "가상 데이터 다시 넣기" : "가상 데이터 넣기"}</button>
           {d.sample_loaded && <button className="chip" onClick={() => { if (confirm("가상 제보·문의를 모두 지울까요? (실제 제보·문의는 그대로예요)")) call(() => api.post("/api/admin/city-sample", { action: "clear" }, tok), "가상 제보·문의를 모두 지웠어요.").then(reload).catch(() => {}); }}>가상 데이터 모두 지우기</button>}

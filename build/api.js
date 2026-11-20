@@ -371,12 +371,14 @@ export function makeApi(DATA) {
       const tt = q15(arrive + wait); const end = tt + (q15(tt + p.stay_min) - tt);
       return q15(end + driveMin([p.lat, p.lon], start)) - t0 <= c.budget_min;
     };
+    const budgetCut = [false];   // engine.budget_cut 과 같게
     const firstOpen = (cands) => {
-      let best = null;
+      let best = null; budgetCut[0] = false;
       for (const p of cands) {
         if (seen.has(p.id)) continue;
         const dm = drive(cur, p);
         if (!fits(p, dm)) {
+          budgetCut[0] = true;
           if ((c.must.includes(p.id) || c.wish.includes(p.id)) && !skipped.some((s) => s.id === p.id)) skipped.push({ id: p.id, name: p.name_ko, reason: "쓸 수 있는 시간 초과" });
           continue;
         }
@@ -394,7 +396,7 @@ export function makeApi(DATA) {
       if (needLunch && mealTime()) {
         const pick = (c.lunch ? firstOpen(food.slice(0, 1)) : null) || firstOpen(food.slice(0, 4)) || firstOpen(food);
         needLunch = false;
-        if (pick) visit(pick, "lunch"); else notes.push("방문 시각에 문을 연 식당을 찾지 못했어요. 시작 시간을 바꿔 보세요.");
+        if (pick) visit(pick, "lunch"); else notes.push(budgetCut[0] ? "쓸 수 있는 시간 안에 식사를 넣기 어려워 식당은 뺐어요." : "방문 시각에 문을 연 식당을 찾지 못했어요. 시작 시간을 바꿔 보세요.");
         continue;
       }
       if (needCafe && !needLunch && stops.filter((s) => s.kind === "sight").length >= 2) {
@@ -995,14 +997,15 @@ export function makeApi(DATA) {
   }
   function segClean(sg) {
     const o = {};
-    for (const k of ["name", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "rise_m", "width_m", "surface", "note", "source"]) {
+    for (const k of ["name", "grade", "optional", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "rise_m", "width_m", "surface", "note", "source", "checked_at"]) {
       let v = sg[k]; if (v === "" || v == null) continue;
-      if (["distance_m", "curb_cm", "slope_deg", "rise_m", "width_m"].includes(k)) v = +v; else if (k === "steps") v = parseInt(v, 10); else if (k === "alt_route") v = !!v; else v = String(v).slice(0, 200);
+      if (["distance_m", "curb_cm", "slope_deg", "rise_m", "width_m"].includes(k)) v = +v; else if (k === "steps") v = parseInt(v, 10);
+      else if (k === "optional") v = !!v; else if (k === "grade") { if (!["G", "Y", "R"].includes(v)) continue; } else if (k === "alt_route") v = String(v).slice(0, 80); else v = String(v).slice(0, 200);
       o[k] = v;
     }
     return o;
   }
-  const SEG_DEFAULT = { distance_m: null, steps: 0, alt_route: false, curb_cm: null, slope_deg: null, rise_m: null, width_m: null, surface: null, note: "", source: "" };
+  const SEG_DEFAULT = { distance_m: null, steps: 0, alt_route: null, curb_cm: null, slope_deg: null, rise_m: null, width_m: null, surface: null, note: "", source: "" };
   function rebuild() {
     for (const k of Object.keys(PLACES)) delete PLACES[k];
     for (const p of JSON.parse(BASE)) PLACES[p.id] = p;
@@ -1199,6 +1202,7 @@ export function makeApi(DATA) {
       }
       throw new Error("400:데모에서는 AI 제안을 처리할 수 없어요.");
     }
+    if (path === "/api/admin/samples") { demoCheck(q.__token); return { notices: [], events: [] }; }   // 데모엔 가상 관리 데이터 없음
     if (path.startsWith("/api/admin/reports") || path.startsWith("/api/admin/visits")) demoCheck(q.__token, permOf(path));
     if (path.startsWith("/api/admin/") && !path.startsWith("/api/admin/reports") && !path.startsWith("/api/admin/visits")) {
       const r = cmsAdmin(method, path, q, body || {}); if (r !== undefined) return r;
@@ -1284,7 +1288,7 @@ export function makeApi(DATA) {
     if (path === "/api/admin/visits" && method === "GET") return adminGet("visits").sort((a, b) => (a.date < b.date ? 1 : -1));
     if (path === "/api/admin/visits") { if (!PLACES[body.place_id]) throw new Error("404"); const rec = { ...body, who: body.who || ACTOR.replace(/ \(.*\)$/, ""), entered_by: ACTOR, id: Math.random().toString(16).slice(2, 14), name: PLACES[body.place_id].name_ko }; adminSet("visits", [...adminGet("visits"), rec]); return { ok: true, id: rec.id }; }
     if (path === "/api/places") return Object.values(PLACES).map((p) => ({ ...p, grade: p.verified ? gradePlace(p, q.mode || "none") : null }));
-    if (path.startsWith("/api/places/")) { const p = PLACES[decodeURIComponent(path.split("/").pop())]; if (!p) throw new Error("404"); return { ...p, ...extras(p, q.lang || "ko"), ...placePage(p, q.lang || "ko", q.mode || "wheel") }; }
+    if (path.startsWith("/api/places/")) { const p = PLACES[decodeURIComponent(path.split("/").pop())]; if (!p) throw new Error("404"); const { verify, ...pub } = p; return { ...pub, ...extras(p, q.lang || "ko"), ...placePage(p, q.lang || "ko", q.mode || "wheel"), segments_raw: p.segments }; }   // main.place_detail 과 같게
     if (path === "/api/course") return course(body);
     if (path === "/api/talk") return talk(body);
     if (path === "/api/edit") return edit(body);
