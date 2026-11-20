@@ -65,13 +65,11 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
         <div className="hero-copy">
           <p className="hero-eyebrow">{L("휠체어도, 유모차도, 부모님과도 —", "Wheelchair, stroller, or with parents —")}</p>
           <h1 id="hero-h">{L("갈 수 있는 길만 골라 주는", "A Donghae trip planner")}<br /><em>{L("동해", "that checks")}</em> {L("여행 코스 AI", "the way first")}</h1>
-          <p className="lead">{L("누구와 어떻게 다니는지 말하면 영업시간·붐빔·길 상태까지 맞춘 코스를 짜 드려요.",
-            "Say who you're with, and get a route checked for opening hours, crowds and path conditions.")}</p>
           <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAsk(v.trim()); setV(""); } }}>
             <svg className="ask-ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <label htmlFor="hero-ask" className="sr-only">{L("AI 동이에게 여행 조건 말하기", "Tell AI Dongi about your trip")}</label>
             <span className="via via-llm ask-ai" aria-hidden="true">AI</span>
-            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("AI 동이에게 말해 보세요 (예: 엄마랑 휠체어로 바다 보고 싶어요)", "Tell AI Dongi (e.g. wheelchair, sea views, with my mum)")} />
+            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("AI 동이에게 말해 보세요 (예: 유모차 탄 아기랑 바다 보러 가고 싶어)", "Tell AI Dongi (e.g. sea views with a baby in a stroller)")} />
             <MicButton lang={lang} className="ask-mic" disabled={busy} onText={(x) => { setV(x); setMicMsg(""); }} onError={setMicMsg} />
             <button className="ask-go" disabled={busy} aria-label={L("코스 짜기", "Plan my route")}>
               <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
@@ -129,7 +127,7 @@ export function QuickBar({ lang }: { lang: Lang }) {
   ];
   return (
     <nav className="quickbar wrap" aria-label={L("바로가기", "Shortcuts")}>
-      <ul>{rows.map(([h, ic, ko, en, c]) => <li key={h}><a href={h}><img className="qb-3d" src={`/icons3d/${ic}.webp`} alt="" width="44" height="44" />{L(ko, en)}</a></li>)}</ul>
+      <ul>{rows.map(([h, ic, ko, en, c]) => <li key={h}><a href={h}><img className="qb-3d" src={`/icons3d/${ic}.webp`} alt="" width="30" height="30" />{L(ko, en)}</a></li>)}</ul>
     </nav>
   );
 }

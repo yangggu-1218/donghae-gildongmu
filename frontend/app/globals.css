@@ -2818,3 +2818,22 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
   .ask .ask-ai, .ask .ask-ic { display: none; }
   .ask input { text-overflow: ellipsis; padding-left: 14px; }
 }
+
+/* ===== 첫 화면 다듬기 (2026-11-21) ===== */
+/* .via 기본 왼쪽 여백(66px)은 대화 말풍선 아래 표시용 — 다른 곳(검색 칸·관리자 AI 줄 등)에서는 여백 없이 */
+.via { margin: 0; }
+.chat-log .via:not(.via-msg) { margin: -4px 0 8px 66px; }
+/* 검색 칸: 안내 글이 넘치면 글자 중간이 잘리지 않고 '…'로 */
+.ask input { text-overflow: ellipsis; }
+.ask input::placeholder { text-overflow: ellipsis; }
+/* 바로가기 아이콘 작게 */
+.qb-3d { width: 30px; height: 30px; }
+.quickbar a { min-height: 56px; }
+/* 큰 제목: 행간·글자 사이 좁게 */
+.hero h1 { line-height: 1.08; letter-spacing: -.035em; word-spacing: -.04em; }
+.hero h1 + .ask, .hero-copy .ask { margin-top: 18px; }
+/* 코스 종류 고르기: 옆 안내 칸과 높이를 맞추되 아래가 비지 않게 두 카드가 남는 높이를 채움 */
+.grid:not(.has-course) > .panel.chat:has(.fork-stage) { display: flex; flex-direction: column; }
+.panel.chat .fork-stage { flex: 1; grid-template-rows: auto auto 1fr; }
+.panel.chat .fork-stage .fork { height: 100%; }
+.panel.chat .fork-stage .fork-btn { justify-content: center; }

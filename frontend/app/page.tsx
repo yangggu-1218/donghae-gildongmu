@@ -7,7 +7,7 @@ import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap, { geocode } from "@/components/KakaoMap";
 import { fuzzyHit as fz } from "@/lib/fuzzy";
-import { Hero, HomeFacts, HowToStrip, NowDonghae, ZoneTiles, MoreLinks, Places, QuickBar, PlanAside } from "@/components/Sections";
+import { Hero, HowToStrip, ZoneTiles, MoreLinks, Places, QuickBar, PlanAside } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
@@ -1059,8 +1059,6 @@ export default function Page() {
       </section>
       {/* 코스를 만들면 아래 둘러보기 섹션은 접고 결과에 집중 (1번 사진: 추천 코스·동이 안내 띠는 코스 짜기와 겹쳐 뺌) */}
       {!course && <>
-        <NowDonghae lang={lang} />
-        <HomeFacts lang={lang} />
         <ZoneTiles lang={lang} />
         <MoreLinks lang={lang} />
       </>}

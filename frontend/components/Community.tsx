@@ -388,7 +388,7 @@ function Write({ lang, places, onDone }: { lang: Lang; places: Record<string, an
   );
 }
 
-// 관광지 상세: 다녀온 사람들 이야기 (그 장소가 들어간 글 + 한 줄 후기·길 메모)
+// 관광지 상세: 다녀온 사람들 후기 요약 (그 장소가 들어간 글 + 한 줄 후기·길 메모, 닉네임 없이)
 export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
   const L = pick(lang);
   const [st, setSt] = useState(load);
@@ -413,8 +413,8 @@ export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
   ].slice(0, 3);
   return (
     <section className="panel cm-place" aria-labelledby="cm-pl-h">
-      <h2 id="cm-pl-h" className="h3">{L("다녀온 사람들 이야기", "From people who went")}</h2>
-      {recent.length > 0 ? <ul className="cm-tips">{recent.map((x) => <li key={x.key}><Icon name={x.tip ? "walk" : "story"} /><span>{x.text} <small className="muted">— {x.who}{x.date ? ` · ${x.date}` : ""}</small></span></li>)}</ul>
+      <h2 id="cm-pl-h" className="h3">{L("다녀온 사람들 후기 요약", "What visitors said")}</h2>
+      {recent.length > 0 ? <ul className="cm-tips">{recent.map((x) => <li key={x.key}><Icon name={x.tip ? "walk" : "story"} /><span>{x.text}</span></li>)}</ul>
         : <p className="muted">{L("아직 이야기가 없어요. 다녀오셨다면 첫 후기를 남겨 주세요.", "No notes yet. Leave the first one.")}</p>}
       {posts.length > 0 && <p className="chips">{posts.slice(0, 2).map((p) => <a key={p.id} className="chip sm" href={`#/community/${p.id}`}>{p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title}</a>)}</p>}
       <div className="chips cm-acts">
