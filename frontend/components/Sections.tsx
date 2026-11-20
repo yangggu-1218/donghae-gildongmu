@@ -27,8 +27,7 @@ type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
 
 /* ---------------- 히어로: 실제 동해 사진 위에 '갈 수 있는지' 판정을 얹는다 ---------------- */
-const GRADE_TXT: Record<string, [string, string]> = { G: ["갈 수 있어요", "Accessible"], Y: ["주의해서 가요", "Go with care"], R: ["어려워요", "Hard to reach"] };
-// 첫 화면 배경: 동해 사진 4장이 천천히 바뀐다. place = '사진 속 장소' 카드에 보여 줄 장소, pos = 사진에서 보일 부분(PC / 휴대폰)
+// 첫 화면 배경: 동해 사진 4장이 천천히 바뀐다. pos = 사진에서 보일 부분(PC / 휴대폰). ('사진 속 장소' 카드와 예시 문장 단추는 2026-11-21 팀장 요청으로 뺌)
 const SLIDES = [
   { photo: "chotdae", place: "chotdae", alt: ["해 뜰 무렵의 추암 촛대바위", "Chotdae Rock at sunrise"], pos: "50% 62%", posM: "42% 40%" },
   { photo: "cheongok_port", place: "cheongok_port", alt: ["천곡항 바닷가의 GOOD 글자 조형물", "GOOD letters by the sea at Cheongok Port"], pos: "60% 55%", posM: "62% 50%" },
@@ -40,13 +39,11 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
   const L = pick(lang);
   const [v, setV] = useState("");
   const [micMsg, setMicMsg] = useState("");
-  const [graded, setGraded] = useState<Record<string, any>>({});   // 사진 속 장소들의 실제 판정 (휠체어 기준)
   const [broken, setBroken] = useState<string[]>([]);               // 못 불러온 사진은 건너뛴다
   const [cur, setCur] = useState(0);
   const [seen, setSeen] = useState(1);                               // 이미 보여 준 장수 (다음 사진만 미리 불러온다)
   const [paused, setPaused] = useState(false);
   const [still, setStill] = useState(false);                         // '동작 줄이기'를 켠 사람은 넘기지 않는다
-  useEffect(() => { getJSON("/api/places?mode=wheel").then((l) => setGraded(Object.fromEntries((l || []).map((p: any) => [p.id, p])))).catch(() => {}); }, []);
   useEffect(() => { try { setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch { /* 무시 */ } }, []);
   const slides = SLIDES.filter((s) => !broken.includes(s.photo));
   const bad = slides.length === 0;
@@ -57,12 +54,6 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
     return () => window.clearInterval(id);
   }, [paused, still, slides.length]);
   useEffect(() => { setSeen((n) => Math.min(slides.length, Math.max(n, idx + 2))); }, [idx, slides.length]);
-  const slide = slides[idx];
-  const spot = slide ? graded[slide.place] || null : null;
-  const ex = lang === "ko"
-    ? ["엄마랑 가는데 무릎이 안 좋으세요", "휠체어 타는 친구랑 묵호역에서 출발해요", "아기랑 유모차로 바다 보러 가요", "친구랑 바다 보고 사진 찍고 싶어요"]
-    : ["Travelling with my mom, her knees hurt", "My friend uses a wheelchair, starting at Mukho Station", "Stroller trip to see the sea", "Sea views and photo spots with a friend"];
-  const g = spot?.grade as string | undefined;
   return (
     <section className={`hero${bad ? " hero-plain" : ""}`} aria-labelledby="hero-h">
       {slides.slice(0, seen).map((s, i) => (
@@ -84,19 +75,8 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
             <button disabled={busy}>{L("코스 짜기", "Plan my route")}</button>
           </form>
           {micMsg && <p className="hero-msg" role="status">{micMsg}</p>}
-          <div className="tries" role="group" aria-label={L("이렇게 말해 보세요", "Try saying")}>
-            {ex.map((x) => <button key={x} type="button" onClick={() => onAsk(x)} disabled={busy}>{x}</button>)}
-          </div>
           <a className="hero-jump" href="#courses">{L("추천 코스로 바로 시작하기 ↓", "Or start from a suggested route ↓")}</a>
         </div>
-        {spot && (
-          <a className="hero-spot" href={`#/place/${slide.place}`}>
-            <span className="hero-spot-k">{L("사진 속 장소", "In this photo")}</span>
-            <b>{L(spot.name_ko, spot.name_en || spot.name_ko)}</b>
-            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}</span></span>
-            <span className="hero-spot-m">{L("길·화장실·주차 보기", "Paths, toilets, parking")}</span>
-          </a>
-        )}
       </div>
       {slides.length > 1 && !still && (
         <button type="button" className="hero-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>
