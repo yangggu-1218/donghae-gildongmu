@@ -12,7 +12,7 @@ import { SyncAdmin } from "@/components/SyncAdmin";
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
 // 위에 늘 보이는 탭 = 운영할 때 매일 쓰는 것. 가끔 쓰는 것은 [더 보기] 안에 (기능은 그대로)
-const TABS = [["home", "홈", null], ["place", "장소 정보", "place"], ["notice", "공지·알림", "notice"], ["reports", "받은 글 (문의·제보)", "reports"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
+const TABS = [["home", "홈", null], ["place", "장소 정보", "place"], ["notice", "공지·알림", "notice"], ["reports", "받은 글", "reports"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
   ["history", "변경 이력·백업", "history"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
 const MAIN_TABS = new Set(["home", "place", "notice", "reports", "aiprops", "visits"]);
 type TabKey = (typeof TABS)[number][0];
@@ -79,6 +79,15 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
   const tabs = TABS.filter(([k, , perm]) => (k === "visits" ? user.role === "surveyor" : k === "notice" ? can("notice") || can("site") : can(perm)));   // 현장 확인 기록은 현장 조사원에게만, 공지·알림은 둘 중 하나라도
   const [tab, setTab] = useState<TabKey>("home");
   const [inbox, setInbox] = useState<"all" | "inq" | "rep">("all");
+  const [focus, setFocus] = useState<string | null>(null);   // 홈에서 누른 제보 묶음을 받은 글에서 바로 연다
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const off = (e: MouseEvent) => { if (!moreRef.current?.contains(e.target as Node)) setMoreOpen(false); };
+    document.addEventListener("mousedown", off); return () => document.removeEventListener("mousedown", off);
+  }, [moreOpen]);
+  const pick = (k: TabKey) => { setTab(k); setMsg(null); setMoreOpen(false); };
   const [db, setDb] = useState<any>(null);
   const [places, setPlaces] = useState<any[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
@@ -105,20 +114,20 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
       {/* '내 계정'은 [더 보기] 안에. 처음 받은 임시 비밀번호일 때는 바꾸는 칸을 맨 위에도 보여 준다 */}
       {user.must_change && tab !== "me" && <div className="admin-msg bad" role="alert"><p>처음 받은 임시 비밀번호예요. 아래에서 비밀번호를 바꿔 주세요.</p>
         <MyAccount tok={tok} user={user} call={call} onChanged={() => setUser({ ...user, must_change: false })} /></div>}
-      <div className="tabs admin-tabs" role="group" aria-label="관리 메뉴">
-        {tabs.filter(([k]) => MAIN_TABS.has(k)).map(([k, t]) => <button key={k} aria-pressed={tab === k} onClick={() => { setTab(k); setMsg(null); }}>{t}</button>)}
-        <label className={`admin-more${MAIN_TABS.has(tab) ? "" : " on"}`}><span className="sr-only">더 보기</span>
-          <select value={MAIN_TABS.has(tab) ? "" : tab} onChange={(e) => { if (e.target.value) { setTab(e.target.value as TabKey); setMsg(null); } }}>
-            <option value="">더 보기</option>
-            {tabs.filter(([k]) => !MAIN_TABS.has(k)).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
-          </select></label>
-      </div>
+      <nav className="adm-tabs" aria-label="관리 메뉴">
+        {tabs.filter(([k]) => MAIN_TABS.has(k)).map(([k, t]) => <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => pick(k)}>{t}</button>)}
+        <div className={`adm-more${MAIN_TABS.has(tab) ? "" : " on"}`} ref={moreRef}>
+          <button aria-haspopup="menu" aria-expanded={moreOpen} aria-current={MAIN_TABS.has(tab) ? undefined : "page"} onClick={() => setMoreOpen(!moreOpen)}>
+            {MAIN_TABS.has(tab) ? "더 보기" : tabs.find(([k]) => k === tab)?.[1]}<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></button>
+          {moreOpen && <ul role="menu">{tabs.filter(([k]) => !MAIN_TABS.has(k)).map(([k, t]) => <li key={k} role="none"><button role="menuitem" aria-current={tab === k ? "page" : undefined} onClick={() => pick(k)}>{t}</button></li>)}</ul>}
+        </div>
+      </nav>
       {msg && <p role="status" className={`admin-msg ${msg.ok ? "ok" : "bad"}`}>{msg.ok ? "✓ " : "! "}{msg.text}{msg.link && <> · <a href={msg.link}>사이트에서 보기</a></>}</p>}
-      {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey, sub?: "inq" | "rep") => { setTab(k); if (sub) setInbox(sub); }} can={can} onExpired={onExpired} />}
+      {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey, sub?: "inq" | "rep", id?: string) => { pick(k); if (sub) setInbox(sub); setFocus(id || null); }} can={can} onExpired={onExpired} />}
       {tab === "accounts" && can("accounts") && <Accounts tok={tok} call={call} me={user} />}
       {tab === "place" && <PlaceEditor places={places} db={db} tok={tok} call={call} />}
       {tab === "notice" && <NoticeHub places={places} db={db} tok={tok} call={call} name={name} can={can} />}
-      {tab === "reports" && <Inbox kind={inbox} setKind={setInbox} tok={tok} call={call} onExpired={onExpired} can={can} />}
+      {tab === "reports" && <Inbox kind={inbox} setKind={setInbox} tok={tok} call={call} onExpired={onExpired} can={can} focus={focus} />}
       {tab === "aiprops" && <AiProposals tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "sync" && <SyncAdmin tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}
@@ -429,14 +438,14 @@ function EventForm({ tok, call }: any) {
 const INQ_CAT: Record<string, string> = { "이용 방법": "일반 문의", "기타": "일반 문의", "장소 정보": "관광지 정보 오류", "오류 신고": "관광지 정보 오류", "접근성·길 정보": "시설·접근성 문제" };
 const ACC_CAT = new Set(["step", "sidewalk", "ramp", "toilet", "lift"]);
 const STEP3 = (s: string) => (s === "접수" ? "접수" : ["확인", "확인 중", "처리 중"].includes(s) ? "확인 중" : "처리 완료");
-function Inbox({ kind, setKind, tok, call, onExpired, can }: any) {
+function Inbox({ kind, setKind, tok, call, onExpired, can, focus }: any) {
   return (<>
-    <div className="tabs inbox-kinds" role="group" aria-label="받은 글 종류">
-      {([["all", "전체"], ["inq", "문의"], ["rep", "불편 제보·민원"]] as const).map(([k, t]) => <button key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>{t}</button>)}
-    </div>
+    <nav className="adm-subtabs" aria-label="받은 글 종류">
+      {([["all", "전체"], ["inq", "문의"], ["rep", "불편 제보·민원"]] as const).map(([k, t]) => <button key={k} aria-current={kind === k ? "page" : undefined} onClick={() => setKind(k)}>{t}</button>)}
+    </nav>
     {kind === "all" && <InboxAll tok={tok} onExpired={onExpired} open={setKind} />}
     {kind === "inq" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
-    {kind === "rep" && <CityAdmin tok={tok} call={call} onExpired={onExpired} can={can} />}
+    {kind === "rep" && <CityAdmin tok={tok} call={call} onExpired={onExpired} can={can} focus={focus} />}
   </>);
 }
 function InboxAll({ tok, onExpired, open }: any) {
@@ -704,41 +713,76 @@ const LABELS: Record<string, string> = { open: "여는 시각", close: "닫는 �
   table: "테이블", indoor: "실내", benches: "벤치", segments: "구간", soft_menu: "부드러운 메뉴", parking_easy: "주차" };
 const label = (k: string) => LABELS[k] || k;
 
-/* ---------- 한눈에 (로그인하면 처음 보는 화면) ---------- */
-function Dashboard({ tok, user, go, can, onExpired }: { tok: string; user: User; go: (k: TabKey, sub?: "inq" | "rep") => void; can: (p: string | null) => boolean; onExpired: () => void }) {
+/* ---------- 홈 (로그인하면 처음 보는 화면) ----------
+   레퍼런스(2026-11-21): 날짜 → 숫자 카드 4개(누르면 그 화면) → 즉시 확인할 항목 | 최근 변경 → 빠른 작업 */
+const WDK = ["일", "월", "화", "수", "목", "금", "토"];
+const PRI_RANK: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+const Chev = () => <svg className="adm-chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>;
+function Dashboard({ tok, user, go, can, onExpired }: { tok: string; user: User; go: (k: TabKey, sub?: "inq" | "rep", id?: string) => void; can: (p: string | null) => boolean; onExpired: () => void }) {
   const [d, setD] = useState<any>(null);
-  useEffect(() => { api.get("/api/admin/dashboard", tok).then(setD).catch((e: any) => { if (e.status === 401) onExpired(); else setD({}); }); }, []);
+  const [city, setCity] = useState<any[]>([]);
+  useEffect(() => {
+    api.get("/api/admin/dashboard", tok).then(setD).catch((e: any) => { if (e.status === 401) onExpired(); else setD({}); });
+    if (can("reports")) api.get("/api/admin/city?sample=1", tok).then((x: any) => setCity(x?.clusters || [])).catch(() => {});
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   if (!d) return <p className="muted" role="status">불러오는 중…</p>;
-  const card = (k: TabKey, ic: string, title: string, big: React.ReactNode, sub: string, warn = false, inbox?: "inq" | "rep") => (
-    <button className={`dash-card${warn ? " warn" : ""}`} onClick={() => go(k, inbox)} disabled={!can(TABS.find((t) => t[0] === k)?.[2] ?? null)}>
-      <span className="dash-k"><Icon name={ic} />{title}</span><b>{big}</b><span className="muted small">{sub}</span></button>);
+  const dt = new Date((d.today || today()) + "T00:00:00");
+  const dateTxt = `${dt.getFullYear()}년 ${dt.getMonth() + 1}월 ${dt.getDate()}일 (${WDK[dt.getDay()]})`;
+  const ok = (k: TabKey) => can(TABS.find((t) => t[0] === k)?.[2] ?? null);
+  const kpi = (k: TabKey, ic: string, title: string, n: number, sub: string, hot: boolean, inbox?: "inq" | "rep") => (
+    <button className={`adm-kpi${hot ? " hot" : ""}`} onClick={() => go(k, inbox)} disabled={!ok(k)}>
+      <span className="adm-kpi-k"><Icon name={ic} />{title}</span>
+      <span className="adm-kpi-n"><b>{n}</b><Chev /></span>
+      <small>{sub}</small></button>);
+  const open = city.filter((c) => !["완료", "반려", "중복"].includes(c.status))
+    .sort((a, b) => (PRI_RANK[a.priority] ?? 9) - (PRI_RANK[b.priority] ?? 9) || (b.stale ? 1 : 0) - (a.stale ? 1 : 0) || String(b.last_at || "").localeCompare(String(a.last_at || ""))).slice(0, 4);
   const exN: any[] = d.notices?.length ? [] : d.examples?.notices || [];
   const exR: any[] = d.recent?.length ? [] : d.examples?.recent || [];
-  return (<>
-    <p className="dash-hello"><b>{user.name}</b>님, 안녕하세요. 오늘은 {d.today} 이에요. <span className="muted">({user.role_name}: {ROLE_INFO[user.role]})</span></p>
-    <div className="dash-grid">
-      {card("reports", "camera", "새 제보", d.reports?.new ?? 0, `확인 중 ${d.reports?.doing ?? 0} · 전체 ${d.reports?.total ?? 0}${d.reports?.sample ? ` · 가상 ${d.reports.sample}건 따로` : ""}`, (d.reports?.new ?? 0) > 0, "rep")}
-      {card("notice", "warn", "지금 걸린 알림", d.notices?.length || exN.length, d.notices?.length ? (d.banner ? `공지: ${d.banner.text.slice(0, 20)}` : "사이트 공지 없음") : exN.length ? "가상 예시 (사이트엔 안 보임)" : "사이트 공지 없음")}
-      {card("reports", "story", "새 문의", d.inquiries?.new ?? 0, `전체 ${d.inquiries?.total ?? 0}${d.inquiries?.sample ? ` · 가상 ${d.inquiries.sample}건 따로` : ""}`, (d.inquiries?.new ?? 0) > 0, "inq")}
-      {card("place", "pin", "고친 장소", d.overrides ?? 0, "원본 위에 덮어쓴 곳")}
-    </div>
-    <div className="cards2">
-      <div className="panel">
-        <h2 className="h3">지금 사이트에 보이는 알림</h2>
-        {d.notices?.length ? <ul className="plain">{d.notices.map((n: any) => <li key={n.id}><span className={`badge ${n.level === "closed" ? "g-R" : n.level === "warn" ? "g-Y" : "b-plain"}`}>{LEVEL[n.level]?.split(" ")[0]}</span> {n.name ? `${n.name} · ` : ""}{n.title}{n.end ? <small className="muted"> ~{n.end}</small> : null}</li>)}</ul>
-          : exN.length ? <ul className="plain">{exN.map((n: any) => <li key={n.id}><span className="badge b-unknown">가상</span> <span className={`badge ${n.level === "closed" ? "g-R" : "g-Y"}`}>{LEVEL[n.level]?.split(" ")[0]}</span> <b>{n.name}</b> {n.title}</li>)}</ul>
-          : <p className="muted">걸려 있는 알림이 없어요.</p>}
-        {d.events_week?.length > 0 && <><h3 className="h3" style={{ marginTop: 14 }}>이번 주 관리자 추가 행사</h3><ul className="plain">{d.events_week.map((e: any) => <li key={e.id}>{e.name} · {e.start}{e.end && e.end !== e.start ? `~${e.end}` : ""}</li>)}</ul></>}
+  const recent = d.recent?.length ? d.recent.map((h: any) => ({ id: h.id, at: h.at, who: h.who === "admin" ? "총괄 관리자" : h.who, what: ACTION[h.action] || h.action, reverted: h.reverted }))
+    : exR.map((h: any) => ({ id: h.id, at: h.at, who: h.who, what: h.summary, sample: true }));
+  const notices = d.notices?.length ? d.notices : exN;
+  const md = (x: string) => String(x || "").slice(5, 16).replace("-", ".").replace("T", " ");
+  return (<div className="adm-home">
+    <section className="adm-card adm-today">
+      <p className="adm-date"><Icon name="cal" /><span>오늘은 <b>{dateTxt}</b> 입니다.</span><span className="adm-hello">{user.name === user.role_name ? user.name : `${user.name} · ${user.role_name}`}</span></p>
+      <div className="adm-kpis">
+        {kpi("reports", "camera", "새 제보", d.reports?.new ?? 0, d.reports?.sample ? `가상 ${d.reports.sample}건 따로` : `전체 ${d.reports?.total ?? 0}건`, (d.reports?.new ?? 0) > 0, "rep")}
+        {kpi("reports", "wait", "처리 대기", d.reports?.doing ?? 0, "확인·처리 중", false, "rep")}
+        {kpi("reports", "story", "새 문의", d.inquiries?.new ?? 0, d.inquiries?.sample ? `가상 ${d.inquiries.sample}건 따로` : `전체 ${d.inquiries?.total ?? 0}건`, (d.inquiries?.new ?? 0) > 0, "inq")}
+        {kpi("place", "pin", "고친 장소", d.overrides ?? 0, "원본 위에 덮어쓴 곳", false)}
       </div>
-      <div className="panel">
-        <h2 className="h3">최근 변경</h2>
-        {d.recent?.length ? <ul className="plain dash-recent">{d.recent.map((h: any) => <li key={h.id}><small className="muted">{h.at.slice(5, 16).replace("T", " ")}</small> <b>{h.who === "admin" ? "총괄 관리자" : h.who}</b> · {ACTION[h.action] || h.action}{h.reverted ? <small className="muted"> (되돌림)</small> : null}</li>)}</ul>
-          : exR.length ? <ul className="plain dash-recent">{exR.map((h: any) => <li key={h.id}><small className="muted">{h.at.slice(5, 16).replace("T", " ")}</small> <span className="badge b-unknown">가상</span> <b>{h.who}</b> · {h.summary}</li>)}</ul>
-          : <p className="muted">아직 바꾼 것이 없어요.</p>}
-        {can("history") && <button className="chip" onClick={() => go("history")}>변경 이력 전체 보기</button>}
-      </div>
+    </section>
+    <div className="adm-two">
+      <section className="adm-card adm-list-card">
+        <header><h2><Icon name="warn" />즉시 확인할 항목</h2>{ok("reports") && <button onClick={() => go("reports", "rep")}>더보기<Chev /></button>}</header>
+        {open.length ? <ul className="adm-rows">{open.map((c) => (
+          <li key={c.id}><button onClick={() => go("reports", "rep", c.id)}>
+            <span className={`adm-badge p-${c.sample ? "sample" : c.priority}`}>{c.sample ? "가상" : c.priority_name}</span>
+            <span className="adm-row-main"><b>{c.title}</b>
+              <small><span><Icon name="pin" />{c.place_name || c.landmark || c.near?.name || c.dept_name}</span><span><Icon name="time" />{md(c.last_at || c.first_at)}</span>{c.stale || c.overdue ? <em className="adm-late">지연</em> : null}</small></span>
+            <Chev /></button></li>))}</ul>
+          : <p className="adm-empty">지금 바로 볼 제보가 없어요.</p>}
+        {notices.length > 0 && <div className="adm-notice-strip">
+          <p><b>사이트에 걸린 알림 {notices.length}</b>{ok("notice") && <button onClick={() => go("notice")}>알림 관리<Chev /></button>}</p>
+          <ul>{notices.slice(0, 3).map((n: any) => <li key={n.id}>{exN.length ? <span className="adm-badge p-sample">가상</span> : null}<span className={`adm-badge l-${n.level}`}>{LEVEL[n.level]?.split(" ")[0]}</span><span>{n.name ? `${n.name} · ` : ""}{n.title}</span></li>)}</ul>
+        </div>}
+      </section>
+      <section className="adm-card adm-list-card">
+        <header><h2><Icon name="time" />최근 변경</h2>{can("history") && <button onClick={() => go("history")}>더보기<Chev /></button>}</header>
+        {recent.length ? <ul className="adm-rows adm-log">{recent.slice(0, 6).map((h: any) => (
+          <li key={h.id}><span className="adm-log-at">{md(h.at)}</span><b>{h.who}</b><span className="adm-log-what">{h.sample ? <span className="adm-badge p-sample">가상</span> : null}{h.what}{h.reverted ? " (되돌림)" : ""}</span></li>))}</ul>
+          : <p className="adm-empty">아직 바꾼 것이 없어요.</p>}
+      </section>
     </div>
-  </>);
+    <section className="adm-card adm-quick">
+      <h2><Icon name="bolt" />빠른 작업</h2>
+      <div>
+        {ok("place") && <button onClick={() => go("place")}><Icon name="pin" /><span>장소 정보 수정</span><Chev /></button>}
+        {ok("notice") && <button onClick={() => go("notice")}><Icon name="warn" /><span>공지·알림 등록</span><Chev /></button>}
+        {ok("reports") && <button onClick={() => go("reports", "rep")}><Icon name="shield" /><span>제보 확인</span><Chev /></button>}
+      </div>
+    </section>
+  </div>);
 }
 
 /* ---------- 계정 관리 (총괄 관리자만) ---------- */

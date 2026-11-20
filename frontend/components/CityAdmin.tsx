@@ -13,58 +13,86 @@ const PRIC: Record<string, string> = { urgent: "g-R", high: "b-unknown", normal:
 const OPEN = (s: string) => !["완료", "반려", "중복"].includes(s);
 const iso = (d: Date) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
 
-export function CityAdmin({ tok, call, onExpired, can }: { tok: string; call: Any; onExpired: () => void; can: (p: string) => boolean }) {
+// 레퍼런스(2026-11-21): 숫자 카드 4개 → 왼쪽 목록(검색·상태·분류·우선순위) | 오른쪽 상세(요약·위치·진행 단계·처리 칸). 휴대폰은 목록 → 상세(← 목록).
+const STEPS4 = ["접수", "확인", "처리 중", "완료"];
+const PRI_ORDER: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+export function CityAdmin({ tok, call, onExpired, can, focus }: { tok: string; call: Any; onExpired: () => void; can: (p: string) => boolean; focus?: string | null }) {
   const [view, setView] = useState<"list" | "map" | "sum" | "set">("list");
   const [d, setD] = useState<Any>(null);
   const [withSample, setWithSample] = useState(true);
-  const [open, setOpen] = useState<string | null>(null);
+  const [sel, setSel] = useState<string | null>(focus || null);
+  const [detail, setDetail] = useState(!!focus);   // 휴대폰에서 상세를 보고 있는지
   const [f, setF] = useState({ status: "열린 것", cat: "", dept: "", pri: "", q: "" });
   const load = () => api.get(`/api/admin/city?sample=${withSample ? 1 : 0}`, tok).then(setD).catch((e: Any) => { if (e.status === 401) onExpired(); });
   useEffect(() => { load(); }, [withSample]);   // eslint-disable-line
   const list = useMemo(() => (d?.clusters || []).filter((c: Any) =>
     (f.status === "전체" || (f.status === "열린 것" ? OPEN(c.status) : c.status === f.status)) && (!f.cat || c.category === f.cat) && (!f.dept || c.dept === f.dept)
-    && (!f.pri || c.priority === f.pri) && (!f.q || `${c.title} ${c.summary} ${c.place_name} ${c.landmark}`.includes(f.q))), [d, f]);
+    && (!f.pri || c.priority === f.pri) && (!f.q || `${c.title} ${c.summary} ${c.place_name} ${c.landmark} ${c.reports.map((r: Any) => r.code).join(" ")}`.includes(f.q)))
+    .sort((a: Any, b: Any) => (PRI_ORDER[a.priority] ?? 9) - (PRI_ORDER[b.priority] ?? 9) || String(b.last_at || "").localeCompare(String(a.last_at || ""))), [d, f]);
+  useEffect(() => {   // 홈에서 고른 묶음이 '열린 것'에 없으면 전체로
+    if (d && focus && !list.some((c: Any) => c.id === focus) && d.clusters.some((c: Any) => c.id === focus)) setF((x) => ({ ...x, status: "전체" }));
+  }, [d]);   // eslint-disable-line
   if (!d) return <p className="muted">불러오는 중…</p>;
   const openN = d.clusters.filter((c: Any) => OPEN(c.status));
+  const cur = list.find((c: Any) => c.id === sel) || list[0] || null;
+  const choose = (id: string) => { setSel(id); setDetail(true); requestAnimationFrame(() => document.querySelector(".ca2")?.scrollIntoView({ block: "start", behavior: "smooth" })); };
+  const kpi = (ic: string, label: string, n: number, tone = "") => <div className={`ca2-kpi ${tone}`}><Icon name={ic} /><span><small>{label}</small><b>{n}</b></span></div>;
   return (
     <div className="ca">
       {d.demo && <p className="ca-warn" role="note"><Picto name="ask" size={18} /><span>데모 화면이에요. 서버·AI가 연결되어 있지 않아 이 기기에서 보낸 제보만 '규칙'으로 보여요.</span></p>}
       {!d.ai && <p className="muted small"><Icon name="info" /> AI 연결 안 됨 — 새 제보는 이용자가 고른 종류로 '규칙' 정리돼요.</p>}
-      <div className="ca-top">
-        <div className="ca-kpi"><b>{openN.length}</b><small>처리할 곳</small></div>
-        <div className="ca-kpi"><b>{openN.reduce((a: number, c: Any) => a + c.count, 0)}</b><small>처리할 제보</small></div>
-        <div className="ca-kpi warn"><b>{openN.filter((c: Any) => c.stale || c.overdue).length}</b><small>밀린 곳 (7일·기한)</small></div>
-        <div className="ca-kpi"><b>{openN.filter((c: Any) => c.priority === "urgent").length}</b><small>긴급</small></div>
+      <div className="ca2-kpis">
+        {kpi("story", "처리할 제보", openN.reduce((a: number, c: Any) => a + c.count, 0))}
+        {kpi("wait", "처리 대기", openN.filter((c: Any) => c.status === "확인" || c.status === "처리 중").length)}
+        {kpi("warn", "기한 임박·지연", openN.filter((c: Any) => c.stale || c.overdue).length, "warn")}
+        {kpi("shield", "긴급", openN.filter((c: Any) => c.priority === "urgent").length, "bad")}
       </div>
-      <div className="tabs ca-views" role="group" aria-label="제보·민원 보기">
-        {([["list", "목록"], ["map", "몰리는 곳 지도"], ["sum", "기간 요약"], ["set", "설정·백업"]] as const).map(([k, t]) =>
-          <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{t}</button>)}
-        {d.sample_loaded && <label className="day small ca-sample"><input type="checkbox" checked={withSample} onChange={(e) => setWithSample(e.target.checked)} />가상 제보 보기</label>}
-      </div>
-
-      {view === "list" && <>
-        <div className="ca-filter">
-          <select className="box sm" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="상태">{["열린 것", "전체", ...d.statuses].map((s: string) => <option key={s}>{s}</option>)}</select>
-          <select className="box sm" value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })} aria-label="분류"><option value="">모든 분류</option>{Object.entries(d.cats).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select>
-          <select className="box sm" value={f.dept} onChange={(e) => setF({ ...f, dept: e.target.value })} aria-label="부서"><option value="">모든 부서</option>{Object.entries(d.depts).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select>
-          <select className="box sm" value={f.pri} onChange={(e) => setF({ ...f, pri: e.target.value })} aria-label="우선순위"><option value="">모든 우선순위</option>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select>
-          <input className="box sm" placeholder="장소·내용 찾기" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
+      <div className="ca2-views">
+        <nav className="adm-seg" aria-label="제보·민원 보기">
+          {([["list", "목록"], ["map", "몰리는 곳 지도"], ["sum", "기간 요약"], ["set", "설정·백업"]] as const).map(([k, t]) =>
+            <button key={k} aria-current={view === k ? "page" : undefined} onClick={() => setView(k)}>{t}</button>)}
+        </nav>
+        <span className="ca2-tools">
+          {d.sample_loaded && <label className="day small"><input type="checkbox" checked={withSample} onChange={(e) => setWithSample(e.target.checked)} />가상 제보 보기</label>}
           <a className="chip sm" href={`/api/admin/city-export.csv?t=${tok}&sample=${withSample ? 1 : 0}`}>CSV 내려받기</a>
-        </div>
-        <ul className="ca-list">
-          {list.map((c: Any) => <ClusterRow key={c.id} c={c} d={d} tok={tok} call={call} can={can} open={open === c.id} onToggle={() => setOpen(open === c.id ? null : c.id)} reload={load} />)}
-          {!list.length && <li className="muted">조건에 맞는 제보가 없어요.</li>}
-        </ul>
-      </>}
+        </span>
+      </div>
 
-      {view === "map" && <HotMap d={d} onPick={(id) => { setOpen(id); setF({ ...f, status: "전체" }); setView("list"); setTimeout(() => document.getElementById(`ca-${id}`)?.scrollIntoView({ block: "start" }), 50); }} />}
+      {view === "list" && <div className={`ca2${detail ? " detail" : ""}`}>
+        <aside className="ca2-list" aria-label="제보 목록">
+          <label className="ca2-search"><span className="sr-only">찾기</span>
+            <input placeholder="제목·장소·접수번호로 찾기" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} /><Icon name="search" /></label>
+          <div className="ca2-filters">
+            <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="상태">{["열린 것", "전체", ...d.statuses].map((s: string) => <option key={s} value={s}>{s === "열린 것" ? "상태: 열린 것" : s}</option>)}</select>
+            <select value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })} aria-label="분류"><option value="">분류: 전체</option>{Object.entries(d.cats).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select>
+            <select value={f.pri} onChange={(e) => setF({ ...f, pri: e.target.value })} aria-label="우선순위"><option value="">우선순위: 전체</option>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select>
+            <select value={f.dept} onChange={(e) => setF({ ...f, dept: e.target.value })} aria-label="담당 부서"><option value="">부서: 전체</option>{Object.entries(d.depts).map(([k, v]: Any) => <option key={k} value={k}>{String(v).replace(/\s*\(.*\)\s*$/, "")}</option>)}</select>
+          </div>
+          <p className="ca2-count">{list.length}곳 · 제보 {list.reduce((a: number, c: Any) => a + c.count, 0)}건</p>
+          <ul>
+            {list.map((c: Any) => (
+              <li key={c.id}><button aria-current={cur?.id === c.id ? "true" : undefined} onClick={() => choose(c.id)} className={c.stale || c.overdue ? "late" : ""}>
+                <span className="ca2-i-top"><b className="ca2-code">{c.reports[0]?.code || ""}{c.count > 1 ? ` 외 ${c.count - 1}` : ""}</b>
+                  <span className={`adm-badge p-${c.sample ? "sample" : c.priority}`}>{c.sample ? "가상" : c.priority_name}</span></span>
+                <span className="ca2-i-title">{c.title}</span>
+                <small>{c.place_name || c.landmark || c.near?.name || "위치 정보"} · {String(c.last_at || c.first_at).slice(5, 10).replace("-", ".")}{c.stale || c.overdue ? <em className="adm-late">지연</em> : null}<span className={`ca2-st st-${c.status.replace(" ", "")}`}>{c.status}</span></small>
+              </button></li>))}
+            {!list.length && <li className="muted ca2-none">조건에 맞는 제보가 없어요.</li>}
+          </ul>
+        </aside>
+        <section className="ca2-detail" aria-live="polite">
+          {cur ? <ClusterDetail key={cur.id} c={cur} d={d} tok={tok} call={call} can={can} reload={load} onBack={() => setDetail(false)} /> : <p className="adm-empty">왼쪽에서 제보를 고르세요.</p>}
+        </section>
+      </div>}
+
+      {view === "map" && <HotMap d={d} onPick={(id) => { setF({ ...f, status: "전체" }); setView("list"); choose(id); }} />}
       {view === "sum" && <Summary tok={tok} withSample={withSample} onExpired={onExpired} />}
       {view === "set" && <Settings d={d} tok={tok} call={call} can={can} reload={load} />}
     </div>
   );
 }
 
-function ClusterRow({ c, d, tok, call, can, open, onToggle, reload }: Any) {
+function ClusterDetail({ c, d, tok, call, can, reload, onBack }: Any) {
   const [e, setE] = useState({ status: c.status, category: c.category, severity: c.severity, dept: c.dept, priority: c.priority, reply: c.reports.find((r: Any) => r.reply)?.reply || "", memo: "" });
   const [into, setInto] = useState("");
   const [contact, setContact] = useState<Record<string, string>>({});
@@ -74,71 +102,68 @@ function ClusterRow({ c, d, tok, call, can, open, onToggle, reload }: Any) {
     call(() => api.post(`/api/admin/city/${c.id}`, body, tok), `묶음 ${c.count}건을 저장했어요.`).then(reload).catch(() => {});
   };
   const others = d.clusters.filter((x: Any) => x.id !== c.id && x.category === c.category && x.sample === c.sample);
-  // 읽기 쉽게(2026-11-21 팀장 요청): 접힌 줄은 제목·부서·기간·상태 칩만, 펼치면 할 일 → 제보 한 줄씩 → 자주 쓰는 처리 칸. 나머지는 [더보기]에 접음(기능은 그대로).
-  const late = c.stale || c.overdue;
-  const age = Math.round(c.age_days);
-  const dept = String(c.dept_name || "").replace(/\s*\(.*\)\s*$/, "");
-  const md = (s: string) => String(s).slice(5, 16).replace("-", "/").replace("T", " ");
+  const md = (s: string) => String(s).slice(5, 16).replace("-", ".").replace("T", " ");
   const extra = (r: Any) => (r.triage?.obstacles || []).map((o: Any) => o.detail || o.type).filter(Boolean).join(", ");
+  const stepI = STEPS4.indexOf(c.status);
+  const where = c.place_name || c.landmark || (c.near ? `${c.near.name} 근처 ${c.near.dist_m}m` : "");
+  const changed = e.status !== c.status || ["category", "severity", "dept", "priority"].some((k) => (e as Any)[k] !== c[k]) || !!e.memo.trim() || e.reply !== (c.reports.find((r: Any) => r.reply)?.reply || "");
   return (
-    <li id={`ca-${c.id}`} className={`ca-row panel${late ? " stale" : ""}${c.sample ? " sample" : ""}${open ? " open" : ""}`}>
-      <button className="ca-head" aria-expanded={open} onClick={onToggle}>
-        <span className="ca-count" style={{ background: SEVC[c.severity] }} title={`${c.severity_name} · 제보 ${c.count}건`}>{c.count}</span>
-        <span className="ca-main"><b>{c.sample && <span className="ca-sample-tag">가상</span>}{c.title}</b>
-          <small className="muted">{dept} · {c.first_at.slice(5, 10).replace("-", "/")}~ {late ? <b className="ca-late">{age}일째 지연</b> : `${age}일째`}</small></span>
-        <span className="ca-tags">
-          {(c.priority === "urgent" || c.priority === "high") && <span className={`badge ${PRIC[c.priority]}`}>{c.priority_name}</span>}
-          <span className={`badge st-${c.status.replace(" ", "")}`}>{c.status}</span>
-          {c.privacy && <span title="사진에 얼굴·번호판이 보일 수 있어요 (공개 금지)"><Picto name="warn" size={18} label="개인정보 포함" /></span>}
-        </span>
-      </button>
-      {open && <div className="ca-body">
-        {c.action ? <p className="ca-do"><b>할 일</b> {c.action}</p> : <p className="ca-do">{c.summary}</p>}
-        <p className="ca-meta small">
-          {c.who.length > 0 && <span>대상 {c.who.join("·")}</span>}
-          {c.near && <span>{c.near.name} {c.near.dist_m}m</span>}
-          {c.lat && <span><a href={`https://map.kakao.com/link/map/${encodeURIComponent(c.title)},${c.lat},${c.lon}`} target="_blank" rel="noreferrer">지도</a> · <a href={`https://map.kakao.com/link/roadview/${c.lat},${c.lon}`} target="_blank" rel="noreferrer">로드뷰</a></span>}
-          <span className="muted">분류 {c.edited ? "담당자" : c.by === "ai" ? "AI" : "규칙"}</span>
-        </p>
-        {c.action && c.count > 1 && c.summary && <details className="ca-more-sum"><summary className="small">묶음 요약</summary><p className="small">{c.summary}</p></details>}
-        <ul className="ca-reports">{c.reports.map((r: Any) => (
-          <li key={r.id}>
-            <p className="ca-r-line"><b>{r.code}</b><small className="muted">{md(r.created_at)}</small>
-              <span className="ca-r-q">{r.note ? `“${r.note}”` : r.triage?.summary || ""}</span>
-              {c.count > 1 && <button className="link-btn small" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { split: r.id }, tok), "이 제보를 따로 떼었어요.").then(reload).catch(() => {})}>떼어 내기</button>}</p>
-            {extra(r) && <p className="small ca-ai"><span className={`via ${r.triage.by === "ai" ? "via-llm" : "via-rule"}`}>{r.triage.by === "ai" ? "AI" : "규칙"}</span><span>{extra(r)}</span></p>}
-            {((r.photos || []).length > 0 || r.has_contact) && <div className="ca-photos">
-              {(r.photos || []).map((p: string) => <a key={p} href={`/api/admin/city-photo/${p}?t=${tok}`} target="_blank" rel="noreferrer"><img src={`/api/admin/city-photo/${p}?t=${tok}`} alt="제보 사진" loading="lazy" /></a>)}
-              {(r.triage?.faces || r.triage?.plates) && <small className="ca-priv" title="공개·공유 금지"><Picto name="warn" size={16} />{[r.triage.plates && "번호판", r.triage.faces && "얼굴"].filter(Boolean).join("·")} 보임</small>}
-              {r.has_contact && (contact[r.id] ? <small>연락처 <b>{contact[r.id]}</b></small>
-                : <button className="link-btn small" title="본 기록이 남아요 · 완료 90일 뒤 자동 삭제" onClick={() => api.get(`/api/admin/city-contact/${r.id}`, tok).then((x: Any) => setContact({ ...contact, [r.id]: x.contact || "(없음)" }))}>연락처 보기</button>)}
-            </div>}
-          </li>))}</ul>
-        <div className="visit-form ca-edit">
-          <label>상태<select value={e.status} onChange={(x) => setE({ ...e, status: x.target.value })}>{d.statuses.map((s: string) => <option key={s}>{s}</option>)}</select></label>
-          <label>담당 부서<select value={e.dept} onChange={(x) => setE({ ...e, dept: x.target.value })}>{Object.entries(d.depts).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label>우선순위{c.priority_rule && c.priority_rule !== e.priority && <small className="muted"> 제안 {d.pri[c.priority_rule]}</small>}<select value={e.priority} onChange={(x) => setE({ ...e, priority: x.target.value })}>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label className="wide">공개 답변<textarea rows={2} value={e.reply} onChange={(x) => setE({ ...e, reply: x.target.value })} placeholder="이용자 [내 제보]에 보임 · 예: 12월 첫 주 보도블록 교체" /></label>
-          <details className="wide ca-more" open={e.status === "반려" || undefined}>
-            <summary>더보기 <small className="muted">분류·심각도·내부 메모·사진·알림·합치기</small></summary>
-            <div className="visit-form">
-              <label>분류<select value={e.category} onChange={(x) => setE({ ...e, category: x.target.value })}>{Object.entries(d.cats).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-              <label>심각도<select value={e.severity} onChange={(x) => setE({ ...e, severity: x.target.value })}>{Object.entries(d.sev).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
-              <label className="wide">내부 메모 {e.status === "반려" && <b className="err">(반려 사유 필수)</b>}<input value={e.memo} onChange={(x) => setE({ ...e, memo: x.target.value })} /></label>
-              <div className="wide save-row">
-                <label className="chip"><input type="file" accept="image/*" hidden onChange={(x) => { const fl = x.target.files?.[0]; if (!fl) return; const fd = new FormData(); fd.append("photo", fl);
-                  call(() => api.form(`/api/admin/city/${c.id}/after-photo`, fd, tok), "고친 뒤 사진을 올렸어요. 이용자 [내 제보]에 보여요.").then(reload).catch(() => {}); }} />고친 뒤 사진</label>
-                {c.place_id && !c.sample && can("notice") && <button className="chip" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/notice`, { title: c.title, body: c.summary, level: e.severity === "block" ? "warn" : "info" }, tok), "관광지 임시 알림으로 올렸어요. [임시 알림]에서 내릴 수 있어요.", `#/place/${c.place_id}`).then(reload).catch(() => {})}>여행 정보에 알리기</button>}
-                {others.length > 0 && <span className="ca-merge"><select className="box sm" value={into} onChange={(x) => setInto(x.target.value)} aria-label="합칠 묶음"><option value="">합치기…</option>
-                  {others.map((o: Any) => <option key={o.id} value={o.id}>{o.title} ({o.count}건)</option>)}</select>
-                  {into && <button className="chip sm" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { into }, tok), "묶음을 합쳤어요.").then(reload).catch(() => {})}>합치기</button>}</span>}
-              </div>
-            </div>
-          </details>
-          <div className="wide save-row"><button className="chip go" onClick={save}>저장 ({c.count}건)</button></div>
-        </div>
-      </div>}
-    </li>
+    <article className={`ca2-card${c.sample ? " sample" : ""}`}>
+      <button className="ca2-back" onClick={onBack}><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="m15 6-6 6 6 6" /></svg>목록</button>
+      <header className="ca2-head">
+        <h2>{c.title}</h2>
+        <span className={`adm-badge p-${c.sample ? "sample" : c.priority}`}>{c.sample ? "가상" : c.priority_name}</span>
+        <span className={`via ${c.sum_by === "ai" || c.by === "ai" ? "via-llm" : "via-rule"} ca2-by`}>{c.edited ? "담당자 수정" : c.sum_by === "ai" || c.by === "ai" ? "AI 요약" : "규칙 정리"}</span>
+        {c.privacy && <span className="ca2-priv" title="사진에 얼굴·번호판이 보일 수 있어요 (공개 금지)"><Picto name="warn" size={18} label="개인정보 포함" />공개 금지 사진</span>}
+      </header>
+      <p className="ca2-sum">{c.summary}</p>
+      {c.action && <p className="ca2-do"><b>할 일</b>{c.action}</p>}
+      <div className="ca2-loc">
+        <Icon name="pin" /><span><b>위치</b> {where || "지도 위치만 있음"}</span>
+        {c.lat && <span className="ca2-links"><a href={`https://map.kakao.com/link/map/${encodeURIComponent(c.title)},${c.lat},${c.lon}`} target="_blank" rel="noreferrer">지도 보기 ↗</a><a href={`https://map.kakao.com/link/roadview/${c.lat},${c.lon}`} target="_blank" rel="noreferrer">로드뷰 ↗</a></span>}
+      </div>
+      {stepI >= 0 ? <ol className="ca2-steps" aria-label="처리 단계">{STEPS4.map((s, i) => <li key={s} className={i < stepI ? "done" : i === stepI ? "cur" : ""}><span>{i <= stepI ? "✓" : i + 1}</span>{s}</li>)}</ol>
+        : <p className="ca2-closed">처리 상태: <b>{c.status}</b></p>}
+      <dl className="ca2-meta">
+        <div><dt>담당</dt><dd>{String(c.dept_name || "").replace(/\s*\(.*\)\s*$/, "")}</dd></div>
+        <div><dt>기간</dt><dd>{md(c.first_at).slice(0, 5)}~ · {Math.round(c.age_days)}일째{c.stale || c.overdue ? <em className="adm-late">지연 (목표 {c.sla_days}일)</em> : null}</dd></div>
+        {c.who.length > 0 && <div><dt>대상</dt><dd>{c.who.join(" · ")}</dd></div>}
+        <div><dt>심각도</dt><dd><i className="ca2-sev" style={{ background: SEVC[c.severity] }} />{c.severity_name}</dd></div>
+      </dl>
+      <h3 className="ca2-h">제보 {c.count}건</h3>
+      <ul className="ca2-reports">{c.reports.map((r: Any) => (
+        <li key={r.id}>
+          <p className="ca2-r-top"><b>{r.code}</b><small>{md(r.created_at)} · {r.source}{r.loc_how === "exif" ? " · 사진 위치" : ""}</small>
+            {c.count > 1 && <button className="link-btn small" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { split: r.id }, tok), "이 제보를 따로 떼었어요.").then(reload).catch(() => {})}>떼어 내기</button>}</p>
+          <p className="ca2-r-q">{r.note ? `“${r.note}”` : r.triage?.summary || ""}</p>
+          {extra(r) && <p className="small ca-ai"><span className={`via ${r.triage.by === "ai" ? "via-llm" : "via-rule"}`}>{r.triage.by === "ai" ? "AI" : "규칙"}</span><span>{extra(r)}</span></p>}
+          {((r.photos || []).length > 0 || r.has_contact) && <div className="ca-photos">
+            {(r.photos || []).map((p: string) => <a key={p} href={`/api/admin/city-photo/${p}?t=${tok}`} target="_blank" rel="noreferrer"><img src={`/api/admin/city-photo/${p}?t=${tok}`} alt="제보 사진" loading="lazy" /></a>)}
+            {(r.triage?.faces || r.triage?.plates) && <small className="ca-priv" title="공개·공유 금지"><Picto name="warn" size={16} />{[r.triage.plates && "번호판", r.triage.faces && "얼굴"].filter(Boolean).join("·")} 보임</small>}
+            {r.has_contact && (contact[r.id] ? <small>연락처 <b>{contact[r.id]}</b></small>
+              : <button className="link-btn small" title="본 기록이 남아요 · 완료 90일 뒤 자동 삭제" onClick={() => api.get(`/api/admin/city-contact/${r.id}`, tok).then((x: Any) => setContact({ ...contact, [r.id]: x.contact || "(없음)" }))}>연락처 보기</button>)}
+          </div>}
+        </li>))}</ul>
+      <h3 className="ca2-h">처리</h3>
+      <div className="ca2-form">
+        <label>상태<select value={e.status} onChange={(x) => setE({ ...e, status: x.target.value })}>{d.statuses.map((s: string) => <option key={s}>{s}</option>)}</select></label>
+        <label>분류<select value={e.category} onChange={(x) => setE({ ...e, category: x.target.value })}>{Object.entries(d.cats).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label>심각도<select value={e.severity} onChange={(x) => setE({ ...e, severity: x.target.value })}>{Object.entries(d.sev).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label>담당 부서<select value={e.dept} onChange={(x) => setE({ ...e, dept: x.target.value })}>{Object.entries(d.depts).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label>우선순위{c.priority_rule && c.priority_rule !== e.priority && <small> 제안: {d.pri[c.priority_rule]}</small>}<select value={e.priority} onChange={(x) => setE({ ...e, priority: x.target.value })}>{Object.entries(d.pri).map(([k, v]: Any) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label className="wide">이용자에게 보일 답변 <small>[내 제보]에 보여요</small><textarea rows={2} value={e.reply} onChange={(x) => setE({ ...e, reply: x.target.value })} placeholder="예: 현장 확인했어요. 12월 첫 주에 보도블록을 바꿔요." /></label>
+        <label className="wide">내부 메모 {e.status === "반려" && <b className="err">(반려 사유 필수)</b>}<input value={e.memo} onChange={(x) => setE({ ...e, memo: x.target.value })} placeholder="담당자끼리만 보여요" /></label>
+      </div>
+      <div className="ca2-actions">
+        <button className="adm-btn primary" onClick={save} disabled={!changed}>변경사항 저장{c.count > 1 ? ` (${c.count}건)` : ""}</button>
+        <label className="adm-btn"><input type="file" accept="image/*" hidden onChange={(x) => { const fl = x.target.files?.[0]; if (!fl) return; const fd = new FormData(); fd.append("photo", fl);
+          call(() => api.form(`/api/admin/city/${c.id}/after-photo`, fd, tok), "고친 뒤 사진을 올렸어요. 이용자 [내 제보]에 보여요.").then(reload).catch(() => {}); }} /><Icon name="camera" />고친 뒤 사진</label>
+        {c.place_id && !c.sample && can("notice") && <button className="adm-btn" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/notice`, { title: c.title, body: c.summary, level: e.severity === "block" ? "warn" : "info" }, tok), "관광지 임시 알림으로 올렸어요. [임시 알림]에서 내릴 수 있어요.", `#/place/${c.place_id}`).then(reload).catch(() => {})}><Icon name="warn" />여행 정보에 알리기</button>}
+        {others.length > 0 && <span className="ca2-merge"><select value={into} onChange={(x) => setInto(x.target.value)} aria-label="합칠 묶음"><option value="">다른 묶음과 합치기…</option>
+          {others.map((o: Any) => <option key={o.id} value={o.id}>{o.title} ({o.count}건)</option>)}</select>
+          {into && <button className="adm-btn" onClick={() => call(() => api.post(`/api/admin/city/${c.id}/merge`, { into }, tok), "묶음을 합쳤어요.").then(reload).catch(() => {})}>합치기</button>}</span>}
+      </div>
+    </article>
   );
 }
 
