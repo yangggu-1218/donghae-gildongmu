@@ -3,6 +3,7 @@
 // 카카오맵 JavaScript API. .env.local 에 NEXT_PUBLIC_KAKAO_JS_KEY 가 없으면 안내 문구만 보여 준다.
 // 카카오 개발자 콘솔 > 내 애플리케이션 > 플랫폼 > Web 에 http://localhost:3000 과 배포 주소를 등록해야 지도가 뜬다.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { PICTO, pictoSvg } from "@/lib/mapPicto";
 import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
@@ -175,7 +176,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, facilit
           const el = document.createElement("button");
           el.type = "button"; el.className = "facility-pin"; el.setAttribute("aria-label", p.label);
           el.style.background = bg;
-          el.textContent = p.icon || "";
+          if ((p as any).picto && PICTO[(p as any).picto]) el.innerHTML = pictoSvg((p as any).picto, 16); else el.textContent = p.icon || "";
           const anchor = document.createElement("div");
           anchor.className = "facility-anchor";
           anchor.appendChild(el);

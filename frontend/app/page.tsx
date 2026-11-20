@@ -579,7 +579,7 @@ export default function Page() {
     const d = 2 * R * Math.asin(Math.sqrt(Math.sin(rad(stay.lat - last.lat) / 2) ** 2 + Math.cos(rad(last.lat)) * Math.cos(rad(stay.lat)) * Math.sin(rad(stay.lon - last.lon) / 2) ** 2));
     return Math.round((d * 1.4) / 35 * 60) + 5;
   }, [stay, pins0]);
-  const pins = useMemo(() => (stay ? [...pins0, { lat: stay.lat, lon: stay.lon, label: stay.name, grade: null, color: "#6B4FA0", icon: lang === "ko" ? "숙" : "H",
+  const pins = useMemo(() => (stay ? [...pins0, { lat: stay.lat, lon: stay.lon, label: stay.name, grade: null, color: "#6B4FA0", icon: lang === "ko" ? "숙" : "H", picto: "lodging",
     sub: lang === "ko" ? `내 숙소 · 마지막 장소에서 차로 약 ${stayMin}분` : `My stay · ~${stayMin} min by car from the last stop`, addr: stay.addr.replace("강원특별자치도 ", "") }] : pins0), [pins0, stay, stayMin, lang]);
   const openStay = () => {
     setAddOpen(addOpen === "stay" ? "" : "stay"); setAddQ(""); setStayMsg("");

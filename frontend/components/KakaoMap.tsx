@@ -2,9 +2,10 @@
 // 카카오맵 JavaScript API. .env.local 에 NEXT_PUBLIC_KAKAO_JS_KEY 가 없으면 안내 문구만 보여 준다.
 // 카카오 개발자 콘솔 > 내 애플리케이션 > 플랫폼 > Web 에 http://localhost:3000 과 배포 주소를 등록해야 지도가 뜬다.
 import { useEffect, useRef, useState } from "react";
+import { PICTO, pictoSvg } from "@/lib/mapPicto";
 
 declare global { interface Window { kakao: any } }
-type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string; sub?: string; addr?: string };
+type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string; picto?: string; sub?: string; addr?: string };
 const isEn = () => typeof document !== "undefined" && document.documentElement.lang === "en";
 const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 const kLink = (p: Pin, kind: "map" | "to") => `https://map.kakao.com/link/${kind}/${encodeURIComponent(p.label.replace(/[,/]/g, " "))},${p.lat},${p.lon}`;
@@ -101,8 +102,8 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         if (dots) {
           const el = document.createElement("button");
           el.type = "button"; el.setAttribute("aria-label", p.label);
-          el.style.cssText = `width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;border:2px solid #fff;font:700 12px sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35)`;
-          el.textContent = p.icon || "";
+          el.style.cssText = `width:30px;height:30px;border-radius:50%;background:${bg};color:#fff;border:2px solid #fff;font:700 12px sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35);display:grid;place-items:center;padding:0`;
+          if (p.picto && PICTO[p.picto]) el.innerHTML = pictoSvg(p.picto, 18); else el.textContent = p.icon || "";
           hook(el, p, pos, i);
           if (cluster) grouped.push(new maps.CustomOverlay({ position: pos, content: el, clickable: true }));
           else new maps.CustomOverlay({ map, position: pos, content: el, clickable: true });
@@ -233,8 +234,9 @@ function Sketch({ pins, overview = false, dots = false, onPick }: { pins: Pin[];
         {!overview && !dots && <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />}
         {dots && pts.map(([px, py], i) => (
           <g key={i} onClick={() => tap(i)} onMouseEnter={() => enter(i)} onMouseLeave={leave} style={{ cursor: "pointer" }} role="button" aria-label={pins[i].label}>
-            <circle cx={px} cy={py} r="9" fill={pins[i].color || "var(--sea)"} stroke="var(--surface)" strokeWidth="2" />
-            <text x={px} y={py + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">{pins[i].icon || ""}</text>
+            <circle cx={px} cy={py} r="10" fill={pins[i].color || "var(--sea)"} stroke="var(--surface)" strokeWidth="2" />
+            {pins[i].picto && PICTO[pins[i].picto!] ? <g transform={`translate(${px - 6.5} ${py - 6.5}) scale(${13 / 24})`} fill="#fff" dangerouslySetInnerHTML={{ __html: PICTO[pins[i].picto!] }} />
+              : <text x={px} y={py + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">{pins[i].icon || ""}</text>}
           </g>))}
         {!dots && pts.map(([px, py], i) => {
           const g = pins[i].grade; const bg = pins[i].color || (g ? `var(--${g === "G" ? "go" : g === "Y" ? "warn-dot" : "stop"})` : "var(--sea)");

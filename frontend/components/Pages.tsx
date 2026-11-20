@@ -11,6 +11,7 @@ import { PHOTOS, GALLERY, photoAt } from "@/lib/photos";
 import { WHEEL_EN } from "@/components/Timeline";
 import { tr, dot, SOURCE_NOTES_EN, nm, ad } from "@/lib/ko2en";
 import { Icon, Picto, VERDICT_PICTO } from "@/components/Icon";
+import { PICTO } from "@/lib/mapPicto";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { PlaceTalk } from "@/components/Community";
 import { AiJudge, AiStatus, useJudge, verdictText } from "@/components/AiCards";
@@ -229,9 +230,9 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const fee = feeMain ? (feeMain[0] === "입장료" ? feeMain[1] : `${feeMain[0]} ${feeMain[1]}`) : p.fee ? tr(lang, p.fee) : "";
   const intro = (lang === "ko" ? p.intro_ko || p.tip_ko : p.intro_en || p.tip_en || p.intro_ko) || "";
   const toilet = (p.toilets || [])[0];
-  const pins = [{ lat: p.lat, lon: p.lon, label: name, grade: null, color: "#12355E", icon: "★" },
-    ...(toilet ? [{ lat: toilet.lat, lon: toilet.lon, label: toilet.name, grade: null, color: "#2462B4", icon: dot(lang, "화"), sub: L("장애인 화장실", "Accessible toilet") }] : []),
-    ...(n.parking?.lat ? [{ lat: n.parking.lat, lon: n.parking.lon, label: n.parking.name, grade: null, color: "#566275", icon: "P", sub: L("주차장", "Parking") }] : [])].filter((x) => x.lat);
+  const pins = [{ lat: p.lat, lon: p.lon, label: name, grade: null, color: "#12355E", icon: "★", picto: "place" },
+    ...(toilet ? [{ lat: toilet.lat, lon: toilet.lon, label: toilet.name, grade: null, color: "#2462B4", icon: dot(lang, "화"), picto: "toilets", sub: L("장애인 화장실", "Accessible toilet") }] : []),
+    ...(n.parking?.lat ? [{ lat: n.parking.lat, lon: n.parking.lon, label: n.parking.name, grade: null, color: "#566275", icon: "P", picto: "parking", sub: L("주차장", "Parking") }] : [])].filter((x) => x.lat);
   const segSources = Array.from(new Set(segs.map((s) => s.source).filter((x: string) => x && x !== "예시")));
   const gallery = (GALLERY[p.id] || []).slice(0, 3);
 
@@ -543,7 +544,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
           const shownP = allP || key || freeOnly || origin ? rows : rows.slice(0, 6);
           const top: string[] = origin ? rows.filter((r: any) => r.dist != null).slice(0, 3).map((r: any) => r.name) : [];
           const km = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
-          const pinsP = (origin ? rows.slice(0, 8) : rows).filter((r: any) => r.lat).map((r: any) => ({ lat: r.lat, lon: r.lon, label: nm(lang, r.name), grade: null, color: top.includes(r.name) ? "#A45400" : "#566275", icon: "P",
+          const pinsP = (origin ? rows.slice(0, 8) : rows).filter((r: any) => r.lat).map((r: any) => ({ lat: r.lat, lon: r.lon, label: nm(lang, r.name), grade: null, color: top.includes(r.name) ? "#A45400" : "#566275", icon: "P", picto: "parking",
             sub: [r.dist != null ? km(r.dist) : "", r.spaces ? `${r.spaces}${L("면", " spaces")}` : "", r.disabled ? L("장애인 차량 요금 면제", "Free with disabled permit") : ""].filter(Boolean).join(" · "), addr: ad(lang, r.road || "") }));
           return (
             <section className="panel tr-sec" id="tr-parking" hidden={open !== "tr-parking"} aria-labelledby="tr-p-h">
@@ -609,14 +610,19 @@ export function TransportPage({ lang }: { lang: Lang }) {
 
 /* ---------------- 편의시설 지도 ---------------- */
 // 순서(사용자 요청): 숙소 → 약국·병원 → 공영주차장 → 관광안내소 → 장애인 화장실 → 전동휠체어 충전기
+// 층마다 같은 틀의 픽토그램(색 원 + 흰 그림, lib/mapPicto.ts). 색은 사이트 색(--sea·--go·--stop·--sun-deep 등)
 const LAYERS = [
   { k: "lodging", ko: "숙소", en: "Places to stay", color: "#6B4FA0", icon: "숙" },
-  { k: "medical", ko: "약국·병원", en: "Pharmacy/clinic", color: "#C9302C", icon: "약" },
+  { k: "medical", ko: "약국·병원", en: "Pharmacy/clinic", color: "#B3261E", icon: "약" },
   { k: "parking", ko: "공영주차장", en: "Public parking", color: "#566275", icon: "P" },
-  { k: "info_centers", ko: "관광안내소", en: "Tourist info", color: "#C46A12", icon: "i" },
+  { k: "info_centers", ko: "관광안내소", en: "Tourist info", color: "#A45400", icon: "i" },
   { k: "toilets", ko: "장애인 화장실", en: "Accessible toilets", color: "#2462B4", icon: "화" },
-  { k: "chargers", ko: "전동휠체어 충전기", en: "Wheelchair chargers", color: "#1E8A3C", icon: "충" },
+  { k: "chargers", ko: "전동휠체어 충전기", en: "Wheelchair chargers", color: "#17692E", icon: "충" },
 ] as const;
+function MapPicto({ k, color, size = 26 }: { k: string; color: string; size?: number }) {
+  return <span className="mpicto" style={{ background: color, width: size, height: size }} aria-hidden="true">
+    <svg viewBox="0 0 24 24" width={Math.round(size * 0.64)} height={Math.round(size * 0.64)} fill="#fff" dangerouslySetInnerHTML={{ __html: PICTO[k] || "" }} /></span>;
+}
 
 export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: string }) {   // initialLayer: #/map/toilets 처럼 한 층만 켜고 열기 (동이 대화에서)
   const L = pick(lang);
@@ -672,7 +678,7 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
     }
     return out.sort((a, b) => a.dm - b.dm);   // 늘 가까운 순 (내 위치, 없으면 동해역에서)
   }, [d0, med, on, me, lang, bar, barOn]);
-  const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon), sub: x.desc, addr: x.road }));
+  const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon), picto: x.layer.k, sub: x.desc, addr: x.road }));
   const unmapped = (d?.toilets || []).filter((t: any) => !t.lat);
   function locate() {
     if (!navigator.geolocation) { setLocMsg(L("이 기기에서는 위치를 쓸 수 없어 동해역에서 가까운 순으로 보여 드려요.", "Location isn't available; sorted from Donghae Station.")); return; }
@@ -692,7 +698,7 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
       <div className="layers chips" role="group" aria-label={L("지도에 보일 것", "Layers")}>
         {LAYERS.map((l) => (
           <button key={l.k} className="chip" aria-pressed={!!on[l.k]} onClick={() => setOn({ ...on, [l.k]: !on[l.k] })}>
-            <span className="dot" style={{ background: l.color }}>{dot(lang, l.icon)}</span>{L(l.ko, l.en)}
+            <MapPicto k={l.k} color={l.color} size={24} />{L(l.ko, l.en)}
           </button>))}
         <button className="chip go" onClick={locate}>{me ? L("내 위치 다시 찾기", "Update my location") : L("내 주변부터 보기", "Nearest first")}</button>
       </div>
@@ -706,7 +712,7 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
             <li key={x.id} id={`f-${i}`} className={sel === x.id ? "sel" : ""}>
               <button className="fac-item" onClick={() => { setSel(x.id); setFocus(i); document.querySelector(".sec .map")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
                 aria-label={L(`${x.name} 지도에서 보기`, `Show ${x.name} on the map`)}>
-                <span className="dot" style={{ background: x.layer.color }}>{dot(lang, x.layer.icon)}</span>
+                <MapPicto k={x.layer.k} color={x.layer.color} size={30} />
                 <div><b>{x.name}</b>{x.dm != null && <span className="muted"> · {dist(x.dm)}</span>}<br /><small className="muted">{x.desc}{x.road ? ` · ${x.road}` : ""}</small></div>
               </button>
             </li>))}
