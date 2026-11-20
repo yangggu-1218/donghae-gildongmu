@@ -33,8 +33,10 @@ type Snap = { course: Course; extras: Record<string, Extra>; cond: Conditions; h
 // 작업2: 큰 버튼 질문 (날짜·시각 → 누구와 → 걸음 → 식사 → 취향)
 const Q = [
   { k: "when", q: "q.when", multi: false, o: [] as string[] },
+  { k: "time", q: "q.time", multi: false, o: ["2시간", "3시간", "4시간", "하루 종일"] },
   { k: "who", q: "q.who", multi: false, o: ["혼자", "연인·친구", "부모님과", "아이와", "단체"] },
   { k: "move", q: "q.move", multi: true, none: "일반", o: ["휠체어", "보행보조기·유모차", "거동 불편 어르신", "일반"] },
+  { k: "need", q: "q.need", multi: true, none: "없어요", o: ["평탄한 길만", "장애인 화장실 우선", "중간에 쉬는 곳", "없어요"] },
   { k: "meal", q: "q.meal", multi: true, none: "상관없어요", o: ["입식", "부드러운 메뉴", "주차 편한 곳", "상관없어요"] },
   { k: "style", q: "q.style", multi: true, o: ["바다 보기", "자연·산책", "산·등산", "카페", "맛집", "역사·문화"] },
 ] as const;
@@ -47,7 +49,31 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
 const nextWd = (wd: number) => plusDays((wd - new Date().getDay() + 7) % 7);
 const TIMES = ["09:00", "10:00", "11:00", "13:00", "14:00"];
-const STEPS = { ko: ["날짜", "누구와", "걸음", "식사", "취향", "출발"], en: ["Date", "Who", "Walking", "Meals", "Style", "Start"] };
+const STEPS = { ko: ["날짜", "시간", "누구와", "걸음", "필요한 것", "식사", "취향", "출발"], en: ["Date", "Time", "Who", "Walking", "Needs", "Meals", "Style", "Start"] };
+const BUDGET: Record<string, number | null> = { "2시간": 120, "3시간": 180, "4시간": 240, "하루 종일": null };
+// 앞 답을 받아 한 줄 반응 + 다음 질문 문장을 그 답에 맞게 (규칙: 빠르고 비용 없음, 자유 입력은 /api/talk)
+const ACK: Record<string, Record<string, string>> = {
+  time: { "2시간": "2시간 안에 돌아오는 코스로 짤게요.", "3시간": "3시간 안에 돌아오는 코스로 짤게요.", "4시간": "4시간 안에 돌아오는 코스로 짤게요.", "하루 종일": "하루 일정으로 짤게요." },
+  who: { "혼자": "혼자 여행이시군요.", "연인·친구": "함께 가는 여행이군요.", "부모님과": "부모님과 함께하는 여행이군요.", "아이와": "아이와 함께하는 여행이군요.", "단체": "단체 여행이군요." },
+  move: { "휠체어": "휠체어로 다닐 수 있는 길만 고를게요.", "보행보조기·유모차": "턱·계단이 없는 길을 먼저 볼게요.", "거동 불편 어르신": "계단·급경사가 있는 곳은 뺄게요.", "일반": "걷는 데 제한 없이 고를게요." },
+};
+function qText(k: string, a: Record<string, string[]>): string | null {
+  const who = a.who?.[0] || "", move = a.move || [];
+  if (k === "move") return who === "혼자" ? "이동할 때 어떤 점이 불편하세요? 고른 조건으로 갈 수 있는 길만 골라요."
+    : who === "부모님과" ? "부모님 걸음은 어떠세요? 고른 조건으로 갈 수 있는 길만 골라요."
+    : who === "아이와" ? "유모차를 쓰시나요? 일행 중 걸음이 불편한 분이 있으면 함께 골라 주세요."
+    : "일행 중 이동이 불편한 분이 있나요? 고른 조건으로 갈 수 있는 길만 골라요.";
+  if (k === "need") return move.includes("휠체어") ? "휠체어로 다닐 때 꼭 필요한 게 있나요? 여러 개 골라도 돼요."
+    : move.includes("보행보조기·유모차") ? "유모차·보행보조기로 다닐 때 필요한 게 있나요? 여러 개 골라도 돼요."
+    : "어르신과 다닐 때 필요한 게 있나요? 여러 개 골라도 돼요.";
+  return null;
+}
+const NEED_OPTS: Record<string, string[]> = {   // 이동 조건마다 다른 선택지 (모두 엔진 조건으로 이어지는 것만)
+  "휠체어": ["평탄한 길만", "장애인 화장실 우선", "중간에 쉬는 곳", "없어요"],
+  "보행보조기·유모차": ["평탄한 길만", "중간에 쉬는 곳", "장애인 화장실 우선", "없어요"],
+  "거동 불편 어르신": ["중간에 쉬는 곳", "평탄한 길만", "장애인 화장실 우선", "없어요"],
+};
+const needOpts = (move: string[] = []) => NEED_OPTS[move.find((m) => NEED_OPTS[m]) || ""] || Q.find((x) => x.k === "need")!.o;
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>("ko");
@@ -226,17 +252,21 @@ export default function Page() {
     setAns({ ...ans, [q.k]: cur });
   }
   function finishQ(next: Record<string, string[]>, chosen: string[]) {
+    const cur = Q[step]?.k;
     let n = step + 1;
     if (kind === "free" && Q[n]?.k === "move") { next = { ...next, move: ["일반"] }; n += 1; }   // 일반 여행: 걸음 질문 건너뜀
+    if (Q[n]?.k === "need" && !(next.move || []).some((m) => NEED_OPTS[m])) { next = { ...next, need: [] }; n += 1; }   // 이동 제약이 없으면 '필요한 것'도 건너뜀
     setAns(next);
-    say({ me: true, text: chosen.map((o) => t(`opt.${o}`)).join(", ") });
+    say({ me: true, text: chosen.map((o) => t(`opt.${o}`)).join(", ") });   // 날짜는 finishWhen 이 이 줄을 바꿔 씀
     setStep(n);
+    const ack = lang === "ko" && cur ? (cur === "move" ? chosen.filter((o) => o !== "일반").map((o) => ACK.move[o]).filter(Boolean)[0] || ACK.move[chosen[0]] : ACK[cur]?.[chosen[0]]) : "";
     if (n === Q.length && !xq) {
       setOffer(true);
-      say({ pose: "ask", text: lang === "ko" ? "조금만 더 여쭤봐도 될까요? 속도·쉬는 곳·하고 싶은 것까지 알면 더 딱 맞는 코스를 짜 드릴게요." : "Can I ask a few more questions? With your pace and interests I can make a better-fitting route." });
+      say({ pose: "ask", text: [ack, lang === "ko" ? "조금만 더 여쭤봐도 될까요? 속도·하고 싶은 것까지 알면 더 맞는 코스를 짤 수 있어요." : "Can I ask a few more questions? With your pace and interests I can make a better-fitting route."].filter(Boolean).join(" ") });
       return;
     }
-    say({ pose: "ask", text: n < Q.length ? t(Q[n].q) : t("q.last") });
+    const qx = n < Q.length ? (lang === "ko" && qText(Q[n].k, next)) || t(Q[n].q) : t("q.last");
+    say({ pose: "ask", text: [ack, qx].filter(Boolean).join(" ") });
   }
   function finishWhen() {
     const d = cond.date || iso(new Date());
@@ -259,9 +289,17 @@ export default function Page() {
   }
   const forkOpen = kind === null && step === 0 && !course && !log.some((m) => m.me);
   const busyOn = (d?: string | null) => Object.entries(crowdMap).filter(([, rows]) => (rows.find((r) => r.date === (d || "").replaceAll("-", ""))?.rate ?? 0) >= 70).map(([id]) => id);
-  const baseCond = (): Conditions => applyExtra({ ...cond, lang, who: ans.who?.[0] || cond.who,
-    move: ans.move ? toMove(ans.move) : cond.move, meal: ans.meal ? ans.meal.filter((x) => x !== "상관없어요") : cond.meal || [],
-    style: ans.style || cond.style }, xa, busyOn(cond.date));
+  const baseCond = (): Conditions => {
+    const need = ans.need || [];
+    const c: Conditions = { ...cond, lang, who: ans.who?.[0] || cond.who,
+      move: ans.move ? toMove(ans.move) : cond.move, meal: ans.meal ? ans.meal.filter((x) => x !== "상관없어요") : cond.meal || [],
+      style: ans.style || cond.style,
+      ...(ans.time ? { budget_min: BUDGET[ans.time[0]] ?? null } : {}),
+      ...(need.includes("평탄한 길만") ? { flat_only: true } : {}),
+      ...(need.includes("중간에 쉬는 곳") ? { rest: true } : {}),
+      ...(need.includes("장애인 화장실 우선") ? { toilet_first: true } : {}) };
+    return applyExtra(c, xa, busyOn(cond.date));
+  };
   function startExtra(yes: boolean) {
     setOffer(false);
     say({ me: true, text: yes ? (lang === "ko" ? "네, 더 물어봐 주세요" : "Yes, ask me more") : (lang === "ko" ? "아니요, 바로 짜 주세요" : "No, plan now") });
@@ -522,12 +560,12 @@ export default function Page() {
 
   // 카카오맵 길찾기 링크: 출발역 → 코스 순서대로 경유(최대 5곳) → 출발역으로 복귀. 자가용은 첫 장소에서 출발
   // 형식: https://map.kakao.com/link/by/car/이름,위도,경도/... (카카오맵 웹 가이드 'URL로 길찾기')
-  const KAKAO_START: Record<string, [number, number]> = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692] };   // engine.py 와 같게
+  const KAKAO_START: Record<string, [number, number]> = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692], "동해종합버스터미널": [37.5213, 129.1137] };   // engine.py 와 같게
   const kakaoRoute = useMemo(() => {
     const pts: [string, number, number][] = (course?.stops || []).filter((s) => places[s.id]?.lat).map((s) => [name(s.id), places[s.id].lat, places[s.id].lon]);
     if (!pts.length) return "";
     const st = KAKAO_START[cond.start];
-    if (st) { const nm = lang === "ko" ? cond.start : cond.start === "동해역" ? "Donghae Station" : "Mukho Station"; pts.unshift([nm, st[0], st[1]]); if (pts.length < 7 && !stay) pts.push([nm, st[0], st[1]]); }
+    if (st) { const nm = lang === "ko" ? cond.start : t(`opt.${cond.start}`); pts.unshift([nm, st[0], st[1]]); if (pts.length < 7 && !stay) pts.push([nm, st[0], st[1]]); }
     if (stay) { if (pts.length >= 7) pts.length = 6; pts.push([stay.name, stay.lat, stay.lon]); }   // 숙소가 있으면 역으로 돌아가는 대신 숙소로
     if (pts.length < 2) return "";
     const seg = pts.slice(0, 7).map(([n, la, lo]) => `${encodeURIComponent(n.replace(/[,/]/g, " "))},${la},${lo}`).join("/");
@@ -562,9 +600,9 @@ export default function Page() {
   // 경로 지도의 점: 출발역 → 장소들 → 출발역 (gangRG님)
   const routePoints = useMemo(() => {
     if (!course?.stops.length || course.stops.some((s) => !places[s.id]?.lat || !places[s.id]?.lon)) return [];
-    const mukho = cond.start === "묵호역";
-    const station = { id: "@start", label: lang === "ko" ? (mukho ? "묵호역" : "동해역") : (mukho ? "Mukho Station" : "Donghae Station"),
-      lat: course.start_point?.[0] ?? (mukho ? 37.546824 : 37.498198), lon: course.start_point?.[1] ?? (mukho ? 129.107692 : 129.123794), grade: null };
+    const sp = KAKAO_START[cond.start] || KAKAO_START["동해역"];
+    const station = { id: "@start", label: cond.start === "자가용" ? t("opt.동해역") : t(`opt.${cond.start}`),
+      lat: course.start_point?.[0] ?? sp[0], lon: course.start_point?.[1] ?? sp[1], grade: null };
     return [station, ...course.stops.map((s) => ({ id: s.id, lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: null })), station];
   }, [course, places, cond.start, lang]);
   const stopIndex = Math.max(0, course?.stops.findIndex((s) => s.id === mapStop) ?? 0);
@@ -773,7 +811,7 @@ export default function Page() {
             {step === 0 && !forkOpen && whenPicker(finishWhen, t("plan.next"))}
             {step > 0 && step < Q.length && (
               <div className="chips big-chips">
-                {q.o.map((o) => <button key={o} className="chip" aria-pressed={q.multi ? (ans[q.k] || []).includes(o) : undefined} onClick={() => pick(o)}>{t(`opt.${o}`)}</button>)}
+                {(q.k === "need" ? needOpts(ans.move) : q.o).map((o) => <button key={o} className="chip" aria-pressed={q.multi ? (ans[q.k] || []).includes(o) : undefined} onClick={() => pick(o)}>{t(`opt.${o}`)}</button>)}
                 {q.multi && <button className="chip go" disabled={!(ans[q.k] || []).length} onClick={() => (ans[q.k] || []).length && finishQ(ans, ans[q.k])}>{t("plan.next")}</button>}
               </div>
             )}
@@ -798,7 +836,16 @@ export default function Page() {
                     {DAY_GROUPS.map((g) => <optgroup key={g.ko} label={lang === "ko" ? g.ko : g.en}>
                       {g.opts.map(([v]) => <option key={v} value={v}>{t(`opt.${v}`)}</option>)}</optgroup>)}
                   </select></label>
-                {(["동해역", "묵호역", "자가용"] as const).map((s) => <button key={s} className="chip" aria-pressed={cond.start === s} onClick={() => setCond({ ...cond, start: s })}>{t(`opt.${s}`)}</button>)}
+                <div className="go-how" role="group" aria-label={lang === "ko" ? "이동 방법" : "How you travel"}>
+                  <span className="go-k">{lang === "ko" ? "이동 방법" : "Travel by"}</span>
+                  <button className="chip" aria-pressed={cond.start === "자가용"} onClick={() => setCond({ ...cond, start: "자가용" })}>{t("opt.자가용")}</button>
+                  <button className="chip" aria-pressed={cond.start !== "자가용"} onClick={() => cond.start === "자가용" && setCond({ ...cond, start: "동해역" })}>{lang === "ko" ? "대중교통·택시" : "Transit / taxi"}</button>
+                </div>
+                {cond.start !== "자가용" && <div className="go-how" role="group" aria-label={lang === "ko" ? "출발하는 곳" : "Starting point"}>
+                  <span className="go-k">{lang === "ko" ? "출발하는 곳" : "Start at"}</span>
+                  {(["동해역", "묵호역", "동해종합버스터미널"] as const).map((s) => <button key={s} className="chip" aria-pressed={cond.start === s} onClick={() => setCond({ ...cond, start: s })}>{t(`opt.${s}`)}</button>)}
+                  <small className="muted go-note">{lang === "ko" ? "장소 사이 이동시간: 차량(택시) 기준 추정 · 버스 시간표·환승·정류장 도보 미포함" : "Times between stops are car/taxi estimates; bus schedules, transfers and walks to stops are not included."}</small>
+                </div>}
                 <input aria-label={t("plan.memo")} placeholder={t("plan.memoPh")} value={cond.memo} onChange={(e) => setCond({ ...cond, memo: e.target.value })} />
                 <button className="chip go" disabled={busy} onClick={make}>{t("plan.make")}</button>
               </div>
@@ -898,6 +945,15 @@ export default function Page() {
                     ))}
                   </div>
                   <p className="muted">{course.back_drive_min != null && <>{t("result.kakaoDrive", { m: course.back_drive_min })} · </>}{t("result.back", { s: startName, t: course.back_at })}</p>
+                  {lang === "ko" && (() => {   // 쓸 수 있는 시간과 예상 소요 비교 (7-3), 대중교통이면 이동시간 기준을 밝힘
+                    const hm = (x: string) => { const [h, m] = x.split(":").map(Number); return h * 60 + m; };
+                    const used = hm(course.back_at) - hm(course.start_time || "10:00");
+                    const budget = ans.time?.[0] ? BUDGET[ans.time[0]] : null;
+                    const f = (m: number) => `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}`;
+                    return <p className={`muted small${budget && used > budget ? " warn-txt" : ""}`}>
+                      {`예상 소요 ${f(used)}${budget ? ` (설정 ${ans.time![0]}${used > budget ? " 초과" : ""})` : ""} · 이동은 차량 기준 추정, 머무는 시간 포함, 휴식 미포함`}
+                      {cond.start !== "자가용" && " · 버스 시간표·환승·정류장 도보 미포함"}</p>;
+                  })()}
                   <RouteCosts course={course} lang={lang} />
                   </>}
                 </section>

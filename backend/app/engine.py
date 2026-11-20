@@ -7,6 +7,7 @@ RANK = {"G": 0, "Y": 1, "R": 2}
 STARTS = {  # 출발점 좌표 (WGS84)
     "동해역": (37.498198, 129.123794),   # 2026-11 역 좌표 바로잡음 (gangRG님)
     "묵호역": (37.546824, 129.107692),
+    "동해종합버스터미널": (37.5213, 129.1137),   # city.py LANDMARKS '동해버스터미널'과 같음
     "자가용": (37.498198, 129.123794),
 }
 START_TIME = 10 * 60   # 10:00 출발 (남은 과제: 사용자가 고르게)
@@ -131,6 +132,8 @@ def score(p: Place, c: Conditions, rain: bool) -> float:
         s += {"평지": 1.5, "완만한경사": 0.5}.get(p.walk_load, 0.0) + (0.5 if p.benches else 0.0)
         if grade_place(p, mode, "오래 걷기 어려움" in c.move) == "Y":
             s -= 3.0
+    if c.toilet_first and any("장애인 화장실" in f for f in p.facilities):
+        s += 1.5
     if p.type in ("식당", "카페"):
         if "부드러운 메뉴" in c.meal and p.soft_menu: s += 2.0
         if "입식" in c.meal and p.table == "입식": s += 1.0     # 혼합보다 완전 입식을 먼저
@@ -325,13 +328,27 @@ def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course
         cur, cur_id = (p.lat or cur[0], p.lon or cur[1]), p.id
         seen.add(p.id)
 
+    def fits(p, dm):
+        """쓸 수 있는 시간(budget_min) 안에 이곳을 들르고 출발점까지 돌아올 수 있는지 (이동·머무는 시간, 휴식 미포함)."""
+        if not c.budget_min:
+            return True
+        arrive = q15(t + dm)
+        _, _, wait = D.open_check(p, wd, arrive, p.stay_min)
+        tt = q15(arrive + wait)
+        end = tt + (q15(tt + p.stay_min) - tt)
+        return q15(end + drive_min((p.lat, p.lon), start)) - t0 <= c.budget_min
+
     def first_open(cands, kind):
-        """지금 위치에서 가까운 순으로, 도착 시각에 영업 중인 첫 곳."""
+        """지금 위치에서 가까운 순으로, 도착 시각에 영업 중이고 쓸 수 있는 시간 안에 드는 첫 곳."""
         best = None
         for p in cands:
             if p.id in seen:
                 continue
             dm = drive(cur_id, cur, p)
+            if not fits(p, dm):
+                if (p.id in c.must or p.id in c.wish) and not any(s["id"] == p.id for s in skipped):
+                    skipped.append({"id": p.id, "name": p.name_ko, "reason": "쓸 수 있는 시간 초과"})
+                continue
             okk, why, wait = D.open_check(p, wd, t + dm, p.stay_min)
             if okk:
                 cost = dm + wait          # 기다리는 시간도 이동 시간처럼 아깝다
@@ -367,6 +384,9 @@ def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course
                 continue
         if not rest:
             if need_lunch and t < 11 * 60 and stops:
+                if c.budget_min and 11 * 60 + 15 - t0 >= c.budget_min:   # 쓸 시간이 점심 전에 끝나면 점심은 빼고 마친다
+                    need_lunch = False
+                    continue
                 # 점심때가 아직 멀면: 일정을 줄여 달라고 한 경우엔 앞 장소에서 여유 있게 머물고,
                 # 아니면 가까운 곳 한 곳으로 시간을 채운다 (한 번만).
                 fill = None if (c.cap is not None or filled) else first_open(spare, "sight")

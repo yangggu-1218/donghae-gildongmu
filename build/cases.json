@@ -150,6 +150,54 @@
    "exclude": [
     "dokkaebi"
    ]
+  },
+  {
+   "date": "2026-11-14",
+   "start_time": "10:00",
+   "budget_min": 180,
+   "style": [
+    "바다 보기"
+   ]
+  },
+  {
+   "move": [
+    "휠체어"
+   ],
+   "date": "2026-11-16",
+   "start_time": "09:00",
+   "budget_min": 120,
+   "start": "자가용"
+  },
+  {
+   "move": [
+    "오래 걷기 어려움",
+    "계단 어려움"
+   ],
+   "date": "2026-11-17",
+   "start_time": "10:00",
+   "start": "동해종합버스터미널",
+   "rest": true
+  },
+  {
+   "move": [
+    "휠체어"
+   ],
+   "must": [
+    "cave"
+   ],
+   "date": "2026-11-18",
+   "start_time": "10:00"
+  },
+  {
+   "move": [
+    "휠체어"
+   ],
+   "date": "2026-11-18",
+   "start_time": "13:00",
+   "budget_min": 240,
+   "must": [
+    "valley"
+   ]
   }
  ],
  "talk": [

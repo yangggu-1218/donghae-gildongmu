@@ -11,11 +11,14 @@ const SLOW_MOVE = ["휠체어", "보행보조기·유모차", "거동 불편 어
 export function buildQuestions(ans: Record<string, string[]>, hasCrowd: boolean): ExtraQ[] {
   const who = ans.who?.[0] || "";
   const move = ans.move || [];
+  const slow = move.some((m) => SLOW_MOVE.includes(m));
   const qs: ExtraQ[] = [
-    { k: "pace", q: ["하루를 어떤 속도로 다니고 싶으세요?", "What pace suits you?"],
-      o: [["slow", "느긋하게 (3곳, 쉬어 가며)", "Relaxed (3 stops, with breaks)"], ["normal", "보통 (4곳)", "Normal (4 stops)"], ["full", "알차게 (5곳)", "Packed (5 stops)"]] },
+    slow ? { k: "pace", q: ["하루를 어떤 속도로 다니고 싶으세요?", "What pace suits you?"],
+      o: [["slow", "느긋하게 (3곳, 쉬어 가며)", "Relaxed (3 stops, with breaks)"], ["normal", "보통 (4곳)", "Normal (4 stops)"], ["full", "알차게 (5곳)", "Packed (5 stops)"]] }
+      : { k: "pace", q: ["어떤 코스가 좋으세요?", "What kind of day?"],
+      o: [["slow", "짧고 편안하게 (3곳)", "Short and easy (3 stops)"], ["normal", "보통 (4곳)", "Normal (4 stops)"], ["full", "많이 걸어도 괜찮아요 (5곳)", "Lots of walking is fine (5 stops)"]] },
   ];
-  if (move.some((m) => SLOW_MOVE.includes(m)) || who === "부모님과") {
+  if ((slow || who === "부모님과") && !ans.need?.length) {   // '필요한 것' 단계에서 이미 답했으면 다시 묻지 않음
     qs.push({ k: "rest", q: ["중간에 앉아 쉬어 갈 카페를 꼭 넣을까요?", "Always add a café to rest?"],
       o: [["yes", "네, 꼭 넣어 주세요", "Yes, please"], ["no", "괜찮아요", "No need"]] });
     qs.push({ k: "flat", q: ["오르막 없이 평지만 다닐까요? 고를 수 있는 곳이 조금 줄어요.", "Flat paths only? (fewer places to choose from)"],

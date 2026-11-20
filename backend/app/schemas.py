@@ -102,7 +102,8 @@ class Conditions(BaseModel):
     @classmethod
     def _days_ok(cls, v):
         return v if v in DAY_OPTS else "당일"
-    start: Literal["동해역", "묵호역", "자가용"] = "동해역"
+    start: Literal["동해역", "묵호역", "동해종합버스터미널", "자가용"] = "동해역"   # 자가용 = 차로 다님, 나머지 = 대중교통·택시 출발점
+    budget_min: Optional[int] = None     # 쓸 수 있는 시간(분). None = 하루 (돌아오는 시각까지 이 안에 들게 장소를 고른다)
     memo: str = ""
     rain: Optional[bool] = None          # None이면 기상청 예보로 판단
     wish: list[str] = Field(default_factory=list)   # 사용자가 담아 둔 장소 id
@@ -116,6 +117,7 @@ class Conditions(BaseModel):
     cap: Optional[int] = None            # 장소 수 (None = 당일 4·1박 6)
     rest: Optional[bool] = None          # 중간에 쉬는 카페 (None = 이동 조건 보고 자동)
     flat_only: bool = False              # 평지만
+    toilet_first: bool = False           # 장애인 화장실 있는 곳을 먼저
     lunch: Optional[str] = None          # 이어서 쓸 점심 식당
     skip_lunch: bool = False             # 식사를 코스에서 뺌
     weather_pref: str = ""               # 날씨 고르기: "" = 예보 보고 자동 / "실내" / "실외"

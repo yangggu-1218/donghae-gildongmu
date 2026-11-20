@@ -2612,3 +2612,9 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .aiw-save { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 12px; }
 .aiw-save label { display: grid; gap: 4px; flex: 1; min-width: 240px; }
 .aiw-save input { min-height: 44px; border-radius: 10px; border: 1.5px solid var(--line-strong); padding: 0 10px; }
+
+/* 코스 마지막 단계: 이동 방법 → 출발하는 곳 (2026-11-20 개선 2단계) */
+.go-how { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+.go-k { font-weight: 700; min-width: 6em; }
+.go-note { flex-basis: 100%; }
+.warn-txt { color: var(--warn); font-weight: 700; }

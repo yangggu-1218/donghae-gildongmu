@@ -31,7 +31,7 @@ export function TripSettings({ conditions, busy, t, onApply, onCancel }: Props) 
         <label>{tr("여행 날짜", "Visit date")}<input required type="date" value={draft.date || ""} onChange={e => setDraft({ ...draft, date: e.target.value })} /></label>
         <label>{tr("출발 시각", "Departure time")}<input required type="time" value={draft.start_time || ""} onChange={e => setDraft({ ...draft, start_time: e.target.value })} /></label>
         <label>{tr("출발 장소", "Starting point")}<select value={draft.start} onChange={e => setDraft({ ...draft, start: e.target.value as Conditions["start"] })}>
-          {["동해역", "묵호역", "자가용"].map(s => <option key={s} value={s}>{t("opt." + s)}</option>)}</select></label>
+          {["동해역", "묵호역", "동해종합버스터미널", "자가용"].map(s => <option key={s} value={s}>{t("opt." + s)}</option>)}</select></label>
         <label>{tr("동행", "Travel party")}<select value={draft.who} onChange={e => setDraft({ ...draft, who: e.target.value })}>
           {["혼자","부모님과","아이와","연인·친구","단체"].map(s => <option key={s} value={s}>{t("opt." + s)}</option>)}</select></label>
       </div></div>

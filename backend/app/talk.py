@@ -24,7 +24,7 @@ TOOLS = [
      "input_schema": {"type": "object", "properties": {
          "who": {"type": "string", "enum": WHO}, "move": {"type": "array", "items": {"type": "string", "enum": MOVE}},
          "move_none": {"type": "boolean"}, "style": {"type": "array", "items": {"type": "string", "enum": STYLE}},
-         "days": {"type": "string", "enum": list(DAY_OPTS)}, "start": {"type": "string", "enum": ["동해역", "묵호역", "자가용"]},
+         "days": {"type": "string", "enum": list(DAY_OPTS)}, "start": {"type": "string", "enum": ["동해역", "묵호역", "동해종합버스터미널", "자가용"]},
          "rain": {"type": "boolean"}, "memo": {"type": "string"},
          "date": {"type": "string", "description": "여행 날짜 YYYY-MM-DD. [현재 상태]의 today를 기준으로 '이번 주 금요일' 같은 말을 날짜로 바꾼다"},
          "start_time": {"type": "string", "description": "출발 시각 HH:MM"},
@@ -102,7 +102,7 @@ class Session:
         if move_none: self.c.move = []; self.state["move_known"] = True
         if style: self.c.style = [s for s in style if s in STYLE]
         if days in DAY_OPTS: self.c.days = days
-        if start in ("동해역", "묵호역", "자가용"): self.c.start = start
+        if start in ("동해역", "묵호역", "동해종합버스터미널", "자가용"): self.c.start = start
         if rain is not None: self.c.rain = bool(rain)
         if memo: self.c.memo = memo[:200]
         if date and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(date)):
@@ -335,6 +335,9 @@ ZONE_KW = [("mukho", "묵호|도째비"), ("chuam", "추암|촛대"), ("mureung"
 SAY = {
     "ko": {"ask_who": "누구랑 오셨어요? 편하게 말씀해 주세요.",
            "ask_move": "혹시 휠체어, 유모차를 쓰시거나 오래 걷기 힘든 분이 계세요? 없으면 '없어요'라고 해 주세요.",
+           "ask_move_혼자": "혼자 여행이시군요. 이동할 때 휠체어·보행보조기를 쓰시거나 오래 걷기 힘드신가요? 없으면 '없어요'라고 해 주세요.",
+           "ask_move_부모님과": "부모님과 함께하시는군요. 부모님 걸음은 어떠세요? 휠체어·보행보조기를 쓰시거나 계단이 힘드시면 말씀해 주세요.",
+           "ask_move_아이와": "아이와 함께하시는군요. 유모차를 쓰시나요? 일행 중 걸음이 불편한 분이 있으면 함께 말씀해 주세요.",
            "made": "조건에 맞춰 {n}곳으로 코스를 짰어요.{caution} 바꾸고 싶은 게 있으면 말씀해 주세요.",
            "remade": "말씀하신 대로 코스를 다시 짰어요.{caution}",
            "caution": " 주의할 곳이 {k}곳 있으니 카드를 확인해 주세요.",
@@ -400,12 +403,13 @@ def _rule(s: Session, message: str) -> dict:
                      meal=[m for m, pattern in [("입식", r"입식|의자식"), ("주차 편한 곳", r"주차.{0,4}편"), ("부드러운 메뉴", r"부드러운")] if re.search(pattern, low)] or None,
                      days=days_from(low),
                      start=("묵호역" if re.search(r"묵호역|mukho st", low) else "동해역" if re.search(r"동해역|donghae st", low)
+                           else "동해종합버스터미널" if re.search(r"터미널|bus terminal", low)
                            else "자가용" if re.search(r"차로|자가용|운전|by car|driving", low) else None),
                      rain=True if llm.RAIN.search(message) else None)
     if not s.state.get("who_known") and not who and not s.course_ids:
         return s.result(L["ask_who"], "rule")
-    if not s.state.get("move_known"):
-        return s.result(L["ask_move"], "rule")
+    if not s.state.get("move_known"):   # 방금 들은 '누구와'에 맞춰 반응 한 줄 + 걸음 질문
+        return s.result(L.get(f"ask_move_{s.c.who}", L["ask_move"]) if who else L["ask_move"], "rule")
     if not s.course_ids or re.search(GO, low) or who or move or style:
         s.make_course()
         return s.result(_made(s, L), "rule")

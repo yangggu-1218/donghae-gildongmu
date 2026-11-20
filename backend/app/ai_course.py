@@ -273,5 +273,10 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool, hint: str = "") ->
         why = f"AI 코스에 카카오 실제 이동시간을 넣으니 '{issue['name']}'에 {issue['reason']} — 규칙 코스로 바꿨어요"
         ai.LAST["course"] = {"why": why, "at": __import__("time").strftime("%Y-%m-%d %H:%M:%S")}
         return None, {"reason": why}
+    used = engine._mins(course.back_at) - engine._mins(course.start_time)
+    if c.budget_min and used > c.budget_min:
+        why = f"AI 코스가 쓸 수 있는 시간({c.budget_min // 60}시간)을 넘어 규칙 코스로 바꿨어요"
+        ai.LAST["course"] = {"why": why, "at": __import__("time").strftime("%Y-%m-%d %H:%M:%S")}
+        return None, {"reason": why}
     course.notes = notes
     return course, {"by": "ai", "model": ai.model_for("course"), "summary": str(data.get("summary") or "")[:200], "problems": problems}

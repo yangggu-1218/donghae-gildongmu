@@ -28,7 +28,7 @@ export const DAY_GROUPS: { ko: string; en: string; opts: [string, number][] }[] 
 export const tripDays = (d: string) => DAY_GROUPS.flatMap((g) => g.opts).find(([v]) => v === d)?.[1] || 1;
 export type Conditions = {
   who: string; move: string[]; style: string[]; days: string; day_no?: number;
-  start: "동해역" | "묵호역" | "자가용"; memo: string; wish: string[]; must?: string[]; rain?: boolean | null; lang: "ko" | "en";
+  start: "동해역" | "묵호역" | "동해종합버스터미널" | "자가용"; budget_min?: number | null; toilet_first?: boolean; memo: string; wish: string[]; must?: string[]; rain?: boolean | null; lang: "ko" | "en";
   date?: string | null; start_time?: string; meal?: string[]; exclude?: string[]; cap?: number | null; rest?: boolean | null;
   flat_only?: boolean; lunch?: string | null; skip_lunch?: boolean; weather_pref?: "" | "실내" | "실외";
 };

@@ -140,7 +140,7 @@ export function makeApi(DATA) {
 
   // ---------- engine.py ----------
   const RANK = { G: 0, Y: 1, R: 2 };
-  const STARTS = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692], "자가용": [37.498198, 129.123794] };   // engine.py 와 같게 (2026-11 바로잡음)
+  const STARTS = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692], "동해종합버스터미널": [37.5213, 129.1137], "자가용": [37.498198, 129.123794] };   // engine.py 와 같게 (2026-11 바로잡음)
   const worst = (gs) => { gs = gs.filter(Boolean); return gs.length ? gs.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null; };
   function gradeSegment(s, mode) {
     const measured = [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null);
@@ -198,6 +198,7 @@ export function makeApi(DATA) {
       s += ({ "평지": 1.5, "완만한경사": 0.5 }[p.walk_load] || 0) + (p.benches ? 0.5 : 0);
       if (gradePlace(p, mode, c.move.includes("오래 걷기 어려움")) === "Y") s -= 3.0;
     }
+    if (c.toilet_first && (p.facilities || []).some((f) => f.includes("장애인 화장실"))) s += 1.5;
     if (["식당", "카페"].includes(p.type)) {
       if (c.meal.includes("부드러운 메뉴") && p.soft_menu) s += 2.0;
       if (c.meal.includes("입식") && p.table === "입식") s += 1.0;
@@ -335,11 +336,22 @@ export function makeApi(DATA) {
       t += stay; cur = [p.lat || cur[0], p.lon || cur[1]]; seen.add(p.id);
     };
     const REASON = { break: "브레이크타임", after_last_entry: "마지막 입장 시간이 지남", not_open_yet: "아직 문을 열기 전" };
+    const fits = (p, dm) => {   // engine.fits 와 같게: 쓸 수 있는 시간 안에 들르고 돌아올 수 있는지
+      if (!c.budget_min) return true;
+      const arrive = q15(t + dm); const [, , wait] = openCheck(p, wd, arrive, p.stay_min);
+      const tt = q15(arrive + wait); const end = tt + (q15(tt + p.stay_min) - tt);
+      return q15(end + driveMin([p.lat, p.lon], start)) - t0 <= c.budget_min;
+    };
     const firstOpen = (cands) => {
       let best = null;
       for (const p of cands) {
         if (seen.has(p.id)) continue;
-        const dm = drive(cur, p); const [okk, why, wait] = openCheck(p, wd, t + dm, p.stay_min);
+        const dm = drive(cur, p);
+        if (!fits(p, dm)) {
+          if ((c.must.includes(p.id) || c.wish.includes(p.id)) && !skipped.some((s) => s.id === p.id)) skipped.push({ id: p.id, name: p.name_ko, reason: "쓸 수 있는 시간 초과" });
+          continue;
+        }
+        const [okk, why, wait] = openCheck(p, wd, t + dm, p.stay_min);
         if (okk) { const cost = dm + wait; if (!best || cost < best[0]) best = [cost, p]; continue; }
         if ((c.must.includes(p.id) || p.id === c.lunch || c.wish.includes(p.id)) && !skipped.some((s) => s.id === p.id))
           skipped.push({ id: p.id, name: p.name_ko, reason: REASON[why] || why });
@@ -362,6 +374,7 @@ export function makeApi(DATA) {
       }
       if (!rest.length) {
         if (needLunch && t < 660 && stops.length) {
+          if (c.budget_min && 675 - t0 >= c.budget_min) { needLunch = false; continue; }
           const fill = (c.cap != null || filled) ? null : firstOpen(spare);
           filled = true;
           if (fill) { spare.splice(spare.indexOf(fill), 1); visit(fill, "sight"); notes.push(`점심때까지 시간이 남아 ${josa(fill.name_ko, "을를")} 넣었어요.`); continue; }
@@ -686,7 +699,7 @@ export function makeApi(DATA) {
     return { taxi: taxiAtStart(c.start), city_tour: cityTour(ids), rentals: rentalsNear(xy[0], xy[1]), mobility_center: c.move.includes("휠체어") ? mobilityCenter() : null };
   }
   // ---------- 차 없이 다니기 (public_data.transit 과 같은 규칙) ----------
-  const TRANSIT_STARTS = { "동해역": [37.4995, 129.1240], "묵호역": [37.5480, 129.1160], "자가용": [37.4995, 129.1240] };
+  const TRANSIT_STARTS = { "동해역": [37.4995, 129.1240], "묵호역": [37.5480, 129.1160], "동해종합버스터미널": [37.5213, 129.1137], "자가용": [37.4995, 129.1240] };
   const B_MUREUNG = ["12-4", "13-1"], B_CAVE = ["21-1", "21-3", "32-1"], B_MANGSANG = ["31-3", "51-1"], B_CHUAM = ["61"], B_MUKHO = ["12-4", "21-1", "21-3", "32-1"];
   const BUS_2019 = { ...Object.fromEntries(["valley", "samhwasa", "yongchu", "forest", "food_kkotsan", "cafe_estmare", "food_boribat"].map((i) => [i, B_MUREUNG])),
     cave: B_CAVE, ...Object.fromEntries(["mangsang", "mangsang_camp"].map((i) => [i, B_MANGSANG])),
@@ -759,6 +772,9 @@ export function makeApi(DATA) {
   const ZONE_KW = [["mukho", /묵호|도째비/], ["chuam", /추암|촛대/], ["mureung", /무릉|삼화/], ["mangsang", /망상/], ["cheongok", /천곡|동굴/]];
   const SAY = {
     ko: { ask_who: "누구랑 오셨어요? 편하게 말씀해 주세요.", ask_move: "혹시 휠체어, 유모차를 쓰시거나 오래 걷기 힘든 분이 계세요? 없으면 '없어요'라고 해 주세요.",
+      "ask_move_혼자": "혼자 여행이시군요. 이동할 때 휠체어·보행보조기를 쓰시거나 오래 걷기 힘드신가요? 없으면 '없어요'라고 해 주세요.",
+      "ask_move_부모님과": "부모님과 함께하시는군요. 부모님 걸음은 어떠세요? 휠체어·보행보조기를 쓰시거나 계단이 힘드시면 말씀해 주세요.",
+      "ask_move_아이와": "아이와 함께하시는군요. 유모차를 쓰시나요? 일행 중 걸음이 불편한 분이 있으면 함께 말씀해 주세요.",
       made: "조건에 맞춰 {n}곳으로 코스를 짰어요.{caution} 바꾸고 싶은 게 있으면 말씀해 주세요.", remade: "말씀하신 대로 코스를 다시 짰어요.{caution}",
       caution: " 주의할 곳이 {k}곳 있으니 카드를 확인해 주세요.", help: "찾아봤어요. 아래 카드를 확인해 주세요.",
       none: "비, 덜 걷기, 장소 넣기·빼기를 말씀해 주시거나 충전기·안내소·숙소 같은 걸 물어봐 주세요.",
@@ -855,11 +871,12 @@ export function makeApi(DATA) {
       const meal = [["입식", /입식|의자식/], ["주차 편한 곳", /주차.{0,4}편/], ["부드러운 메뉴", /부드러운/]].filter(([, r]) => r.test(low)).map(([m]) => m);
       if (meal.length) c.meal = meal;
     }
-    const start = /묵호역|mukho st/.test(low) ? "묵호역" : /동해역|donghae st/.test(low) ? "동해역" : /차로|자가용|운전|by car|driving/.test(low) ? "자가용" : null;
+    const start = /묵호역|mukho st/.test(low) ? "묵호역" : /동해역|donghae st/.test(low) ? "동해역" : /터미널|bus terminal/.test(low) ? "동해종합버스터미널"
+      : /차로|자가용|운전|by car|driving/.test(low) ? "자가용" : null;
     if (start) c.start = start;
     if (RAIN.test(message)) c.rain = true;
     if (!state.who_known && !who && !courseIds.length) return result(L.ask_who);
-    if (!state.move_known) return result(L.ask_move);
+    if (!state.move_known) return result(who ? (L[`ask_move_${c.who}`] || L.ask_move) : L.ask_move);   // talk.py 와 같게
     if (!courseIds.length || GO.test(low) || who || move.length || style.length) { setRes(plan(PLACES, c, rainFor(c))); return result(made(false)); }
     return result(L.none);
   }
