@@ -7,11 +7,12 @@ import { api } from "@/lib/api";
 import { Icon } from "@/components/Icon";
 import { SourcesPage } from "@/components/Pages";
 import { CityAdmin } from "@/components/CityAdmin";
+import { SyncAdmin } from "@/components/SyncAdmin";
 
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
 // 위에 늘 보이는 탭 = 운영할 때 매일 쓰는 것. 가끔 쓰는 것은 [더 보기] 안에 (기능은 그대로)
-const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보·민원", "reports"], ["inquiries", "문의", "reports"], ["aiprops", "AI 제안", "reports"], ["aiset", "AI 설정", "reports"],
+const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보·민원", "reports"], ["inquiries", "문의", "reports"], ["aiprops", "AI 제안", "reports"], ["aiset", "AI 설정", "reports"], ["sync", "자동 갱신", "place"],
   ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
 const MAIN_TABS = new Set(["home", "place", "notice", "site", "reports", "inquiries", "aiprops"]);
 type TabKey = (typeof TABS)[number][0];
@@ -20,7 +21,7 @@ const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·
 const LEVEL: Record<string, string> = { closed: "임시 휴무 (코스에서 빠짐)", warn: "주의 (공사·우회 등)", info: "안내" };
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const ACTION: Record<string, string> = { place: "장소 정보 수정", notice_add: "알림 올림", notice_remove: "알림 내림", banner: "공지 배너", event_add: "행사 추가",
-  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경", ai_models: "AI 모델 설정", city_settings: "제보 담당 부서", contact_view: "제보자 연락처 확인" };
+  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경", ai_models: "AI 모델 설정", city_settings: "제보 담당 부서", contact_view: "제보자 연락처 확인", sync_rules: "자동 갱신 설정", eatery_hide: "폐업 의심 식당 숨김" };
 const STATUS = ["접수", "확인", "처리 중", "완료", "반려", "중복"];   // 예전 '확인 중'·'반영'은 서버가 '확인'·'완료'로 읽음
 const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
@@ -148,6 +149,7 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
       {tab === "reports" && <CityAdmin tok={tok} call={call} onExpired={onExpired} can={can} Legacy={<Reports tok={tok} call={call} onExpired={onExpired} canNotice={can("notice")} />} />}
       {tab === "inquiries" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
       {tab === "aiprops" && <AiProposals tok={tok} call={call} onExpired={onExpired} can={can} />}
+      {tab === "sync" && <SyncAdmin tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "aiset" && <AiSettings tok={tok} call={call} onExpired={onExpired} isOwner={can("accounts")} />}
       {tab === "sources" && <SourcesPage lang="ko" />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}

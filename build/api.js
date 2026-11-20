@@ -1162,6 +1162,11 @@ export function makeApi(DATA) {
       return { clusters: cls, cats: CR_CATS, sev: { block: "지나갈 수 없음", help: "도움이 있어야 지나감", minor: "불편함" }, pri: { urgent: "긴급", high: "높음", normal: "보통", low: "낮음" },
         depts: CR_DEPTS, statuses: ["접수", "확인", "처리 중", "완료", "반려", "중복"], sample_loaded: false, persistent: true, ai: false, demo: true };
     }
+    if (path.startsWith("/api/admin/sync")) {   // 자동 갱신(docs/20_AUTO_SYNC.md): 데모에는 서버가 없어 연결 안 됨
+      demoCheck(q.__token, "place");
+      if (path === "/api/admin/sync" && method === "GET") return { pending: [], log: [], sources: [], rules: {}, defaults: {}, groups: {}, locked: [], token_set: false, allow: [], suspect: [], hidden: [], demo: true };
+      throw new Error("400:데모에는 서버가 없어 자동 갱신이 연결되어 있지 않아요.");
+    }
     if (path.startsWith("/api/admin/city")) { demoCheck(q.__token, "reports"); throw new Error("400:데모에서는 제보 처리·가상 데이터·백업을 할 수 없어요. 서버가 있는 실제 사이트에서 써 주세요."); }
     if (path === "/api/inquiries" && method === "POST") {
       const text = (body.text || "").trim();

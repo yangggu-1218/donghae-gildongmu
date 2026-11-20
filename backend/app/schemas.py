@@ -49,6 +49,7 @@ class Place(BaseModel):
     sample: bool = False                 # 예시 데이터 표시
     # 공공데이터(파일데이터)에서 채우는 값 — backend/app/public_data.py
     address: str = ""
+    homepage: str = ""                   # 공식 홈페이지 주소 (자동 갱신이 공식 API에서 채움)
     coord_source: str = ""               # 좌표 출처 (비어 있으면 추정 좌표)
     intro_source: str = ""
     about: list[dict] = Field(default_factory=list)   # 장소 소개 묶음 [{t:[ko,en], i:[[ko,en],...]}]

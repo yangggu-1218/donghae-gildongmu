@@ -1,0 +1,66 @@
+{
+ "items": [
+  {
+   "place_id": "cave",
+   "field": "phone",
+   "value": "033-539-3700",
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "tel: 033-539-3700"
+  },
+  {
+   "place_id": "cave",
+   "field": "address",
+   "value": "강원특별자치도 동해시 동굴로 50",
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "addr1: 강원특별자치도 동해시 동굴로 50"
+  },
+  {
+   "place_id": "nongol",
+   "field": "coord",
+   "value": [
+    37.55243,
+    129.1183
+   ],
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "mapy,mapx: 37.55243,129.11830"
+  },
+  {
+   "place_id": "haeamjeong",
+   "field": "coord",
+   "value": [
+    37.4801,
+    129.1591
+   ],
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "mapy,mapx: 37.48010,129.15910"
+  },
+  {
+   "place_id": "mureung",
+   "field": "hours",
+   "value": "09:00~18:00",
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "usetime: 09:00~18:00"
+  },
+  {
+   "place_id": "pencil_museum",
+   "field": "hours",
+   "value": "10:00~17:00",
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "usetime: 10:00~17:00"
+  },
+  {
+   "place_id": "haeamjeong",
+   "field": "access.wheelchair",
+   "value": "가능",
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "wheelchair: 대여 가능"
+  },
+  {
+   "place_id": "pencil_museum",
+   "field": "phone",
+   "value": "033-532-1011",
+   "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=FAKE",
+   "evidence": "tel: 033-532-1011"
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+{
+ "note": "2단계(공식 홈페이지 AI 추출)에서 읽어도 되는 도메인. 여기 없는 곳은 읽지 않는다. robots.txt 를 지키고 같은 도메인은 5초 간격.",
+ "domains": [
+  "dh.go.kr",
+  "www.dh.go.kr",
+  "visitkorea.or.kr",
+  "korean.visitkorea.or.kr",
+  "access.visitkorea.or.kr",
+  "data.go.kr"
+ ]
+}

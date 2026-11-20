@@ -1984,3 +1984,76 @@ details.pp2-know > summary h2 { margin: 0; }
   .top, .tabbar, .quick, .admin-tabs, .ca-views, .ca-warn, .no-print, .admin-who, .site-notes, .foot, .chat-fab { display: none !important; }
   .ca-ai-rep, .ca-kpi { break-inside: avoid; }
 }
+
+/* =====================================================================
+   2026-11-21 관광지 상세 다시 정리 (pp3): 판정 한 줄 · 이용 정보 띠 · 같은 정보는 한 번만
+   ===================================================================== */
+.pp3 { display: grid; gap: 14px; }
+.pp3 > * { margin: 0; }
+.pp3-news { display: grid; gap: 6px; }
+.pp3-news .pp-notice { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 0; }
+.pp3-news .pp-notice p { flex-basis: 100%; margin: 0; }
+.pp3-verdict { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 6px; padding: 8px 12px; border-radius: var(--r-m); background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line-strong); font-size: 1.02em; line-height: 1.45; }
+.pp3-verdict .picto { margin-top: .05em; }
+.pp3-verdict.v-G { border-left-color: var(--go); } .pp3-verdict.v-Y { border-left-color: var(--sun-deep); } .pp3-verdict.v-R { border-left-color: var(--stop); }
+.pp3-strip { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: .95em; font-weight: 600; }
+.pp3-strip li { display: inline-flex; align-items: center; gap: 5px; }
+.pp3-strip li[title] { cursor: help; }
+.pp3-strip .ic { width: 17px; height: 17px; color: var(--sea); }
+.pp3-note { margin: 0 0 6px; }
+.pp2-intro.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0; }
+.pp3 .pp2-hero-txt .link-btn { align-self: flex-start; margin: 0 0 6px; }
+.pp3-thumbs { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pp3-thumbs li { aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; }
+.pp3-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pp3-thumbs figcaption, .pp3-thumbs .credit { display: none; }
+.pp3-h-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pp3-h-row h2 { margin: 0; }
+.pp3-h-row .badge[title] { cursor: help; }
+.aj-more { margin-top: 6px; }
+.aj-more summary, .pp2-more summary, .pp3-src summary { cursor: pointer; color: var(--sea-deep); font-weight: 600; min-height: 40px; display: flex; align-items: center; }
+.aj-more .tl-badges { margin: 6px 0; }
+.pp3-segs { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.pp3-segs li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 7px 10px; background: var(--mist); border-radius: 10px; }
+.pp3-segs li[title] { cursor: help; }
+.pp3-seg-n { font-weight: 700; }
+.pp3-segs .badge { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+.pp3-near .map { height: 200px; }
+.pp3-near { grid-template-columns: minmax(0, 1fr); }
+.pp3-src summary h2, .pp2-know summary h2 { margin: 0; }
+.pp3-src { padding-block: 6px; }
+.pp3-src ul { margin: 6px 0 4px; padding-left: 1.1em; display: grid; gap: 4px; }
+.pp3-src summary { list-style: none; } .pp3-src summary::-webkit-details-marker { display: none; }
+.pp3-src summary::after { content: "▾"; margin-left: auto; color: var(--sea-deep); }
+.pp3-src[open] summary::after { content: "▴"; }
+.clamp2-box ul { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding-left: 0; list-style: none; }
+.clamp2-box li { display: inline; } .clamp2-box li + li::before { content: " "; }
+.pp2-days .pp2-line { margin: 4px 0; }
+.cm-acts { align-items: center; margin-top: 8px; }
+@media (max-width: 600px) {
+  .pp3-verdict { font-size: .97em; }
+  .pp3-strip { gap: 4px 10px; font-size: .9em; }
+  .pp3-segs .badge { margin-left: 0; }
+}
+.pp3 .pp2-hero-img { aspect-ratio: auto; overflow: visible; background: none; border-radius: 0; }
+.pp3-main { position: relative; border-radius: 22px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--mist); }
+.pp3-main .ph, .pp3-main > img, .pp3-main > .pp2-noimg { position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; }
+.pp3-thumbs .ph { position: static; width: 100%; height: 100%; margin: 0; }
+@media (max-width: 700px) { .pp3 .pp2-row.two .pp2-near { grid-template-columns: minmax(0, 1fr); } }
+
+/* 관리자 [자동 갱신] (docs/20_AUTO_SYNC.md) */
+.sy { display: grid; gap: 12px; }
+.sy-list, .sy-src { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sy-item { display: grid; gap: 6px; padding: 12px 14px; }
+.sy-top, .sy-src-top { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.sy-top .badge:last-child { margin-left: auto; cursor: help; }
+.sy-src-top .chip { margin-left: auto; }
+.sy-diff { margin: 0; font-size: 1.02em; }
+.sy-old { text-decoration: line-through; color: var(--muted); }
+.sy-new { color: var(--go); }
+.sy-ev { margin: 0; font-size: .92em; } .sy-ev small { color: var(--muted); margin-right: 4px; }
+.sy-ev mark { background: var(--warn-bg); color: var(--ink); padding: 1px 4px; border-radius: 4px; }
+.sy-opts { display: grid; gap: 4px; } .sy-opts p { margin: 0; }
+.sy-edit { display: grid; gap: 4px; font-size: .9em; font-weight: 600; max-width: 360px; }
+.sy-src .panel { padding: 10px 12px; } .sy-src p { margin: 4px 0 0; }
+.sy-log td { vertical-align: top; font-size: .9em; }

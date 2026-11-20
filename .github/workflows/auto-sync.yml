@@ -1,0 +1,36 @@
+# 자동 정보 갱신 예약 실행 (docs/20_AUTO_SYNC.md 5장)
+# Render Free 서버는 잠들고 서버 안 예약 실행을 믿을 수 없어서, GitHub Actions가 정해진 시각에 보호된 관리자 주소를 부른다.
+# 준비(팀장): GitHub 저장소 Settings › Secrets and variables › Actions 에
+#   - SYNC_TOKEN : Render 환경변수 SYNC_TOKEN 과 같은 값 (긴 무작위 문자열, 코드·채팅에 쓰지 않기)
+#   - SYNC_URL   : 사이트 주소 (예: https://donghae-gildongmu.onrender.com)
+# 두 값이 없으면 아무것도 하지 않고 끝난다.
+name: auto-sync
+
+on:
+  schedule:
+    - cron: "0 19 * * *"     # 매일 04:00 (한국 시간) — 공식 관광 API·공식 홈페이지
+    - cron: "30 19 * * 0"    # 월요일 04:30 (한국 시간) — 표준데이터·인허가
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "all | daily | weekly"
+        default: "daily"
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Run auto-sync
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SYNC_URL: ${{ secrets.SYNC_URL }}
+          SCOPE: ${{ github.event.inputs.scope || (github.event.schedule == '30 19 * * 0' && 'weekly' || 'daily') }}
+        run: |
+          if [ -z "$SYNC_TOKEN" ] || [ -z "$SYNC_URL" ]; then echo "SYNC_TOKEN/SYNC_URL 비밀값이 없어 건너뜀"; exit 0; fi
+          # 잠든 서버 깨우기 (Render Free)
+          for i in 1 2 3 4 5 6; do curl -fsS -m 30 "$SYNC_URL/api/health" >/dev/null && break; sleep 20; done
+          curl -fsS -m 600 -X POST -H "X-Sync-Token: $SYNC_TOKEN" "$SYNC_URL/api/admin/sync/run?scope=$SCOPE" -o result.json
+          cat result.json

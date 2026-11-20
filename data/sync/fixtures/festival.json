@@ -1,0 +1,27 @@
+{
+ "items": [
+  {
+   "place_id": null,
+   "field": "event",
+   "value": {
+    "name": "동해 무장애 해변 걷기 축제 (가짜)",
+    "start": "2099-05-01",
+    "end": "2099-05-03",
+    "venue": "망상해변",
+    "tel": "033-530-0000"
+   },
+   "url": "https://korean.visitkorea.or.kr/detail/fes_detail.do?cotid=FAKE",
+   "evidence": "동해 무장애 해변 걷기 축제 20990501~20990503"
+  },
+  {
+   "place_id": null,
+   "field": "event",
+   "value": {
+    "name": "이미 끝난 행사 (가짜)",
+    "start": "2020-01-01",
+    "end": "2020-01-02"
+   },
+   "evidence": "지난 행사"
+  }
+ ]
+}

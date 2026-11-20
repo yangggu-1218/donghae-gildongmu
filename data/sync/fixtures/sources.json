@@ -1,0 +1,50 @@
+{
+ "note": "가짜 소스 (점검·시연용). 실제 목록은 data/sync/sources.json",
+ "sources": [
+  {
+   "id": "fake-tour",
+   "name": "한국관광공사 TourAPI (가짜)",
+   "kind": "api",
+   "provider": "fixture",
+   "file": "tour.json",
+   "grade": 1,
+   "every": "1d"
+  },
+  {
+   "id": "fake-standard",
+   "name": "전국관광지 표준데이터 (가짜)",
+   "kind": "api",
+   "provider": "fixture",
+   "file": "standard.json",
+   "grade": 1,
+   "every": "7d"
+  },
+  {
+   "id": "fake-festival",
+   "name": "한국관광공사 행사·축제 (가짜)",
+   "kind": "api",
+   "provider": "fixture",
+   "file": "festival.json",
+   "grade": 1,
+   "every": "1d"
+  },
+  {
+   "id": "fake-licence",
+   "name": "동해시 일반음식점 인허가 (가짜)",
+   "kind": "api",
+   "provider": "fixture",
+   "file": "licence_1.json",
+   "grade": 1,
+   "every": "7d"
+  },
+  {
+   "id": "fake-blog",
+   "name": "여행 블로그 (가짜)",
+   "kind": "community",
+   "provider": "fixture",
+   "file": "blog.json",
+   "grade": 3,
+   "every": "7d"
+  }
+ ]
+}

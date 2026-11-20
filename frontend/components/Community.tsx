@@ -398,6 +398,7 @@ export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
   const [nick, setNick] = useState(() => { try { return localStorage.getItem("gd-nick") || ""; } catch { return ""; } });
   const [text, setText] = useState("");
   const [tip, setTip] = useState(false);
+  const [writing, setWriting] = useState(false);
   const add = () => {
     if (!nick.trim() || !text.trim()) return;
     try { localStorage.setItem("gd-nick", nick.trim()); } catch { /* */ }
@@ -405,20 +406,28 @@ export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
     // 서버에도 보내 '최근 길 상태' AI 요약의 재료로 쓴다 (닉네임은 보내지 않음). 실패해도 내 화면 기록은 남는다.
     api.post("/api/place-notes", { place_id: id, text: text.trim().slice(0, 300), tip }).catch(() => { /* 오프라인·데모 */ });
   };
+  // 관광지 상세: 최근 3개만 보이고, 글쓰기는 [후기 남기기]를 눌러야 열린다. [시에 불편 알리기]는 제보 기능과 같은 입구.
+  const recent: { key: string; text: string; who: string; date?: string; tip?: boolean }[] = [
+    ...notes.map((n, i) => ({ key: "n" + i, text: n.text, who: n.nick, date: n.date, tip: n.tip })),
+    ...tips.map((x, i) => ({ key: "t" + i, text: x.t, who: x.by, tip: true })),
+  ].slice(0, 3);
   return (
     <section className="panel cm-place" aria-labelledby="cm-pl-h">
       <h2 id="cm-pl-h" className="h3">{L("다녀온 사람들 이야기", "From people who went")}</h2>
-      {tips.length > 0 && <ul className="cm-tips">{tips.map((x, i) => <li key={i}><Icon name="info" />{x.t} <small className="muted">— {x.by}</small></li>)}</ul>}
-      {notes.length > 0 && <ul className="cm-clist">{notes.map((n, i) => <li key={i}><b>{n.nick}</b><small className="muted">{n.date}{n.tip ? L(" · 길 메모", " · path note") : ""}</small><p>{n.text}</p></li>)}</ul>}
-      {posts.length > 0 && <p className="chips">{posts.map((p) => <a key={p.id} className="chip sm" href={`#/community/${p.id}`}>{p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title}</a>)}</p>}
-      {tips.length === 0 && notes.length === 0 && posts.length === 0 && <p className="muted">{L("아직 이야기가 없어요. 다녀오셨다면 첫 후기를 남겨 주세요.", "No notes yet. Leave the first one.")}</p>}
-      <div className="cm-form inline">
+      {recent.length > 0 ? <ul className="cm-tips">{recent.map((x) => <li key={x.key}><Icon name={x.tip ? "walk" : "story"} /><span>{x.text} <small className="muted">— {x.who}{x.date ? ` · ${x.date}` : ""}</small></span></li>)}</ul>
+        : <p className="muted">{L("아직 이야기가 없어요. 다녀오셨다면 첫 후기를 남겨 주세요.", "No notes yet. Leave the first one.")}</p>}
+      {posts.length > 0 && <p className="chips">{posts.slice(0, 2).map((p) => <a key={p.id} className="chip sm" href={`#/community/${p.id}`}>{p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title}</a>)}</p>}
+      <div className="chips cm-acts">
+        <button className="chip" aria-expanded={writing} onClick={() => setWriting(!writing)}>{L("후기 남기기", "Leave a note")}</button>
+        <a className="chip" href={`#/report/${id}`}><Icon name="flag" />&nbsp;{L("시에 불편 알리기", "Report to the city")}</a>
+        <a className="link-btn" href="#/community">{L("커뮤니티에서 더 보기", "More in Community")}</a>
+      </div>
+      {writing && <div className="cm-form inline">
         <input aria-label={L("닉네임", "Nickname")} placeholder={L("닉네임", "Nickname")} value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} />
         <input aria-label={L("한 줄 후기", "Short note")} placeholder={L("한 줄 후기 (예: 입구 경사로 있어요)", "Short note")} value={text} maxLength={300} onChange={(e) => setText(e.target.value)} />
         <label className="cm-chk"><input type="checkbox" checked={tip} onChange={(e) => setTip(e.target.checked)} />{L("길 정보예요", "Path info")}</label>
-        <button className="chip go" onClick={add} disabled={!nick.trim() || !text.trim()}>{L("남기기", "Post")}</button>
-      </div>
-      <a className="link-btn" href="#/community">{L("다녀온 길 전체 보기", "See all trips")}</a>
+        <button className="chip go" onClick={() => { add(); setWriting(false); }} disabled={!nick.trim() || !text.trim()}>{L("남기기", "Post")}</button>
+      </div>}
     </section>
   );
 }

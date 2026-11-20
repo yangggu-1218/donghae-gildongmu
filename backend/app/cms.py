@@ -25,6 +25,7 @@ _lock = threading.Lock()
 FIELDS = {
     "open": "str", "close": "str", "break_time": "list", "closed_day_nums": "ints", "last_entry": "str", "stay_min": "int",
     "phone": "str", "fee": "str", "intro_ko": "str", "tip_ko": "str", "carer_tip": "str",
+    "address": "str", "homepage": "str", "lat": "float", "lon": "float",   # 자동 갱신(docs/20_AUTO_SYNC.md)이 공식 API 값으로 고치는 칸
     "walk_load": "str", "wheelchair": "str", "entrance_step": "bool", "table": "str", "indoor": "bool", "benches": "bool",
     "soft_menu": "bool", "parking_easy": "bool",
     "facilities": "strs",   # 편의시설 이름 목록 (AI 제안 승인으로도 바뀜)
@@ -248,6 +249,8 @@ def _clean(field: str, v):
         return None
     if kind == "int":
         return int(v)
+    if kind == "float":
+        return round(float(v), 7)
     if kind == "bool":
         return v if isinstance(v, bool) else str(v).lower() in ("true", "1", "예", "있음", "yes")
     if kind == "ints":

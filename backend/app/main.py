@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import trip_days, Place, Conditions, ChatEdit
-from . import ai, ai_course, ai_extract, city, reports_store, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
+from . import ai, ai_course, ai_extract, city, reports_store, sync as sync_mod, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -888,6 +888,47 @@ async def admin_city_restore(file: UploadFile = File(...), x_admin_token: str | 
     except Exception as e:  # noqa: BLE001
         raise HTTPException(400, f"백업 파일을 열지 못했어요 ({type(e).__name__})")
     return {"ok": True, "files": n}
+
+
+# ---------- 자동 정보 갱신 (docs/20_AUTO_SYNC.md, 0~1단계: AI 없이) ----------
+@app.post("/api/admin/sync/run")
+def admin_sync_run(scope: str = "all", source: str = "", x_admin_token: str | None = Header(None), x_sync_token: str | None = Header(None)):
+    """소스를 돌려 비교·반영·검수함. GitHub Actions 예약 실행은 X-Sync-Token(전용 토큰)으로, 관리자는 [지금 실행]으로."""
+    if not sync_mod.token_ok(x_sync_token):
+        _admin(x_admin_token, "data")
+    if scope not in ("all", "daily", "weekly"):
+        raise HTTPException(400, "scope 는 all·daily·weekly")
+    return sync_mod.run(PLACES, scope, source or None, refresh)
+
+
+@app.get("/api/admin/sync")
+def admin_sync(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "place")
+    return sync_mod.overview(PLACES)
+
+
+@app.post("/api/admin/sync/changes/{cid}")
+def admin_sync_decide(cid: str, body: dict, x_admin_token: str | None = Header(None)):
+    """검수: action = approve | reject, value = 고쳐서 승인할 값(불일치는 고른 값)."""
+    s = _admin(x_admin_token, "place")
+    out = _guard(lambda: sync_mod.decide(cid, str(body.get("action") or ""), PLACES, _who(s), body.get("value"), str(body.get("memo") or "")))
+    refresh()
+    return out
+
+
+@app.post("/api/admin/sync/changes/{cid}/revert")
+def admin_sync_revert(cid: str, x_admin_token: str | None = Header(None)):
+    s = _admin(x_admin_token, "history")
+    out = _guard(lambda: sync_mod.undo(cid, _who(s)))
+    refresh()
+    return out
+
+
+@app.post("/api/admin/sync/rules")
+def admin_sync_rules(body: dict, x_admin_token: str | None = Header(None)):
+    """[자동 갱신 설정] 항목별 auto·review·off (총괄 관리자만, 무장애 정보는 auto 불가)."""
+    s = _admin(x_admin_token, "accounts")
+    return sync_mod.set_rules(body.get("rules") or {}, _who(s))
 
 
 def _admin(token: str | None, perm: str | None = None) -> dict:

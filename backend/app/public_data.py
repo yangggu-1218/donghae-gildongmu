@@ -318,14 +318,17 @@ def _eat_score(r: dict) -> float:
 
 def eateries(lat: float, lon: float, group: str = "", radius: int = 800, limit: int = 8, sort: str = "pick") -> dict:
     """좌표 주변 일반음식점. 접근성은 확인 전이고, 한국관광공사 무장애 정보로 확인한 식당(checked)은 표시해서 먼저 보여 준다."""
+    from . import sync   # 자동 갱신(docs/20_AUTO_SYNC.md): 폐업 의심 표시·숨김
+    hidden, suspect = sync.hidden_eateries(), sync.suspect_eateries()
     seen, near = set(), []
     for n, k, la, lo, tel, addr, since in EAT.get("rows", []):
         d = dist_m(lat, lon, la, lo)
-        if d > radius or n in seen:
+        if d > radius or n in seen or n in hidden:
             continue
         seen.add(n)
         near.append({"name": n, "kind": k, "group": _KIND2G.get(k, "기타"), "lat": la, "lon": lo, "dist_m": d, "tel": tel, "address": addr,
-                     "since": since, "years": max(0, THIS_YEAR - int(since)) if since else 0, "place_id": EAT_LINK.get(n, ("", False))[0], "checked": EAT_LINK.get(n, ("", False))[1]})
+                     "since": since, "years": max(0, THIS_YEAR - int(since)) if since else 0, "place_id": EAT_LINK.get(n, ("", False))[0], "checked": EAT_LINK.get(n, ("", False))[1],
+                     "closed_suspect": n in suspect})
     counts = {g: sum(1 for r in near if r["group"] == g) for g, _ in EAT_GROUPS}
     items = [r for r in near if not group or r["group"] == group]
     sort = sort if sort in EAT_SORTS else "pick"

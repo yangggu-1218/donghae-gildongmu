@@ -21,28 +21,38 @@ const VERDICT: Record<string, [string, string]> = {
 };
 const CONF: Record<string, [string, string]> = { high: ["확신 높음", "High confidence"], medium: ["확신 보통", "Medium confidence"], low: ["확신 낮음", "Low confidence"] };
 
-export function AiJudge({ id, mode, lang }: { id: string; mode: string; lang: Lang }) {
-  const L = pick(lang);
+// 판정은 상세 페이지가 한 번만 불러서 맨 위 '판정 한 줄'과 아래 카드에 함께 쓴다
+export function useJudge(id: string, mode: string, lang: Lang, skip = false): { d: Judge | null; state: "load" | "ok" | "fail" } {
   const [d, setD] = useState<Judge | null>(null);
-  const [state, setState] = useState<"load" | "ok" | "fail">("load");
+  const [state, setState] = useState<"load" | "ok" | "fail">(skip ? "fail" : "load");
   useEffect(() => {
+    if (skip) { setState("fail"); setD(null); return; }
     let live = true;
     setState("load"); setD(null);
     api.get(`/api/ai/judge/${id}?mode=${mode}&lang=${lang}`)
       .then((r: Judge) => { if (live) { setD(r); setState(r && r.by !== "none" ? "ok" : "fail"); } })
       .catch(() => { if (live) setState("fail"); });
     return () => { live = false; };
-  }, [id, mode, lang]);
-  if (state === "fail") return null;
-  if (state === "load" || !d) return (
+  }, [id, mode, lang, skip]);
+  return { d, state };
+}
+export const verdictText = (v: string, lang: Lang) => pick(lang)(...(VERDICT[v in VERDICT ? v : "U"] as [string, string]));
+
+// 접근성 카드: 보이는 것은 판정 + 조심할 곳 2개 + 꿀팁 1개. 근거·전화로 물어볼 것·한눈에 칩은 접어 둔다
+export function AiJudge({ j, lang, chips = [], carerTip = "" }: { j: { d: Judge | null; state: string }; lang: Lang; chips?: string[]; carerTip?: string }) {
+  const L = pick(lang);
+  const d = j.d;
+  if (j.state === "fail") return null;
+  if (j.state === "load" || !d) return (
     <div className="ai-card ai-judge loading" aria-live="polite">
       <p className="ai-by"><Icon name="info" />{L("AI 판정관이 길 정보와 최근 제보를 읽는 중이에요…", "The AI is reading the path data and recent reports…")}</p>
     </div>);
   const v = d.verdict in VERDICT ? d.verdict : "U";
   const ai = d.by === "ai";
   const dots = d.confidence === "high" ? 3 : d.confidence === "medium" ? 2 : 1;
-  // 정보 밀도: 제목 글 대신 픽토그램(✓ 근거 · ⚠ 조심 · ☎ 물어보기 · i 도움말), 출처·설명은 마우스를 올리면(title) 보이게
   const generic = !ai && /구간 정보로 계산/.test(d.headline || "");
+  const tip = carerTip || d.tip;   // AI 도움말과 보호자 꿀팁은 하나로 (팀이 쓴 꿀팁이 먼저)
+  const more = d.reasons.length + d.ask_before.length + chips.length;
   return (
     <div className={`ai-card ai-judge v-${v}`} aria-live="polite">
       <div className="aj-top">
@@ -50,17 +60,20 @@ export function AiJudge({ id, mode, lang }: { id: string; mode: string; lang: La
         <b className="aj-verdict">{L(VERDICT[v][0], VERDICT[v][1])}</b>
         <span className="aj-conf" role="img" aria-label={L(CONF[d.confidence]?.[0] || "", CONF[d.confidence]?.[1] || "")}
           title={L(CONF[d.confidence]?.[0] || "", CONF[d.confidence]?.[1] || "")}>{[1, 2, 3].map((i) => <i key={i} className={i <= dots ? "on" : ""} />)}</span>
-        <span className={`via ${ai ? "via-llm" : "via-rule"}`} title={ai
-          ? L(`AI가 근거 ${d.evidence_count ?? 0}가지(최근 제보 ${d.reports_used ?? 0}건 포함)를 읽고 낸 의견이에요. 현장 상황은 바뀔 수 있어요.`, `AI opinion from ${d.evidence_count ?? 0} pieces of evidence.`)
-          : L("AI를 쓸 수 없어 구간 정보만으로 계산했어요.", "Calculated from path data only.")}>{ai ? "AI" : L("구간 계산", "Path data")}</span>
+        <span className={`via ${ai ? "via-llm" : "via-rule"}`}>{ai ? "AI" : L("구간 계산", "Path data")}</span>
       </div>
       {d.headline && !generic && <p className="aj-head">{d.headline}</p>}
-      <ul className="aj-list">
-        {d.reasons.map((r, i) => <li key={"r" + i} title={r.source ? `${L("근거", "Source")}: ${r.source}` : undefined}><Picto name="ok" size={18} label={L("근거", "Reason")} />{r.text}</li>)}
-        {d.cautions.map((c, i) => <li key={"c" + i} className="aj-warn"><Picto name="warn" size={18} label={L("조심", "Caution")} />{c}</li>)}
-        {d.ask_before.map((c, i) => <li key={"a" + i}><Picto name="call" size={18} label={L("가기 전에 물어보기", "Ask ahead")} />{c}</li>)}
-        {d.tip && <li><Picto name="tip" size={18} label={L("도움말", "Tip")} />{d.tip}</li>}
-      </ul>
+      {(d.cautions.length > 0 || tip) && <ul className="aj-list">
+        {d.cautions.slice(0, 2).map((c, i) => <li key={"c" + i} className="aj-warn"><Picto name="warn" size={18} label={L("조심할 곳", "Watch out")} />{c}</li>)}
+        {tip && <li><Picto name="tip" size={18} label={L("보호자 꿀팁", "Tip for carers")} />{tip}</li>}
+      </ul>}
+      {more > 0 && <details className="aj-more"><summary>{L("근거·가기 전에 물어볼 것", "Why, and what to ask ahead")}</summary>
+        {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
+        <ul className="aj-list">
+          {d.reasons.map((r, i) => <li key={"r" + i}><Picto name="ok" size={18} label={L("근거", "Reason")} />{r.text}{r.source && <small className="muted"> · {r.source}</small>}</li>)}
+          {d.ask_before.map((c, i) => <li key={"a" + i}><Picto name="call" size={18} label={L("가기 전에 물어보기", "Ask ahead")} />{c}</li>)}
+        </ul>
+      </details>}
     </div>
   );
 }

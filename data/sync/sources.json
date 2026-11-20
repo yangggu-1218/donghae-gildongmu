@@ -1,0 +1,44 @@
+{
+ "note": "자동 갱신 소스 목록 (docs/20_AUTO_SYNC.md). grade 1 = 공공 API·공공데이터, 2 = 공식 홈페이지(2단계), 3 = 블로그·커뮤니티. every: 1d 매일 · 7d 주 1번",
+ "sources": [
+  {
+   "id": "tourapi-list",
+   "name": "한국관광공사 TourAPI",
+   "kind": "api",
+   "provider": "tourapi_list",
+   "grade": 1,
+   "every": "1d",
+   "url": "https://www.data.go.kr/data/15101578/openapi.do",
+   "fields": [
+    "phone",
+    "address",
+    "coord"
+   ]
+  },
+  {
+   "id": "tourapi-festival",
+   "name": "한국관광공사 행사·축제",
+   "kind": "api",
+   "provider": "tourapi_festival",
+   "grade": 1,
+   "every": "1d",
+   "url": "https://www.data.go.kr/data/15101578/openapi.do",
+   "fields": [
+    "event"
+   ]
+  },
+  {
+   "id": "licence-eateries",
+   "name": "동해시 일반음식점 인허가",
+   "kind": "api",
+   "provider": "licence",
+   "grade": 1,
+   "every": "7d",
+   "url": "https://www.data.go.kr",
+   "fields": [
+    "closure"
+   ],
+   "note": "data/public/eateries.json (scripts/ingest_public.py 로 새로 받은 목록)을 지난번 목록과 비교"
+  }
+ ]
+}
