@@ -1,8 +1,8 @@
 import json,sys
 sys.path.insert(0,"../backend")
-from app.main import course, talk, edit
+from app.main import course, talk, edit, reorder, optimize
 from app.schemas import Conditions
-C=json.load(open("cases.json")); out={"course":[],"talk":[],"edit":[]}
+C=json.load(open("cases.json")); out={"course":[],"talk":[],"edit":[],"reorder":[],"optimize":[]}
 def sm(r):
     cs=r["course"]; ex=r.get("extras") or {}
     return {"ids":[s["id"] for s in cs["stops"]],"arr":[s["arrive"]+"-"+s["depart"]+s["kind"]+s["open_state"]+str(s["wait_min"])+s["hours_text"] for s in cs["stops"]],
@@ -12,6 +12,14 @@ def sm(r):
             "acc":[[ex[i].get(k) for k in ("walk_load","table","wheelchair","carer_tip")] for i in ex]}
 for c in C["course"]:
     out["course"].append(sm(course(Conditions(**c))))
+for c in C["course"]:   # 일정 카드 순서 바꾸기: 거꾸로 놓고 다시 계산
+    r=course(Conditions(**c)); ids=[s["id"] for s in r["course"]["stops"]][::-1]
+    if ids: out["reorder"].append(sm(reorder({"conditions":r["conditions"],"order":ids})))
+for k,c in enumerate(C["course"]):   # AI 동선 최적화: 섞어 놓고 최적 순서 (셋에 하나는 첫 장소 고정)
+    r=course(Conditions(**c)); ids=[s["id"] for s in r["course"]["stops"]]; ids=ids[1::2]+ids[0::2]
+    if len(ids)>=2:
+        o=optimize({"conditions":r["conditions"],"order":ids,"locked":ids[:1] if k%3==1 else []})
+        out["optimize"].append({kk:o[kk] for kk in ("changed","reason","order_before","order_after","before","after","kept","locked","timed","free","unknown","access","checked","method")}|{"res":sm(o["result"])})
 for e in C["edit"]:
     r=course(Conditions(**e["base"])); log=[]
     for st in e["steps"]:

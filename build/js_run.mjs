@@ -1,5 +1,5 @@
 import fs from "fs"; import { makeApi } from "./api.js";
-const api=makeApi(JSON.parse(fs.readFileSync("data.json","utf8"))); const C=JSON.parse(fs.readFileSync("cases.json","utf8")); const out={course:[],talk:[],edit:[]};
+const api=makeApi(JSON.parse(fs.readFileSync("data.json","utf8"))); const C=JSON.parse(fs.readFileSync("cases.json","utf8")); const out={course:[],talk:[],edit:[],reorder:[],optimize:[]};
 const H=(p,b)=>api.handle("POST",p,{},b);
 const sm=(r)=>{const cs=r.course, ex=r.extras||{};
  return {ids:cs.stops.map(s=>s.id),arr:cs.stops.map(s=>s.arrive+"-"+s.depart+s.kind+s.open_state+s.wait_min+s.hours_text),grades:cs.stops.map(s=>s.grade),notes:cs.notes,back:cs.back_at,
@@ -7,6 +7,10 @@ const sm=(r)=>{const cs=r.course, ex=r.extras||{};
   near:Object.keys(ex).map(i=>[...["parking","charger","info_center"].map(k=>(ex[i].nearby[k]||{}).name??null),...Object.values(ex[i].nearby.medical||{}).map(v=>(v||{}).name??null)]),
   acc:Object.keys(ex).map(i=>["walk_load","table","wheelchair","carer_tip"].map(k=>ex[i][k]??null))};};
 for(const c of C.course) out.course.push(sm(H("/api/course",c)));
+for(const c of C.course){const r=H("/api/course",c);const ids=r.course.stops.map(s=>s.id).reverse();if(ids.length)out.reorder.push(sm(H("/api/reorder",{conditions:r.conditions,order:ids})));}
+C.course.forEach((c,k)=>{const r=H("/api/course",c);let ids=r.course.stops.map(s=>s.id);ids=[...ids.filter((_,i)=>i%2===1),...ids.filter((_,i)=>i%2===0)];
+ if(ids.length>=2){const o=H("/api/optimize",{conditions:r.conditions,order:ids,locked:k%3===1?ids.slice(0,1):[]});const x={};
+  for(const kk of ["changed","reason","order_before","order_after","before","after","kept","locked","timed","free","unknown","access","checked","method"])x[kk]=o[kk];x.res=sm(o.result);out.optimize.push(x);}});
 for(const e of C.edit){let r=H("/api/course",e.base);const log=[];
  for(const st of e.steps){const ids=r.course.stops.map(s=>s.id);let body;
   if(st.startsWith("@")){const [a,...rest]=st.slice(1).split(":");let tg=rest.join(":");tg=/^\d+$/.test(tg)?ids[+tg]:(tg||null);body={conditions:r.conditions,course_ids:ids,action:a,target:tg};}

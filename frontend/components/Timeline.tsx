@@ -24,6 +24,7 @@ const dist = (m: number | undefined, t: T) => (m == null ? "" : m >= 1000 ? t("t
 export function OpenBadge({ s, t }: { s: Stop; t: T }) {
   if (s.open_state === "always") return <span className="badge b-open">{t("tl.always")}</span>;
   if (s.open_state === "unknown") return <span className="badge b-unknown">{t("tl.unknown")}</span>;
+  if (s.open_state === "closed") return <span className="badge b-closed">{t("tl.closedAt")}</span>;
   return <span className="badge b-open">✓ {t("tl.open", { t: s.visit_at || s.arrive })}</span>;
 }
 
@@ -60,9 +61,10 @@ function StopWeather({ forecast, lang }: { forecast: VisitWeather; lang: string 
 }
 
 // ---------- 시간표 카드 ----------
-export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, children, onMap, onRemove, onReplace, crowd, at }: {
+export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, children, onMap, onRemove, onReplace, crowd, at, handle, route, lock }: {
   s: Stop; i: number; x?: Extra; name: string; t: T; lang: string; wheel: boolean; showNear: boolean; isNew: boolean; busy: boolean;
   children?: ReactNode; onMap?: () => void; onRemove: () => void; onReplace: () => void; crowd?: number | null; at?: { lat: number; lon: number };
+  handle?: ReactNode; route?: string; lock?: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [eatOpen, setEatOpen] = useState(false);
@@ -78,6 +80,7 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
   return (
     <>
       <article className="stop-overview" aria-label={`${i + 1}. ${name}`}>
+        {handle}
         <div className="stop-identity"><span className="so-n" aria-hidden="true">{i + 1}</span><PlacePhoto id={s.id} lang={lang as "ko" | "en"} small />
           <div className="so-main"><span>{s.arrive} – {s.depart}</span>
             <h4><button type="button" className="so-title" onClick={() => dialog.current?.showModal()}>{name}</button></h4>
@@ -89,10 +92,13 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           {onMap && <button type="button" className="chip sm" onClick={onMap}>{lang === "ko" ? "지도" : "Map"}</button>}
           <button className="chip sm" disabled={busy} onClick={onRemove}>{lang === "ko" ? "빼기" : "Remove"}</button>
           <button className="chip sm" disabled={busy} onClick={onReplace}>{lang === "ko" ? "바꾸기" : "Replace"}</button>
+          {lock}
         </div>
       </article>
       <dialog className="stop-detail-dialog" ref={dialog} aria-label={name}>
         <div className="stop-detail-bar"><b>{name}</b><button className="chip" onClick={() => dialog.current?.close()}>{lang === "ko" ? "닫기" : "Close"}</button></div>
+        {route && <p className="stop-route"><a className="chip go" href={route} target="_blank" rel="noreferrer"><Icon name="navi" />&nbsp;{lang === "ko" ? "카카오맵 길찾기 (앞 장소 → 여기)" : "Kakao directions (previous stop → here)"}</a>
+          <small className="muted">{lang === "ko" ? "카카오맵 길찾기는 일반 경로예요. 휠체어 통행 가능 여부는 확인되지 않았어요." : "Kakao directions are general routes, not verified for wheelchairs."}</small></p>}
       <article className={`tl-card${isNew ? " is-new" : ""}`} aria-label={`${i + 1}. ${name}`}>
       <div className="tl-time" aria-hidden="true"><b>{s.arrive}</b><span>{s.depart}</span></div>
       <div className="tl-dot" aria-hidden="true">{i + 1}</div>
@@ -206,7 +212,7 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
                   <b className="sum-n">{name(s.id)}</b>
                   <p className="sum-s">{t(course.drive_source === "transit" ? "result.transit" : course.drive_source === "kakao" ? "result.drive" : "result.estDrive", { m: s.drive_min })} · {s.wait_min > 0 && <>{t("tl.wait", { m: s.wait_min })} · </>}{s.depart} {lang === "ko" ? "출발" : "depart"}</p>
                   <p className="sum-b">
-                    {s.open_state === "always" ? t("tl.always") : s.open_state === "open" ? t("tl.open", { t: s.visit_at || s.arrive }) : t("tl.unknown")}
+                    {s.open_state === "always" ? t("tl.always") : s.open_state === "open" ? t("tl.open", { t: s.visit_at || s.arrive }) : s.open_state === "closed" ? t("tl.closedAt") : t("tl.unknown")}
                     {x?.walk_load && x.walk_load !== "확인 전" ? ` · ${t(`walk.${x.walk_load}`)}` : ""}
                     {s.kind !== "sight" && x?.table ? ` · ${t(`tl.table.${x.table}`)}` : ""}
                   </p>
@@ -245,7 +251,7 @@ export function encodePlan(c: Conditions, course: Course): string {
   const sights = course.stops.filter((s) => s.kind === "sight").map((s) => s.id);
   const lunch = course.stops.find((s) => s.kind === "lunch")?.id || null;
   const keep = { ...c, must: sights, lunch, cap: course.stops.length, rest: course.stops.some((s) => s.kind === "cafe"),
-    date: course.date, start_time: course.start_time, memo: "", wish: [] };
+    date: course.date, start_time: course.start_time, memo: "", wish: [], order: c.order?.length ? course.stops.map((s) => s.id) : [] };
   const raw = btoa(unescape(encodeURIComponent(JSON.stringify(keep))));
   return raw.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

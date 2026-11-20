@@ -116,6 +116,7 @@ class Conditions(BaseModel):
     start_time: str = "10:00"            # 출발 시각
     meal: list[str] = Field(default_factory=list)   # 입식, 부드러운 메뉴, 주차 편한 곳
     exclude: list[str] = Field(default_factory=list)  # 대화로 뺀 장소
+    order: list[str] = Field(default_factory=list)    # 일정 카드를 끌어서 정한 방문 순서 (있으면 /api/reorder 로 이 순서 그대로 다시 계산)
     cap: Optional[int] = None            # 장소 수 (None = 당일 4·1박 6)
     rest: Optional[bool] = None          # 중간에 쉬는 카페 (None = 이동 조건 보고 자동)
     flat_only: bool = False              # 평지만

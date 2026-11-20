@@ -71,5 +71,31 @@ if big:
     check("첫 제보 떼어 내기", r1.status_code == 200 and after.get(f"solo-{anchor}") == [anchor], str(after)[:200])
     check("옛 묶음 번호로도 떼어 내기", r2.status_code == 200 and after.get(f"solo-{other}") == [other], r2.text[:120])
 
+# 6) 일정 카드 끌어서 순서 바꾸기: 정한 순서 그대로, 장소는 그대로, 시각은 다시 계산 (2026-11-21)
+base = {"who": "어르신", "move": ["휠체어"], "style": [], "days": "당일", "start": "동해역", "memo": "", "wish": [], "lang": "ko",
+        "date": "2026-11-24", "start_time": "10:00", "must": ["dokkaebi", "chotdae"], "lunch": "food_daege", "cap": 4, "rest": True}
+order = ["dokkaebi", "cafe_clam", "food_daege", "chotdae"]
+r = c.post("/api/reorder", json={"conditions": base, "order": order}).json()
+st = r["course"]["stops"]
+check("순서 바꾸기: 정한 순서 그대로", [x["id"] for x in st] == order, str([x["id"] for x in st]))
+check("순서 바꾸기: 시각이 앞에서부터 이어짐", all(st[i]["depart"] <= st[i + 1]["arrive"] for i in range(len(st) - 1)), str([(x["arrive"], x["depart"]) for x in st]))
+check("순서 바꾸기: 조건에 순서가 남음(저장·공유용)", r["conditions"]["order"] == order and r["action"] == "reorder")
+check("순서 바꾸기: 빈 순서는 400", c.post("/api/reorder", json={"conditions": base, "order": []}).status_code == 400)
+late = c.post("/api/reorder", json={"conditions": {**base, "start_time": "16:30"}, "order": order}).json()["course"]["stops"]
+check("순서 바꾸기: 운영 시간이 아니어도 빼지 않고 '운영 안 함'으로", len(late) == 4 and any(x["open_state"] == "closed" for x in late), str([x["open_state"] for x in late]))
+
+# 7) AI 동선 최적화: 장소는 그대로, 운영시간 위반을 줄이고 이동을 줄이며, 고정한 장소는 제자리 (2026-11-21)
+bad = ["chotdae", "dokkaebi", "cafe_clam", "food_daege"]
+o = c.post("/api/optimize", json={"conditions": base, "order": bad, "locked": []}).json()
+check("최적화: 장소 구성은 그대로", sorted(o["order_after"]) == sorted(bad) and o["order_before"] == bad)
+check("최적화: 바꾸면 이동·위반이 줄어듦", (not o["changed"]) or (len(o["after"]["closed"]) < len(o["before"]["closed"])
+      or o["after"]["move_min"] + o["after"]["wait_min"] < o["before"]["move_min"] + o["before"]["wait_min"]), str((o["before"], o["after"])))
+check("최적화: 추정이면 거리 수치를 만들지 않음", o["after"]["source"] != "estimate" or (o["after"]["distance_m"] is None and o["before"]["distance_m"] is None))
+check("최적화: 운영시간 모르는 곳은 '확인 필요'로 따로", "food_daege" in o["unknown"] and "food_daege" not in o["free"], str(o["unknown"]))
+check("최적화: 결과는 바로 적용되지 않고 돌려주기만", o["result"]["action"] == "reorder" and [x["id"] for x in o["result"]["course"]["stops"]] == o["order_after"])
+ol = c.post("/api/optimize", json={"conditions": base, "order": bad, "locked": ["chotdae"]}).json()
+check("최적화: 고정한 장소는 제자리", ol["order_after"][0] == "chotdae", str(ol["order_after"]))
+check("최적화: 한 곳이면 400", c.post("/api/optimize", json={"conditions": base, "order": ["chotdae"]}).status_code == 400)
+
 print(f"회귀 점검 실패 {len(fails)}건")
 sys.exit(1 if fails else 0)

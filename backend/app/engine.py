@@ -259,15 +259,16 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         public_apis._ROUTE_DEADLINE.reset(tok)
 
 
-def apply_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:
-    """역·터미널 출발이면 ODsay 대중교통으로, 안 되면(키 없음·실패) 카카오 자동차로, 그것도 안 되면 추정 그대로."""
-    issue = apply_transit_route(places, c, result)
+def apply_route(places: dict[str, Place], c: Conditions, result: Course, strict: bool = True) -> dict | None:
+    """역·터미널 출발이면 ODsay 대중교통으로, 안 되면(키 없음·실패) 카카오 자동차로, 그것도 안 되면 추정 그대로.
+    strict=False(사용자가 순서를 직접 바꾼 코스): 영업시간이 안 맞아도 장소를 빼거나 되돌리지 않고 open_state='closed' 로 알린다."""
+    issue = apply_transit_route(places, c, result, strict)
     if result.drive_source == "transit" or issue is not None:
         return issue
-    return apply_driving_route(places, c, result)
+    return apply_driving_route(places, c, result, strict)
 
 
-def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:
+def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course, strict: bool = True) -> dict | None:
     """ODsay 대중교통 시간으로 도착·출발 시각을 다시 계산한다. 문제없으면 None(적용), 못 가게 된 곳이 생기면 그 장소."""
     from . import details, public_apis
     if c.start == "자가용" or not result.stops or not public_apis.odsay_available():
@@ -290,6 +291,8 @@ def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course)
         stay = _mins(stop.depart) - _mins(stop.arrive)
         arrival = clock + leg["min"]
         ok, state, wait = details.open_check(place, result.weekday, arrival, stay)
+        if not strict and (not ok or clock >= 20 * 60):
+            ok, state, wait = True, "closed", 0
         if not ok or clock >= 20 * 60:
             for s, old in zip(result.stops, planned):
                 s.arrive, s.depart, s.drive_min, s.wait_min, s.visit_at, s.open_state = old
@@ -298,7 +301,7 @@ def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course)
         stop.drive_min, stop.wait_min = leg["min"], wait
         stop.arrive, stop.depart = hhmm(arrival), hhmm(clock)
         stop.visit_at = hhmm(arrival + wait) if wait else None
-        stop.open_state = state if state in ("always", "unknown") else "open"
+        stop.open_state = state if state in ("always", "unknown", "closed") else "open"
     names = [c.start, *[places[s.id].name_ko for s in result.stops], c.start]
     result.drive_source = "transit"
     result.transit_legs = [{**leg, "from": a, "to": b} for leg, a, b in zip(legs, names, names[1:])]
@@ -307,7 +310,7 @@ def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course)
     return None
 
 
-def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:
+def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course, strict: bool = True) -> dict | None:
     """카카오 자동차 길찾기로 도착·출발 시각을 다시 계산한다. 문제없으면 None, 이동시간 때문에 못 가게 된 곳이 있으면 그 장소.
     카카오를 못 쓰면(키 없음·실패) 아무것도 바꾸지 않고 None (추정 이동시간 유지)."""
     from . import details, public_apis
@@ -332,6 +335,8 @@ def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course)
         drive_minutes = math.ceil(seconds / 60)
         arrival = clock + drive_minutes
         ok, state, wait = details.open_check(place, result.weekday, arrival, stay)
+        if not strict and (not ok or clock >= 20 * 60):
+            ok, state, wait = True, "closed", 0
         if not ok or clock >= 20 * 60:
             for s, old in zip(result.stops, planned):   # 반만 바뀐 코스가 남지 않게 되돌린다
                 s.arrive, s.depart, s.drive_min, s.wait_min, s.visit_at, s.open_state = old
@@ -340,7 +345,7 @@ def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course)
         stop.drive_min, stop.wait_min = drive_minutes, wait
         stop.arrive, stop.depart = hhmm(arrival), hhmm(clock)
         stop.visit_at = hhmm(arrival + wait) if wait else None
-        stop.open_state = state if state in ("always", "unknown") else "open"
+        stop.open_state = state if state in ("always", "unknown", "closed") else "open"
     result.drive_source = "kakao"
     result.driving_path = path
     result.driving_sections = section_ranges
@@ -349,6 +354,195 @@ def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course)
     result.back_drive_min = math.ceil(durations[-1] / 60)
     result.back_at = hhmm(clock + result.back_drive_min)
     return None
+
+
+def order_stops(places: dict[str, Place], c: Conditions, ids: list[str]) -> Course:
+    """사용자가 끌어서 정한 순서 그대로 시각을 다시 쌓는다 (장소를 빼거나 바꾸지 않음).
+    이동시간은 추정값으로 쌓고, 실제 길찾기(ODsay·카카오)는 schedule_order 가 덮어쓴다.
+    방문 시각에 운영하지 않으면 open_state='closed' 로 알리고, 접근성 판정(grade)은 이동 조건 그대로."""
+    from . import details as D
+    mode = mode_from(c.move)
+    less = "오래 걷기 어려움" in c.move
+    day = trip_date(c)
+    wd = weekday_of(day)
+    day_s = day.isoformat()
+
+    def notice_on(p, level):
+        return next((n for n in p.notices if n.get("level") == level and (not n.get("start") or n["start"] <= day_s)
+                     and (not n.get("end") or day_s <= n["end"])), None)
+    start = STARTS[c.start]
+    t = _mins(c.start_time or "10:00")
+    t0 = t
+    cur, cur_id, stops, seen = start, c.start, [], set()
+    for pid in ids:
+        p = places.get(pid)
+        if not p or p.lat is None or p.lon is None or pid in seen:
+            continue
+        seen.add(pid)
+        kind = "lunch" if p.type == "식당" else "cafe" if p.type == "카페" else "sight"
+        dm = drive(cur_id, cur, p)
+        arrive = q15(t + dm)
+        okk, why, wait = D.open_check(p, wd, arrive, p.stay_min)
+        closed = (not okk) or bool(notice_on(p, "closed")) or (bool(p.market_days) and day.day % 10 not in p.market_days)
+        st = "closed" if closed else "always" if why == "always" else "unknown" if why == "unknown" else "open"
+        if closed:
+            wait = 0
+        t = q15(arrive + wait)
+        stay = q15(t + p.stay_min) - t
+        stops.append(Stop(id=p.id, arrive=hhmm(t), drive_min=dm, grade=grade_place(p, mode, less), kind=kind,
+                          depart=hhmm(t + stay), open_state=st, hours_text=D.hours_text(p, c.lang),
+                          hours_sample=bool(p.open) and p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
+                          notice=(notice_on(p, "warn") or {}).get("title", "")))
+        t += stay
+        cur, cur_id = (p.lat, p.lon), p.id
+    back = q15(t + drive_min(cur, start))
+    return Course(start_point=STARTS[c.start], mode=mode, stops=stops, overall=worst(s.grade for s in stops) if mode != "none" else None,
+                  back_at=hhmm(back), notes=[], date=day.isoformat(), weekday=wd, start_time=hhmm(t0), skipped=[])
+
+
+def schedule_order(places: dict[str, Place], c: Conditions, ids: list[str]) -> Course:
+    """순서 고정 코스 + 실제 이동시간(역·터미널 출발이면 ODsay 대중교통, 자가용이면 카카오 자동차). 둘 다 안 되면 추정(drive_source='estimate')."""
+    from . import public_apis
+    tok = public_apis.route_deadline()
+    try:
+        result = order_stops(places, c, ids)
+        apply_route(places, c, result, strict=False)
+        return result
+    finally:
+        public_apis._ROUTE_DEADLINE.reset(tok)
+
+
+# ---------- AI 동선 최적화 (시간창이 있는 순회 문제, 장소 수가 적어 분기한정으로 정확히) ----------
+# 1순위: 운영시간·휴무·입장 마감을 어기지 않기 (어기면 큰 벌점)
+# 2순위: 이동시간 합계 (가까운 곳끼리 묶이고 A→B→A 같은 왕복이 사라진다)
+# 3순위: 문 열 때까지 기다리는 시간, 점심 식당은 11:30~13:30 도착
+# 후보 비교는 장소 사이 추정 이동시간표(drive)로, 마지막 비교는 실제 길찾기(schedule_order)로 한다.
+OPT_EXACT_MAX = 9
+LUNCH_FROM, LUNCH_TO = 11 * 60 + 30, 13 * 60 + 30
+
+
+def hours_kind(p: Place) -> str:
+    """운영시간 분류: timed(시간 제약 있음) / always(상시 개방) / unknown(운영시간 확인 필요, 상시로 보지 않음)."""
+    from . import details as D
+    o, cl = D.mins(p.open), D.mins(p.close)
+    if o is None or cl is None:
+        return "timed" if p.closed_day_nums or p.market_days else "unknown"
+    if (o, cl) == (0, 1440):
+        return "timed" if p.closed_day_nums or p.market_days else "always"
+    return "timed"
+
+
+def optimize_order(places: dict[str, Place], c: Conditions, ids: list[str], locked: list[str]) -> dict:
+    """지금 장소 그대로 가장 좋은 방문 순서를 찾는다. 장소를 빼거나 더하지 않고, 고정(locked)한 장소는 제자리.
+    돌려주는 값: order(새 순서), checked(끝까지 계산한 순서 수), method('exact' 또는 'local')."""
+    from . import details as D
+    ids = [i for i in ids if i in places and places[i].lat is not None and places[i].lon is not None]
+    n = len(ids)
+    day = trip_date(c)
+    wd = weekday_of(day)
+    day_s = day.isoformat()
+    start = STARTS[c.start]
+    t0 = _mins(c.start_time or "10:00")
+    P = [places[i] for i in ids]
+    static_closed = [any(x.get("level") == "closed" and (not x.get("start") or x["start"] <= day_s) and (not x.get("end") or day_s <= x["end"]) for x in q.notices)
+                     or (bool(q.market_days) and day.day % 10 not in q.market_days) for q in P]
+    first = [drive(c.start, start, q) for q in P]
+    M = [[drive(a.id, (a.lat, a.lon), b) for b in P] for a in P]
+    back = [drive_min((q.lat, q.lon), start) for q in P]
+    lunch = [q.type == "식당" for q in P]
+    memo: dict = {}
+
+    def visit(j, arrive):
+        k = (j, arrive)
+        if k not in memo:
+            memo[k] = D.open_check(P[j], wd, arrive, P[j].stay_min)
+        return memo[k]
+
+    def step(j, prev, t):
+        """장소 j 를 지금 시각 t 에 이어 붙였을 때 (늘어난 비용, 떠나는 시각)."""
+        dm = first[j] if prev < 0 else M[prev][j]
+        arrive = q15(t + dm)
+        ok, why, wait = visit(j, arrive)
+        bad = (not ok) or static_closed[j]
+        if bad:
+            wait = 0
+        t2 = q15(arrive + wait)
+        stay = q15(t2 + P[j].stay_min) - t2
+        lp = (max(0, LUNCH_FROM - t2) + max(0, t2 - LUNCH_TO)) if lunch[j] else 0
+        return (100000 if bad else 0) + dm * 10 + wait * 3 + lp * 4, t2 + stay
+
+    def cost(order):
+        tot, t, prev = 0, t0, -1
+        for j in order:
+            add, t = step(j, prev, t)
+            tot += add
+            prev = j
+        return tot + (back[prev] * 10 if prev >= 0 else 0)
+
+    pos_lock = {k: ids.index(x) for k, x in enumerate(ids) if x in locked}   # 고정된 장소 → 그 자리
+    fixed_at = {v: k for k, v in pos_lock.items()}
+    cur = list(range(n))
+    best = [cost(cur), cur[:]]
+    checked = [1]
+    if n <= OPT_EXACT_MAX:
+        used = [False] * n
+        seq: list[int] = []
+
+        def dfs(pos, prev, t, acc):
+            if acc >= best[0]:
+                return
+            if pos == n:
+                checked[0] += 1
+                total = acc + back[prev] * 10
+                if total < best[0]:
+                    best[0], best[1] = total, seq[:]
+                return
+            cand = [fixed_at[pos]] if pos in fixed_at else [j for j in range(n) if not used[j] and j not in pos_lock]
+            for j in cand:
+                if used[j]:
+                    continue
+                add, t2 = step(j, prev, t)
+                used[j] = True
+                seq.append(j)
+                dfs(pos + 1, j, t2, acc + add)
+                seq.pop()
+                used[j] = False
+        dfs(0, -1, t0, 0)
+        method = "exact"
+    else:   # 장소가 많으면: 한 곳 옮기기·구간 뒤집기를 더 나아지지 않을 때까지
+        order = cur[:]
+        free = [k for k in range(n) if k not in pos_lock]
+        improved = True
+        while improved:
+            improved = False
+            for a in free:
+                for b in free:
+                    if a == b:
+                        continue
+                    o2 = order[:]
+                    x = o2.pop(a)
+                    o2.insert(b, x)
+                    if any(o2[k] != order[k] for k in fixed_at) or any(o2[k] != fixed_at[k] for k in fixed_at):
+                        continue
+                    checked[0] += 1
+                    cst = cost(o2)
+                    if cst < best[0]:
+                        best[0], best[1], order, improved = cst, o2[:], o2, True
+        method = "local"
+    return {"order": [ids[j] for j in best[1]], "checked": checked[0], "method": method,
+            "kinds": {i: hours_kind(places[i]) for i in ids}}
+
+
+def route_metric(places: dict[str, Place], c: Conditions, r: Course) -> dict:
+    """코스 하나의 이동 합계 (실제 길찾기면 그 값, 아니면 추정)."""
+    if not r.stops:
+        return {"move_min": 0, "distance_m": None, "source": r.drive_source or "estimate", "back_at": r.back_at, "total_min": 0, "closed": [], "wait_min": 0}
+    last = places[r.stops[-1].id]
+    back = r.back_drive_min if r.back_drive_min is not None else drive_min((last.lat, last.lon), STARTS[c.start])
+    dist = r.route_costs.distance_m if (r.drive_source == "kakao" and r.route_costs) else None
+    return {"move_min": sum(s.drive_min for s in r.stops) + back, "distance_m": dist, "source": r.drive_source or "estimate",
+            "back_at": r.back_at, "total_min": _mins(r.back_at) - _mins(r.start_time), "closed": [s.id for s in r.stops if s.open_state == "closed"],
+            "wait_min": sum(s.wait_min for s in r.stops)}
 
 
 def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course:

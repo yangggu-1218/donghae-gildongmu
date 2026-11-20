@@ -224,7 +224,8 @@ export default function KakaoMap({ pins, overview = false, dots = false, facilit
           strokeColor: "#eaf7ff", strokeOpacity: 0.96, strokeStyle: "dash" }));
       }
       if (courseMap) {
-        fitRoute.current = () => map.setBounds(bounds, 60, 28, 24, 28);
+        // 코스 전체: 축척막대 2km(카카오 레벨 8), 출발지를 가운데에 (팀장 요청 2026-11-21). 구간 하나를 고르면 그 구간에 맞춤
+        fitRoute.current = pins[0].endpoint ? () => map.setBounds(bounds, 60, 28, 24, 28) : () => { map.setLevel(8); map.setCenter(path[0]); };
         fitRoute.current();
       }
       else if (dots) {

@@ -435,6 +435,185 @@ export function makeApi(DATA) {
       date: day, weekday: wd, start_time: hhmm(t0), skipped };
   }
 
+  // ---------- engine.order_stops: 일정 카드를 끌어서 정한 순서 그대로 (장소를 빼거나 바꾸지 않음) ----------
+  function orderStops(places, c, ids) {
+    const mode = modeFrom(c.move), less = c.move.includes("오래 걷기 어려움");
+    const day = tripDate(c), wd = weekdayOf(day);
+    const start = STARTS[c.start];
+    let t = mins(c.start_time || "10:00"); const t0 = t;
+    let cur = start; const stops = [], seen = new Set();
+    for (const pid of ids) {
+      const p = places[pid];
+      if (!p || p.lat == null || p.lon == null || seen.has(pid)) continue;
+      seen.add(pid);
+      const kind = p.type === "식당" ? "lunch" : p.type === "카페" ? "cafe" : "sight";
+      const dm = drive(cur, p), arrive = q15(t + dm);
+      let [okk, why, wait] = openCheck(p, wd, arrive, p.stay_min);
+      const closed = !okk || !!noticeOn(p, "closed", day) || ((p.market_days || []).length > 0 && !p.market_days.includes(Number(day.slice(8)) % 10));
+      const st = closed ? "closed" : why === "always" ? "always" : why === "unknown" ? "unknown" : "open";
+      if (closed) wait = 0;
+      t = q15(arrive + wait);
+      const stay = q15(t + p.stay_min) - t;
+      stops.push({ id: p.id, arrive: hhmm(t), drive_min: dm, grade: gradePlace(p, mode, less), why: "", depart: hhmm(t + stay), kind,
+        open_state: st, hours_text: hoursText(p, c.lang), hours_sample: !!p.open && !["공공데이터", "상시 개방", "관리자 확인"].includes(p.hours_source), wait_min: wait,
+        notice: (noticeOn(p, "warn", day) || {}).title || "" });
+      t += stay; cur = [p.lat, p.lon];
+    }
+    const back = q15(t + driveMin(cur, start));
+    return { start_point: STARTS[c.start], driving_guides: [], back_drive_min: null, drive_source: "estimate", driving_path: null, driving_sections: [], route_costs: null,
+      mode, stops, overall: mode !== "none" ? worst(stops.map((s) => s.grade)) : null, back_at: hhmm(back), notes: [],
+      date: day, weekday: wd, start_time: hhmm(t0), skipped: [] };
+  }
+  function reorder(body) {
+    const c = cond(body.conditions || {});
+    const ids = (body.order || []).filter((i) => typeof i === "string" && PLACES[i]).slice(0, 12);
+    if (!ids.length) throw new Error("400:순서를 바꿀 장소가 없어요");
+    c.order = ids;
+    return { ...coursePayload(orderStops(PLACES, c, ids), c, rainFor(c)), action: "reorder", via: "rule" };
+  }
+
+  // ---------- engine.optimize_order: AI 동선 최적화 (운영시간 먼저, 그다음 이동시간·기다림·점심 시각) ----------
+  const OPT_EXACT_MAX = 9, LUNCH_FROM = 11 * 60 + 30, LUNCH_TO = 13 * 60 + 30;
+  function hoursKind(p) {
+    const o = mins(p.open), cl = mins(p.close);
+    const timedExtra = (p.closed_day_nums || []).length > 0 || (p.market_days || []).length > 0;
+    if (o == null || cl == null) return timedExtra ? "timed" : "unknown";
+    if (o === 0 && cl === 1440) return timedExtra ? "timed" : "always";
+    return "timed";
+  }
+  function optimizeOrder(places, c, ids0, locked) {
+    const ids = ids0.filter((i) => places[i] && places[i].lat != null && places[i].lon != null);
+    const n = ids.length;
+    const day = tripDate(c), wd = weekdayOf(day);
+    const start = STARTS[c.start];
+    const t0 = mins(c.start_time || "10:00");
+    const P = ids.map((i) => places[i]);
+    const staticClosed = P.map((q) => !!noticeOn(q, "closed", day) || ((q.market_days || []).length > 0 && !q.market_days.includes(Number(day.slice(8)) % 10)));
+    const first = P.map((q) => drive(start, q));
+    const M = P.map((a) => P.map((b) => drive([a.lat, a.lon], b)));
+    const back = P.map((q) => driveMin([q.lat, q.lon], start));
+    const lunch = P.map((q) => q.type === "식당");
+    const memo = new Map();
+    const visit = (j, arrive) => { const k = j + ":" + arrive; if (!memo.has(k)) memo.set(k, openCheck(P[j], wd, arrive, P[j].stay_min)); return memo.get(k); };
+    const step = (j, prev, t) => {
+      const dm = prev < 0 ? first[j] : M[prev][j];
+      const arrive = q15(t + dm);
+      let [ok, , wait] = visit(j, arrive);
+      const bad = !ok || staticClosed[j];
+      if (bad) wait = 0;
+      const t2 = q15(arrive + wait);
+      const stay = q15(t2 + P[j].stay_min) - t2;
+      const lp = lunch[j] ? Math.max(0, LUNCH_FROM - t2) + Math.max(0, t2 - LUNCH_TO) : 0;
+      return [(bad ? 100000 : 0) + dm * 10 + wait * 3 + lp * 4, t2 + stay];
+    };
+    const cost = (order) => {
+      let tot = 0, t = t0, prev = -1;
+      for (const j of order) { const [add, t2] = step(j, prev, t); tot += add; t = t2; prev = j; }
+      return tot + (prev >= 0 ? back[prev] * 10 : 0);
+    };
+    const posLock = new Map(); ids.forEach((x, k) => { if (locked.includes(x)) posLock.set(k, ids.indexOf(x)); });
+    const fixedAt = new Map(); for (const [k, v] of posLock) fixedAt.set(v, k);
+    const cur = ids.map((_, k) => k);
+    let bestCost = cost(cur), bestSeq = cur.slice(), checked = 1, method;
+    if (n <= OPT_EXACT_MAX) {
+      const used = new Array(n).fill(false), seq = [];
+      const dfs = (pos, prev, t, acc) => {
+        if (acc >= bestCost) return;
+        if (pos === n) {
+          checked++;
+          const total = acc + back[prev] * 10;
+          if (total < bestCost) { bestCost = total; bestSeq = seq.slice(); }
+          return;
+        }
+        const cand = fixedAt.has(pos) ? [fixedAt.get(pos)] : cur.filter((j) => !used[j] && !posLock.has(j));
+        for (const j of cand) {
+          if (used[j]) continue;
+          const [add, t2] = step(j, prev, t);
+          used[j] = true; seq.push(j);
+          dfs(pos + 1, j, t2, acc + add);
+          seq.pop(); used[j] = false;
+        }
+      };
+      dfs(0, -1, t0, 0);
+      method = "exact";
+    } else {
+      let order = cur.slice();
+      const free = cur.filter((k) => !posLock.has(k));
+      let improved = true;
+      while (improved) {
+        improved = false;
+        for (const a of free) for (const b of free) {
+          if (a === b) continue;
+          const o2 = order.slice(); const [x] = o2.splice(a, 1); o2.splice(b, 0, x);
+          if ([...fixedAt.keys()].some((k) => o2[k] !== order[k] || o2[k] !== fixedAt.get(k))) continue;
+          checked++;
+          const cst = cost(o2);
+          if (cst < bestCost) { bestCost = cst; bestSeq = o2.slice(); order = o2; improved = true; }
+        }
+      }
+      method = "local";
+    }
+    return { order: bestSeq.map((j) => ids[j]), checked, method, kinds: Object.fromEntries(ids.map((i) => [i, hoursKind(places[i])])) };
+  }
+  function routeMetric(places, c, r) {
+    if (!r.stops.length) return { move_min: 0, distance_m: null, source: r.drive_source || "estimate", back_at: r.back_at, total_min: 0, closed: [], wait_min: 0 };
+    const last = places[r.stops[r.stops.length - 1].id];
+    const back = r.back_drive_min != null ? r.back_drive_min : driveMin([last.lat, last.lon], STARTS[c.start]);
+    const dist = r.drive_source === "kakao" && r.route_costs ? r.route_costs.distance_m : null;
+    return { move_min: r.stops.reduce((a, s) => a + s.drive_min, 0) + back, distance_m: dist, source: r.drive_source || "estimate",
+      back_at: r.back_at, total_min: mins(r.back_at) - mins(r.start_time), closed: r.stops.filter((s) => s.open_state === "closed").map((s) => s.id),
+      wait_min: r.stops.reduce((a, s) => a + s.wait_min, 0) };
+  }
+  const fact = (k) => { let f = 1; for (let i = 2; i <= k; i++) f *= i; return f; };
+  const comma = (x) => String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  function optimize(body) {
+    const c = cond(body.conditions || {});
+    const ids = (body.order || []).filter((i) => typeof i === "string" && PLACES[i]).slice(0, 12);
+    if (ids.length < 2) throw new Error("400:순서를 바꿀 장소가 두 곳 이상 있어야 해요");
+    const locked = (body.locked || []).filter((i) => ids.includes(i));
+    const en = c.lang === "en";
+    const opt = optimizeOrder(PLACES, c, ids, locked);
+    const nw = opt.order;
+    c.order = ids;
+    const before = orderStops(PLACES, c, ids), mb = routeMetric(PLACES, c, before);
+    const same0 = nw.join("|") === ids.join("|");
+    let c2 = c, after = before, ma = mb;
+    if (!same0) { c2 = { ...c, order: nw }; after = orderStops(PLACES, c2, nw); ma = routeMetric(PLACES, c2, after); }
+    let changed = !same0;
+    if (changed) {
+      const same = ma.source === mb.source;
+      const worse = ma.closed.length > mb.closed.length || (ma.closed.length === mb.closed.length && same && ma.move_min + ma.wait_min > mb.move_min + mb.wait_min);
+      if (worse) { changed = false; c2 = c; after = before; ma = mb; }
+    }
+    const n = ids.length;
+    const reason = !changed && same0 ? (en ? "The current order already keeps opening hours with the least travel." : "지금 순서가 이미 운영시간을 지키면서 이동이 가장 적은 순서예요. 바꿀 필요가 없어요.")
+      : !changed ? (en ? "Checked with real routes: your current order is better, so nothing changes." : "추천 순서를 실제 길찾기로 다시 재 보니 지금 순서가 더 나아서 그대로 두었어요.")
+      : (en ? "Opening hours first, then the shortest travel among all possible orders." : "운영시간·휴무를 먼저 지키고, 그 안에서 이동이 가장 짧은 순서를 찾았어요. [이 일정 적용하기]를 눌러야 바뀌어요.");
+    let method = opt.method === "exact"
+      ? (en ? `Compared every possible order (${fact(n - locked.length)}) with branch-and-bound using estimated stop-to-stop times.`
+        : `가능한 순서 ${comma(fact(n - locked.length))}가지를 모두 따져(분기한정) 후보를 골랐어요. 후보끼리는 장소 사이 추정 이동시간으로 비교했어요.`)
+      : (en ? "Too many stops for a full search, so improved step by step (move one stop / swap) until no gain." : "장소가 많아 한 곳씩 옮겨 보며 더 나아지지 않을 때까지 개선했어요.");
+    method += ma.source === "estimate" ? (en ? " Real routing was unavailable, so all times are estimates." : " 실제 길찾기를 불러오지 못해 시간은 모두 추정값이에요.")
+      : (en ? " The before/after numbers are from real routing." : " 위 전후 비교 숫자는 실제 길찾기 값이에요.");
+    const kinds = opt.kinds;
+    const fin = after.stops.map((s) => s.id);
+    const kept = changed ? ids.filter((i) => kinds[i] === "timed" && !locked.includes(i) && fin.indexOf(i) === ids.indexOf(i)) : [];
+    const mode = modeFrom(c.move);
+    const access = [];
+    if (mode !== "none") {
+      const caution = after.stops.filter((s) => s.grade && s.grade !== "G").map((s) => PLACES[s.id].name_ko);
+      if (caution.length) access.push(en ? `Access caution: ${caution.join(", ")} (order changes don't change access ratings).`
+        : `${caution.join(", ")}: 접근 주의 구간이 있어요. 순서를 바꿔도 장소의 접근성 판정은 그대로예요.`);
+      access.push(en ? "Travel times are by car/transit; a short drive doesn't mean an easy wheelchair path. Check each stop's access details."
+        : "이동시간은 자동차·대중교통 기준이에요. 차로 가깝다고 휠체어 동선이 쉬운 것은 아니니 장소마다 [상세]의 접근 정보를 확인하세요.");
+      if (after.drive_source === "transit") access.push(en ? "Walking parts between transit are not verified for wheelchairs." : "대중교통 사이 걷는 구간은 계단·경사가 확인되지 않은 일반 보행 경로예요.");
+    }
+    const out = { ...coursePayload(after, c2, rainFor(c2)), action: "reorder", via: "rule" };
+    return { changed, reason, order_before: ids, order_after: changed ? fin : ids, before: mb, after: ma, result: out, kept, locked,
+      timed: ids.filter((i) => kinds[i] === "timed"), free: ids.filter((i) => kinds[i] === "always"), unknown: ids.filter((i) => kinds[i] === "unknown"),
+      access, checked: opt.checked, method };
+  }
+
   // ---------- edits.py (규칙 편집기) ----------
   const E = {
     REMOVE: "빼|제외|지워|없애|말고|안\\s*갈|안\\s*가|skip|remove|drop",
@@ -1292,6 +1471,8 @@ export function makeApi(DATA) {
     if (path === "/api/course") return course(body);
     if (path === "/api/talk") return talk(body);
     if (path === "/api/edit") return edit(body);
+    if (path === "/api/reorder") return reorder(body);
+    if (path === "/api/optimize") return optimize(body);
     if (path === "/api/safety") return safety(+q.lat, +q.lon, q.lang || "ko");
     if (path === "/api/eateries") return eateries(+q.lat, +q.lon, q.group || "", Math.max(100, Math.min(+q.r || 800, 3000)), Math.max(1, Math.min(+q.limit || 8, 30)), q.sort || "pick");
     if (path === "/api/health") return { ok: true, demo: true, places: Object.keys(PLACES).length };

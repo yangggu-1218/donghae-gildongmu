@@ -127,6 +127,91 @@ def plan_course(c: Conditions, rain: bool, hint: str = ""):
     return engine.plan(PLACES, c, rain), {"by": "rule"}
 
 
+@app.post("/api/reorder")
+def reorder(body: dict):
+    """일정 카드를 끌어서 바꾼 순서 그대로: body {conditions, order:[장소 id …]}.
+    장소를 빼거나 바꾸지 않고, 바뀐 순서로 이동시간(ODsay·카카오, 안 되면 추정)·방문 시각·돌아오는 시각을 다시 계산한다.
+    이동 조건(휠체어 등)은 그대로라 걷는 속도·접근성 판정도 그대로 쓴다."""
+    c = Conditions(**(body.get("conditions") or {}))
+    ids = [i for i in (body.get("order") or []) if isinstance(i, str) and i in PLACES][:12]
+    if not ids:
+        raise HTTPException(400, "순서를 바꿀 장소가 없어요")
+    c.order = ids
+    result = engine.schedule_order(PLACES, c, ids)
+    out = course_payload(result, c, engine.rain_for(c))
+    out.update({"action": "reorder", "via": "rule"})
+    return out
+
+
+@app.post("/api/optimize")
+def optimize(body: dict):
+    """AI 동선 최적화: body {conditions, order:[지금 순서], locked:[고정한 장소]}.
+    장소는 그대로 두고, 운영시간·휴무를 먼저 지키면서 이동이 가장 짧은 순서를 찾는다. 바로 바꾸지 않고 변경 전후를 함께 돌려준다."""
+    c = Conditions(**(body.get("conditions") or {}))
+    ids = [i for i in (body.get("order") or []) if isinstance(i, str) and i in PLACES][:12]
+    if len(ids) < 2:
+        raise HTTPException(400, "순서를 바꿀 장소가 두 곳 이상 있어야 해요")
+    locked = [i for i in (body.get("locked") or []) if i in ids]
+    en = c.lang == "en"
+    opt = engine.optimize_order(PLACES, c, ids, locked)
+    new = opt["order"]
+    c.order = ids
+    before = engine.schedule_order(PLACES, c, ids)
+    mb = engine.route_metric(PLACES, c, before)
+    if new != ids:
+        c2 = c.model_copy(update={"order": new})
+        after = engine.schedule_order(PLACES, c2, new)
+        ma = engine.route_metric(PLACES, c2, after)
+    else:
+        c2, after, ma = c, before, mb
+    changed = new != ids
+    if changed:   # 실제 길찾기로 다시 재 보니 더 나쁘면 바꾸지 않는다
+        same = ma["source"] == mb["source"]
+        worse = len(ma["closed"]) > len(mb["closed"]) or (len(ma["closed"]) == len(mb["closed"]) and same and ma["move_min"] + ma["wait_min"] > mb["move_min"] + mb["wait_min"])
+        if worse:
+            changed, c2, after, ma = False, c, before, mb
+    n = len(ids)
+    if not changed and new == ids:
+        reason = "The current order already keeps opening hours with the least travel." if en else "지금 순서가 이미 운영시간을 지키면서 이동이 가장 적은 순서예요. 바꿀 필요가 없어요."
+    elif not changed:
+        reason = "Checked with real routes: your current order is better, so nothing changes." if en else "추천 순서를 실제 길찾기로 다시 재 보니 지금 순서가 더 나아서 그대로 두었어요."
+    else:
+        reason = ("Opening hours first, then the shortest travel among all possible orders." if en
+                  else "운영시간·휴무를 먼저 지키고, 그 안에서 이동이 가장 짧은 순서를 찾았어요. [이 일정 적용하기]를 눌러야 바뀌어요.")
+    import math as _m
+    if opt["method"] == "exact":
+        method = (f"Compared every possible order ({_m.factorial(n - len(locked))}) with branch-and-bound using estimated stop-to-stop times."
+                  if en else f"가능한 순서 {_m.factorial(n - len(locked)):,}가지를 모두 따져(분기한정) 후보를 골랐어요. 후보끼리는 장소 사이 추정 이동시간으로 비교했어요.")
+    else:
+        method = ("Too many stops for a full search, so improved step by step (move one stop / swap) until no gain." if en
+                  else "장소가 많아 한 곳씩 옮겨 보며 더 나아지지 않을 때까지 개선했어요.")
+    if ma["source"] == "estimate":
+        method += (" Real routing was unavailable, so all times are estimates." if en else " 실제 길찾기를 불러오지 못해 시간은 모두 추정값이에요.")
+    else:
+        method += (" The before/after numbers are from real routing." if en else " 위 전후 비교 숫자는 실제 길찾기 값이에요.")
+    kinds = opt["kinds"]
+    final = [s.id for s in after.stops]
+    kept = [i for i in ids if kinds[i] == "timed" and i not in locked and final.index(i) == ids.index(i)] if changed else []
+    mode = engine.mode_from(c.move)
+    access = []
+    if mode != "none":
+        caution = [PLACES[s.id].name_ko for s in after.stops if s.grade and s.grade != "G"]
+        if caution:
+            access.append((f"Access caution: {', '.join(caution)} (order changes don't change access ratings)." if en
+                           else f"{', '.join(caution)}: 접근 주의 구간이 있어요. 순서를 바꿔도 장소의 접근성 판정은 그대로예요."))
+        access.append(("Travel times are by car/transit; a short drive doesn't mean an easy wheelchair path. Check each stop's access details." if en
+                       else "이동시간은 자동차·대중교통 기준이에요. 차로 가깝다고 휠체어 동선이 쉬운 것은 아니니 장소마다 [상세]의 접근 정보를 확인하세요."))
+        if after.drive_source == "transit":
+            access.append(("Walking parts between transit are not verified for wheelchairs." if en
+                           else "대중교통 사이 걷는 구간은 계단·경사가 확인되지 않은 일반 보행 경로예요."))
+    out = course_payload(after, c2, engine.rain_for(c2))
+    out.update({"action": "reorder", "via": "rule"})
+    return {"changed": changed, "reason": reason, "order_before": ids, "order_after": final if changed else ids,
+            "before": mb, "after": ma, "result": out, "kept": kept, "locked": locked,
+            "timed": [i for i in ids if kinds[i] == "timed"], "free": [i for i in ids if kinds[i] == "always"],
+            "unknown": [i for i in ids if kinds[i] == "unknown"], "access": access, "checked": opt["checked"], "method": method}
+
+
 @app.post("/api/edit")
 def edit(body: dict):
     """작업3: AI 없이 규칙으로 코스 고치기. body: {conditions, course_ids, text? | action?, target?}

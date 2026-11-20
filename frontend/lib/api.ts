@@ -6,7 +6,7 @@ export type VisitWeather = {
 };
 export type Stop = {
   id: string; arrive: string; drive_min: number; grade: Grade; why: string;
-  depart: string; kind: "sight" | "lunch" | "cafe"; open_state: "open" | "always" | "unknown";
+  depart: string; kind: "sight" | "lunch" | "cafe"; open_state: "open" | "always" | "unknown" | "closed";
   hours_text: string; hours_sample: boolean; wait_min: number; visit_at?: string | null; notice?: string; weather?: VisitWeather;
 };
 export type Course = {
@@ -31,6 +31,7 @@ export type Conditions = {
   start: "동해역" | "묵호역" | "동해종합버스터미널" | "자가용"; budget_min?: number | null; toilet_first?: boolean; memo: string; wish: string[]; must?: string[]; rain?: boolean | null; lang: "ko" | "en";
   date?: string | null; start_time?: string; meal?: string[]; exclude?: string[]; cap?: number | null; rest?: boolean | null;
   flat_only?: boolean; lunch?: string | null; skip_lunch?: boolean; weather_pref?: "" | "실내" | "실외";
+  order?: string[];   // 사용자가 끌어서 정한 방문 순서 (비어 있으면 엔진이 정한 순서)
 };
 // 일별 예보 하루 (backend/app/public_apis.py forecast)
 export type WxDay = { date: string; code: number; ko: string; en: string; icon: string; pop: number | null; mm: number; tmax: number; tmin: number; wind: number | null; rain: boolean };
@@ -40,6 +41,14 @@ export type Nearby = { parking: Near; charger: Near & { spot?: string; weekday_h
 export type CourseRes = {
   course: Course; rain: boolean; summary: string; conditions: Conditions; extras: Record<string, Extra>; stay: any; move: any;
   events: any[]; events_on_day: boolean; planner?: { by: "ai" | "rule"; model?: string; summary?: string; problems?: string[] }; reply?: string; action?: string; target?: string | null; changed?: boolean;
+};
+
+// AI 동선 최적화 결과 (backend/app/main.py /api/optimize)
+export type RouteMetric = { move_min: number; distance_m: number | null; source: "kakao" | "transit" | "estimate"; back_at: string; total_min: number; closed: string[]; wait_min: number };
+export type OptimizeRes = {
+  changed: boolean; reason: string; order_before: string[]; order_after: string[];
+  before: RouteMetric; after: RouteMetric; result: CourseRes;
+  kept: string[]; locked: string[]; timed: string[]; free: string[]; unknown: string[]; access: string[]; checked: number; method: string;
 };
 
 // 공공데이터에서 붙는 장소별 정보 (backend/app/public_data.py)
@@ -105,6 +114,14 @@ export const api = {
   edit: (body: { conditions: Conditions; course_ids: string[]; text?: string; action?: string; target?: string | null }) =>
     fetch("/api/edit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
       .then((r) => j<CourseRes>(r)),
+  // 일정 카드를 끌어서 바꾼 순서 그대로 이동시간·시각을 다시 계산 (장소는 그대로)
+  reorder: (conditions: Conditions, order: string[]) =>
+    fetch("/api/reorder", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conditions, order }) })
+      .then((r) => j<CourseRes>(r)),
+  // AI 동선 최적화: 지금 장소 그대로, 운영시간을 먼저 지키고 이동이 가장 짧은 순서를 찾아 변경 전후를 함께 돌려준다 (적용은 화면에서)
+  optimize: (conditions: Conditions, order: string[], locked: string[]) =>
+    fetch("/api/optimize", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conditions, order, locked }) })
+      .then((r) => j<OptimizeRes>(r)),
   chat: (message: string, conditions: Conditions, course_ids: string[]) =>
     fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message, conditions, course_ids }) })
       .then((r) => j<{ edit: { action: string; reply: string }; course: Course; conditions: Conditions }>(r)),
