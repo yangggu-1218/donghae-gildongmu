@@ -31,7 +31,7 @@ TASKS: dict[str, dict] = {
     "judge": {"tier": "smart", "ko": "AI 접근성 판정", "effort": "medium"},
     "status": {"tier": "fast", "ko": "최근 길 상태 요약", "effort": "low"},
     "talk": {"tier": "fast", "ko": "대화형 동이", "effort": "low"},
-    "extract": {"tier": "fast", "ko": "자료로 장소 정보 채우기 (관리자)", "effort": "low"},
+    "extract": {"tier": "fast", "ko": "장소 정보 AI 간단 작업 (자료 확인·글 다듬기, 관리자)", "effort": "low"},
     "triage": {"tier": "fast", "ko": "불편 제보 정리 (사진 분석·분류)", "effort": "low"},
     "cluster": {"tier": "fast", "ko": "비슷한 제보 묶음 요약", "effort": "low"},
     "report": {"tier": "smart", "ko": "제보 기간 보고서 (시 담당자)", "effort": "medium"},

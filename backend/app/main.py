@@ -329,7 +329,8 @@ async def admin_ai_work(url: str = Form(""), place_id: str = Form(""), file: Upl
         if place_id:
             if place_id not in PLACES:
                 raise HTTPException(404, "알 수 없는 장소예요")
-            who = {"place_id": place_id, "name": PLACES[place_id].name_ko, "how": "admin", "reason": "관리자가 고른 장소", "candidates": []}
+            who = {"place_id": place_id, "name": PLACES[place_id].name_ko, "how": "admin", "reason": "관리자가 고른 장소", "candidates": [],
+                   "mismatch": ai_extract.other_place(kind, data, pool, place_id)}
         else:
             who = await anyio.to_thread.run_sync(ai_extract.identify, kind, data, pool)
         if not who.get("place_id"):
@@ -339,6 +340,19 @@ async def admin_ai_work(url: str = Form(""), place_id: str = Form(""), file: Upl
         if not got.get("ok"):
             return {**got, "place": who, "source": name}
         return {**got, "place": who, "changes": ai_extract.changes(cur, got.get("fields") or {})}
+    except ai_extract.BadInput as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/admin/ai/tidy")
+def admin_ai_tidy(body: dict, x_admin_token: str | None = Header(None)):
+    """장소 정보 화면의 AI 간단 작업: 소개·팁 글을 간결한 객관형으로 다듬은 미리 보기 (저장은 관리자가 [저장]으로)."""
+    _admin(x_admin_token, "place")
+    p = PLACES.get(body.get("place_id") or "")
+    if not p:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    try:
+        return ai_extract.tidy(p.model_dump(), body.get("field") or "", body.get("text") or "")
     except ai_extract.BadInput as e:
         raise HTTPException(400, str(e))
 

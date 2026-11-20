@@ -1,6 +1,6 @@
 "use client";
 // 관리자 [제보·민원] — 시 담당자 화면 (docs/19_CITY_REPORTS.md 2-3)
-//  목록(묶음 단위) · 몰리는 곳 지도 · 기간 요약(AI 보고서) · 설정(부서 이름·가상 데이터·백업) · 개별 제보(예전 [제보 검수] 화면)
+//  목록(묶음 단위) · 몰리는 곳 지도 · 기간 요약(AI 보고서) · 설정(부서 이름·가상 데이터·백업)
 // AI가 낸 분류·심각도·부서·우선순위는 담당자가 고칠 수 있고, 고친 값이 먼저 보인다(AI 값은 따로 남음).
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
@@ -13,8 +13,8 @@ const PRIC: Record<string, string> = { urgent: "g-R", high: "b-unknown", normal:
 const OPEN = (s: string) => !["완료", "반려", "중복"].includes(s);
 const iso = (d: Date) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
 
-export function CityAdmin({ tok, call, onExpired, can, Legacy }: { tok: string; call: Any; onExpired: () => void; can: (p: string) => boolean; Legacy: React.ReactNode }) {
-  const [view, setView] = useState<"list" | "map" | "sum" | "set" | "old">("list");
+export function CityAdmin({ tok, call, onExpired, can }: { tok: string; call: Any; onExpired: () => void; can: (p: string) => boolean }) {
+  const [view, setView] = useState<"list" | "map" | "sum" | "set">("list");
   const [d, setD] = useState<Any>(null);
   const [withSample, setWithSample] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function CityAdmin({ tok, call, onExpired, can, Legacy }: { tok: string; 
         <div className="ca-kpi"><b>{openN.filter((c: Any) => c.priority === "urgent").length}</b><small>긴급</small></div>
       </div>
       <div className="tabs ca-views" role="group" aria-label="제보·민원 보기">
-        {([["list", "목록"], ["map", "몰리는 곳 지도"], ["sum", "기간 요약"], ["set", "설정·백업"], ["old", "개별 제보 (예전 화면)"]] as const).map(([k, t]) =>
+        {([["list", "목록"], ["map", "몰리는 곳 지도"], ["sum", "기간 요약"], ["set", "설정·백업"]] as const).map(([k, t]) =>
           <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{t}</button>)}
         {d.sample_loaded && <label className="day small ca-sample"><input type="checkbox" checked={withSample} onChange={(e) => setWithSample(e.target.checked)} />가상 제보 보기</label>}
       </div>
@@ -60,7 +60,6 @@ export function CityAdmin({ tok, call, onExpired, can, Legacy }: { tok: string; 
       {view === "map" && <HotMap d={d} onPick={(id) => { setOpen(id); setF({ ...f, status: "전체" }); setView("list"); setTimeout(() => document.getElementById(`ca-${id}`)?.scrollIntoView({ block: "start" }), 50); }} />}
       {view === "sum" && <Summary tok={tok} withSample={withSample} onExpired={onExpired} />}
       {view === "set" && <Settings d={d} tok={tok} call={call} can={can} reload={load} />}
-      {view === "old" && Legacy}
     </div>
   );
 }

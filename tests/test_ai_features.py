@@ -211,6 +211,20 @@ check("AI 작업: 이름이 한 번뿐이면 규칙으로 정하지 않고 AI에
 f = FakeClaude(json_msg(d2)); ai.set_client(f)
 r = c.post("/api/admin/ai/work", data={"place_id": "chotdae"}, files={"file": ("안내.txt", txt, "text/plain")}, headers=H)
 check("AI 작업: 관리자가 장소를 바꿀 수 있음", r.status_code == 200 and r.json()["place"]["place_id"] == "chotdae" and r.json()["place"]["how"] == "admin")
+f = FakeClaude(json_msg(d2)); ai.set_client(f)
+r = c.post("/api/admin/ai/work", data={"place_id": "chotdae"}, files={"file": ("안내.txt", txt, "text/plain")}, headers=H)
+check("장소 정보 화면: 다른 장소 자료면 알림(mismatch)", r.status_code == 200 and r.json()["place"].get("mismatch") == "무릉별유천지", r.text[:200])
+
+# ---------- 장소 정보 화면의 AI 간단 작업: 글 다듬기 (미리 보기만, 저장 안 함) ----------
+intro0 = PLACES["mureung"].intro_ko
+f = FakeClaude(json_msg({"text": "석회석 광산을 바꾼 체험형 관광지. 호수 2곳·절벽·라벤더 정원", "removed": []})); ai.set_client(f)
+r = c.post("/api/admin/ai/tidy", json={"place_id": "mureung", "field": "intro_ko", "text": intro0}, headers=H); j = r.json()
+check("글 다듬기: 미리 보기만 돌려줌", r.status_code == 200 and j["ok"] and j["text"].startswith("석회석") and j["before"] and PLACES["mureung"].intro_ko == intro0, r.text[:200])
+check("글 다듬기: 객관형 지시(구어체 금지·사실만)", f.calls and "구어체" in str(f.calls[0].get("system")) and "새 사실" in str(f.calls[0].get("system")))
+check("글 다듬기: 다른 칸은 400", c.post("/api/admin/ai/tidy", json={"place_id": "mureung", "field": "phone", "text": "033-000-0000"}, headers=H).status_code == 400)
+check("글 다듬기: 관리자 아니면 못 씀", c.post("/api/admin/ai/tidy", json={"place_id": "mureung", "field": "intro_ko", "text": "가나다라마바사"}).status_code in (401, 403))
+ai.set_client(FakeClaude(RuntimeError("down")))
+check("글 다듬기: AI 실패면 안내", c.post("/api/admin/ai/tidy", json={"place_id": "mureung", "field": "carer_tip", "text": "다른 글이라 캐시 없음"}, headers=H).json()["ok"] is False)
 ai.set_client(None)
 r = c.post("/api/admin/ai/work", files={"file": ("y.txt", "아무 장소 이름도 없는 그냥 긴 글입니다. 오늘 날씨가 좋네요.".encode(), "text/plain")}, headers=H)
 check("AI 작업: 못 찾으면 직접 고르라고", r.status_code == 200 and r.json()["ok"] is False and r.json()["place"]["place_id"] is None, r.text[:200])

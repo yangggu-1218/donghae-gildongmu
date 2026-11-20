@@ -1,6 +1,6 @@
 "use client";
 // 관리자: 계정마다 로그인 → 역할(총괄 관리자·편집자·현장 조사원)에 맞는 탭만 보인다.
-// 장소 정보·임시 알림·공지·행사를 고치면 사이트에 바로 반영. 모든 변경은 '누가' 바꿨는지와 함께 이력에 남고 되돌릴 수 있다.
+// 장소 정보(+AI 간단 작업)·공지·알림을 고치면 사이트에 바로 반영. 문의와 불편 제보는 '받은 글' 한 탭에서. 모든 변경은 '누가' 바꿨는지와 함께 이력에 남고 되돌릴 수 있다.
 // 팀 현장 확인 기록과 이용자 제보 검수, 관리자 계정 관리도 여기서 한다. (관리 화면은 팀용이라 한국어만)
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
@@ -12,9 +12,9 @@ import { SyncAdmin } from "@/components/SyncAdmin";
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
 // 위에 늘 보이는 탭 = 운영할 때 매일 쓰는 것. 가끔 쓰는 것은 [더 보기] 안에 (기능은 그대로)
-const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보·민원", "reports"], ["inquiries", "문의", "reports"], ["aiwork", "AI로 작업하기", "place"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
+const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "공지·알림", "notice"], ["reports", "받은 글 (문의·제보)", "reports"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
   ["history", "변경 이력·백업", "history"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
-const MAIN_TABS = new Set(["home", "aiwork", "place", "notice", "site", "reports", "inquiries", "aiprops", "visits"]);
+const MAIN_TABS = new Set(["home", "place", "notice", "reports", "aiprops", "visits"]);
 type TabKey = (typeof TABS)[number][0];
 type User = { id: string; name: string; role: string; role_name: string; perms: string[]; must_change?: boolean; expires_at?: string };
 const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·백업·초기화", editor: "장소·알림·공지·행사·제보·되돌리기", surveyor: "현장 확인 기록 입력과 제보 검수만" };
@@ -27,112 +27,6 @@ const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)
 
 function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <label className={wide ? "wide" : undefined}>{label}{children}</label>;
-}
-
-// 자료로 채우기: 한글·PDF 파일이나 공개 링크 → AI가 [장소 정보] 칸 초안을 만든다 (저장은 관리자가 확인한 뒤)
-function ImportBox({ pid, tok, onDraft }: { pid: string; tok: string; onDraft: (r: any) => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [url, setUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  async function run() {
-    setErr(""); setBusy(true);
-    const fd = new FormData(); fd.append("place_id", pid);
-    if (file) fd.append("file", file); else fd.append("url", url.trim());
-    try {
-      const r = await api.form("/api/admin/ai/extract", fd, tok);
-      if (r.ok) onDraft(r); else setErr(r.why || "AI가 자료를 읽지 못했어요.");
-    } catch (e: any) { setErr(e.message || "자료를 읽지 못했어요."); }
-    setBusy(false);
-  }
-  return (
-    <div className="import-box">
-      <b className="import-h"><Icon name="story" />자료로 채우기 <span className="via via-llm">AI</span></b>
-      <label className="chip import-file"><input type="file" accept=".hwp,.hwpx,.pdf,.txt" hidden onChange={(e) => { setFile(e.target.files?.[0] || null); setUrl(""); }} />
-        {file ? file.name : "한글·PDF 파일"}</label>
-      <span className="muted small">또는</span>
-      <input className="import-url" type="url" placeholder="정보가 공개된 링크 (https://…)" value={url} onChange={(e) => { setUrl(e.target.value); setFile(null); }} />
-      <button type="button" className="chip go" disabled={busy || (!file && !/^https?:\/\/\S+/.test(url.trim()))} onClick={run}>{busy ? "읽는 중…" : "AI로 정리"}</button>
-      {err && <p className="err small" role="alert">{err}</p>}
-    </div>
-  );
-}
-
-/* ---------- AI로 작업하기: 자료만 올리면 AI가 어느 관광지인지 찾고, 바뀐 칸만 골라 보여 준다 ---------- */
-// 장소를 먼저 고르지 않는다. 저장은 관리자가 고른 칸만 [장소 정보 고치기]와 같은 길로 (변경 이력·되돌리기 그대로)
-function AiWork({ places, tok, call, onExpired, go }: any) {
-  const [file, setFile] = useState<File | null>(null);
-  const [url, setUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [r, setR] = useState<any>(null);
-  const [pick, setPick] = useState<Record<string, boolean>>({});
-  const [reason, setReason] = useState("");
-  const [saved, setSaved] = useState("");
-  const ready = !!file || /^https?:\/\/\S+/.test(url.trim());
-  async function run(placeId = "") {
-    setErr(""); setSaved(""); setBusy(true);
-    const fd = new FormData();
-    if (placeId) fd.append("place_id", placeId);
-    if (file) fd.append("file", file); else fd.append("url", url.trim());
-    try {
-      const x = await api.form("/api/admin/ai/work", fd, tok);
-      setR(x);
-      setPick(Object.fromEntries((x.changes || []).map((c: any) => [c.key, !c.access])));   // 이동약자 칸은 꼭 직접 확인하게 처음엔 안 고름
-      setReason(`AI로 작업하기: ${x.source || "자료"} (관리자 확인)`);
-      if (!x.ok) setErr(x.why || "AI가 자료를 읽지 못했어요.");
-    } catch (e: any) { if (e.status === 401) onExpired(); setErr(e.message || "자료를 읽지 못했어요."); }
-    setBusy(false);
-  }
-  const pid = r?.place?.place_id;
-  const chosen = (r?.changes || []).filter((c: any) => pick[c.key]);
-  async function save() {
-    const fields = Object.fromEntries(chosen.map((c: any) => [c.key, c.value]));
-    await call(() => api.post(`/api/admin/places/${pid}`, { fields, reason }, tok), `${r.place.name}: ${chosen.length}칸을 고쳤어요.`);
-    setSaved(`${r.place.name}에 ${chosen.length}칸을 반영했어요. [변경 이력]에서 되돌릴 수 있어요.`);
-    setR({ ...r, changes: (r.changes || []).filter((c: any) => !pick[c.key]) });
-  }
-  return (
-    <div className="aiw">
-      <div className="panel aiw-in">
-        <h2 className="h3"><Icon name="story" />자료로 장소 정보 고치기 <span className="via via-llm">AI</span></h2>
-        <p className="muted">공문·안내문(한글·PDF)이나 공개된 누리집 링크를 넣으면, AI가 <b>어느 관광지 자료인지</b> 알아내고 <b>지금 사이트와 달라진 칸</b>만 골라 보여 줘요. 저장은 고른 칸만, 관리자가 눌러야 돼요.</p>
-        <div className="aiw-drop">
-          <label className="aiw-file"><input type="file" accept=".hwp,.hwpx,.pdf,.txt" onChange={(e) => { setFile(e.target.files?.[0] || null); setUrl(""); setR(null); }} />
-            <Icon name="edit" /><span>{file ? file.name : "한글·PDF·글 파일 고르기"}</span></label>
-          <span className="muted">또는</span>
-          <input className="aiw-url" type="url" placeholder="정보가 공개된 링크 (https://…)" value={url} onChange={(e) => { setUrl(e.target.value); setFile(null); setR(null); }} aria-label="자료 링크" />
-          <button className="chip go" disabled={busy || !ready} onClick={() => run()}>{busy ? "AI가 읽는 중…" : "AI에게 맡기기"}</button>
-        </div>
-        {err && <p className="err" role="alert">{err}</p>}
-      </div>
-      {r?.place && <div className="panel aiw-place" role="status">
-        <p><span className="aiw-k">어느 관광지</span> {pid ? <b>{r.place.name}</b> : <b className="muted">찾지 못함</b>}
-          <small className="muted"> · {r.place.how === "rule" ? "이름으로 찾음" : r.place.how === "ai" ? "AI가 찾음" : r.place.how === "admin" ? "직접 고름" : ""} · {r.place.reason}</small></p>
-        <label className="aiw-other">다른 곳이면 고르기
-          <select value="" onChange={(e) => e.target.value && run(e.target.value)} disabled={busy}>
-            <option value="">장소 바꾸기…</option>
-            {places.filter((p: any) => p.type !== "숙박").map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}</option>)}</select></label>
-      </div>}
-      {r?.ok && <div className="panel aiw-res">
-        <h3 className="h3">바뀐 점 {r.changes?.length || 0}가지 {r.summary && <small className="muted">· {r.summary}</small>}</h3>
-        {r.changes?.length ? <table className="tbl aiw-tbl">
-          <thead><tr><th>반영</th><th>칸</th><th>지금 사이트</th><th>자료에 적힌 값</th></tr></thead>
-          <tbody>{r.changes.map((c: any) => <tr key={c.key} className={c.access ? "aiw-acc" : undefined}>
-            <td><input type="checkbox" checked={!!pick[c.key]} onChange={(e) => setPick({ ...pick, [c.key]: e.target.checked })} aria-label={`${c.label} 반영`} /></td>
-            <td><b>{c.label}</b>{c.access && <span className="badge b-unknown">이동약자 정보 · 직접 확인</span>}</td><td className="muted">{c.now}</td><td><b>{c.new}</b></td></tr>)}</tbody></table>
-          : <p className="muted">자료의 내용이 지금 사이트와 같아요. 고칠 것이 없어요.</p>}
-        {r.evidence?.length > 0 && <details><summary>근거 문장 {r.evidence.length}개</summary><ul className="ai-list">{r.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
-        {r.missing_ko?.length > 0 && <p className="muted small">자료에 없어 건드리지 않은 칸: {r.missing_ko.join(", ")}</p>}
-        {r.changes?.length > 0 && <div className="aiw-save">
-          <label>바꾸는 이유<input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
-          <button className="chip go" disabled={!chosen.length || !reason.trim()} onClick={save}>고른 {chosen.length}칸 반영</button>
-          <button className="chip" onClick={() => go("place")}>장소 정보에서 직접 고치기</button>
-        </div>}
-      </div>}
-      {saved && <p className="ok" role="status">{saved}</p>}
-    </div>
-  );
 }
 
 export function AdminPage({ lang }: { lang: Lang }) {
@@ -182,8 +76,9 @@ export function AdminPage({ lang }: { lang: Lang }) {
 
 function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; user: User; setUser: (u: User) => void; onLogout: () => void; onExpired: () => void }) {
   const can = (perm: string | null) => !perm || user.perms.includes(perm);
-  const tabs = TABS.filter(([k, , perm]) => (k === "visits" ? user.role === "surveyor" : can(perm)));   // 현장 확인 기록은 현장 조사원에게만
+  const tabs = TABS.filter(([k, , perm]) => (k === "visits" ? user.role === "surveyor" : k === "notice" ? can("notice") || can("site") : can(perm)));   // 현장 확인 기록은 현장 조사원에게만, 공지·알림은 둘 중 하나라도
   const [tab, setTab] = useState<TabKey>("home");
+  const [inbox, setInbox] = useState<"all" | "inq" | "rep">("all");
   const [db, setDb] = useState<any>(null);
   const [places, setPlaces] = useState<any[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
@@ -219,14 +114,11 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
           </select></label>
       </div>
       {msg && <p role="status" className={`admin-msg ${msg.ok ? "ok" : "bad"}`}>{msg.ok ? "✓ " : "! "}{msg.text}{msg.link && <> · <a href={msg.link}>사이트에서 보기</a></>}</p>}
-      {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey) => setTab(k)} can={can} onExpired={onExpired} />}
+      {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey, sub?: "inq" | "rep") => { setTab(k); if (sub) setInbox(sub); }} can={can} onExpired={onExpired} />}
       {tab === "accounts" && can("accounts") && <Accounts tok={tok} call={call} me={user} />}
       {tab === "place" && <PlaceEditor places={places} db={db} tok={tok} call={call} />}
-      {tab === "aiwork" && <AiWork places={places} tok={tok} call={call} onExpired={onExpired} go={(k: TabKey) => setTab(k)} />}
-      {tab === "notice" && <Notices places={places} db={db} tok={tok} call={call} name={name} />}
-      {tab === "site" && <SiteEditor db={db} tok={tok} call={call} />}
-      {tab === "reports" && <CityAdmin tok={tok} call={call} onExpired={onExpired} can={can} Legacy={<Reports tok={tok} call={call} onExpired={onExpired} canNotice={can("notice")} />} />}
-      {tab === "inquiries" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
+      {tab === "notice" && <NoticeHub places={places} db={db} tok={tok} call={call} name={name} can={can} />}
+      {tab === "reports" && <Inbox kind={inbox} setKind={setInbox} tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "aiprops" && <AiProposals tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "sync" && <SyncAdmin tok={tok} call={call} onExpired={onExpired} can={can} />}
       {tab === "visits" && <Visits places={places} tok={tok} call={call} me={user} />}
@@ -244,9 +136,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
   const [segs, setSegs] = useState<any[]>([]);
   const [reason, setReason] = useState("");
   const [orig, setOrig] = useState<any>(null);
-  const [aiFill, setAiFill] = useState<any>(null);       // AI가 채운 초안 결과 (근거·빈칸)
   useEffect(() => {
-    setAiFill(null);
     if (!pid) return;
     api.place(pid).then((p: any) => {
       setOrig(p); setReason("");
@@ -277,12 +167,8 @@ function PlaceEditor({ places, db, tok, call }: any) {
       <label className="pick-place">고칠 장소
         <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
           {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
-      {aiFill && <div className="ai-fill" role="status">
-        <p><b>AI가 {Object.keys(aiFill.fields).length}칸을 채웠어요.</b> 아래 칸을 확인하고 저장해 주세요. {aiFill.truncated && <span className="muted">(자료가 길어 앞부분만 읽었어요)</span>}</p>
-        {aiFill.missing_ko.length > 0 && <p className="ai-missing">⚠ 자료에 없어 비워 둔 칸: {aiFill.missing_ko.map((m: string) => <span key={m} className="badge b-unknown">{m}</span>)}</p>}
-        {aiFill.evidence.length > 0 && <details><summary>근거 문장 {aiFill.evidence.length}개 보기</summary><ul className="ai-list">{aiFill.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
-      </div>}
-      {pid && orig && (<form className="visit-form" onSubmit={(e) => { e.preventDefault();
+      {pid && orig && <div className="pe-grid">
+      <form className="visit-form" onSubmit={(e) => { e.preventDefault();
         call(() => api.post(`/api/admin/places/${pid}`, { fields: d.fields, segments: d.segments, reason }, tok), `${orig.name_ko} 정보를 바꿨어요. 코스 추천과 장소 페이지에 바로 반영됐어요.`, `#/place/${pid}`); }}>
         <h2 className="h3">운영시간 {Object.keys(ov).some((k) => ["open", "close", "break_time", "closed_day_nums"].includes(k)) && <span className="badge b-plain">관리자 확인</span>}</h2>
         <Field label="여는 시각"><input type="time" value={f.open} onChange={(e) => set("open", e.target.value)} /></Field>
@@ -329,8 +215,88 @@ function PlaceEditor({ places, db, tok, call }: any) {
           <span className="muted small">{changed ? `바뀐 항목 ${changed}개` : "바뀐 것이 없어요"}</span>
           <a className="chip" href={`#/place/${pid}`}>장소 페이지 보기</a>
         </div>
-      </form>)}
+      </form>
+      <AiQuick pid={pid} name={orig.name_ko} feeDone={Object.keys(orig.fee_detail || {}).length > 0} f={f} tok={tok} onFill={(patch: any) => setF({ ...f, ...patch })} />
+      </div>}
     </div>
+  );
+}
+
+/* ---------- AI 간단 작업 (장소 정보 옆): 자료로 확인 · 글 다듬기 · 빠진 칸 확인 ---------- */
+// 결과는 미리 보기뿐. [폼에 넣기]는 왼쪽 칸만 바꾸고, 사이트 반영은 관리자가 [저장하고 바로 반영]을 눌러야 한다. 어떤 칸도 미리 체크하지 않는다.
+const TIDY_FIELDS: [string, string][] = [["intro_ko", "소개 간결하게"], ["carer_tip", "보호자 꿀팁 다듬기"], ["tip_ko", "한 줄 팁 다듬기"]];
+function toForm(c: any): any {
+  if (c.key === "break_time") return { b0: c.value?.[0] || "", b1: c.value?.[1] || "" };
+  if (["entrance_step", "indoor", "benches"].includes(c.key)) return { [c.key]: tri(c.value) };
+  return { [c.key]: c.value ?? "" };
+}
+function AiQuick({ pid, name, f, tok, onFill, feeDone }: any) {
+  const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState("");
+  const [err, setErr] = useState("");
+  const [r, setR] = useState<any>(null);
+  const [pick, setPick] = useState<Record<string, boolean>>({});
+  const [td, setTd] = useState<any>(null);
+  const [done, setDone] = useState("");
+  useEffect(() => { setR(null); setTd(null); setErr(""); setDone(""); setFile(null); setUrl(""); }, [pid]);
+  async function read() {
+    setErr(""); setDone(""); setBusy("read");
+    const fd = new FormData(); fd.append("place_id", pid);
+    if (file) fd.append("file", file); else fd.append("url", url.trim());
+    try { const x = await api.form("/api/admin/ai/work", fd, tok); setR(x); setPick({}); if (!x.ok) setErr(x.why || "AI가 자료를 읽지 못했어요."); }
+    catch (e: any) { setErr(e.message || "자료를 읽지 못했어요."); }
+    setBusy("");
+  }
+  async function tidy(field: string) {
+    setErr(""); setDone(""); setBusy(field);
+    try { const x = await api.post("/api/admin/ai/tidy", { place_id: pid, field, text: f[field] || "" }, tok); setTd(x); if (!x.ok) setErr(x.why || "AI가 글을 다듬지 못했어요."); }
+    catch (e: any) { setErr(e.message || "글을 다듬지 못했어요."); }
+    setBusy("");
+  }
+  const chosen = (r?.changes || []).filter((c: any) => pick[c.key]);
+  const MISS: [string, string][] = [["open", "여는 시각"], ["close", "닫는 시각"], ["phone", "전화"], ["fee", "요금"], ["intro_ko", "소개"], ["carer_tip", "보호자 꿀팁"]];
+  const missing = [...MISS.filter(([k]) => !String(f[k] ?? "").trim() && !(k === "fee" && feeDone)).map(([, l]) => l),
+    ...(f.wheelchair === "확인 전" ? ["휠체어"] : []), ...(f.walk_load === "확인 전" ? ["걷기 정보"] : []), ...(f.entrance_step === "" ? ["출입구 턱"] : [])];
+  const ready = !!file || /^https?:\/\/\S+/.test(url.trim());
+  return (
+    <aside className="panel aiq" aria-label="AI 간단 작업">
+      <h2 className="h3"><Icon name="story" />AI 간단 작업 <span className="via via-llm">AI</span></h2>
+      <p className="muted small">결과는 미리 보기예요. [폼에 넣기]는 왼쪽 칸만 바꾸고, 사이트 반영은 [저장하고 바로 반영]을 눌러야 돼요.</p>
+
+      <h3 className="aiq-h">빠진 칸 확인 <small className="muted">(AI 없이)</small></h3>
+      {missing.length ? <p className="aiq-miss">{missing.map((m) => <span key={m} className="badge b-unknown">{m}</span>)}</p> : <p className="muted small">비어 있는 주요 칸이 없어요.</p>}
+
+      <h3 className="aiq-h">자료로 확인</h3>
+      <div className="aiq-in">
+        <label className="aiw-file"><input type="file" accept=".hwp,.hwpx,.pdf,.txt" onChange={(e) => { setFile(e.target.files?.[0] || null); setUrl(""); setR(null); }} />
+          <Icon name="edit" /><span>{file ? file.name : "한글·PDF·글 파일"}</span></label>
+        <input type="url" placeholder="또는 공개 링크 (https://…)" value={url} onChange={(e) => { setUrl(e.target.value); setFile(null); setR(null); }} aria-label="자료 링크" />
+        <button type="button" className="chip go" disabled={!!busy || !ready} onClick={read}>{busy === "read" ? "읽는 중…" : "AI에게 읽히기"}</button>
+      </div>
+      {r?.place?.mismatch && <p className="err" role="alert">자료에 '{r.place.mismatch}' 이름이 더 많이 나와요. {name} 자료가 맞는지 확인해 주세요.</p>}
+      {r?.ok && <div className="aiq-res">
+        <p className="small"><b>{name}과 다른 칸 {r.changes?.length || 0}개</b>{r.summary && <span className="muted"> · {r.summary}</span>}</p>
+        {r.changes?.length > 0 && <ul className="aiq-list">{r.changes.map((c: any) => (
+          <li key={c.key}><label><input type="checkbox" checked={!!pick[c.key]} onChange={(e) => setPick({ ...pick, [c.key]: e.target.checked })} />
+            <b>{c.label}</b>{c.access && <span className="badge b-unknown">이동약자 정보 · 직접 확인</span>}</label>
+            <span className="muted small">지금: {c.now}</span><span className="small">자료: <b>{c.new}</b></span></li>))}</ul>}
+        {r.evidence?.length > 0 && <details><summary className="small">근거 문장 {r.evidence.length}개</summary><ul className="ai-list">{r.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
+        {r.changes?.length > 0 && <button type="button" className="chip go" disabled={!chosen.length}
+          onClick={() => { onFill(Object.assign({}, ...chosen.map(toForm))); setDone(`${chosen.length}칸을 폼에 넣었어요. 확인하고 저장해 주세요.`); setPick({}); }}>고른 {chosen.length}칸 폼에 넣기</button>}
+      </div>}
+
+      <h3 className="aiq-h">글 다듬기</h3>
+      <div className="chips">{TIDY_FIELDS.map(([k, t]) => <button key={k} type="button" className="chip sm" disabled={!!busy || !String(f[k] || "").trim()} onClick={() => tidy(k)}>{busy === k ? "다듬는 중…" : t}</button>)}</div>
+      {td?.ok && <div className="aiq-res">
+        <p className="small muted">{td.label} · 지금</p><p className="aiq-before">{td.before}</p>
+        <p className="small muted">AI 제안</p><p className="aiq-after">{td.text}</p>
+        {td.removed?.length > 0 && <p className="muted small">뺀 내용: {td.removed.join(" · ")}</p>}
+        <button type="button" className="chip go" onClick={() => { onFill({ [td.field]: td.text }); setDone(`${td.label}을 폼에 넣었어요. 확인하고 저장해 주세요.`); setTd(null); }}>폼에 넣기</button>
+      </div>}
+      {err && <p className="err" role="alert">{err}</p>}
+      {done && <p className="ok" role="status">{done}</p>}
+    </aside>
   );
 }
 const tri = (v: any) => (v === true ? "yes" : v === false ? "no" : "");
@@ -338,55 +304,84 @@ const untri = (v: string) => (v === "yes" ? true : v === "no" ? false : null);
 const norm = (v: any) => (v === "" || v === undefined ? null : v);
 const segKey = (s: any) => ["name", "slope_deg", "curb_cm", "width_m", "steps", "surface", "note", "source"].map((k) => (s[k] === "" || s[k] == null ? null : String(s[k])));
 
-/* ---------- 임시 알림 ---------- */
-function Notices({ places, db, tok, call, name }: any) {
-  const blank = { place_id: "", level: "warn", title: "", body: "", start: today(), end: "" };
-  const [n, setN] = useState<any>(blank);
+/* ---------- 공지·알림: 긴급 알림(휴무·주의) · 일반 공지(모든 화면 위 공지·장소 안내) · 행사 안내를 한 탭에서 ---------- */
+// 저장 구조(알림·배너·행사)와 API는 그대로. 등록할 종류만 골라 쓰고, 목록은 하나로 모아 종류를 표시한다.
+const NH_KINDS = [["urgent", "긴급 알림 (휴무·주의)"], ["general", "일반 공지"], ["event", "행사 안내"]] as const;
+const NH_NAME: Record<string, string> = { urgent: "긴급 알림", general: "일반 공지", event: "행사 안내" };
+function NoticeHub({ places, db, tok, call, name, can }: any) {
+  const [kind, setKind] = useState<"urgent" | "general" | "event">(can("notice") ? "urgent" : "general");
+  const rows: any[] = [
+    ...(db?.banner ? [{ k: "general", id: "banner", title: db.banner.text, where: "모든 화면 위 공지", period: db.banner.until ? `~ ${db.banner.until}` : "계속", level: db.banner.level, perm: "site",
+      del: () => call(() => api.post("/api/admin/banner", {}, tok), "공지를 내렸어요.") }] : []),
+    ...(db?.notices || []).map((x: any) => ({ k: x.level === "info" ? "general" : "urgent", id: x.id, title: x.title, body: x.body, where: x.place_id ? name(x.place_id) : "사이트 전체",
+      period: `${x.start || "지금"} ~ ${x.end || "계속"}`, level: x.level, past: x.end && x.end < today(), perm: "notice",
+      del: () => call(() => api.post(`/api/admin/notices/${x.id}/delete`, {}, tok), "알림을 내렸어요.") })),
+    ...(db?.events || []).map((x: any) => ({ k: "event", id: x.id, title: x.name, where: x.venue, period: `${x.start}${x.end && x.end !== x.start ? ` ~ ${x.end}` : ""}`,
+      body: x.access ? `휠체어 접근: ${x.access}` : "", perm: "site", del: () => call(() => api.post(`/api/admin/events/${x.id}/delete`, {}, tok), "행사를 지웠어요.") })),
+  ];
+  const order = { urgent: 0, general: 1, event: 2 } as Record<string, number>;
+  rows.sort((a, b) => order[a.k] - order[b.k]);
   return (<>
+    <div className="tabs nh-kinds" role="group" aria-label="등록할 종류">
+      {NH_KINDS.map(([k, t]) => <button key={k} aria-pressed={kind === k} disabled={k === "urgent" ? !can("notice") : k === "event" ? !can("site") : !(can("notice") || can("site"))}
+        onClick={() => setKind(k)}>{t}</button>)}
+    </div>
+    {kind === "urgent" && <NoticeForm places={places} tok={tok} call={call} levels={["closed", "warn"]} title="긴급 알림 올리기 (휴무·주의 — 휴무는 코스에서 빠져요)" />}
+    {kind === "general" && <>
+      {can("site") && <BannerForm db={db} tok={tok} call={call} />}
+      {can("notice") && <NoticeForm places={places} tok={tok} call={call} levels={["info"]} title="장소·사이트 안내 올리기" />}</>}
+    {kind === "event" && <EventForm tok={tok} call={call} />}
+    <h2 className="h3">등록된 공지·알림·행사 <span className="muted small">{rows.length}건</span></h2>
+    <ul className="rv-list">
+      {rows.map((r) => (
+        <li key={r.k + r.id} className={`panel notice-${r.k === "urgent" ? r.level : "info"}`}>
+          <div className="seg-top"><span className={`badge ${r.k === "urgent" ? "b-urgent" : "b-plain"}`}>{NH_NAME[r.k]}{r.k === "urgent" ? ` · ${LEVEL[r.level]?.split(" ")[0] || ""}` : ""}</span>
+            <b>{r.title}</b><small className="muted">{r.where} · {r.period}</small></div>
+          {r.body && <p>{r.body}</p>}
+          {r.past && <p className="muted small">기간이 지나 사이트에는 안 보여요.</p>}
+          {can(r.perm) && <button className="chip" onClick={r.del}>{r.k === "event" ? "삭제" : "내리기"}</button>}
+        </li>))}
+      {!rows.length && <li className="muted">등록된 공지·알림·행사가 없어요.</li>}
+    </ul>
+  </>);
+}
+function NoticeForm({ places, tok, call, levels, title }: any) {
+  const blank = { place_id: "", level: levels[0], title: "", body: "", start: today(), end: "" };
+  const [n, setN] = useState<any>(blank);
+  return (
     <form className="panel visit-form" onSubmit={(e) => { e.preventDefault();
       call(() => api.post("/api/admin/notices", n, tok), "알림을 올렸어요. 장소 페이지와 코스 추천에 바로 반영됐어요.", n.place_id ? `#/place/${n.place_id}` : "#/").then(() => setN(blank)); }}>
-      <h2 className="h3">알림 올리기</h2>
+      <h2 className="h3">{title}</h2>
       <Field label="장소 (비우면 사이트 전체)"><select value={n.place_id} onChange={(e) => setN({ ...n, place_id: e.target.value })}><option value="">사이트 전체</option>
         {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}</option>)}</select></Field>
-      <Field label="종류"><select value={n.level} onChange={(e) => setN({ ...n, level: e.target.value })}>{Object.entries(LEVEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+      {levels.length > 1 && <Field label="종류"><select value={n.level} onChange={(e) => setN({ ...n, level: e.target.value })}>{levels.map((k: string) => <option key={k} value={k}>{LEVEL[k]}</option>)}</select></Field>}
       <Field label="시작일"><input type="date" value={n.start} onChange={(e) => setN({ ...n, start: e.target.value })} /></Field>
       <Field label="끝일 (비우면 계속)"><input type="date" value={n.end} onChange={(e) => setN({ ...n, end: e.target.value })} /></Field>
       <Field label="제목" wide><input value={n.title} maxLength={80} placeholder="예: 데크 보수로 휠체어는 해안 쪽 우회" onChange={(e) => setN({ ...n, title: e.target.value })} /></Field>
       <Field label="내용" wide><textarea rows={2} value={n.body} onChange={(e) => setN({ ...n, body: e.target.value })} /></Field>
       <button className="chip go" disabled={!n.title.trim()}>올리고 바로 반영</button>
     </form>
-    <ul className="rv-list">
-      {(db?.notices || []).map((x: any) => (
-        <li key={x.id} className={`panel notice-${x.level}`}>
-          <div className="seg-top"><span className="badge b-plain">{LEVEL[x.level]}</span><b>{x.title}</b><small className="muted">{x.place_id ? name(x.place_id) : "사이트 전체"} · {x.start || "지금"} ~ {x.end || "계속"}</small></div>
-          {x.body && <p>{x.body}</p>}
-          {x.end && x.end < today() && <p className="muted small">기간이 지나 사이트에는 안 보여요.</p>}
-          <button className="chip" onClick={() => call(() => api.post(`/api/admin/notices/${x.id}/delete`, {}, tok), "알림을 내렸어요.")}>내리기</button>
-        </li>))}
-      {!(db?.notices || []).length && <li className="muted">올린 알림이 없어요.</li>}
-    </ul>
-  </>);
+  );
 }
-
-/* ---------- 공지 배너·행사 ---------- */
-function SiteEditor({ db, tok, call }: any) {
+function BannerForm({ db, tok, call }: any) {
   const [b, setB] = useState<any>({ text: "", level: "info", until: "" });
   useEffect(() => { if (db?.banner) setB({ until: "", ...db.banner }); }, [db?.banner]);
-  const blank = { name: "", start: today(), end: "", venue: "", tel: "", url: "", access: "" };
-  const [e, setE] = useState<any>(blank);
-  return (<>
+  return (
     <form className="panel visit-form" onSubmit={(ev) => { ev.preventDefault(); call(() => api.post("/api/admin/banner", b, tok), "첫 화면 공지를 바꿨어요.", "#/"); }}>
       <h2 className="h3">모든 화면 위 공지 {db?.banner && <span className="badge b-open">게시 중</span>}</h2>
       <Field label="공지 문구" wide><input value={b.text} maxLength={200} placeholder="예: 11/21~22 도째비페스타로 묵호항 주변 주차가 어려워요" onChange={(x) => setB({ ...b, text: x.target.value })} /></Field>
       <Field label="종류"><select value={b.level} onChange={(x) => setB({ ...b, level: x.target.value })}><option value="info">안내</option><option value="warn">주의</option></select></Field>
       <Field label="이 날까지 보이기 (비우면 계속)"><input type="date" value={b.until || ""} onChange={(x) => setB({ ...b, until: x.target.value })} /></Field>
-      <div className="wide save-row">
-        <button className="chip go" disabled={!b.text.trim()}>게시</button>
-        {db?.banner && <button type="button" className="chip" onClick={() => call(() => api.post("/api/admin/banner", {}, tok), "공지를 내렸어요.").then(() => setB({ text: "", level: "info", until: "" }))}>내리기</button>}
-      </div>
+      <div className="wide save-row"><button className="chip go" disabled={!b.text.trim()}>게시</button></div>
     </form>
+  );
+}
+function EventForm({ tok, call }: any) {
+  const blank = { name: "", start: today(), end: "", venue: "", tel: "", url: "", access: "" };
+  const [e, setE] = useState<any>(blank);
+  return (
     <form className="panel visit-form" onSubmit={(ev) => { ev.preventDefault(); call(() => api.post("/api/admin/events", e, tok), "행사를 추가했어요. 행사 달력과 코스 추천에 바로 보여요.", "#/events").then(() => setE(blank)); }}>
-      <h2 className="h3">행사 추가 <span className="muted small">(공공데이터에 없는 행사)</span></h2>
+      <h2 className="h3">행사 안내 추가 <span className="muted small">(공공데이터에 없는 행사)</span></h2>
       <Field label="행사 이름" wide><input value={e.name} onChange={(x) => setE({ ...e, name: x.target.value })} /></Field>
       <Field label="시작일"><input type="date" value={e.start} onChange={(x) => setE({ ...e, start: x.target.value })} /></Field>
       <Field label="끝일"><input type="date" value={e.end} onChange={(x) => setE({ ...e, end: x.target.value })} /></Field>
@@ -396,16 +391,56 @@ function SiteEditor({ db, tok, call }: any) {
       <Field label="접근성 메모 (휠체어석·장애인 화장실·셔틀 등)" wide><input value={e.access} onChange={(x) => setE({ ...e, access: x.target.value })} /></Field>
       <button className="chip go" disabled={!e.name.trim() || !e.start}>추가하고 바로 반영</button>
     </form>
-    <ul className="rv-list">
-      {(db?.events || []).map((x: any) => (
-        <li key={x.id} className="panel"><div className="seg-top"><b>{x.name}</b><small className="muted">{x.start}{x.end && x.end !== x.start ? ` ~ ${x.end}` : ""} · {x.venue}</small></div>
-          {x.access && <p className="muted">휠체어 접근: {x.access}</p>}
-          <button className="chip" onClick={() => call(() => api.post(`/api/admin/events/${x.id}/delete`, {}, tok), "행사를 지웠어요.")}>삭제</button></li>))}
+  );
+}
+
+/* ---------- 받은 글: 문의 + 불편 제보·민원을 한 탭에서 ---------- */
+// 저장값(문의: 접수/확인 중/답변 완료, 제보: 접수/확인/처리 중/완료/반려/중복)은 그대로 두고, 전체 목록에서만 3단계로 맞춰 보여 준다.
+const INQ_CAT: Record<string, string> = { "이용 방법": "일반 문의", "기타": "일반 문의", "장소 정보": "관광지 정보 오류", "오류 신고": "관광지 정보 오류", "접근성·길 정보": "시설·접근성 문제" };
+const ACC_CAT = new Set(["step", "sidewalk", "ramp", "toilet", "lift"]);
+const STEP3 = (s: string) => (s === "접수" ? "접수" : ["확인", "확인 중", "처리 중"].includes(s) ? "확인 중" : "처리 완료");
+function Inbox({ kind, setKind, tok, call, onExpired, can }: any) {
+  return (<>
+    <div className="tabs inbox-kinds" role="group" aria-label="받은 글 종류">
+      {([["all", "전체"], ["inq", "문의"], ["rep", "불편 제보·민원"]] as const).map(([k, t]) => <button key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>{t}</button>)}
+    </div>
+    {kind === "all" && <InboxAll tok={tok} onExpired={onExpired} open={setKind} />}
+    {kind === "inq" && <Inquiries tok={tok} call={call} onExpired={onExpired} />}
+    {kind === "rep" && <CityAdmin tok={tok} call={call} onExpired={onExpired} can={can} />}
+  </>);
+}
+function InboxAll({ tok, onExpired, open }: any) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [todo, setTodo] = useState(true);
+  useEffect(() => {
+    Promise.all([api.get("/api/admin/inquiries", tok), api.get("/api/admin/city?sample=1", tok)]).then(([inq, city]: any) => {
+      const a = (inq || []).map((r: any) => ({ id: `i${r.id}`, kind: "inq", cat: INQ_CAT[r.category] || "일반 문의", step: STEP3(r.status), raw: r.status, at: r.created_at,
+        text: r.text, who: r.nick, sample: r.sample }));
+      const b = (city?.clusters || []).map((c: any) => ({ id: `c${c.id}`, kind: "rep", cat: ACC_CAT.has(c.category) ? "시설·접근성 문제" : "불편 사항·민원", step: STEP3(c.status), raw: c.status,
+        at: c.last_at || c.first_at, text: c.title || c.summary, who: `${c.count}건${c.place_name || c.landmark ? ` · ${c.place_name || c.landmark}` : ""}`, sample: c.sample }));
+      setRows([...a, ...b].sort((x, y) => String(y.at || "").localeCompare(String(x.at || ""))));
+    }).catch((e: any) => { if (e.status === 401) onExpired(); setRows([]); });
+  }, []);   // eslint-disable-line
+  if (!rows) return <p className="muted" role="status">불러오는 중…</p>;
+  const n = (s: string) => rows.filter((r) => r.step === s).length;
+  const shown = rows.filter((r) => !todo || r.step !== "처리 완료");
+  return (<>
+    <p className="ib-sum"><b>접수 {n("접수")}</b> · 확인 중 {n("확인 중")} · 처리 완료 {n("처리 완료")}
+      <label className="day small"><input type="checkbox" checked={todo} onChange={(e) => setTodo(e.target.checked)} />처리 안 된 것만</label></p>
+    <ul className="rv-list ib-list">
+      {shown.map((r) => (
+        <li key={r.id} className="panel rv-row">
+          <p>{r.sample && <span className="badge b-unknown">가상</span>} <span className="badge b-plain">{r.kind === "inq" ? "문의" : "불편 제보"}</span> <b>[{r.cat}]</b>{" "}
+            <span className={`badge ib-${r.step === "접수" ? "new" : r.step === "확인 중" ? "doing" : "done"}`}>{r.step}</span>{r.raw !== r.step && <small className="muted"> ({r.raw})</small>}
+            <small className="muted"> · {r.who} · {String(r.at || "").replace("T", " ").slice(0, 16)}</small></p>
+          <p className="inq-text">{r.text}</p>
+          <button className="chip sm" onClick={() => open(r.kind)}>{r.kind === "inq" ? "문의에서 답하기" : "제보·민원에서 처리하기"}</button>
+        </li>))}
+      {!shown.length && <li className="muted">{todo ? "처리할 글이 없어요." : "받은 글이 없어요."}</li>}
     </ul>
   </>);
 }
 
-/* ---------- 제보 검수 (반영하면 알림으로 바로 올리기) ---------- */
 // 커뮤니티 > 문의하기로 들어온 문의: 읽고, 답변 쓰고, 상태 바꾸기 (답변은 문의한 사람 화면 [내 문의]에 보임)
 function Inquiries({ tok, call, onExpired }: any) {
   const [rows, setRows] = useState<any[] | null>(null);
@@ -527,48 +562,6 @@ function AiSettings({ tok, call, onExpired, isOwner }: any) {
   );
 }
 
-function Reports({ tok, call, onExpired, canNotice }: any) {
-  const [rows, setRows] = useState<any[] | null>(null);
-  const load = () => api.get("/api/admin/reports", tok).then(setRows).catch((e: any) => { if (e.status === 401) onExpired(); setRows([]); });
-  useEffect(() => { load(); }, []);
-  return (
-    <ul className="rv-list">
-      {(rows || []).map((r) => <ReportRow key={r.id} r={r} canNotice={canNotice} onSave={(body: any) => call(() => api.post(`/api/admin/reports/${r.id}`, body, tok), body.notice ? "반영하고 장소 알림으로 올렸어요." : "검수 결과를 저장했어요.", body.notice ? `#/place/${r.place_id}` : undefined).then(load)} />)}
-      {rows && !rows.length && <li className="muted">아직 제보가 없어요. 코스 결과 아래 [현장 제보]로 들어와요.</li>}
-    </ul>
-  );
-}
-function ReportRow({ r, onSave, canNotice }: { r: any; onSave: (b: any) => void; canNotice: boolean }) {
-  const [s, setS] = useState(r.status || "접수");
-  const [m, setM] = useState(r.memo || "");
-  const [post, setPost] = useState(false);
-  const [n, setN] = useState({ level: "warn", title: (r.note || "").slice(0, 60), start: today(), end: "" });
-  return (
-    <li className="panel">
-      <div className="seg-top"><b>{r.name}</b><span className="badge b-plain">{r.kind}</span><span className="badge b-plain">{r.status}</span><small className="muted">{r.created_at?.replace("T", " ")}</small></div>
-      {r.note && <p>{r.note}</p>}
-      {r.ai && <p className="muted">AI 사진 분석: {(r.ai.obstacles || []).join(", ") || "장애물 없음"} {r.ai.summary ? `· ${r.ai.summary}` : ""} — 사람이 확인한 뒤에만 반영</p>}
-      {r.notice_id && <p className="muted small">이 제보로 올린 알림이 있어요.</p>}
-      {r.reviewed_by && <p className="muted small">마지막 검수: {r.reviewed_by} · {String(r.reviewed_at || "").slice(0, 16).replace("T", " ")}</p>}
-      <div className="chips">
-        <select value={s} onChange={(e) => setS(e.target.value)} aria-label="처리 상태">{STATUS.map((x) => <option key={x}>{x}</option>)}</select>
-        <input value={m} onChange={(e) => setM(e.target.value)} placeholder="검수 메모" aria-label="검수 메모" />
-      </div>
-      {s === "완료" && !r.notice_id && canNotice && r.place_id && (
-        <div className="post-notice">
-          <label className="day"><input type="checkbox" checked={post} onChange={(e) => setPost(e.target.checked)} />장소 알림으로 바로 올리기</label>
-          {post && <div className="visit-form">
-            <Field label="종류"><select value={n.level} onChange={(e) => setN({ ...n, level: e.target.value })}>{Object.entries(LEVEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-            <Field label="시작일"><input type="date" value={n.start} onChange={(e) => setN({ ...n, start: e.target.value })} /></Field>
-            <Field label="끝일"><input type="date" value={n.end} onChange={(e) => setN({ ...n, end: e.target.value })} /></Field>
-            <Field label="알림 제목" wide><input value={n.title} onChange={(e) => setN({ ...n, title: e.target.value })} /></Field>
-          </div>}
-        </div>)}
-      <button className="chip go" onClick={() => onSave({ status: s, memo: m, notice: s === "완료" && post && n.title.trim() ? n : null })}>저장</button>
-    </li>
-  );
-}
-
 /* ---------- 현장 확인 기록 ---------- */
 function Visits({ places, tok, call, me }: any) {
   const [rows, setRows] = useState<any[]>([]);
@@ -682,21 +675,21 @@ const LABELS: Record<string, string> = { open: "여는 시각", close: "닫는 �
 const label = (k: string) => LABELS[k] || k;
 
 /* ---------- 한눈에 (로그인하면 처음 보는 화면) ---------- */
-function Dashboard({ tok, user, go, can, onExpired }: { tok: string; user: User; go: (k: TabKey) => void; can: (p: string | null) => boolean; onExpired: () => void }) {
+function Dashboard({ tok, user, go, can, onExpired }: { tok: string; user: User; go: (k: TabKey, sub?: "inq" | "rep") => void; can: (p: string | null) => boolean; onExpired: () => void }) {
   const [d, setD] = useState<any>(null);
   useEffect(() => { api.get("/api/admin/dashboard", tok).then(setD).catch((e: any) => { if (e.status === 401) onExpired(); else setD({}); }); }, []);
   if (!d) return <p className="muted" role="status">불러오는 중…</p>;
-  const card = (k: TabKey, ic: string, title: string, big: React.ReactNode, sub: string, warn = false) => (
-    <button className={`dash-card${warn ? " warn" : ""}`} onClick={() => go(k)} disabled={!can(TABS.find((t) => t[0] === k)?.[2] ?? null)}>
+  const card = (k: TabKey, ic: string, title: string, big: React.ReactNode, sub: string, warn = false, inbox?: "inq" | "rep") => (
+    <button className={`dash-card${warn ? " warn" : ""}`} onClick={() => go(k, inbox)} disabled={!can(TABS.find((t) => t[0] === k)?.[2] ?? null)}>
       <span className="dash-k"><Icon name={ic} />{title}</span><b>{big}</b><span className="muted small">{sub}</span></button>);
   const exN: any[] = d.notices?.length ? [] : d.examples?.notices || [];
   const exR: any[] = d.recent?.length ? [] : d.examples?.recent || [];
   return (<>
     <p className="dash-hello"><b>{user.name}</b>님, 안녕하세요. 오늘은 {d.today} 이에요. <span className="muted">({user.role_name}: {ROLE_INFO[user.role]})</span></p>
     <div className="dash-grid">
-      {card("reports", "camera", "새 제보", d.reports?.new ?? 0, `확인 중 ${d.reports?.doing ?? 0} · 전체 ${d.reports?.total ?? 0}${d.reports?.sample ? ` · 가상 ${d.reports.sample}건 따로` : ""}`, (d.reports?.new ?? 0) > 0)}
+      {card("reports", "camera", "새 제보", d.reports?.new ?? 0, `확인 중 ${d.reports?.doing ?? 0} · 전체 ${d.reports?.total ?? 0}${d.reports?.sample ? ` · 가상 ${d.reports.sample}건 따로` : ""}`, (d.reports?.new ?? 0) > 0, "rep")}
       {card("notice", "warn", "지금 걸린 알림", d.notices?.length || exN.length, d.notices?.length ? (d.banner ? `공지: ${d.banner.text.slice(0, 20)}` : "사이트 공지 없음") : exN.length ? "가상 예시 (사이트엔 안 보임)" : "사이트 공지 없음")}
-      {card("inquiries", "story", "새 문의", d.inquiries?.new ?? 0, `전체 ${d.inquiries?.total ?? 0}${d.inquiries?.sample ? ` · 가상 ${d.inquiries.sample}건 따로` : ""}`, (d.inquiries?.new ?? 0) > 0)}
+      {card("reports", "story", "새 문의", d.inquiries?.new ?? 0, `전체 ${d.inquiries?.total ?? 0}${d.inquiries?.sample ? ` · 가상 ${d.inquiries.sample}건 따로` : ""}`, (d.inquiries?.new ?? 0) > 0, "inq")}
       {card("place", "pin", "고친 장소", d.overrides ?? 0, "원본 위에 덮어쓴 곳")}
     </div>
     <div className="cards2">
