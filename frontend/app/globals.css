@@ -2849,3 +2849,24 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 }
 /* 코스 지도 핀 글자: 가운데, 한 줄, 넘치면 자르지 않고 조금 작게 */
 .course-pin-face { white-space: nowrap; font-size: 13px; letter-spacing: -.03em; padding: 0 1px; }
+/* 관광지 상세 '정보' (휴무 · 입장료 · 주차비용) */
+.pp4-info2-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pp4-info2-head .pp4-h { margin: 0; }
+.pp4-info2-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; margin-top: 14px; }
+.pp4-ig { background: var(--mist); border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; }
+.pp4-ig h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1.05em; color: var(--sea-deep); }
+.pp4-ig h3 .ic { width: 20px; height: 20px; color: var(--sea); }
+.pp4-ig p { margin: 0; }
+.pp4-ig dl { margin: 0; display: grid; gap: 0; }
+.pp4-ig dl > div { display: grid; grid-template-columns: minmax(84px, 40%) 1fr; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--line); }
+.pp4-ig dl > div:first-child { border-top: 0; padding-top: 0; }
+.pp4-ig dl > div:has(> dd:only-child) { grid-template-columns: 1fr; }
+.pp4-ig dt { font-weight: 700; color: var(--ink); }
+.pp4-ig dd { margin: 0; display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+@media (min-width: 761px) {
+  .pp4-info2-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); grid-template-areas: "closed fee" "park fee"; align-items: start; }
+  .pp4-info2-grid:not(:has(.ig-fee)) { grid-template-areas: "closed park"; grid-template-columns: 1fr 1fr; }
+  .ig-closed { grid-area: closed; } .ig-fee { grid-area: fee; } .ig-park { grid-area: park; }
+  .pp4-info2-grid:not(:has(.ig-park)) .ig-closed { grid-row: 1 / span 2; }
+}
+@media (min-width: 761px) { .pp4-info2-grid { grid-template-rows: auto 1fr; } .ig-park, .ig-closed { align-self: start; } }

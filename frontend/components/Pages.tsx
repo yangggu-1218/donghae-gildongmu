@@ -259,7 +259,13 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   limited.forEach((s) => pills.push(["warn", L(`일부 구간 제한 — ${s.name}${s.note ? `: ${s.note}` : ""}`, `Limited part — ${s.name}`)]));
   if (tipLine) pills.push(["info", tipLine]);
 
-  // 방문 전 확인 (휴무 · 입장료 · 가기 전에 물어볼 것)
+  // 정보 (팀장 요청 2026-11-21): 휴무 · 입장료 · 주차비용만, 항목별로 나눠 표처럼
+  const infoClosed = closedMore[0] || closedTxt;
+  const infoFee: [string, string][] = feeRows.filter(([k]) => !/주차/.test(k));
+  if (!infoFee.length && fee) infoFee.push([L("입장료", "Admission"), fee]);
+  const infoPark: [string, string][] = feeRows.filter(([k]) => /주차/.test(k)).map(([k, v]) => [k.replace(/^주차\s*/, "").replace(/^\((.*)\)$/, "$1"), v]);
+  const lines2 = (v: string) => v.split(/\s+·\s+/).map((x, i) => <span key={i}>{x}</span>);
+  // (예전 '방문 전 확인' 목록 — 다른 곳에서 쓰지 않음)
   const before: [string, string][] = [];
   if (closedMore[0]) before.push(["cal", closedMore[0]]);       // 자세한 휴무 문장이 있으면 그것 하나만
   else if (closedTxt) before.push(["cal", closedTxt]);
@@ -371,14 +377,20 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
         {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("이동약자 편의정보 자세히", "Accessibility details")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
       </section>
 
-      {/* 3. 방문 전 확인 ('위치 및 주변 편의시설' 칸은 팀장 요청으로 뺌 2026-11-21 — 편의시설은 [편의시설 지도]에서) */}
+      {/* 3. 정보: 휴무 · 입장료 · 주차비용 ('위치 및 주변 편의시설' 칸은 팀장 요청으로 뺌 2026-11-21) */}
       <div className="pp4-row one">
-        <section className="panel pp4-before" aria-labelledby="pp4-before-h">
-          <h2 id="pp4-before-h" className="h3 pp4-h"><Picto name="tip" size={24} />{L("방문 전 확인", "Before you go")}</h2>
-          <div className="pp4-before-in">
-            <ul>{before.length ? before.map(([ic, t]) => <li key={t}>{ic === "wheel" ? <AccIcon k="지체장애" size={20} /> : <Icon name={ic} />}{ic === "ticket" ? <span className="pp4-fee-lines">{t.split(/\s+·\s+/).map((x, i) => <span key={i}>{x}</span>)}</span> : <span>{t}</span>}</li>)
-              : <li><Icon name="phone" /><span>{L("운영시간은 바뀔 수 있어요. 출발 전에 한 번 더 확인해 주세요.", "Hours can change. Please check before you go.")}</span></li>}</ul>
+        <section className="panel pp4-before pp4-info2" aria-labelledby="pp4-before-h">
+          <div className="pp4-info2-head">
+            <h2 id="pp4-before-h" className="h3 pp4-h"><Picto name="tip" size={24} />{L("정보", "Info")}</h2>
             {p.phone && <a className="pp4-call" href={`tel:${p.phone}`}><Icon name="phone" />{L("전화 문의", "Call")}</a>}
+          </div>
+          <div className="pp4-info2-grid">
+            {infoClosed && <div className="pp4-ig ig-closed"><h3><Icon name="cal" />{L("휴무", "Closed")}</h3><p>{infoClosed}</p></div>}
+            {infoFee.length > 0 && <div className="pp4-ig ig-fee"><h3><Icon name="ticket" />{L("입장료", "Admission")}</h3>
+              <dl>{infoFee.map(([k, v]) => <div key={k}>{!/^(입장료|Admission)$/.test(k) && <dt>{k}</dt>}<dd>{lines2(v)}</dd></div>)}</dl></div>}
+            {infoPark.length > 0 && <div className="pp4-ig ig-park"><h3><Icon name="parking" />{L("주차비용", "Parking")}</h3>
+              <dl>{infoPark.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd>{lines2(v)}</dd></div>)}</dl></div>}
+            {!infoClosed && !infoFee.length && !infoPark.length && <p className="muted">{L("운영시간·요금은 바뀔 수 있어요. 출발 전에 한 번 더 확인해 주세요.", "Hours and fees can change. Please check before you go.")}</p>}
           </div>
         </section>
       </div>

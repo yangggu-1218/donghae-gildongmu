@@ -416,7 +416,6 @@ export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
       <h2 id="cm-pl-h" className="h3">{L("다녀온 사람들 후기 요약", "What visitors said")}</h2>
       {recent.length > 0 ? <ul className="cm-tips">{recent.map((x) => <li key={x.key}><Icon name={x.tip ? "walk" : "story"} /><span>{x.text}</span></li>)}</ul>
         : <p className="muted">{L("아직 이야기가 없어요. 다녀오셨다면 첫 후기를 남겨 주세요.", "No notes yet. Leave the first one.")}</p>}
-      {posts.length > 0 && <p className="chips">{posts.slice(0, 2).map((p) => <a key={p.id} className="chip sm" href={`#/community/${p.id}`}>{p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title}</a>)}</p>}
       <div className="chips cm-acts">
         <button className="chip" aria-expanded={writing} onClick={() => setWriting(!writing)}><Icon name="edit" />{L("후기 남기기", "Leave a note")}</button>
         <a className="chip" href={`#/report/${id}`}><Icon name="flag" />{L("시에 불편 알리기", "Report to the city")}</a>
