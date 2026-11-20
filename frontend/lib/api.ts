@@ -1,11 +1,21 @@
 // FastAPI 서버 호출. next.config.mjs 의 rewrites 덕분에 같은 주소(/api)로 부른다.
 export type Grade = "G" | "Y" | "R" | null;
+export type VisitWeather = {
+  source: "KMA"; issued: string; grid: [number, number];
+  hours: { time: string; temp: number; pop: number; sky: number; pty: number }[];
+};
 export type Stop = {
   id: string; arrive: string; drive_min: number; grade: Grade; why: string;
   depart: string; kind: "sight" | "lunch" | "cafe"; open_state: "open" | "always" | "unknown";
-  hours_text: string; hours_sample: boolean; wait_min: number; notice?: string;
+  hours_text: string; hours_sample: boolean; wait_min: number; visit_at?: string | null; notice?: string; weather?: VisitWeather;
 };
 export type Course = {
+  start_point?: [number, number] | null;
+  driving_guides?: { text: string; lat: number; lon: number }[][];
+  driving_path?: [number, number][] | null;
+  driving_sections?: [number, number][];
+  route_costs?: { distance_m: number | null; toll_won: number | null; taxi_won: number | null; quote_parts: number } | null;
+  drive_source?: "kakao" | "estimate"; back_drive_min?: number | null;
   mode: string; stops: Stop[]; overall: Grade; back_at: string; notes: string[];
   date: string; weekday: number; start_time: string; skipped: { id: string; name: string; reason: string }[];
 };

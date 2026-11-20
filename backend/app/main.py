@@ -88,8 +88,16 @@ def extras(p: Place, lang: str = "ko") -> dict:
             "hours": p.hours, "closed_days": p.closed_days, "fee": p.fee}
 
 
+@app.post("/api/course-preview")
+def course_preview(c: Conditions):
+    """조건을 고르는 동안 보여 줄 후보 (gangRG님). 규칙 엔진만 — AI·카카오·날씨 API를 절대 부르지 않는다(비용·요청 수 영향 없음)."""
+    draft = engine.preview_stops(PLACES, c, c.rain is True or c.weather_pref == "실내")
+    return [{"id": s.id, "kind": s.kind, "grade": s.grade} for s in draft.stops]
+
+
 @app.post("/api/course")
 def course(c: Conditions):
+    public_apis.prefetch_daily()   # 일별 예보를 코스 설계와 함께 미리 받는다
     if c.memo:   # 자유 입력에서 조건을 보충 (AI 실패 시 규칙 기반)
         extra = llm.parse_conditions(c.memo)
         c.move = sorted(set(c.move) | set(extra.get("move", [])) - {"없어요"})
@@ -108,8 +116,10 @@ def plan_course(c: Conditions, rain: bool, hint: str = ""):
     """① AI 코스 설계 에이전트가 먼저, 안 되면 규칙 엔진 (AI_COURSE=0 이면 규칙만)."""
     if os.getenv("AI_COURSE", "1") != "0":
         got = ai_course.plan(PLACES, c, rain, hint)
-        if got:
+        if got and got[0] is not None:
             return got
+        if got:   # AI 코스를 버리고 규칙으로 — 이유를 planner 에 남긴다
+            return engine.plan(PLACES, c, rain), {"by": "rule", "reason": got[1].get("reason", "")}
     return engine.plan(PLACES, c, rain), {"by": "rule"}
 
 
@@ -131,6 +141,18 @@ def stop_info(p: Place, lang: str, weekday: int, at_min: int) -> dict:
     return {**{k: getattr(p, k) for k in keys}, "nearby": details.nearby(p, lang, weekday, at_min)}
 
 
+def course_for_display(result) -> dict:
+    """코스 + 장소별 방문 시간대 단기예보(기상청, 발표 범위 안일 때만)."""
+    visits = [(s.id, PLACES[s.id].lat, PLACES[s.id].lon, engine._mins(s.arrive), engine._mins(s.depart))
+              for s in result.stops if s.id in PLACES and s.depart]
+    forecasts = public_apis.visit_forecasts(result.date, visits) if result.date else {}
+    course = result.model_dump()
+    for stop in course["stops"]:
+        if stop["id"] in forecasts:
+            stop["weather"] = forecasts[stop["id"]]
+    return course
+
+
 def course_payload(result, c: Conditions, rain: bool, summary: str = "") -> dict:
     """코스 응답 하나로 통일 (/api/course, /api/edit, /api/talk)."""
     for s in result.stops:
@@ -139,7 +161,7 @@ def course_payload(result, c: Conditions, rain: bool, summary: str = "") -> dict
             s.why = p.tip_ko if c.lang == "ko" else (p.tip_en or p.tip_ko)
     on_day = public_data.events_on(result.date)
     wday = next((d for d in (public_apis.forecast() or {}).get("days", []) if d["date"] == result.date), None)
-    return {"course": result.model_dump(), "rain": rain, "summary": summary, "conditions": c.model_dump(), "weather": wday,
+    return {"course": course_for_display(result), "rain": rain, "summary": summary, "conditions": c.model_dump(), "weather": wday,
             "extras": {s.id: {"phone": PLACES[s.id].phone, "address": PLACES[s.id].address, **extras(PLACES[s.id], c.lang),
                               **stop_info(PLACES[s.id], c.lang, result.weekday, engine._mins(s.arrive))} for s in result.stops},
             "stay": stay_hint(result, c), "events": on_day or public_data.events()["upcoming"][:3], "events_on_day": bool(on_day),
@@ -382,9 +404,9 @@ def chat(body: dict):
         c.wish = [i for i in ids if i != edit.place_id]
         PLACES_wo = {k: v for k, v in PLACES.items() if k != edit.place_id}
         res = engine.plan(PLACES_wo, c, engine.rain_for(c))
-        return {"edit": edit.model_dump(), "course": res.model_dump(), "conditions": c.model_dump()}
+        return {"edit": edit.model_dump(), "course": course_for_display(res), "conditions": c.model_dump()}
     res = engine.plan(PLACES, c, engine.rain_for(c))
-    return {"edit": edit.model_dump(), "course": res.model_dump(), "conditions": c.model_dump()}
+    return {"edit": edit.model_dump(), "course": course_for_display(res), "conditions": c.model_dump()}
 
 
 @app.get("/api/ai")
@@ -403,7 +425,7 @@ def talk(body: dict):
         c = Conditions(**r["conditions"])
         res = engine.Course(**r["course"])
         pl = course_payload(res, c, engine.rain_for(c))
-        r.update({k: pl[k] for k in ("extras", "stay", "events", "events_on_day", "move")})
+        r.update({k: pl[k] for k in ("course", "extras", "stay", "events", "events_on_day", "move")})
     return r
 
 
@@ -1255,6 +1277,15 @@ def last_visit(pid: str) -> dict | None:
 
 # ------------------------------------------------------------------ 웹 화면 (배포용)
 # gildongmu/web/index.html 이 있으면 같은 서버에서 화면도 보여 준다 (API 경로가 먼저 잡히도록 맨 끝에 둔다).
+@app.get("/map-config.js", include_in_schema=False)
+def public_map_config():
+    """카카오 지도 JavaScript 키를 서버 환경변수에서 화면으로 (gangRG님). JS 키는 원래 브라우저에 보이는 키이고,
+    카카오 개발자센터에서 허용 도메인(사이트 주소·localhost)을 정해 두어야 지도가 뜬다."""
+    js_key = os.getenv("KAKAO_JS_KEY") or os.getenv("NEXT_PUBLIC_KAKAO_JS_KEY") or ""
+    return Response("window.gildongmuKakaoJsKey=" + json.dumps(js_key) + ";", media_type="application/javascript",
+                    headers={"Cache-Control": "no-cache"})
+
+
 WEB = Path(__file__).resolve().parents[2] / "web"
 if (WEB / "index.html").exists():
     from fastapi.staticfiles import StaticFiles

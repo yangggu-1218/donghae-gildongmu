@@ -24,7 +24,7 @@ const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 // 카카오 지도 레벨과 축척 막대: 4=100m, 5=250m, 6=500m, 7=1km, 8=2km, 9=4km, 10=8km
 export default function KakaoMap({ pins, overview = false, dots = false, onPick, label, zoomOnPick = false, focus = null, center = null, cluster = false, start = null, centerLevel = 4, centerKey = 0, me = null, onMapClick }: { onMapClick?: (lat: number, lon: number) => void; pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; label?: string; zoomOnPick?: boolean; focus?: number | null; center?: [number, number] | null; cluster?: boolean; start?: { lat: number; lon: number; level: number } | null; centerLevel?: number; centerKey?: number; me?: [number, number] | null }) {
   const ref = useRef<HTMLDivElement>(null);
-  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || (typeof window !== "undefined" ? (window as any).gildongmuKakaoJsKey : "");   // 서버 화면은 /map-config.js 가 키를 준다
   const [failed, setFailed] = useState(false);   // 키가 틀렸거나 도메인이 등록되지 않으면 약도로 대신한다
   // 점을 눌러 부모가 다시 그려져도(같은 점들이면) 지도를 새로 만들지 않는다 → 확대·이동이 풀리지 않음
   const sig = pins.map((p) => `${p.lat},${p.lon},${p.label},${p.color || ""},${p.grade || ""},${p.sub || ""}`).join("|");
@@ -176,7 +176,7 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
 // 카카오 지도 SDK를 한 번만 불러온다 (주소 검색용 services 포함)
 let kakaoP: Promise<void> | null = null;
 export function loadKakao(): Promise<void> {
-  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || (typeof window !== "undefined" ? (window as any).gildongmuKakaoJsKey : "");   // 서버 화면은 /map-config.js 가 키를 준다
   if (!key) return Promise.reject(new Error("no key"));
   if (kakaoP) return kakaoP;
   kakaoP = new Promise<void>((res, rej) => {

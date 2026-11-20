@@ -1,13 +1,108 @@
 """공공 API 중계: 안심(병원·약국·응급실)과 날씨. 키는 서버에만 두고, 웹 화면은 이 서버만 부른다.
 엔드포인트 이름은 공공데이터포털 각 API의 활용가이드(참고문서)로 한 번 더 확인할 것."""
 from typing import Optional
-import math, os, sys, time, datetime as dt
+import contextvars, math, os, sys, time, datetime as dt
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from threading import Lock
+from urllib.parse import unquote
 import httpx
+from .schemas import RouteCosts
 
 KEY = os.getenv("DATA_GO_KR_KEY", "")
 NMC = "https://apis.data.go.kr/B552657"
 KMA = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
+
+
+# ---------- 카카오 자동차 길찾기 (gangRG님 변경 반영) ----------
+# 키(KAKAO_REST_API_KEY)가 없거나 실패하면 None → 엔진은 지금처럼 추정 이동시간을 쓴다(drive_source="estimate").
+# 요청 하나(코스 한 번 짜기)에서 카카오를 부르는 총 시간은 KAKAO_ROUTE_BUDGET 초(기본 8초)를 넘지 않는다.
+KAKAO_DIRECTIONS = "https://apis-navi.kakaomobility.com/v1/directions"
+ROUTE_BUDGET = float(os.getenv("KAKAO_ROUTE_BUDGET") or 8)
+_ROUTE_DEADLINE: contextvars.ContextVar[float] = contextvars.ContextVar("kakao_route_deadline", default=0.0)
+ROUTE_STATS = {"calls": 0, "ok": 0, "fail": 0, "skipped_budget": 0, "last_error": ""}   # 점검용 (키·좌표 없음)
+
+
+def route_deadline(seconds: float | None = None) -> contextvars.Token:
+    """이 요청에서 카카오 길찾기를 부를 수 있는 마감 시각을 정한다 (엔진·AI 코스가 부른다)."""
+    return _ROUTE_DEADLINE.set(time.monotonic() + (ROUTE_BUDGET if seconds is None else seconds))
+
+
+def _route_timeout() -> float:
+    end = _ROUTE_DEADLINE.get()
+    return 5.0 if not end else max(0.0, min(5.0, end - time.monotonic()))
+
+
+@lru_cache(maxsize=32)
+def _driving_route(points, time_bucket):
+    """방문 순서를 유지하며 자동차 길찾기의 요청당 최대 5개 경유지에 맞춰 나눈다."""
+    line = []
+    section_ranges = []
+    durations = []
+    instructions = []
+    quotes = []
+    for start in range(0, len(points) - 1, 6):
+        part = [f"{lon},{lat}" for lat, lon in points[start:start + 7]]
+        params = {"origin": part[0], "destination": part[-1]}
+        if len(part) > 2:
+            params["waypoints"] = "|".join(part[1:-1])
+        timeout = _route_timeout()
+        if timeout < 0.5:
+            raise TimeoutError("kakao route budget used up")
+        ROUTE_STATS["calls"] += 1
+        res = httpx.get(KAKAO_DIRECTIONS, params=params, headers={"Authorization": "KakaoAK " + os.environ["KAKAO_REST_API_KEY"]}, timeout=timeout)
+        res.raise_for_status()
+        route = res.json()["routes"][0]
+        if route["result_code"] != 0 or len(route["sections"]) != len(part) - 1:
+            raise ValueError("incomplete driving route")
+        summary = route.get("summary") or {}
+        fare = summary.get("fare") or {}
+        quotes.append((summary.get("distance"), fare.get("toll"), fare.get("taxi")))
+        for section in route["sections"]:
+            seconds = section["duration"]
+            if not isinstance(seconds, int) or seconds < 0:
+                raise ValueError("invalid section duration")
+            durations.append(seconds)
+            instructions.append([{"text": g["guidance"], "lat": g["y"], "lon": g["x"]}
+                                 for g in section.get("guides", []) if g.get("guidance") and g.get("x") and g.get("y")])
+            begin = len(line)
+            first_vertex = True
+            for road in section["roads"]:
+                coords = road["vertexes"]
+                for point in zip(coords[1::2], coords[::2]):
+                    if first_vertex and line and line[-1] == point:
+                        begin -= 1
+                    first_vertex = False
+                    if not line or line[-1] != point:
+                        line.append(point)
+            section_ranges.append((begin, len(line)))
+    if len(durations) != len(points) - 1:
+        raise ValueError("section count mismatch")
+
+    # 여러 번 나눠 조회한 경우 한 응답이라도 빠진 항목은 전체 금액으로 표시하지 않는다.
+    def total(values):
+        return sum(values) if all(type(v) is int and v >= 0 for v in values) else None
+
+    distance, toll, taxi = map(total, zip(*quotes))
+    return line, durations, RouteCosts(distance_m=distance, toll_won=toll, taxi_won=taxi, quote_parts=len(quotes)), instructions, section_ranges
+
+
+def driving_route(points):
+    """[(위도, 경도), ...] 순서대로의 자동차 경로. 키가 없거나 실패·시간 초과면 None."""
+    if len(points) < 2 or not os.getenv("KAKAO_REST_API_KEY"):
+        return None
+    if _ROUTE_DEADLINE.get() and _route_timeout() < 0.5:
+        ROUTE_STATS["skipped_budget"] += 1
+        return None
+    try:
+        out = _driving_route(tuple(points), int(time.monotonic() // 600))
+        ROUTE_STATS["ok"] += 1
+        return out
+    except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError, TimeoutError) as e:
+        ROUTE_STATS["fail"] += 1
+        ROUTE_STATS["last_error"] = type(e).__name__
+        return None
 
 
 def _items(xml_text: str) -> list[dict]:
@@ -171,6 +266,18 @@ def _base(now: dt.datetime) -> tuple[str, str]:
 # ---------- 16일 일별 예보 (키 없이 쓰는 Open-Meteo: 기상청 등 여러 나라 수치예보 모델을 합친 예보) ----------
 OM = "https://api.open-meteo.com/v1/forecast"
 _FC: dict = {"t": 0.0, "data": None, "fail": 0.0}
+_daily_pool = ThreadPoolExecutor(max_workers=1)
+_daily_lock = Lock()
+_daily_job = None
+
+
+def prefetch_daily():
+    """코스 설계와 일별 예보를 함께 진행하고, 화면과 서버가 요청한 동해시 예보는 하나를 같이 쓴다."""
+    global _daily_job
+    with _daily_lock:
+        if _daily_job is None or _daily_job.done():
+            _daily_job = _daily_pool.submit(_daily_forecast, 37.5245, 129.1143)
+        return _daily_job
 RAIN_CODES = set(range(51, 68)) | {80, 81, 82, 95, 96, 99}
 SNOW_CODES = set(range(71, 78)) | {85, 86}
 KIND = [((0,), "맑음", "Clear", "sun"), ((1, 2), "구름 조금", "Partly cloudy", "part"), ((3,), "흐림", "Cloudy", "cloud"),
@@ -186,6 +293,12 @@ def _kind(code: int) -> tuple[str, str, str]:
 
 
 def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
+    if (lat, lon) == (37.5245, 129.1143):
+        return prefetch_daily().result()
+    return _daily_forecast(lat, lon)
+
+
+def _daily_forecast(lat: float, lon: float) -> dict | None:
     """동해시 16일 일별 예보. 1시간 동안 기억하고, 실패하면 10분 동안 다시 부르지 않는다."""
     now = time.time()
     if _FC["data"] and now - _FC["t"] < 3600:
@@ -276,20 +389,82 @@ def rain_on(date_iso: str) -> bool:
     return bool(d and d["rain"])
 
 
+_KST = dt.timezone(dt.timedelta(hours=9))
+_grid_pool = ThreadPoolExecutor(max_workers=4)
+_grid_cache: dict = {}
+
+
+@lru_cache(maxsize=128)
+def _grid_lock(grid):
+    return Lock()
+
+
+def _grid_forecast(grid, issue):
+    """같은 발표의 격자 예보를 재사용한다. 실패한 요청은 1분 뒤 다시 시도한다."""
+    with _grid_lock(grid):
+        cached = _grid_cache.get(grid)
+        if cached and cached[0] == issue and time.monotonic() < cached[1]:
+            return cached[2]
+        slots: dict = {}
+        try:
+            params = {"serviceKey": unquote(KEY), "pageNo": 1, "numOfRows": 1500, "dataType": "JSON",
+                      "base_date": issue[0], "base_time": issue[1], "nx": grid[0], "ny": grid[1]}
+            res = httpx.get(KMA, params=params, timeout=5)
+            res.raise_for_status()
+            response = res.json()["response"]
+            if response["header"]["resultCode"] == "00":
+                for row in response["body"]["items"]["item"]:
+                    if row["category"] in ("TMP", "POP", "SKY", "PTY"):
+                        stamp = row["fcstDate"] + row["fcstTime"]
+                        slots.setdefault(stamp, {})[row["category"]] = int(float(row["fcstValue"]))
+        except (httpx.HTTPError, ValueError, TypeError, KeyError) as error:
+            print("[kma]", type(error).__name__, file=sys.stderr)
+            slots.clear()
+        slots = {dt.datetime.strptime(stamp, "%Y%m%d%H%M"): values for stamp, values in sorted(slots.items())
+                 if all(k in values for k in ("TMP", "POP", "SKY", "PTY")) and 0 <= values["POP"] <= 100}
+        _grid_cache[grid] = (issue, time.monotonic() + (10800 if slots else 60), slots)
+        return slots
+
+
+def visit_forecasts(date, visits):
+    """장소별 도착~출발(미포함)에 걸친 단기예보. 발표 범위 밖에는 값을 붙이지 않는다.
+    visits = [(장소 id, 위도, 경도, 도착 분, 출발 분)]"""
+    now = dt.datetime.now(_KST)
+    day = dt.date.fromisoformat(date)
+    if not KEY or not 0 <= (day - now.date()).days <= 5:
+        return {}
+    issue = _base(now)
+    grids = {pid: to_grid(lat, lon) for pid, lat, lon, _, _ in visits if lat is not None and lon is not None}
+    jobs = {grid: _grid_pool.submit(_grid_forecast, grid, issue) for grid in set(grids.values())}
+    midnight = dt.datetime.combine(day, dt.time())
+    forecasts = {}
+    for pid, _, _, arrive, depart in visits:
+        grid = grids.get(pid)
+        if grid is None:
+            continue
+        slots = jobs[grid].result()
+        hours = []
+        stamps = list(slots)
+        start = midnight + dt.timedelta(minutes=arrive)
+        end = midnight + dt.timedelta(minutes=max(arrive + 1, depart))
+        for i, at in enumerate(stamps):
+            # 뒤쪽 날짜는 3시간 간격이다. 마지막 발표 시각 이후의 시간대로 늘리지 않는다.
+            until = stamps[i + 1] if i + 1 < len(stamps) else at + dt.timedelta(hours=1)
+            if at < end and start < min(until, at + dt.timedelta(hours=3)):
+                v = slots[at]
+                hours.append({"time": at.strftime("%H:%M"), "temp": v["TMP"], "pop": v["POP"], "sky": v["SKY"], "pty": v["PTY"]})
+        if hours:
+            forecasts[pid] = {"source": "KMA", "issued": dt.datetime.strptime("".join(issue), "%Y%m%d%H%M").replace(tzinfo=_KST).isoformat(timespec="minutes"),
+                              "grid": grid, "hours": hours}
+    return forecasts
+
+
 def rain_today(lat: float = 37.5245, lon: float = 129.1143) -> dict:
-    """오늘 10~18시 중 강수확률 60% 이상인 시간이 있으면 rain=True."""
+    """오늘 10~18시 중 강수확률 60% 이상인 시간이 있으면 rain=True. (장소별 예보와 같은 격자 예보를 쓴다)"""
     if not KEY:
         return {"sample": True, "rain": False, "hours": []}
-    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+    now = dt.datetime.now(_KST)
     nx, ny = to_grid(lat, lon)
-    d, h = _base(now)
-    try:
-        r = httpx.get(KMA, params={"serviceKey": KEY, "pageNo": 1, "numOfRows": 300, "dataType": "JSON",
-                                   "base_date": d, "base_time": h, "nx": nx, "ny": ny}, timeout=5)
-        items = r.json()["response"]["body"]["items"]["item"]
-    except Exception as e:
-        print("[kma]", e); return {"sample": True, "rain": False, "hours": []}
-    today = now.strftime("%Y%m%d")
-    pops = [(i["fcstTime"], int(i["fcstValue"])) for i in items
-            if i["category"] == "POP" and i["fcstDate"] == today and "1000" <= i["fcstTime"] <= "1800"]
-    return {"sample": False, "rain": any(p >= 60 for _, p in pops), "hours": pops, "grid": [nx, ny]}
+    slots = _grid_forecast((nx, ny), _base(now))
+    pops = [(at.strftime("%H%M"), v["POP"]) for at, v in slots.items() if at.date() == now.date() and 10 <= at.hour <= 18]
+    return {"sample": not bool(pops), "rain": any(p >= 60 for _, p in pops), "hours": pops, "grid": [nx, ny]}

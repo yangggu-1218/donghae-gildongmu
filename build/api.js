@@ -140,7 +140,7 @@ export function makeApi(DATA) {
 
   // ---------- engine.py ----------
   const RANK = { G: 0, Y: 1, R: 2 };
-  const STARTS = { "동해역": [37.4995, 129.124], "묵호역": [37.548, 129.116], "자가용": [37.4995, 129.124] };
+  const STARTS = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692], "자가용": [37.498198, 129.123794] };   // engine.py 와 같게 (2026-11 바로잡음)
   const worst = (gs) => { gs = gs.filter(Boolean); return gs.length ? gs.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null; };
   function gradeSegment(s, mode) {
     const measured = [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null);
@@ -271,7 +271,7 @@ export function makeApi(DATA) {
     const cap = c.cap || 4;   // 하루 4곳 (여러 날 여행은 날마다 따로 짠다)
     const day = tripDate(c), wd = weekdayOf(day);
     const notes = [], skipped = [];
-    let pool = Object.values(places).filter((p) => p.type !== "숙박" && p.lat != null && !c.exclude.includes(p.id));
+    let pool = Object.values(places).filter((p) => p.type !== "숙박" && p.lat != null && p.lon != null && !c.exclude.includes(p.id));
     if (mode !== "none") {
       const unv = pool.filter((p) => !p.verified && !c.must.includes(p.id));
       pool = pool.filter((p) => !unv.includes(p));
@@ -371,7 +371,9 @@ export function makeApi(DATA) {
     }
     const back = q15(t + driveMin(cur, start));
     for (const s of skipped) notes.push(`${josa(s.name, "은는")} ${s.reason}라서 뺐어요.`);
-    return { mode, stops, overall: mode !== "none" ? worst(stops.map((s) => s.grade)) : null, back_at: hhmm(back), notes,
+    // 데모에는 카카오 길찾기가 없어 서버의 '추정 이동시간'과 같은 모양 (engine.py Course 칸)
+    return { start_point: STARTS[c.start], driving_guides: [], back_drive_min: null, drive_source: "estimate", driving_path: null, driving_sections: [], route_costs: null,
+      mode, stops, overall: mode !== "none" ? worst(stops.map((s) => s.grade)) : null, back_at: hhmm(back), notes,
       date: day, weekday: wd, start_time: hhmm(t0), skipped };
   }
 
@@ -725,7 +727,7 @@ export function makeApi(DATA) {
 
   // ---------- talk.py 규칙 경로 ----------
   const WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"], MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"], STYLE = ["바다 보기", "자연·산책", "산·등산", "카페", "맛집", "역사·문화"];
-  const HELP_KW = [["charger", /충전|charg/], ["mobility_van", /휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)/],
+  const HELP_KW = [["toilets", /화장실|restroom|toilet/], ["charger", /충전|charg/], ["mobility_van", /휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)/],
     ["info_center", /안내소|통역|외국어|interpret|info\w*\s*(center|centre|desk)|information/], ["city_tour", /시티\s*투어|버스|city tour|bus/],
     ["events", /행사|축제|공연|festival|event/], ["lodging", /숙소|숙박|호텔|펜션|게스트|hotel|stay/], ["restaurants", /식당|밥집|맛집|먹을|restaurant|짜장|짬뽕|중국집|횟집|국밥|냉면|칼국수|치킨/],
     ["parking", /주차|parking/], ["taxi", /택시|taxi/], ["hospital_pharmacy", /약국|병원|아파|다쳤|응급|pharmacy|hospital/]];
@@ -779,7 +781,7 @@ export function makeApi(DATA) {
       if (lunch) { elat = lunch.lat; elon = lunch.lon; }
       if (zone) { const zp = Object.values(PLACES).find((p) => p.zone === zone && p.type === "관광지" && p.lat && !p.sample); if (zp) { elat = zp.lat; elon = zp.lon; } }
       zone = zone || (courseIds.length ? PLACES[courseIds[courseIds.length - 1]].zone : "mukho");
-      const f = { info_center: () => infoCenters(lat, lon, c.lang, 2), charger: () => chargers(lat, lon, 2), mobility_van: () => mobilityCenter(),
+      const f = { toilets: () => toiletsNear(lat, lon), info_center: () => infoCenters(lat, lon, c.lang, 2), charger: () => chargers(lat, lon, 2), mobility_van: () => mobilityCenter(),
         city_tour: () => cityTour(courseIds), events: () => events().upcoming.slice(0, 3), lodging: () => lodging(zone, 5),
         restaurants: () => { const e = eateries(elat, elon, food || "", 1000, 5); return e.count ? e : eateries(elat, elon, food || "", 3000, 5); }, parking: () => parkingNear(lat, lon, 3000, 2),
         taxi: () => { const x = courseIds.flatMap((pid) => taxiFor(pid)).slice(0, 2); return x.length ? x : taxiAtStart(c.start); },
@@ -801,7 +803,8 @@ export function makeApi(DATA) {
       const d = (FC || []).find((x) => x.date === tripDate(c));
       return result(d && d.tmin != null && d.tmax != null && d.pop != null ? fmt(L.weather, d) : L.weather_none);
     }
-    for (const [kind, pat] of HELP_KW) if (pat.test(low)) {
+    const asksForCourse = /코스|일정.*짜|itinerary|plan (a|my|our) trip/.test(low);   // talk.py 와 같게: '코스' 요청은 도움 검색으로 새지 않게
+    for (const [kind, pat] of HELP_KW) if (!asksForCourse && pat.test(low)) {
       const z = ZONE_KW.find(([, pz]) => pz.test(message)); findHelp(kind, z ? z[0] : null, kind === "restaurants" ? eatGroup(message) : ""); return result(L.help);
     }
     if (courseIds.length && OTHER.test(low)) {   // '다른 코스': 지금 관광지를 빼고 새로 (talk.make_course(fresh=True))
@@ -829,6 +832,15 @@ export function makeApi(DATA) {
     if (!move.length && NO_MOVE.test(low)) { c.move = []; state.move_known = true; }
     if (style.length) c.style = style;
     const dd = daysFrom(low); if (dd) c.days = dd;
+    {   // talk.py set_conditions 와 같게: 날짜(오늘~90일)·출발 시각·식사 조건
+      const pd = parseDate(low), pt = parseTime(low);
+      if (pd && /^\d{4}-\d{2}-\d{2}$/.test(pd)) { const t0 = tripDate({}); const [y, m, d] = t0.split("-").map(Number);
+        const lim = new Date(Date.UTC(y, m - 1, d) + 90 * 864e5).toISOString().slice(0, 10);   // UTC 로 계산해야 날짜가 밀리지 않음
+        if (pd >= t0 && pd <= lim) c.date = pd; }
+      if (pt && /^\d{1,2}:\d{2}$/.test(pt)) c.start_time = pt.padStart(5, "0");
+      const meal = [["입식", /입식|의자식/], ["주차 편한 곳", /주차.{0,4}편/], ["부드러운 메뉴", /부드러운/]].filter(([, r]) => r.test(low)).map(([m]) => m);
+      if (meal.length) c.meal = meal;
+    }
     const start = /묵호역|mukho st/.test(low) ? "묵호역" : /동해역|donghae st/.test(low) ? "동해역" : /차로|자가용|운전|by car|driving/.test(low) ? "자가용" : null;
     if (start) c.start = start;
     if (RAIN.test(message)) c.rain = true;
@@ -1138,6 +1150,10 @@ export function makeApi(DATA) {
         history: [{ status: "접수", at: nowIso() }], reply: "" };
       adminSet("reports", [...adminGet("reports"), rec]);
       return { ok: true, id: rec.id, code: rec.code, ai: null, status: "접수", triage: { by: "rule", category: cat }, same: 1, demo: true };
+    }
+    if (path === "/api/course-preview") {   // 고르는 중 후보 미리 보기 (서버와 같이 규칙만)
+      const cc = cond(body);
+      return plan(PLACES, cc, cc.rain === true || cc.weather_pref === "실내").stops.map((s) => ({ id: s.id, kind: s.kind, grade: s.grade }));
     }
     if (path === "/api/reports/mine") {
       const want = String(q.ids || "").split(","), code = String(q.code || "").trim().toUpperCase();

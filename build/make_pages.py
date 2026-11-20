@@ -33,6 +33,7 @@ html=f'''<!doctype html>
 </style>
 </head>
 <body>
+{'<script src="/map-config.js"></script>' if SERVER else ""}
 <div id="root"></div>
 <script>{js}</script>
 </body>

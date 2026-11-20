@@ -18,12 +18,12 @@ WD = ["일", "월", "화", "수", "목", "금", "토"]
 SYSTEM = """너는 '동해 길동무'의 코스 설계 에이전트다. 동해시 하루 여행 코스를 이 사람에게 꼭 맞게 직접 설계한다.
 
 일하는 순서
-1. find_places 로 조건에 맞는 후보를 찾는다 (취향·권역·종류·실내를 바꿔 가며 필요한 만큼). 궁금한 곳은 place_detail 로 본다.
+1. 서버가 먼저 조회한 후보와 여행 조건을 읽는다. 적합한 후보가 충분하면 바로 check_plan 으로 넘어간다. 후보가 부족하면 find_places 로 더 찾고, 접근성 등 확인이 필요하면 place_detail 로 본다.
 2. 순서를 정해 check_plan 으로 검산한다. 서버가 도착 시각·이동 시간·그날 휴무·영업시간을 계산해 문제를 알려 준다.
 3. 문제가 있으면 장소나 순서를 바꿔 다시 check_plan 한다. 문제가 없으면 최종 JSON 을 낸다.
 
 꼭 지킬 것
-- 장소 id 는 도구 결과에 나온 것만 쓴다. 숙박 시설은 넣지 않는다.
+- 장소 id 는 서버가 먼저 조회한 후보나 도구 결과에 나온 것만 쓴다. 숙박 시설은 넣지 않는다.
 - [꼭 넣을 곳]은 모두 넣는다. [뺄 곳]은 넣지 않는다. [앞 날에 간 곳]도 넣지 않는다.
 - 이동 조건이 있으면 access 가 R(어려움)인 곳은 넣지 않고, verified=false(접근성 확인 전)인 곳은 꼭 넣을 곳이 아니면 피한다.
 - 장소 수는 [하루 장소 수]를 따른다 (식사·카페 포함). 점심 식당(kind=lunch)은 11:20~14:00 사이에 도착하게 한 곳 넣는다 (점심 빼기면 넣지 않음). [쉬는 카페]가 예면 관광지 두 곳 뒤에 카페(kind=cafe) 한 곳.
@@ -208,12 +208,30 @@ class _Agent:
         return "\n".join(lines)
 
 
-def plan(places: dict[str, Place], c: Conditions, rain: bool, hint: str = "") -> tuple[Course, dict] | None:
-    """AI가 설계한 코스. 실패하면 None."""
+def plan(places: dict[str, Place], c: Conditions, rain: bool, hint: str = "") -> tuple[Course | None, dict] | None:
+    """AI가 설계한 코스. 실패하면 None.
+    AI 코스를 만들었지만 카카오 실제 이동시간을 넣으니 문 닫는 곳이 생겨 버리면 (None, {"reason": …}) — 부르는 쪽은 규칙으로 가고 이유를 남긴다."""
     if not ai.available():
         return None
+    places = {pid: p for pid, p in places.items() if p.lat is not None and p.lon is not None}
     ag = _Agent(places, c, rain)
-    res = ai.run_tools("course", SYSTEM, [{"role": "user", "content": ag.brief(hint) + "\n\n위 조건으로 코스를 설계해 주세요."}],
+    # 먼저 조회한 후보 (gangRG님): 꼭 넣을·담은 곳 + 종류별 상위 6곳을 미리 넣어 도구 왕복을 줄인다
+    candidates = {}
+    for pid in [*c.must, *c.wish, c.lunch]:
+        if pid in places and pid not in ag.blocked and places[pid].type != "숙박":
+            candidates[pid] = ag._row(places[pid])
+    for category in ("관광지", "식당", "카페"):
+        rows = ag.find_places(types=[category])["places"]
+        rows.sort(key=lambda row: (
+            row["hours_today"] == "휴무", row["access"] == "R",
+            ag.mode != "none" and not row["verified"],
+            (rain or c.weather_pref == "실내") and not row["indoor"],
+            -len(set(c.style).intersection(row["styles"])),
+        ))
+        candidates.update((row["id"], row) for row in rows[:6])
+    prompt = ag.brief(hint) + "\n[먼저 조회한 후보]\n" + json.dumps(list(candidates.values()), ensure_ascii=False, separators=(",", ":")) \
+        + "\n\n위 조건으로 코스를 설계해 주세요."
+    res = ai.run_tools("course", SYSTEM, [{"role": "user", "content": prompt}],
                        TOOLS, ag.call, schema=FINAL, max_rounds=8, max_tokens=8000)
     if not res:
         return None
@@ -245,5 +263,15 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool, hint: str = "") ->
         notes.append(("꼭 넣을 곳 중 이번 코스에 못 넣은 곳: " if c.lang == "ko" else "Could not fit: ") + ", ".join(places[m].name_ko for m in missing))
     if problems:
         notes.append(("확인해 주세요: " if c.lang == "ko" else "Please check: ") + "; ".join(problems[:2]))
+    from . import public_apis
+    tok = public_apis.route_deadline()
+    try:
+        issue = engine.apply_driving_route(places, c, course)
+    finally:
+        public_apis._ROUTE_DEADLINE.reset(tok)
+    if issue is not None:
+        why = f"AI 코스에 카카오 실제 이동시간을 넣으니 '{issue['name']}'에 {issue['reason']} — 규칙 코스로 바꿨어요"
+        ai.LAST["course"] = {"why": why, "at": __import__("time").strftime("%Y-%m-%d %H:%M:%S")}
+        return None, {"reason": why}
     course.notes = notes
     return course, {"by": "ai", "model": ai.model_for("course"), "summary": str(data.get("summary") or "")[:200], "problems": problems}

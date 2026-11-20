@@ -552,14 +552,16 @@ const LAYERS = [
   { k: "chargers", ko: "전동휠체어 충전기", en: "Wheelchair chargers", color: "#1E8A3C", icon: "충" },
 ] as const;
 
-export function MapPage({ lang }: { lang: Lang }) {
+export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: string }) {   // initialLayer: #/map/toilets 처럼 한 층만 켜고 열기 (동이 대화에서)
   const L = pick(lang);
   const [d0, err] = useLoad(() => api.get("/api/facilities"), []);
   // 약국·병원은 긴급·도움과 같은 국립중앙의료원 실데이터 (서버에 키가 없으면 예시)
   const [med, setMed] = useState<{ sample: boolean; items: any[] } | null>(null);
   useEffect(() => { api.get("/api/medical").then(setMed).catch(() => {}); }, []);
   const d = d0 ? { ...d0, medical: med?.items || d0.medical } : null;
-  const [on, setOn] = useState<Record<string, boolean>>({ lodging: false, medical: false, parking: false, info_centers: false, toilets: true, chargers: true });
+  const [on, setOn] = useState<Record<string, boolean>>(() => initialLayer && ["lodging", "medical", "parking", "info_centers", "toilets", "chargers"].includes(initialLayer)
+    ? { lodging: false, medical: false, parking: false, info_centers: false, toilets: false, chargers: false, [initialLayer]: true }
+    : { lodging: false, medical: false, parking: false, info_centers: false, toilets: true, chargers: true });
   const [focus, setFocus] = useState<number | null>(null);   // 목록을 누르면 지도에서 그 점을 500m 정도로 확대
   // 처음: 동해역 가운데·축척 4km. 지도를 열면 바로 내 위치를 찾아 250m로 확대하고 빨간 점, 목록은 가까운 순.
   // 동해에서 25km 넘게 떨어져 있으면(예: 서울) 동해역 기준으로 두고 그렇게 알려 준다. 위치를 못 쓰면 동해역에서 가까운 순

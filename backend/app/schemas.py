@@ -128,10 +128,26 @@ class Stop(BaseModel):
     hours_text: str = ""
     hours_sample: bool = False           # 영업시간이 예시 값
     wait_min: int = 0                    # 문 열 때까지 기다린 시간
+    visit_at: Optional[str] = None       # 도착 후 대기가 있을 때 실제 관람 시작 시각
     notice: str = ""                     # 그날 걸린 관리자 알림 (공사·우회 등)
 
 
+class RouteCosts(BaseModel):
+    """카카오 자동차 길찾기 요약 (왕복 거리·통행료·택시 요금). 나눠 조회한 일부가 빠지면 None."""
+    distance_m: Optional[int]
+    toll_won: Optional[int]
+    taxi_won: Optional[int]
+    quote_parts: int
+
+
 class Course(BaseModel):
+    start_point: Optional[tuple[float, float]] = None          # 출발·복귀 위치 (역 좌표)
+    driving_guides: list[list[dict]] = Field(default_factory=list)   # 구간별 길안내 [{text, lat, lon}]
+    back_drive_min: Optional[int] = None                       # 마지막 장소 → 출발역 (카카오)
+    drive_source: Literal["kakao", "estimate"] = "estimate"    # 이동시간이 카카오 길찾기인지 추정인지
+    driving_path: Optional[list[tuple[float, float]]] = None   # 지도에 그릴 경로선
+    driving_sections: list[tuple[int, int]] = Field(default_factory=list)   # 구간마다 경로선의 [시작, 끝)
+    route_costs: Optional[RouteCosts] = None
     mode: Mode
     stops: list[Stop]
     overall: Optional[Grade]

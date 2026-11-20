@@ -31,6 +31,7 @@ py tests/test_admin_accounts.py    # → 관리자 점검 실패 0건
 unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가짜 Claude, 비용 없음)
 py tests/test_city_reports.py   # → 제보 점검 실패 0건 (가짜 Claude, 임시 폴더)
 py tests/test_auto_sync.py     # → 자동 갱신 점검 실패 0건 (가짜 소스 data/sync/fixtures)
+py tests/test_route_weather.py  # → 길찾기·날씨 점검 실패 0건 (가짜 카카오·기상청 응답, 네트워크 없음)
 py scripts/make_sample_reports.py   # 가상 제보 18건 원본 다시 만들기 (data/sample_reports/)
 ```
 배포: Render 대시보드 → 서비스 srv-dbs8ak142hec738upbpg → Manual Deploy → **Clear build cache & deploy** → Events에서 "Deploy live" 확인.
@@ -51,6 +52,7 @@ py scripts/make_sample_reports.py   # 가상 제보 18건 원본 다시 만들�
 | 11-21 | f8410bd (push·배포 전) | **시(市)를 위한 기능 — 투트랙**: 이용자 '불편 알리기'(위치·그림 단추·사진 3장·접수번호·[내 제보]) → AI 제보 정리(Haiku: 사진 분석·분류·부서·우선순위) → 규칙 묶기 → 관리자 **[제보·민원]**(묶음 목록·처리 상태·분류 고치기·몰리는 곳 지도·기간 요약 + AI 보고서(Sonnet)·CSV·백업) → 이용자 답변·관광지 임시 알림. 공개 지도 '알려진 불편'. 가상 제보 18건 — 자세히는 `docs/19_CITY_REPORTS.md`, CHANGELOG 11-21 |
 | 11-21 | (f8410bd 다음 커밋, push·배포 전) | **관광지 상세 다시 정리**: 판정 한 줄·이용 정보 띠를 첫 화면에, 같은 정보 한 번만, 자세한 것은 접기·링크로(빠진 것은 어디서 보는지 CHANGELOG에), 정보 출처 맨 아래 한곳 |
 | 11-21 | (같은 커밋, push·배포 전) | **자동 정보 갱신 0~1단계** (AI 없이): 공식 API·인허가 비교 → 전화·주소·좌표(50m)·행사 자동, 나머지 검수, 무장애 자동 금지, 충돌·불일치·폐업 의심, 관리자 [자동 갱신], GitHub Actions 예약 실행 — `docs/20_AUTO_SYNC.md` |
+| 11-21 | (다음 커밋) | 첫 화면 '사진 속 장소'·예시 문장 단추 빼기 (1fac3f1) · **gangRG님 변경 반영**: 카카오 실제 길찾기(3번 상한·8초 상한)·장소별 시간대 날씨·AI 코스 먼저 조회한 후보·동이 화장실·역 좌표·지도 키 서버에서·코스 결과 화면(경로 지도·공식 길찾기·여행 설정)·코스 준비 화면·후보 미리 보기(규칙만) |
 
 ### AI 기능 (4d02613) 핵심
 - 공통 모듈 `backend/app/ai.py`: 작업별 모델(기본 Haiku 5.5, 코스 설계·판정은 Sonnet 5.5), Sonnet은 서버 측 대체(fallbacks) 켬, 결과 캐시, 사용량·비용 집계
@@ -100,6 +102,9 @@ py scripts/make_sample_reports.py   # 가상 제보 18건 원본 다시 만들�
 
 9. **자동 갱신 실제 API 미확인** (11-21) — 로컬에 공공데이터 키가 없어 가짜 소스로만 점검. 배포 뒤 관리자 [더 보기 › 자동 갱신 › 지금 실행]으로 TourAPI 응답과 장소 짝짓기(이름 비교)가 맞는지, 잘못 짝지어진 곳이 없는지 확인
 10. 자동 갱신 예약 실행은 비밀값(`SYNC_TOKEN`·`SYNC_URL`)을 넣기 전까지 꺼져 있음 (워크플로가 건너뜀)
+
+11. **카카오 설정 (gangRG님 변경 반영, 11-21)** — Render 환경변수에 `KAKAO_REST_API_KEY`(카카오 REST API 키)를 넣어야 실제 길찾기가 켜짐(없으면 추정 이동시간). `KAKAO_JS_KEY`는 선택(지금 빌드에 JS 키가 들어 있어 없어도 지도는 뜸). 카카오 개발자센터: ① 내 애플리케이션 › 카카오맵/카카오모빌리티 **자동차 길찾기(Directions) API 사용 설정** ② 플랫폼 › Web 사이트 도메인에 `https://donghae-gildongmu.onrender.com`·`http://localhost:8765`(로컬)·GitHub Pages 주소. 키 값은 코드·채팅에 쓰지 않기
+12. **보류(팀 결정)**: 예시 데이터 장소(p.sample)를 코스에서 빼는 변경 — 지금 `sample=True` 장소는 **0곳**이라 빼도 코스는 그대로(일반·휠체어·유모차·오래 걷기 모두 후보 수·평균 장소 수 변화 없음). 따로 '길 정보가 예시'인 장소 5곳(무릉별유천지·도째비골 스카이밸리·해랑전망대·묵호항·연필뮤지엄)은 이 필터와 관계없음
 
 ## 4. 남은 할 일
 

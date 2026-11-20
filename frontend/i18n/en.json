@@ -331,5 +331,8 @@
   "cr.layerSample": "Items marked [Sample] are test data.",
   "cr.reportHere": "Report a barrier here",
   "cr.n": "{n} reports",
-  "cr.err": "Couldn't send. Please try again shortly."
+  "cr.err": "Couldn't send. Please try again shortly.",
+  "result.kakaoDrive": "Kakao estimated drive: {m} min",
+  "result.estDrive": "Estimated drive: about {m} min",
+  "sum.driveSource": "Driving times are Kakao estimates at the time of lookup."
 }

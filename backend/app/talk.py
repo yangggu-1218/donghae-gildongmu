@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 
-from . import ai, edits, engine, llm, public_data
+from . import ai, edits, engine, llm, pages, public_data
 from .schemas import DAY_OPTS, Conditions, Place
 
 PROMPT = (Path(__file__).parent / "prompts" / "talk.md").read_text(encoding="utf-8")
@@ -17,7 +17,7 @@ TALK_TIMEOUT = float(os.getenv("TALK_TIMEOUT") or 20)
 WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"]
 MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"]
 STYLE = ["바다 보기", "자연·산책", "산·등산", "카페", "맛집", "역사·문화"]
-HELP_KINDS = ["info_center", "charger", "mobility_van", "city_tour", "events", "lodging", "restaurants", "parking", "taxi", "hospital_pharmacy"]
+HELP_KINDS = ["toilets", "info_center", "charger", "mobility_van", "city_tour", "events", "lodging", "restaurants", "parking", "taxi", "hospital_pharmacy"]
 
 TOOLS = [
     {"name": "set_conditions", "description": "사용자가 말한 여행 조건을 저장한다. 말한 항목만 넣는다. move가 '없음'이면 move_none=true.",
@@ -52,7 +52,7 @@ TOOLS = [
      "input_schema": {"type": "object", "properties": {}}},
     {"name": "weather", "description": "동해시 날씨 예보(최대 16일). 여행 날짜와 앞뒤 며칠의 날씨·비 올 확률·기온.",
      "input_schema": {"type": "object", "properties": {}}},
-    {"name": "find_help", "description": "여행 도움 정보: info_center(관광안내소·외국어), charger(전동휠체어 충전기), mobility_van(휠체어 차량 예약), city_tour, events(행사·축제), lodging(숙박, zone 필요), restaurants(근처 식당: 동해시 일반음식점 1,400여 곳에서 거리순, 코스 점심 장소나 zone 기준. 음식 종류를 말하면 food에 넣는다), parking, taxi, hospital_pharmacy.",
+    {"name": "find_help", "description": "여행 도움 정보: toilets(장애인 화장실), info_center(관광안내소·외국어), charger(전동휠체어 충전기), mobility_van(휠체어 차량 예약), city_tour, events(행사·축제), lodging(숙박, zone 필요), restaurants(근처 식당: 동해시 일반음식점 1,400여 곳에서 거리순, 코스 점심 장소나 zone 기준. 음식 종류를 말하면 food에 넣는다), parking, taxi, hospital_pharmacy.",
      "input_schema": {"type": "object", "properties": {"kind": {"type": "string", "enum": HELP_KINDS},
                                                        "zone": {"type": "string", "enum": ["chuam", "mureung", "cheongok", "mukho", "mangsang", "station"]},
                                                        "food": {"type": "string", "enum": ["한식", "회·해산물", "고기·탕", "중식", "분식·국수", "양식·일식", "치킨"]}},
@@ -147,9 +147,12 @@ class Session:
         if os.getenv("AI_COURSE", "1") != "0":
             from . import ai_course
             got = ai_course.plan(self.places, self.c, rain, getattr(self, "hint", ""))
-            if got:
+            if got and got[0] is not None:
                 self.planner = got[1]
                 return got[0]
+            if got:   # AI 코스를 버리고 규칙으로 — 이유를 남긴다
+                self.planner = {"by": "rule", "reason": got[1].get("reason", "")}
+                return engine.plan(self.places, self.c, rain)
         self.planner = {"by": "rule"}
         return engine.plan(self.places, self.c, rain)
 
@@ -219,6 +222,7 @@ class Session:
                 elat, elon = zp.lat, zp.lon
         zone = zone or (self.places[self.course_ids[-1]].zone if self.course_ids else "mukho")
         data = {
+            "toilets": lambda: pages.toilets_near(lat, lon),
             "info_center": lambda: public_data.info_centers(lat, lon, self.c.lang, 2),
             "charger": lambda: public_data.chargers(lat, lon, 2),
             "mobility_van": lambda: public_data.mobility_center(),
@@ -285,7 +289,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
     try:   # 공식 SDK (backend/app/ai.py). 모델은 작업 'talk' 설정(기본 Haiku), TALK_MODEL 환경 변수가 있으면 그것
         ai.gate("talk")   # 요청 한도에 걸리면 Limited → 아래 except 에서 규칙으로
         for _ in range(5):   # 도구 호출은 최대 5번
-            out = ai.create("talk", model=os.getenv("TALK_MODEL") or None, max_tokens=1500, system=system_for(s.places),
+            out = ai.create("talk", model=os.getenv("TALK_MODEL") or os.getenv("LLM_MODEL") or None, max_tokens=1500, system=system_for(s.places),
                             tools=CACHED_TOOLS, messages=merged, timeout=TALK_TIMEOUT)
             bad = ai._why_bad(out)
             ai._count("talk", ai.model_for("talk"), not bad, out.usage, bad or "")
@@ -309,7 +313,7 @@ def _llm(s: Session, message: str, history: list[dict]) -> dict | None:
 
 
 # ---------------- 규칙 경로 ----------------
-HELP_KW = [("charger", r"충전|charg"), ("mobility_van", r"휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)"),
+HELP_KW = [("toilets", r"화장실|restroom|toilet"), ("charger", r"충전|charg"), ("mobility_van", r"휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)"),
            ("info_center", r"안내소|통역|외국어|interpret|info\w*\s*(center|centre|desk)|information"), ("city_tour", r"시티\s*투어|버스|city tour|bus"),
            ("events", r"행사|축제|공연|festival|event"), ("lodging", r"숙소|숙박|호텔|펜션|게스트|hotel|stay"),
            ("restaurants", r"식당|밥집|맛집|먹을|restaurant|짜장|짬뽕|중국집|횟집|국밥|냉면|칼국수|치킨"), ("parking", r"주차|parking"), ("taxi", r"택시|taxi"),
@@ -369,8 +373,9 @@ def _rule(s: Session, message: str) -> dict:
         w = s.weather()
         d = next((x for x in w.get("days", []) if x.get("date") == w.get("trip_date")), None)
         return s.result(L["weather"].format(**d) if d and all(d.get(k) is not None for k in ("tmin", "tmax", "pop")) else L["weather_none"], "rule")
+    asks_for_course = bool(re.search(r"코스|일정.*짜|itinerary|plan (a|my|our) trip", low))   # '코스' 요청이 도움 검색으로 새지 않게
     for kind, pat in HELP_KW:
-        if re.search(pat, low):
+        if not asks_for_course and re.search(pat, low):
             zone = next((z for z, pz in ZONE_KW if re.search(pz, message)), None)
             s.find_help(kind, zone, public_data.eat_group(message) if kind == "restaurants" else None)
             return s.result(L["help"], "rule")
@@ -391,6 +396,8 @@ def _rule(s: Session, message: str) -> dict:
     move = [m for m, p in MOVE_KW if re.search(p, low)]
     style = [st for st, p in STYLE_KW if re.search(p, low)]
     s.set_conditions(who=who, move=move or None, move_none=bool(re.search(NO_MOVE, low)) and not move, style=style or None,
+                     date=edits.parse_date(low), start_time=edits.parse_time(low),
+                     meal=[m for m, pattern in [("입식", r"입식|의자식"), ("주차 편한 곳", r"주차.{0,4}편"), ("부드러운 메뉴", r"부드러운")] if re.search(pattern, low)] or None,
                      days=days_from(low),
                      start=("묵호역" if re.search(r"묵호역|mukho st", low) else "동해역" if re.search(r"동해역|donghae st", low)
                            else "자가용" if re.search(r"차로|자가용|운전|by car|driving", low) else None),

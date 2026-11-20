@@ -12,3 +12,7 @@ data/cms/
 # AI 사용량 기록 (서버가 쓰는 파일)
 data/ai_usage.json
 data/ai_usage.tmp
+/data/cache/
+/audit-*.txt
+/audit-npm.json
+*.tsbuildinfo

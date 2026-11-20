@@ -24,7 +24,7 @@ except ImportError:          # SDK 가 없으면 AI 없이 동작 (규칙 경로
 
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 WORKSPACE = os.getenv("ANTHROPIC_WORKSPACE_ID", "")
-MODELS = {"fast": os.getenv("AI_MODEL_FAST") or "claude-haiku-5-5", "smart": os.getenv("AI_MODEL_SMART") or "claude-sonnet-5-5"}
+MODELS = {"fast": os.getenv("AI_MODEL_FAST") or os.getenv("LLM_MODEL") or "claude-haiku-5-5", "smart": os.getenv("AI_MODEL_SMART") or "claude-sonnet-5-5"}
 # 작업 → 기본 등급. 화면 [AI 설정]에 보이는 이름도 여기서.
 TASKS: dict[str, dict] = {
     "course": {"tier": "smart", "ko": "AI 코스 설계", "effort": "medium"},

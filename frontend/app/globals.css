@@ -1110,15 +1110,7 @@ span.chip, .chip.plain { cursor: default; white-space: nowrap; }
 .chat-fab b { display: block; color: var(--sea-deep); line-height: 1.25; }
 .chat-fab small { display: block; color: var(--muted); font-size: 14px; }
 .chat-fab:hover { background: var(--mist); }
-#timeline.res { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); gap: 0 22px; align-items: start; }
-#timeline.res > * { grid-column: 1; }
-#timeline.res > .res-map { grid-column: 2; grid-row: 1 / span 30; position: sticky; top: calc(var(--hdr, 64px) + 12px); display: grid; gap: 10px; }
-#timeline.res > .res-map .map { height: min(560px, calc(100dvh - var(--hdr, 64px) - 120px)); }
-#timeline.res > .res-map .chip { justify-self: start; text-decoration: none; }
 @media (max-width: 900px) {
-  #timeline.res { grid-template-columns: minmax(0, 1fr); }
-  #timeline.res > .res-map { grid-column: 1; grid-row: auto; position: static; }
-  #timeline.res > .res-map .map { height: 280px; }
   .chat-fab { right: 12px; bottom: calc(74px + env(safe-area-inset-bottom)); padding-right: 14px; }
   .grid.has-course > .panel.chat.widget.open { left: 0; right: 0; bottom: 0; width: 100%; height: min(78dvh, 640px); border-radius: var(--r-l) var(--r-l) 0 0; z-index: 70; }
 }
@@ -2057,3 +2049,279 @@ details.pp2-know > summary h2 { margin: 0; }
 .sy-edit { display: grid; gap: 4px; font-size: .9em; font-weight: 600; max-width: 360px; }
 .sy-src .panel { padding: 10px 12px; } .sy-src p { margin: 4px 0 0; }
 .sy-log td { vertical-align: top; font-size: .9em; }
+
+/* =====================================================================
+   gangRG님 변경 반영 (2026-11-21): 코스 결과 화면 — 경로 지도·구간 선택·장소별 일정·여행 설정·방문 시간 날씨·왕복 요금·코스 준비 화면
+   ===================================================================== */
+.tl-weather { margin: 10px 0; padding: 0 12px; border-left: 3px solid var(--sea); background: var(--mist); border-radius: 4px; }
+.tl-weather summary { padding: 10px 0; min-height: 44px; cursor: pointer; }
+.tl-weather p, .tl-weather ul { margin: 0 0 6px; }
+.tl-weather ul { padding-left: 1.3em; }
+.tl-weather small { display: block; padding-bottom: 10px; color: var(--muted); }
+.facility-page { padding-block: clamp(16px, 3vw, 34px) 24px; }
+.facility-heading, .facility-list-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.facility-heading h1 { margin: 0; font-family: var(--f-display); font-size: clamp(26px, 4vw, 36px); }
+.facility-heading .chip { border-color: var(--sea); color: var(--sea-deep); }
+.facility-filters { margin: 12px 0; }
+.facility-filters[hidden] { display: none; }
+.facility-list-title { margin: 20px 0 0; font-size: 1.25em; }
+.facility-list-title small { color: var(--muted); font-size: .75em; font-weight: 500; }
+.facility-cluster { border: 2px solid white; border-radius: 24px; padding: 6px 10px; min-height: 40px; background: #234d78; color: white; box-shadow: 0 1px 4px #0006; font: 700 14px/1.2 var(--f-body); cursor: pointer; }
+.facility-map { position: relative; isolation: isolate; }
+.route-anchor { position: relative; width: 0; height: 0; }
+.course-pin { transform: translate(-50%, -100%); position: absolute; width: 34px; height: 47px; left: 0; top: 0; color: white; filter: drop-shadow(0 1px 1px #19355266); }
+.course-pin-face { width: 100%; height: 100%; display: block; text-align: center; background: #0573d8; font: 700 14px/33px sans-serif; clip-path: path("M17 0C7.5 0 0 7.6 0 17c0 9 11 19 17 30 6-11 17-21 17-30C34 7.6 26.5 0 17 0Z"); }
+.course-pin.station .course-pin-face { background: #ef584d; }
+.course-pin sup { position: absolute; right: -7px; top: -5px; display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid #b4c0c9; background: white; color: #333; border-radius: 50%; font: 700 12px/1 sans-serif; }
+.route-guide-number { display: grid; place-items: center; width: 22px; height: 22px; min-height: 0; padding: 0; border: 1.5px solid #666; border-radius: 50%; background: #fff; color: #454545; font: 700 12px/1 sans-serif; cursor: pointer; }
+.route-guide-number[hidden] { display: none; }
+.guide-callout { display: block; max-width: 220px; white-space: normal; padding: 7px 10px; border: 1px solid var(--sea); border-radius: 6px; background: var(--surface); color: var(--ink); font: 600 14px/1.4 var(--f-body); }
+.route-caption { display: block; margin: 4px 0 8px; color: var(--muted); }
+.route-costs { margin: 0; padding: 12px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-s); }
+.route-costs > div { padding: 0 clamp(7px, 1vw, 14px); }
+.route-costs > div + div { border-inline-start: 1px solid var(--line); }
+.route-costs dt { font-size: .88em; line-height: 1.35; color: var(--muted); }
+.route-costs dd { margin: 4px 0 0; font-weight: 700; line-height: 1.35; color: var(--ink); }
+.sum-head .route-costs { margin-bottom: 18px; }
+@media (max-width: 420px) { .big .route-costs { grid-template-columns: 1fr; gap: 6px; } .big .route-costs > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border: 0; } }
+.facility-map .map { height: clamp(400px, 54vh, 520px); }
+.facility-anchor { position: relative; width: 30px; height: 30px; line-height: 1; }
+.facility-pin { width: 30px; height: 30px; padding: 0; border: 2px solid white; border-radius: 50%; color: white; font: 700 14px sans-serif; cursor: pointer; box-shadow: 0 1px 4px #0006; }
+.facility-pin:is(:hover, :focus-visible, [aria-pressed="true"]) { outline: 3px solid #12355e; }
+.facility-info { position: absolute; z-index: 5; box-sizing: border-box; padding: 15px 17px 13px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--surface); color: var(--ink); box-shadow: 0 3px 12px #0003; font: 1rem/1.45 var(--f-body); text-align: left; white-space: normal; overflow-wrap: anywhere; cursor: auto; }
+.facility-info::after { content: ""; position: absolute; left: var(--tip); width: 14px; height: 14px; background: var(--surface); border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
+.facility-info[data-side="above"]::after { bottom: 0; transform: translate(-50%, 55%) rotate(45deg); }
+.facility-info[data-side="below"]::after { top: 0; transform: translate(-50%, -55%) rotate(225deg); }
+.facility-info strong { display: block; padding-right: 30px; font-size: 1.18em; }
+.facility-info p { margin: 5px 0 0; }
+.facility-info .facility-meta { color: var(--muted); }
+.facility-close { position: absolute; top: 1px; right: 2px; width: 44px; height: 44px; background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 1.65em; cursor: pointer; }
+.facility-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; margin-top: 12px; padding-top: 9px; border-top: 1px solid var(--line); }
+.facility-actions a { display: inline-flex; gap: 6px; align-items: center; min-height: 44px; color: var(--sea); font-weight: 600; }
+.facility-actions a:last-child { padding: 0 13px; border-radius: 5px; color: var(--sea-ink); background: var(--sea); text-decoration: none; }
+.cal-day.has-ev { position: relative; }
+.cal-day.has-ev:not([aria-pressed="true"]) { background: var(--glow); }
+.cal-day.has-ev[aria-pressed="true"] i { background: currentColor; }
+.cal-grid > .cal-day { width: 100%; min-width: 0; }
+#plan:has(.course-layout) { max-width: 1520px; }
+@media (min-width: 1321px) {
+  #plan:has(.course-layout) { max-width: min(1520px, calc(100% - 176px)); }
+}
+.course-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); align-items: start; margin-block: 16px 24px; }
+.res-map { display: grid; gap: 10px; min-width: 0; position: sticky; top: calc(var(--hdr, 64px) + 12px); container-type: inline-size; }
+.course-schedule { min-width: 0; }
+.course-schedule > h3 { margin: 0 0 6px; color: var(--sea-deep); }
+.course-route-frame { display: block; width: 100%; height: clamp(350px, calc(100dvh - var(--hdr, 64px) - 180px), 720px); border: 1px solid var(--line); background: white; }
+@container (max-width: 740px) {
+  .course-route-frame { zoom: .78; height: clamp(450px, calc((100dvh - var(--hdr, 64px) - 180px) / .78), 780px); }
+}
+@container (max-width: 500px) {
+  .course-route-frame { zoom: .7; height: clamp(600px, 90dvh, 800px); }
+}
+.course-guidance[open] { max-height: 35dvh; overflow: auto; }
+.course-guidance { padding: 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-s); }
+.course-guidance details { border-top: 1px solid var(--line); }
+.course-guidance summary { padding: 10px 0; min-height: 44px; cursor: pointer; font-weight: 600; }
+.course-guidance ol { margin: 0 0 12px; padding-inline-start: 2em; }
+.course-guidance button { background: transparent; color: var(--sea); border: none; min-height: 44px; text-align: start; font: inherit; cursor: pointer; }
+.course-guidance button[aria-pressed=true] { font-weight: 700; text-decoration: underline; }
+.res-map .map { height: clamp(245px, calc(100dvh - var(--hdr, 64px) - 220px), 560px); }
+.res-map .chip { justify-self: start; text-decoration: none; }
+  .course-layout { grid-template-columns: minmax(0, 1fr); }
+  .res-map { position: static; }
+  .res-map .map { height: clamp(320px, 55dvh, 560px); }
+@media (max-width: 480px) {
+  .ask { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 8px; border-radius: var(--r-m); }
+  .ask-dongi { display: none; }
+  .ask input { width: 100%; }
+  .ask button:last-child { grid-column: 1 / -1; border-radius: var(--r-s); }
+}
+@media (min-width: 900px) {
+}
+.trip-suggestions h3 { margin: 0 0 6px; }
+.trip-suggestions > p { margin: 0 0 12px; }
+.trip-suggestions ol { margin: 10px 0 16px; padding-inline-start: 1.7em; }
+.trip-suggestions li { padding-block: 5px; }
+.trip-suggestions li a { font-weight: 700; }
+.trip-suggestions li small { display: block; color: var(--muted); }
+.trip-suggestions + .trip { margin-top: 16px; }
+
+@media (max-width: 760px) { .candidate-jump { display: inline-flex; margin: 4px 0; } }
+
+/* Shared frame for planning, then the route and its inspector. */
+.planner-shell { border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface); }
+.planner-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--sea-soft); border-radius: var(--r-m) var(--r-m) 0 0; }
+.planner-bar h2, .workspace-heading { color: var(--sea-deep); font-size: 1.15em; }
+.planner-bar h2 { margin: 0; }
+.planner-bar > span { font-variant-numeric: tabular-nums; }
+.planner-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-inline-start: auto; }
+.planner-shell > .grid { gap: 0; }
+.planner-shell .grid > .panel:not(.widget) { border: 0; box-shadow: none; background: transparent; border-radius: 0; min-width: 0; }
+.workspace-heading { margin: 0; }
+.workspace-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+.planner-shell .workspace-tabs .chip { border-radius: 5px; }
+.trip-settings { padding-block: 14px; }
+.prefs-fields { padding: 0; margin: 0; border: 0; min-width: 0; }
+.prefs-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.prefs-pair label { display: grid; font-weight: 650; gap: 4px; }
+.prefs-pair :is(input,select) { width: 100%; min-width: 0; min-height: 44px; font: inherit; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 5px; padding: 6px; }
+.prefs-fields fieldset { border: 0; border-top: 1px solid var(--line); padding: 6px 0; margin: 14px 0; min-width: 0; }
+.prefs-fields legend { font-weight: 700; padding-inline-end: 8px; }
+.prefs-choices { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.prefs-choices label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+.prefs-choices input { width: 18px; height: 18px; accent-color: var(--sea); }
+.planner-shell .course-layout { margin-block: 0 16px; }
+@media (min-width: 901px) {
+  #plan.wrap { max-width: min(1440px, 94%); }
+  .planner-shell > .grid:not(.has-course) > #timeline { border-inline-start: 1px solid var(--line); max-height: min(780px, calc(100dvh - var(--hdr, 64px) - 20px)); overflow: auto; }
+  .planner-shell .course-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 0; align-items: stretch; }
+  .planner-shell .res-map { align-content: start; position: static; padding-inline-end: 18px; }
+  .planner-shell .course-schedule { padding-inline-start: 18px; border-inline-start: 1px solid var(--line); max-height: max(420px, calc(100dvh - var(--hdr, 64px) - 116px)); overflow-y: auto; scrollbar-gutter: stable; }
+  .workspace-tabs { position: sticky; top: 0; z-index: 2; }
+}
+@media (max-width: 540px) {
+  .planner-bar { padding: 10px; }
+  .planner-actions { margin-inline-start: 0; }
+  .planner-bar .chip { padding-inline: 9px; }
+  .planner-shell .res-map .map { height: clamp(240px, 36dvh, 340px); }
+  .prefs-pair { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 1321px) {
+  #plan.wrap { max-width: min(1440px, calc(100% - 192px)); }
+}
+
+.map-stop-editor { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 14px; }
+.map-stop-editor label { display: grid; gap: 4px; font-size: .9em; font-weight: 700; max-width: 100%; }
+.map-stop-editor select { max-width: 100%; min-height: 44px; padding: 5px 9px; border-radius: 6px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); font: inherit; }
+button.course-pin { padding: 0; border: 0; background: transparent; cursor: pointer; }
+.course-pin[aria-pressed="true"] .course-pin-face { background: #824500; }
+[data-course-stop][data-selected="true"] .tl-body { outline: 2px solid var(--sea); outline-offset: -2px; }
+
+.pane-switch { display: none; }
+.stop-pager, .route-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stop-pager { justify-content: space-between; margin: 0; padding: 6px 0; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 65px; z-index: 1; }
+.stop-pager b { font-variant-numeric: tabular-nums; }
+.planner-shell .course-layout {
+  --editor-height: calc(100dvh - var(--hdr, 64px) - var(--editor-offset, 100px) - var(--tab, 0px) - 18px);
+  height: max(350px, var(--editor-height));
+}
+.planner-shell .res-map { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-height: 0; }
+.planner-shell .res-map .route-costs { margin: 0; }
+.planner-shell .res-map .map, .planner-shell .res-map .course-route-frame { flex: 1 1 0%; min-height: 100px; height: 0; }
+.planner-shell .course-schedule { min-height: 0; max-height: 100%; overflow: auto; overscroll-behavior: contain; }
+.route-links { position: relative; }
+.route-links .course-guidance[open] { position: absolute; z-index: 4; bottom: 0; left: 0; width: 100%; max-height: 34dvh; }
+@media (max-width: 900px) {
+  .pane-switch { display: flex; gap: 4px; }
+  .planner-shell .course-layout { display: flex; flex-direction: column; }
+  .course-layout[data-pane="map"] > .course-schedule,
+  .course-layout[data-pane="schedule"] > .res-map { display: none; }
+  .planner-shell .course-layout > :is(.res-map,.course-schedule) { flex: 1; }
+  .workspace-tabs { position: sticky; top: 0; z-index: 2; }
+}
+
+.route-view { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; gap: 6px; background: var(--surface); }
+.route-view[data-large="true"] { position: fixed; inset: 0; z-index: 110; width: 100%; height: 100dvh; padding: 10px; box-sizing: border-box; }
+.route-view .map-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.map-toolbar .chips { margin: 0; }
+.map-toolbar .map-size { margin-inline-start: auto; }
+.route-view .route-caption { margin: 0; font-size: .85em; }
+.stop-overview { background: var(--surface); border: 1px solid var(--line); padding: 12px; border-radius: var(--r-m); }
+.stop-identity { display: flex; gap: 12px; align-items: center; }
+.stop-identity h4 { margin: 1px 0; font-size: 1.15em; line-height: 1.3; }
+.stop-identity span { font-weight: 650; font-variant-numeric: tabular-nums; color: var(--sea-deep); }
+.stop-identity .ph-s { width: 64px; height: 64px; flex-shrink: 0; }
+.stop-actions, .settings-groups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.settings-groups { margin: 0 0 12px; }
+.stop-detail-dialog { color: var(--ink); background: var(--surface); width: min(640px, 94vw); max-height: 82dvh; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r-m); }
+.stop-detail-dialog::backdrop { background: #101d32aa; }
+.stop-detail-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; position: sticky; top: -12px; background: var(--surface); padding: 4px 0; z-index: 2; }
+.planner-shell .course-schedule { max-height: none; height: auto; overflow: visible; scrollbar-gutter: auto; }
+.course-schedule .workspace-tabs, .course-schedule .stop-pager { position: static; }
+.course-schedule > .tl { margin: 8px 0; }
+.course-schedule .tl-drive { margin: 0 0 4px; }
+.course-schedule > .muted { margin: 8px 0; }
+.course-schedule .route-costs { margin: 6px 0; }
+.course-schedule .route-costs > div { min-width: 0; }
+.planner-shell .res-map { height: max(350px, var(--editor-height)); }
+@media (min-width: 901px) {
+  .planner-shell .course-layout { height: auto; min-height: max(350px, var(--editor-height)); grid-template-columns: minmax(0, 1.58fr) minmax(360px, 1fr); align-items: start; }
+}
+@media (max-width: 900px) {
+  .planner-shell .course-layout { height: auto; min-height: max(350px, var(--editor-height)); }
+  .planner-shell .course-layout > .res-map { flex: 0 0 auto; }
+}
+
+@media (max-width: 900px) {
+  .planner-shell .course-layout { align-items: stretch; }
+  .planner-shell .course-layout > :is(.course-schedule,.res-map) { width: 100%; }
+}
+@media (min-width: 901px) {
+  #plan.wrap:has(.course-layout) { width: calc(100% - 40px); max-width: 1640px; }
+}
+@media (min-width: 1321px) {
+  #plan.wrap:has(.course-layout) { width: calc(100% - 120px); margin-inline: max(16px, calc((100% - 1640px) / 2)) auto; }
+}
+
+.planner-tools-toggle { display: none; }
+@media (max-width: 600px) {
+  .planner-tools-toggle { display: inline-flex; margin-inline-start: auto; }
+  .planner-actions[data-open="false"] { display: none; }
+  .planner-shell .planner-bar { gap: 4px 8px; padding: 6px 10px; }
+  .planner-shell .pane-switch { flex: 1 0 100%; }
+  .planner-shell .grid > #timeline.res { padding: 8px; }
+}
+
+@media (min-width: 901px) { .planner-shell > .grid:not(.has-course):has(> #timeline) { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+.planner-shell > .grid:not(.has-course) {
+  --planning-pane-height: min(780px, calc(100dvh - var(--hdr, 64px) - var(--tab, 0px) - var(--planner-bar-height, 48px) - 18px));
+}
+.planner-shell > .grid:not(.has-course):has(> #timeline) > .panel.chat {
+  position: static;
+  height: var(--planning-pane-height);
+}
+@media (min-width: 901px) {
+  .planner-shell > .grid:not(.has-course) > #timeline { max-height: var(--planning-pane-height); }
+}
+
+.course-pin.leg-from .course-pin-face { background: #197342; }
+.course-pin.leg-to .course-pin-face { background: #b7382d; }
+.leg-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; font-weight: 700; line-height: 1.4; }
+.leg-summary small { color: var(--muted); }
+.leg-summary strong { margin-inline-start: auto; font-size: .9em; color: var(--sea-deep); }
+
+.planner-shell > .grid[hidden] { display: none; }
+
+.planning-wait { overflow: hidden; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--surface); }
+.planning-heading { display: flex; align-items: center; gap: 12px; padding: clamp(16px, 2vw, 28px); color: var(--ink); }
+.planning-heading strong { font-size: clamp(1.05rem, 2vw, 1.5rem); line-height: 1.35; }
+.planning-indicator { width: 12px; height: 12px; border-radius: 50%; background: #2376c8; box-shadow: 0 0 0 5px #2376c81e; flex: none; }
+.planning-map { position: relative; overflow: hidden; background: #f1f2eb; border-top: 1px solid var(--line); }
+.planning-map svg { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; }
+.planning-map text { font-family: inherit; paint-order: stroke; stroke-linejoin: round; }
+.planning-area-label { fill: #627d83; stroke: #f1f5ef; stroke-width: 2px; font-size: 18px; letter-spacing: .1em; }
+.planning-pin-label { fill: #253c4e; }
+.planning-pin-label text { stroke: #fffefa; stroke-width: 4px; font-size: 18px; font-weight: 700; }
+.planning-trace { stroke-dasharray: 1; animation: planning-draw 8s linear infinite; }
+@keyframes planning-draw { 0%,7% { stroke-dashoffset: 1; } 49%,59% { stroke-dashoffset: .36; } 91%,100% { stroke-dashoffset: 0; } }
+.planning-map-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 12px; background: var(--surface); font-size: .8em; color: var(--muted); }
+.planning-map-meta a { color: inherit; }
+.planning-guide-static { display: none; }
+@media (max-width: 600px) {
+  .planning-map svg { height: clamp(240px, 70vw, 320px); }
+  .planning-pin-label text { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planning-trace { animation: none; }
+  .planning-guide-moving { display: none; }
+  .planning-guide-static { display: block; }
+}
+/* 우리 쪽과 맞추기: 코스 전 대화는 가운데 한 장(메신저형) 그대로, 후보 미리 보기는 대화 칸 안에 접어서 */
+.cr-suggest { margin: 0 14px; border-bottom: 1px solid var(--line); }
+.cr-suggest > summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; font-weight: 600; color: var(--sea-deep); }
+.cr-suggest .trip-suggestions { padding-bottom: 10px; max-height: 320px; overflow: auto; }
+.cr-suggest .trip-suggestions .map { height: 200px; }
+.itinerary-additions { display: grid; gap: 8px; margin: 10px 0; }
+.planner-shell .res-map .route-note { margin: 0; }
+@media (max-width: 900px) { .planner-shell .course-layout[data-pane="schedule"] { min-height: 0; } }   /* 폰: 일정 칸은 지도 높이만큼 비우지 않게 */
