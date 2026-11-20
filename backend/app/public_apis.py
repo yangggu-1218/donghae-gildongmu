@@ -1,5 +1,6 @@
 """공공 API 중계: 안심(병원·약국·응급실)과 날씨. 키는 서버에만 두고, 웹 화면은 이 서버만 부른다.
 엔드포인트 이름은 공공데이터포털 각 API의 활용가이드(참고문서)로 한 번 더 확인할 것."""
+from typing import Optional
 import math, os, sys, time, datetime as dt
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -18,6 +19,7 @@ KMA = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
 def _driving_route(points, time_bucket):
     """방문 순서를 유지하며 자동차 길찾기의 요청당 최대 5개 경유지에 맞춰 나눈다."""
     line = []
+    section_ranges = []
     durations = []
     instructions = []
     quotes = []
@@ -42,17 +44,23 @@ def _driving_route(points, time_bucket):
             durations.append(seconds)
             instructions.append([{"text": g["guidance"], "lat": g["y"], "lon": g["x"]}
                                  for g in section.get("guides", []) if g.get("guidance") and g.get("x") and g.get("y")])
+            begin = len(line)
+            first_vertex = True
             for road in section["roads"]:
                 coords = road["vertexes"]
                 for point in zip(coords[1::2], coords[::2]):
+                    if first_vertex and line and line[-1] == point:
+                        begin -= 1
+                    first_vertex = False
                     if not line or line[-1] != point:
                         line.append(point)
+            section_ranges.append((begin, len(line)))
     # 여러 번 나눠 조회한 경우 한 응답이라도 빠진 항목은 전체 금액으로 표시하지 않는다.
     def total(values):
         return sum(values) if all(type(v) is int and v >= 0 for v in values) else None
 
     distance, toll, taxi = map(total, zip(*quotes))
-    return line, durations, RouteCosts(distance_m=distance, toll_won=toll, taxi_won=taxi, quote_parts=len(quotes)), instructions
+    return line, durations, RouteCosts(distance_m=distance, toll_won=toll, taxi_won=taxi, quote_parts=len(quotes)), instructions, section_ranges
 
 
 def driving_route(points):
@@ -88,27 +96,22 @@ def _dist_m(lat1, lon1, lat2, lon2) -> int:
 
 def nearby_open(lat: float, lon: float) -> dict:
     """지금 문 연 약국·병의원과 가까운 응급실. 키가 없으면 sample=True 예시를 돌려준다."""
-    if not KEY:
-        return {"sample": True, "places": [
-            {"name": "○○약국 (예시)", "kind": "약국", "until": "21:00", "dist_m": 350, "tel": "033-000-0000"},
-            {"name": "△△의원 (예시)", "kind": "의원", "until": "18:00", "dist_m": 800, "tel": "033-000-0000"},
-            {"name": "지역 응급실 (예시)", "kind": "응급실", "until": "24시간", "dist_m": 2100, "tel": "033-000-0000"}]}
+    if not KEY:   # 키가 없으면 저장해 둔 실제 목록에서 가까운 곳 (운영시간은 모름)
+        from . import details
+        near = details.medical_near(lat, lon)
+        return {"sample": False, "hours_unknown": True, "places": [
+            {"name": near[k]["name"], "kind": k, "until": "24시간" if k == "응급실" else "운영시간 확인", "dist_m": near[k]["dist_m"], "tel": near[k]["tel"]}
+            for k in ("약국", "의원", "응급실") if k in near]}
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
     out = []
     common = {"serviceKey": KEY, "WGS84_LON": lon, "WGS84_LAT": lat, "pageNo": 1, "numOfRows": 20}
-    for kind, path in (("약국", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
-                       ("병의원", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")):
-        try:
-            items = _items(httpx.get(NMC + path, params=common, timeout=5).text)
-        except Exception as e:
-            print("[nmc]", kind, e); items = []
+    for kind, items in (_dh_all() or {}).items():
         for it in items:
-            # 위치기반 목록에는 운영시간이 없을 수 있다 → 기관코드(hpid)로 상세 조회가 필요하면 여기서 추가
+            # 지역 목록에는 요일별 운영시간이 있다. 위치 기반 결과처럼 운영시간이 없으면 '운영시간 확인'
             ok, until = _open_now(it, now)
             if ok or "dutyTime1s" not in it:
                 out.append({"name": it.get("dutyName"), "kind": kind, "until": until or "운영시간 확인",
-                            "dist_m": _dist_m(lat, lon, float(it.get("latitude", lat)), float(it.get("longitude", lon))),
-                            "tel": it.get("dutyTel1", "")})
+                            "dist_m": _dist_m(lat, lon, it["_lat"], it["_lon"]), "tel": it.get("dutyTel1", "")})
     try:
         er = _items(httpx.get(NMC + "/ErmctInfoInqireService/getEgytLcinfoInqire", params=common, timeout=5).text)
         for it in er[:1]:
@@ -119,6 +122,85 @@ def nearby_open(lat: float, lon: float) -> dict:
         print("[nmc] er", e)
     out.sort(key=lambda x: (x["kind"] == "응급실", x["dist_m"]))
     return {"sample": False, "places": out[:5]}
+
+
+_MED_CACHE: dict = {}
+MED_DIAG: list = []   # 마지막 호출의 결과 코드·메시지·개수 (키는 담지 않는다)
+
+
+def _items_diag(text: str) -> tuple[list[dict], str, str]:
+    """목록과 함께 공공데이터포털의 결과 코드·메시지를 돌려준다 (인증 오류는 OpenAPI_ServiceResponse 형식)."""
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return [], "", " ".join(text[:80].split())
+    g = lambda t: (root.findtext(f".//{t}") or "").strip()
+    code = g("resultCode") or g("returnReasonCode")
+    msg = g("resultMsg") or g("returnAuthMsg") or g("errMsg")
+    return [{c.tag: (c.text or "").strip() for c in it} for it in root.iter("item")], code, msg
+
+
+# 동해시 약국·병의원 전체 목록: 지역 목록 조회(시도·시군구)를 먼저 쓰고, 0곳이면 위치 기반 조회로 한 번 더 시도.
+# 위치 기반 조회는 키가 정상(00)이어도 0곳을 돌려준 적이 있어(2026-11-20 실서버) 지역 목록을 기본으로 둔다.
+LIST = {"약국": ("/ErmctInsttInfoInqireService/getParmacyListInfoInqire", "/ErmctInsttInfoInqireService/getParmacyLcinfoInqire"),
+        "병의원": ("/HsptlAsembySearchService/getHsptlMdcncListInfoInqire", "/HsptlAsembySearchService/getHsptlMdcncLcinfoInqire")}
+DH_CENTER = (37.5245, 129.1143)
+
+
+def _fetch(kind: str, diag: list) -> list[dict]:
+    lst, loc = LIST[kind]
+    tries = [("목록", lst, {"Q0": q0, "Q1": "동해시", "pageNo": 1, "numOfRows": 500}) for q0 in ("강원특별자치도", "강원도")]
+    tries.append(("위치", loc, {"WGS84_LON": DH_CENTER[1], "WGS84_LAT": DH_CENTER[0], "pageNo": 1, "numOfRows": 100}))
+    for how, path, extra in tries:
+        try:
+            r = httpx.get(NMC + path, params={"serviceKey": KEY, **extra}, timeout=12)
+            items, code, msg = _items_diag(r.text)
+            diag.append({"kind": kind, "how": how, "q0": extra.get("Q0", ""), "http": r.status_code, "code": code, "msg": msg, "n": len(items)})
+        except Exception as e:
+            items = []
+            diag.append({"kind": kind, "how": how, "q0": extra.get("Q0", ""), "http": None, "code": "", "msg": type(e).__name__, "n": 0})
+        print("[nmc list]", diag[-1], flush=True)
+        good = []
+        for it in items:
+            try:
+                la = float(it.get("wgs84Lat") or it.get("latitude")); lo = float(it.get("wgs84Lon") or it.get("longitude"))
+            except (TypeError, ValueError):
+                continue
+            good.append({**it, "_lat": la, "_lon": lo})
+        if good:
+            return good
+    return []
+
+
+def _dh_all() -> Optional[dict]:
+    """{'약국': [...], '병의원': [...]} 1시간 보관. 키가 없거나 둘 다 0곳이면 None."""
+    if not KEY:
+        return None
+    hit = _MED_CACHE.get("raw")
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    diag: list = []
+    got = {k: _fetch(k, diag) for k in LIST}
+    MED_DIAG[:] = diag
+    if not any(got.values()):
+        return None
+    _MED_CACHE["raw"] = (time.time(), got)
+    return got
+
+
+def medical_list() -> Optional[list]:
+    """편의시설 지도용 약국·병의원 목록 (긴급·도움과 같은 국립중앙의료원 API). 실패하면 None → 화면은 예시 데이터."""
+    got = _dh_all()
+    if not got:
+        return None
+    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+    out = []
+    for kind, items in got.items():
+        for it in items:
+            ok, until = _open_now(it, now)
+            out.append({"name": it.get("dutyName"), "kind": kind, "lat": it["_lat"], "lon": it["_lon"], "tel": it.get("dutyTel1", ""),
+                        "road": it.get("dutyAddr", ""), "open_now": bool(ok), "until": until, "div": it.get("dutyDivNam", "")})
+    return out
 
 
 # ---- 기상청 격자 변환 (기상청 공식 LCC 변환식) ----
@@ -151,6 +233,18 @@ def _base(now: dt.datetime) -> tuple[str, str]:
 # ---------- 16일 일별 예보 (키 없이 쓰는 Open-Meteo: 기상청 등 여러 나라 수치예보 모델을 합친 예보) ----------
 OM = "https://api.open-meteo.com/v1/forecast"
 _FC: dict = {"t": 0.0, "data": None, "fail": 0.0}
+_daily_pool = ThreadPoolExecutor(max_workers=1)
+_daily_lock = Lock()
+_daily_job = None
+
+
+def prefetch_daily():
+    """코스 설계와 일별 예보를 병행하고 화면과 서버가 요청한 동해시 예보는 함께 쓴다."""
+    global _daily_job
+    with _daily_lock:
+        if _daily_job is None or _daily_job.done():
+            _daily_job = _daily_pool.submit(_daily_forecast, 37.5245, 129.1143)
+        return _daily_job
 RAIN_CODES = set(range(51, 68)) | {80, 81, 82, 95, 96, 99}
 SNOW_CODES = set(range(71, 78)) | {85, 86}
 KIND = [((0,), "맑음", "Clear", "sun"), ((1, 2), "구름 조금", "Partly cloudy", "part"), ((3,), "흐림", "Cloudy", "cloud"),
@@ -166,6 +260,12 @@ def _kind(code: int) -> tuple[str, str, str]:
 
 
 def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
+    if (lat, lon) == (37.5245, 129.1143):
+        return prefetch_daily().result()
+    return _daily_forecast(lat, lon)
+
+
+def _daily_forecast(lat: float, lon: float) -> dict | None:
     """동해시 16일 일별 예보. 1시간 동안 기억하고, 실패하면 10분 동안 다시 부르지 않는다."""
     now = time.time()
     if _FC["data"] and now - _FC["t"] < 3600:
@@ -182,12 +282,14 @@ def forecast(lat: float = 37.5245, lon: float = 129.1143) -> dict | None:
         j = body["daily"]
         days = []
         for i, d in enumerate(j["time"]):
+            if j["temperature_2m_max"][i] is None or j["temperature_2m_min"][i] is None:
+                continue   # 예보 끝자락에 값이 빈 날이 있으면 그날만 건너뛴다 (전체를 버리지 않게)
             code, pop, mm = int(j["weather_code"][i] or 0), int(j["precipitation_probability_max"][i] or 0), float(j["precipitation_sum"][i] or 0)
             ko, en, icon = _kind(code)
             wet = code in RAIN_CODES or code in SNOW_CODES
             days.append({"date": d, "code": code, "ko": ko, "en": en, "icon": icon, "pop": pop, "mm": round(mm, 1),
                          "tmax": round(j["temperature_2m_max"][i]), "tmin": round(j["temperature_2m_min"][i]),
-                         "wind": round(j["wind_speed_10m_max"][i] / 3.6, 1),          # m/s
+                         "wind": round((j["wind_speed_10m_max"][i] or 0) / 3.6, 1),          # m/s
                          "rain": pop >= 60 or mm >= 5 or (wet and pop >= 40)})
         data = {"source": "Open-Meteo 일별 예보 (기상청 등 수치예보 모델 종합)", "updated": dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).isoformat(timespec="minutes"), "days": days}
         _FC.update(t=now, data=data)

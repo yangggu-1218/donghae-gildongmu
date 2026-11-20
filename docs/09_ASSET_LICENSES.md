@@ -98,3 +98,10 @@
 - 편람에 마스코트 이름이 없어 서비스 안 이름은 '동이'를 그대로 쓴다. 동해시 공식 이름이 있으면 바꾼다.
 - **동해시 마스코트는 동해시 저작물**이다. 대회 출품·시연은 동해시 행사 맥락이지만, 공개 서비스로 운영하기 전에는 동해시(관광과·홍보 담당)에 사용 승인을 받아야 한다. 예전 동이 그림(팀 자체 제작)은 git 이력에 남아 있다.
 
+
+## 팀 제공 사진 (2026-11-19 받음)
+
+12장: 추암 촛대바위 출렁다리(chuam_bridge, chuam_bridge_2), 천곡천연동굴 자연학습체험공원(nature_park, nature_park_2), 한섬해변·감성바닷길(hanseom, hanseom_2, hanseom_3), 북평민속오일장(bukpyeong_market, bukpyeong_market_2), 묵호항 수변공원(mukho_park, mukho_park_2), 초록봉(chorokbong). `chuam_bridge` 원본에 'ⓒ동해시청' 표시가 있어 저작자를 동해시청으로 적음. 나머지는 앞의 팀 제공 사진과 같이 촬영자·라이선스를 전달받지 못했다('팀 제공 · 출처 확인 중'). 공개 운영 전에 출처 확인 필요.
+
+### 2026-11-20 추가 13장 (팀장 제공)
+봉정연꽃마을(bongjeong_lotus·_2·_3), 동해문화원(culture_center·_2), 북평성당(bukpyeong_church·_2), 묵호시장(mukho_market·_2), 가원습지 생태자연공원(gawon·_2), 동해약천온천실버타운(yakcheon·_2). 사진에 '한국관광공사' 표시가 있는 것(bongjeong_lotus, culture_center, mukho_market·_2, yakcheon)은 저작자를 한국관광공사로, 'ⓒ동해시청'(gawon)·'namgil kim'(bongjeong_lotus_3)·'Wood Honey'(bukpyeong_church_2) 표시가 있는 것은 그 이름으로 적었다. 이용 허락 범위는 아직 확인 전('출처 확인 중'). 개인 촬영자 표시가 있는 2장(namgil kim, Wood Honey)은 2026-11-20 팀장이 촬영자 사용 허락을 받았다고 확인했다.

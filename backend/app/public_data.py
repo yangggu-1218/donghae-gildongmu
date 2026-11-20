@@ -148,14 +148,19 @@ def events_near(lat, lon, radius: int = 800, today: Optional[str] = None) -> lis
     return [e for e in events(today)["upcoming"] if e.get("lat") and dist_m(lat, lon, e["lat"], e["lon"]) <= radius]
 
 
+# 숙박 좌표: 주소를 카카오 주소 검색으로 한 번 바꿔 둔 값 (data/public/lodging_coords.json)
+_LXY_F = Path(__file__).resolve().parents[2] / "data" / "public" / "lodging_coords.json"
+LODGE_XY = json.loads(_LXY_F.read_text(encoding="utf-8")).get("coords", {}) if _LXY_F.exists() else {}
+
+
 def lodging(zone: str = "", limit: int = 0) -> dict:
-    """숙박업소(공중위생업소 중 숙박업). 좌표가 없어 권역으로만 묶고, 접근성은 확인 전이다."""
+    """숙박업소(공중위생업소 중 숙박업). 좌표는 주소 검색으로 붙인 건물 좌표, 접근성은 확인 전이다."""
     seen, ls = set(), []
     for l in sorted(PUB.get("lodging", []), key=lambda l: not l.get("tourist")):   # 관광숙박업 등록 업소를 먼저
         if (not zone or l["zone"] == zone) and l["name"] not in seen:
             seen.add(l["name"]); ls.append(l)
     items = [{"name": l["name"], "kind": l["kind"], "address": l.get("road") or l.get("jibun", ""), "tel": l["tel"], "zone": l["zone"],
-              "tourist": bool(l.get("tourist"))} for l in ls]
+              "tourist": bool(l.get("tourist")), **({"lat": LODGE_XY[l["name"]][0], "lon": LODGE_XY[l["name"]][1]} if l["name"] in LODGE_XY else {})} for l in ls]
     return {"count": len(items), "zone": zone, "accessibility": "확인 전", "items": items[:limit] if limit else items}
 
 
@@ -366,3 +371,51 @@ def rentals_near(lat, lon, radius: int = 1500, limit: int = 3) -> list[dict]:
     return [{"name": r["name"], "tel": r["tel"], "cars": int(r["cars"] or 0), "vans": int(r["vans"] or 0),
              "weekday": f"{r['wk_open']}~{r['wk_close']}", "weekend": f"{r['we_open']}~{r['we_close']}", "dist_m": r["dist_m"]}
             for r in _near("rentals", lat, lon, radius) if r["cars"]][:limit]
+
+
+# ---- 차 없이 다니기: 코스 구간마다 걸어갈 만한지, 대중교통(카카오맵 길찾기)·택시·시티투어 안내 ----
+# 버스 노선·시간표 공공데이터가 없어 노선 번호를 지어내지 않는다. 구간마다 카카오맵 '대중교통 길찾기' 링크로 실제 노선을 보게 한다.
+TRANSIT_STARTS = {"동해역": (37.4995, 129.1240), "묵호역": (37.5480, 129.1160), "자가용": (37.4995, 129.1240)}
+# 동해종합버스터미널에서 가는 시내버스 (한국관광공사 열린관광 '떠나자, 감성 뿜뿜 동해로!' 2019년 자료). 노선이 바뀌었을 수 있어 화면에 연도를 밝힌다.
+_B_MUREUNG, _B_CAVE, _B_MANGSANG, _B_CHUAM, _B_MUKHO = ["12-4", "13-1"], ["21-1", "21-3", "32-1"], ["31-3", "51-1"], ["61"], ["12-4", "21-1", "21-3", "32-1"]
+BUS_2019 = {**{i: _B_MUREUNG for i in ("valley", "samhwasa", "yongchu", "forest", "food_kkotsan", "cafe_estmare", "food_boribat")},
+            "cave": _B_CAVE, **{i: _B_MANGSANG for i in ("mangsang", "mangsang_camp")},
+            **{i: _B_CHUAM for i in ("chotdae", "chuam_bridge", "haeamjeong", "food_chuam_hanki")},
+            **{i: _B_MUKHO for i in ("nongol", "mukho_lighthouse")}}
+
+
+def _km(a, b) -> float:
+    (la1, lo1), (la2, lo2) = a, b
+    h = math.sin(math.radians(la2 - la1) / 2) ** 2 + math.cos(math.radians(la1)) * math.cos(math.radians(la2)) * math.sin(math.radians(lo2 - lo1) / 2) ** 2
+    return 2 * 6371.0 * math.asin(math.sqrt(h))
+
+
+def _kakao_by(mode: str, a: tuple, b: tuple) -> str:
+    """카카오맵 길찾기 링크. mode: traffic(대중교통)·walk·car. a, b = (이름, 위도, 경도)"""
+    clean = lambda s: re.sub(r"[,/]", " ", s)
+    return f"https://map.kakao.com/link/by/{mode}/{clean(a[0])},{a[1]},{a[2]}/{clean(b[0])},{b[1]},{b[2]}"
+
+
+def transit(points: list[tuple[str, str, float, float]], start: str, move: list[str], lang: str = "ko") -> dict:
+    """points = [(id, 이름, 위도, 경도), ...] 코스 순서. 출발역에서 시작해 출발역으로 돌아온다.
+    걷기: 직선거리 x 1.3 을 시속 4km(이동이 불편하면 3km)로. 0.8km(이동이 불편하면 0.4km)까지만 걸어가기로 권한다."""
+    st = "동해역" if start == "자가용" else start
+    sx, sy = TRANSIT_STARTS[st]
+    slow = bool(move)
+    speed, walk_max = (3.0, 0.4) if slow else (4.0, 0.8)
+    seq = [("start", st, sx, sy)] + [p for p in points if p[2] is not None] + [("start", st, sx, sy)]
+    hops = []
+    for a, b in zip(seq, seq[1:]):
+        km = _km((a[2], a[3]), (b[2], b[3]))
+        walk_min = max(1, round(km * 1.3 / speed * 60))
+        car_min = round(km * 1.4 / 35 * 60) + 3
+        walk = km <= walk_max
+        hops.append({"from": a[1], "to": b[1], "km": round(km, 1), "how": "walk" if walk else "ride", "walk_min": walk_min, "car_min": car_min,
+                     "link": _kakao_by("walk" if walk else "traffic", (a[1], a[2], a[3]), (b[1], b[2], b[3])),
+                     "bus_2019": [] if walk else BUS_2019.get(b[0], [])})
+    ids = [p[0] for p in points]
+    return {"start": st, "hops": hops, "city_tour": city_tour(ids), "taxi": taxi_at_start(st),
+            "van": mobility_center() if "휠체어" in move else None,
+            "bus_src": "한국관광공사 열린관광 (2019년 자료, 동해종합버스터미널 출발 기준)",
+            "note": ("버스 노선·시간은 링크를 누르면 카카오맵에서 바로 볼 수 있어요. 동해시에는 아직 저상버스가 없어 휠체어는 휠체어 차량이나 택시를 권해요."
+                     if lang == "ko" else "Tap a link to see live bus routes in Kakao Map. Donghae has no low-floor buses yet, so wheelchair users should use the wheelchair van or a taxi.")}

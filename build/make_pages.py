@@ -33,6 +33,7 @@ html=f'''<!doctype html>
 </style>
 </head>
 <body>
+{'<script src="/map-config.js"></script>' if SERVER else ""}
 <div id="root"></div>
 <script>{js}</script>
 </body>
@@ -41,7 +42,7 @@ html=f'''<!doctype html>
 OUT = "web" if SERVER else "docs"
 os.makedirs(OUT, exist_ok=True)
 open(f"{OUT}/index.html","w").write(html)
-if SERVER:
-    shutil.copytree(f"{SRC}/dongi", f"{OUT}/dongi", dirs_exist_ok=True)
+shutil.copytree(f"{SRC}/dongi", f"{OUT}/dongi", dirs_exist_ok=True)   # 시연(docs)에도 새 마스코트 (전엔 서버만 복사해서 docs에 옛 그림이 남았음)
 shutil.copytree(f"{SRC}/photos", f"{OUT}/photos", dirs_exist_ok=True)
+shutil.copytree(f"{SRC}/icons", f"{OUT}/icons", dirs_exist_ok=True)   # 무장애 픽토그램 (모양 틀)
 print(OUT, len(html)//1024,"KB")

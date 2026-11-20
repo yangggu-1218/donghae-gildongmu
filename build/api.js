@@ -140,7 +140,7 @@ export function makeApi(DATA) {
 
   // ---------- engine.py ----------
   const RANK = { G: 0, Y: 1, R: 2 };
-  const STARTS = { "동해역": [37.4995, 129.124], "묵호역": [37.548, 129.116], "자가용": [37.4995, 129.124] };
+  const STARTS = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692], "자가용": [37.498198, 129.123794] };
   const worst = (gs) => { gs = gs.filter(Boolean); return gs.length ? gs.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null; };
   function gradeSegment(s, mode) {
     const measured = [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null);
@@ -238,10 +238,10 @@ export function makeApi(DATA) {
     if (lat == null) return {};
     const out = {};
     for (const kind of ["약국", "의원", "응급실"]) {
-      const cand = MED.filter((m) => m.kind === kind).map((m) => {
-        let isOpen = null;
-        if (wd != null && at != null) isOpen = !m.closed_days.includes(wd) && mins(m.open) <= at && at < mins(m.close);
-        return { name: m.name, kind: m.kind, tel: m.tel, open: m.open, close: m.close, dist_m: distM(lat, lon, m.lat, m.lon), open_then: isOpen, sample: true };
+      // details.medical_near 와 같은 규칙. 데모는 운영시간이 없어 응급실만 '24시간'
+      const cand = MED.filter((m) => m.kind === kind || (kind === "의원" && m.kind === "병의원" && ["의원", "종합병원", "보건소"].includes(m.div))).map((m) => {
+        const er = kind === "응급실";
+        return { name: m.name, kind, tel: m.tel, open: er ? "00:00" : null, close: er ? "24:00" : null, road: m.road, dist_m: distM(lat, lon, m.lat, m.lon), open_then: er ? true : null };
       }).map((x, i) => [x, i]).sort((a, b) => ((a[0].open_then === false) - (b[0].open_then === false)) || (a[0].dist_m - b[0].dist_m) || (a[1] - b[1])).map((x) => x[0]);
       if (cand.length) out[kind] = cand[0];
     }
@@ -271,7 +271,7 @@ export function makeApi(DATA) {
     const cap = c.cap || 4;   // 하루 4곳 (여러 날 여행은 날마다 따로 짠다)
     const day = tripDate(c), wd = weekdayOf(day);
     const notes = [], skipped = [];
-    let pool = Object.values(places).filter((p) => p.type !== "숙박" && p.lat != null && !c.exclude.includes(p.id));
+    let pool = Object.values(places).filter((p) => !p.sample && p.type !== "숙박" && p.lat != null && p.lon != null && !c.exclude.includes(p.id));
     if (mode !== "none") {
       const unv = pool.filter((p) => !p.verified && !c.must.includes(p.id));
       pool = pool.filter((p) => !unv.includes(p));
@@ -316,7 +316,7 @@ export function makeApi(DATA) {
       t = q15(arrive + wait);
       const stay = q15(t + p.stay_min) - t;
       stops.push({ id: p.id, arrive: hhmm(t), drive_min: dm, grade: gradePlace(p, mode, less), why: "", depart: hhmm(t + stay), kind,
-        open_state: st, hours_text: hoursText(p, c.lang), hours_sample: !["공공데이터", "상시 개방", "관리자 확인"].includes(p.hours_source), wait_min: wait,
+        open_state: st, hours_text: hoursText(p, c.lang), hours_sample: !!p.open && !["공공데이터", "상시 개방", "관리자 확인"].includes(p.hours_source), wait_min: wait,
         notice: (noticeOn(p, "warn", day) || {}).title || "" });
       t += stay; cur = [p.lat || cur[0], p.lon || cur[1]]; seen.add(p.id);
     };
@@ -371,7 +371,7 @@ export function makeApi(DATA) {
     }
     const back = q15(t + driveMin(cur, start));
     for (const s of skipped) notes.push(`${josa(s.name, "은는")} ${s.reason}라서 뺐어요.`);
-    return { mode, stops, overall: mode !== "none" ? worst(stops.map((s) => s.grade)) : null, back_at: hhmm(back), notes,
+    return { start_point: start, mode, stops, overall: mode !== "none" ? worst(stops.map((s) => s.grade)) : null, back_at: hhmm(back), notes,
       date: day, weekday: wd, start_time: hhmm(t0), skipped };
   }
 
@@ -555,7 +555,7 @@ export function makeApi(DATA) {
       reply = ko ? (hilly.length ? "덜 걷도록 평지 코스로 바꿨어요." : "지금 코스는 이미 평지 위주예요. 앞으로도 평지만 고를게요.") : "Switched to flat, shorter walks.";
     } else if (act === "indoor") {
       const out = ids.filter((i) => k[i] === "sight" && !PLACES[i].indoor);
-      keep(c, ids, new Set(out)); c.rain = true;
+      keep(c, ids, new Set(out)); c.rain = true; c.weather_pref = "실내";
       reply = ko ? "비가 와도 괜찮게 실내 위주로 바꿨어요." : "Switched to indoor stops for the rain.";
     } else if (act === "relax") {
       const sights = ids.filter((i) => k[i] === "sight");
@@ -669,6 +669,31 @@ export function makeApi(DATA) {
     const ids = result.stops.map((s) => s.id), xy = STARTS[c.start];
     return { taxi: taxiAtStart(c.start), city_tour: cityTour(ids), rentals: rentalsNear(xy[0], xy[1]), mobility_center: c.move.includes("휠체어") ? mobilityCenter() : null };
   }
+  // ---------- 차 없이 다니기 (public_data.transit 과 같은 규칙) ----------
+  const TRANSIT_STARTS = { "동해역": [37.4995, 129.1240], "묵호역": [37.5480, 129.1160], "자가용": [37.4995, 129.1240] };
+  const B_MUREUNG = ["12-4", "13-1"], B_CAVE = ["21-1", "21-3", "32-1"], B_MANGSANG = ["31-3", "51-1"], B_CHUAM = ["61"], B_MUKHO = ["12-4", "21-1", "21-3", "32-1"];
+  const BUS_2019 = { ...Object.fromEntries(["valley", "samhwasa", "yongchu", "forest", "food_kkotsan", "cafe_estmare", "food_boribat"].map((i) => [i, B_MUREUNG])),
+    cave: B_CAVE, ...Object.fromEntries(["mangsang", "mangsang_camp"].map((i) => [i, B_MANGSANG])),
+    ...Object.fromEntries(["chotdae", "chuam_bridge", "haeamjeong", "food_chuam_hanki"].map((i) => [i, B_CHUAM])),
+    ...Object.fromEntries(["nongol", "mukho_lighthouse"].map((i) => [i, B_MUKHO])) };
+  const kmBetween = ([la1, lo1], [la2, lo2]) => { const r = Math.PI / 180;
+    const h = Math.sin((la2 - la1) * r / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin((lo2 - lo1) * r / 2) ** 2;
+    return 2 * 6371.0 * Math.asin(Math.sqrt(h)); };
+  const kakaoBy = (mode, a, b) => { const cl = (s) => s.replace(/[,/]/g, " "); return `https://map.kakao.com/link/by/${mode}/${cl(a[0])},${a[1]},${a[2]}/${cl(b[0])},${b[1]},${b[2]}`; };
+  function transit(points, start, move, lang = "ko") {
+    const st = start === "자가용" ? "동해역" : start; const [sx, sy] = TRANSIT_STARTS[st];
+    const slow = move.length > 0; const [speed, walkMax] = slow ? [3.0, 0.4] : [4.0, 0.8];
+    const seq = [["start", st, sx, sy], ...points.filter((p) => p[2] != null), ["start", st, sx, sy]];
+    const hops = [];
+    for (let i = 0; i + 1 < seq.length; i++) { const a = seq[i], b = seq[i + 1]; const km = kmBetween([a[2], a[3]], [b[2], b[3]]);
+      const walk = km <= walkMax;
+      hops.push({ from: a[1], to: b[1], km: pyRound(km * 10) / 10, how: walk ? "walk" : "ride", walk_min: Math.max(1, pyRound(km * 1.3 / speed * 60)), car_min: pyRound(km * 1.4 / 35 * 60) + 3,
+        link: kakaoBy(walk ? "walk" : "traffic", [a[1], a[2], a[3]], [b[1], b[2], b[3]]), bus_2019: walk ? [] : (BUS_2019[b[0]] || []) }); }
+    return { start: st, hops, city_tour: cityTour(points.map((p) => p[0])), taxi: taxiAtStart(st), van: move.includes("휠체어") ? mobilityCenter() : null,
+      bus_src: "한국관광공사 열린관광 (2019년 자료, 동해종합버스터미널 출발 기준)",
+      note: lang === "ko" ? "버스 노선·시간은 링크를 누르면 카카오맵에서 바로 볼 수 있어요. 동해시에는 아직 저상버스가 없어 휠체어는 휠체어 차량이나 택시를 권해요."
+        : "Tap a link to see live bus routes in Kakao Map. Donghae has no low-floor buses yet, so wheelchair users should use the wheelchair van or a taxi." };
+  }
   // ---------- 날씨: 화면이 Open-Meteo 일별 예보를 받아 넣어 준다 (데모에는 서버가 없음) ----------
   let FC = null;
   const setForecast = (days) => { FC = Array.isArray(days) ? days : null; };
@@ -699,7 +724,7 @@ export function makeApi(DATA) {
   }
 
   // ---------- talk.py 규칙 경로 ----------
-  const WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"], MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"], STYLE = ["바다 보기", "자연·산책", "카페", "맛집", "역사·문화"];
+  const WHO = ["혼자", "연인·친구", "부모님과", "아이와", "단체"], MOVE = ["휠체어", "오래 걷기 어려움", "계단 어려움", "유모차"], STYLE = ["바다 보기", "자연·산책", "산·등산", "카페", "맛집", "역사·문화"];
   const HELP_KW = [["charger", /충전|charg/], ["mobility_van", /휠체어\s*(차|택시|콜)|이동지원|장애인\s*콜|wheelchair (van|taxi)/],
     ["info_center", /안내소|통역|외국어|interpret|info\w*\s*(center|centre|desk)|information/], ["city_tour", /시티\s*투어|버스|city tour|bus/],
     ["events", /행사|축제|공연|festival|event/], ["lodging", /숙소|숙박|호텔|펜션|게스트|hotel|stay/], ["restaurants", /식당|밥집|맛집|먹을|restaurant|짜장|짬뽕|중국집|횟집|국밥|냉면|칼국수|치킨/],
@@ -709,18 +734,28 @@ export function makeApi(DATA) {
   const MOVE_KW = [["휠체어", /휠체어|wheelchair/], ["유모차", /유모차|stroller|pram/], ["계단 어려움", /계단/],
     ["오래 걷기 어려움", /무릎|오래\s*못\s*걷|걷기\s*(힘|어려)|다리가?\s*(아프|불편)|지팡이|walk/]];
   const STYLE_KW = [["바다 보기", /바다|해변|sea|beach/], ["자연·산책", /자연|산책|계곡|숲|nature/], ["카페", /카페|커피|cafe/],
-    ["맛집", /맛집|회|먹|food/], ["역사·문화", /역사|문화|절|유적|history|culture/]];
+    ["맛집", /맛집|회|먹|food/], ["역사·문화", /역사|문화|절|유적|history|culture/],
+    ["산·등산", /등산|산행|하이킹|hiking|hike|mountain|봉우리|산에\s*(가|오르)|산\s*(가고|타고|오르)|(^|\s)산(이|을|으로)?(\s|$)/]];
   const NO_MOVE = /없어요|없음|괜찮|문제\s*없|다\s*잘\s*걸|no one|none|we're fine|no$/, GO = /코스|짜\s*줘|추천|만들어|plan|course|go$/;
+  const OTHER = /다른\s*(코스|곳|데)|딴\s*(데|곳)|별로|새로\s*(짜|만들)|another|different/;
+  const TRANSIT_RE = /대중교통|차\s*(가|는|도)?\s*없|뚜벅|버스\s*(타|로|노선)|어떻게\s*가|가는\s*(길|법)|by bus|public transport|no car|without a car/;
+  const NO_CAR = /차\s*(가|는|도)?\s*없|뚜벅|no car|without a car/, WEATHER_RE = /날씨|기온|더워|추워|weather/;
   const ZONE_KW = [["mukho", /묵호|도째비/], ["chuam", /추암|촛대/], ["mureung", /무릉|삼화/], ["mangsang", /망상/], ["cheongok", /천곡|동굴/]];
   const SAY = {
     ko: { ask_who: "누구랑 오셨어요? 편하게 말씀해 주세요.", ask_move: "혹시 휠체어, 유모차를 쓰시거나 오래 걷기 힘든 분이 계세요? 없으면 '없어요'라고 해 주세요.",
       made: "조건에 맞춰 {n}곳으로 코스를 짰어요.{caution} 바꾸고 싶은 게 있으면 말씀해 주세요.", remade: "말씀하신 대로 코스를 다시 짰어요.{caution}",
       caution: " 주의할 곳이 {k}곳 있으니 카드를 확인해 주세요.", help: "찾아봤어요. 아래 카드를 확인해 주세요.",
-      none: "비, 덜 걷기, 장소 넣기·빼기를 말씀해 주시거나 충전기·안내소·숙소 같은 걸 물어봐 주세요." },
+      none: "비, 덜 걷기, 장소 넣기·빼기를 말씀해 주시거나 충전기·안내소·숙소 같은 걸 물어봐 주세요.",
+      transit: "차 없이 가는 방법을 구간마다 정리했어요. 카드의 길찾기를 누르면 카카오맵에서 버스 노선과 시간을 바로 볼 수 있어요.",
+      weather: "그날 동해는 {tmin}~{tmax}도, 비 올 확률 {pop}%예요. 비가 오면 '실내로 바꿔 줘'라고 말씀해 주세요.",
+      weather_none: "지금은 날씨 예보를 불러오지 못했어요. 잠시 뒤 다시 물어봐 주세요." },
     en: { ask_who: "Who are you travelling with?", ask_move: "Does anyone use a wheelchair or stroller, or find long walks hard? If not, just say 'none'.",
       made: "I planned {n} stops for you.{caution} Tell me if you'd like any changes.", remade: "Done — I re-planned the course.{caution}",
       caution: " {k} of them need care — please check the cards.", help: "Here's what I found — see the cards below.",
-      none: "Tell me about rain, less walking, or a place to add or remove — or ask about chargers, info centers or places to stay." } };
+      none: "Tell me about rain, less walking, or a place to add or remove — or ask about chargers, info centers or places to stay.",
+      transit: "Here's how to get around without a car, leg by leg. Tap a route link to see live bus routes in Kakao Map.",
+      weather: "Donghae that day: {tmin}–{tmax}°C, {pop}% chance of rain. If it rains, say 'switch to indoor'.",
+      weather_none: "I couldn't load the forecast right now. Please ask again shortly." } };
   const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
 
   function talk(body) {
@@ -756,8 +791,27 @@ export function makeApi(DATA) {
       return result(c.lang === "ko" ? "많이 놀라셨죠. 위급하면 바로 119에 전화해 주세요. 화면 위 '안심' 버튼에서 가까운 병원·약국을 보여 드려요."
         : "If it's an emergency, call 119 now. Tap 'Safety' at the top for nearby hospitals and pharmacies.");
     }
+    if (TRANSIT_RE.test(low)) {
+      if (NO_CAR.test(low) && c.start === "자가용") c.start = "동해역";
+      const pts = courseIds.filter((i) => PLACES[i]).map((i) => [i, c.lang === "ko" ? PLACES[i].name_ko : (PLACES[i].name_en || PLACES[i].name_ko), PLACES[i].lat, PLACES[i].lon]);
+      cards.push({ kind: "transit", data: transit(pts, c.start, c.move, c.lang) });
+      return result(L.transit);
+    }
+    if (WEATHER_RE.test(low) && !/비\s*(와|오|가)/.test(message)) {
+      const d = (FC || []).find((x) => x.date === tripDate(c));
+      return result(d && d.tmin != null && d.tmax != null && d.pop != null ? fmt(L.weather, d) : L.weather_none);
+    }
     for (const [kind, pat] of HELP_KW) if (pat.test(low)) {
       const z = ZONE_KW.find(([, pz]) => pz.test(message)); findHelp(kind, z ? z[0] : null, kind === "restaurants" ? eatGroup(message) : ""); return result(L.help);
+    }
+    if (courseIds.length && OTHER.test(low)) {   // '다른 코스': 지금 관광지를 빼고 새로 (talk.make_course(fresh=True))
+      const sights = courseIds.filter((i) => PLACES[i] && !["식당", "카페"].includes(PLACES[i].type));
+      c = { ...c, exclude: [...new Set([...c.exclude, ...sights])].sort(), must: c.must.filter((m) => !sights.includes(m)), lunch: null };
+      let res = plan(PLACES, c, rainFor(c));
+      if (res.stops.filter((s) => s.kind === "sight").length < 2) {
+        const back = sights.filter((_, i) => i % 2 === 1); c = { ...c, exclude: c.exclude.filter((x) => !back.includes(x)) }; res = plan(PLACES, c, rainFor(c));
+      }
+      setRes(res); return result(made(true));
     }
     if (courseIds.length) {
       const r = applyEdit(c, courseIds.filter((i) => PLACES[i]), message);
@@ -784,11 +838,10 @@ export function makeApi(DATA) {
     return result(L.none);
   }
 
-  function safety(lat, lon, lang) {
-    return { sample: true, places: [
-      { name: lang === "en" ? "○○ Pharmacy (sample)" : "○○약국 (예시)", kind: "약국", until: "21:00", dist_m: 350, tel: "033-000-0000" },
-      { name: lang === "en" ? "△△ Clinic (sample)" : "△△의원 (예시)", kind: "의원", until: "18:00", dist_m: 800, tel: "033-000-0000" },
-      { name: lang === "en" ? "Local ER (sample)" : "지역 응급실 (예시)", kind: "응급실", until: "24시간", dist_m: 2100, tel: "033-000-0000" }],
+  function safety(lat, lon, lang) {   // 데모: 실제 약국·병원·응급실 이름, 운영시간은 서버(국립중앙의료원)에서만
+    const near = medicalNear(lat, lon);
+    return { sample: false, hours_unknown: true, places: ["약국", "의원", "응급실"].filter((k) => near[k]).map((k) => ({
+      name: near[k].name, kind: k, until: k === "응급실" ? "24시간" : (lang === "en" ? "Call to check hours" : "운영시간 확인"), dist_m: near[k].dist_m, tel: near[k].tel })),
       help: infoCenters(lat, lon, lang, 2), chargers: chargers(lat, lon, 2), mobility_center: mobilityCenter() };
   }
 
@@ -840,7 +893,7 @@ export function makeApi(DATA) {
     if (path.startsWith("/api/admin/history")) return "history";
     if (["/api/admin/backup", "/api/admin/restore", "/api/admin/reset"].includes(path)) return "backup";
     if (path.startsWith("/api/admin/accounts")) return "accounts";
-    if (path.startsWith("/api/admin/reports") || path === "/api/admin/report") return "reports";
+    if (path.startsWith("/api/admin/reports") || path === "/api/admin/report" || path.startsWith("/api/admin/inquiries")) return "reports";
     if (path.startsWith("/api/admin/visits")) return "visits";
     if (path === "/api/admin/probe") return "data";
     return null;
@@ -1047,6 +1100,22 @@ export function makeApi(DATA) {
   rebuild();
   function handle(method, path, q, body) {
     if (path === "/api/site") return cmsSite();
+    // AI 기능(판정관·코스 에이전트·길 상태·AI 제안)은 서버에서만 돈다. 데모에선 '없음'으로 답해 화면이 조용히 숨긴다.
+    if (path.startsWith("/api/ai/judge/")) return { by: "none" };
+    if (/^\/api\/places\/[^/]+\/status$/.test(path)) return { by: "none", state: "none", count: 0 };
+    if (path === "/api/place-notes" && method === "POST") return { ok: true, id: Math.random().toString(16).slice(2, 14), demo: true };
+    if (path.startsWith("/api/admin/ai/")) {
+      demoCheck(q.__token, path === "/api/admin/ai/settings" && method === "POST" ? "accounts" : "reports");
+      if (path === "/api/admin/ai/proposals") return [];
+      if (path === "/api/admin/ai/refresh") return { places: 0, new_proposals: 0, demo: true };
+      if (path === "/api/admin/ai/settings") {
+        const models = { fast: "claude-haiku-5-5", smart: "claude-sonnet-5-5" };
+        const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];
+        return { models, price_per_mtok: { "claude-haiku-5-5": [0.1, 0.5], "claude-sonnet-5-5": [2, 10] }, connected: false, usage: {}, last: {},
+          tasks: T.map(([key, ko, tier]) => ({ key, ko, tier, default: tier, model: models[tier] })) };
+      }
+      throw new Error("400:데모에서는 AI 제안을 처리할 수 없어요.");
+    }
     if (path.startsWith("/api/admin/reports") || path.startsWith("/api/admin/visits")) demoCheck(q.__token, permOf(path));
     if (path.startsWith("/api/admin/") && !path.startsWith("/api/admin/reports") && !path.startsWith("/api/admin/visits")) {
       const r = cmsAdmin(method, path, q, body || {}); if (r !== undefined) return r;
@@ -1058,8 +1127,23 @@ export function makeApi(DATA) {
       adminSet("reports", [...adminGet("reports"), rec]);
       return { ok: true, id: rec.id, ai: null, demo: true };
     }
+    if (path === "/api/inquiries" && method === "POST") {
+      const text = (body.text || "").trim();
+      if (text.length < 5) throw new Error("400:문의 내용을 5자 이상 적어 주세요");
+      const cats = ["이용 방법", "장소 정보", "접근성·길 정보", "오류 신고", "기타"];
+      const rec = { id: Math.random().toString(16).slice(2, 14), nick: (body.nick || "방문자").trim().slice(0, 20), contact: (body.contact || "").trim().slice(0, 60),
+        category: cats.includes(body.category) ? body.category : "기타", text: text.slice(0, 1000), status: "접수", answer: "", created_at: new Date().toISOString().slice(0, 19) };
+      adminSet("inquiries", [...adminGet("inquiries"), rec]);
+      return { ok: true, id: rec.id };
+    }
+    if (path === "/api/inquiries/mine") { const want = String(q.ids || "").split(","); return adminGet("inquiries").filter((r) => want.includes(r.id)); }
+    if (path === "/api/admin/inquiries" && method === "GET") return adminGet("inquiries").sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    if (path.startsWith("/api/admin/inquiries/")) { const id = path.split("/").pop();
+      adminSet("inquiries", adminGet("inquiries").map((r) => (r.id !== id ? r : { ...r, status: body.status || r.status, answer: (body.answer ?? r.answer ?? "").slice(0, 1000), answered_at: nowIso(), answered_by: ACTOR })));
+      return { ok: true }; }
     if (path === "/api/transport") return ST.transport;
     if (path === "/api/facilities") return ST.facilities;
+    if (path === "/api/medical") return { sample: false, source: "국립중앙의료원 약국·병의원 정보 (2026-11-20 저장본, 운영시간 없음)", items: ST.facilities.medical };
     if (path === "/api/sources") return { ...ST.sources, ai: { connected: false, demo: true } };
     if (path === "/api/events/all") return { events: events("0000-00-00").upcoming, as_of: ST.events_all.as_of };
     if (path === "/api/lodging") { const items = ST.lodging.items.filter((l) => !q.zone || l.zone === q.zone); return { count: items.length, zone: q.zone || "", accessibility: "확인 전", items: +q.limit ? items.slice(0, +q.limit) : items }; }

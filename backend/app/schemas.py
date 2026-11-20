@@ -38,7 +38,7 @@ class Place(BaseModel):
     lat: Optional[float] = None
     lon: Optional[float] = None
     stay_min: int = 60
-    styles: list[str] = Field(default_factory=list)   # 바다 보기, 자연·산책, 카페, 맛집, 역사·문화
+    styles: list[str] = Field(default_factory=list)   # 바다 보기, 자연·산책, 산·등산, 카페, 맛집, 역사·문화
     facilities: list[str] = Field(default_factory=list)
     intro_ko: str = ""
     intro_en: str = ""
@@ -76,6 +76,7 @@ class Place(BaseModel):
     soft_menu: Optional[bool] = None     # 부드러운 메뉴
     parking_easy: Optional[bool] = None  # 주차 편함
     notices: list[dict] = Field(default_factory=list)   # 관리자 임시 알림 (cms.py)
+    access_kto: dict = Field(default_factory=dict)   # 열린관광 무장애 편의정보 {cats, items, links} (kto_access.py)
     market_days: list[int] = Field(default_factory=list)   # 장날: 날짜 끝자리 (예: [3, 8] = 3·8·13·18·23·28일)
 
     @property
@@ -138,6 +139,7 @@ class RouteCosts(BaseModel):
 
 
 class Course(BaseModel):
+    start_point: Optional[tuple[float, float]] = None
     driving_guides: list[list[dict]] = Field(default_factory=list)
     mode: Mode
     stops: list[Stop]
@@ -146,6 +148,7 @@ class Course(BaseModel):
     back_drive_min: Optional[int] = None
     drive_source: Literal["kakao", "estimate"] = "estimate"
     driving_path: Optional[list[tuple[float, float]]] = None
+    driving_sections: list[tuple[int, int]] = Field(default_factory=list)
     route_costs: Optional[RouteCosts] = None
     notes: list[str] = Field(default_factory=list)
     date: str = ""                       # YYYY-MM-DD

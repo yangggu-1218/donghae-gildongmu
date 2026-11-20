@@ -87,7 +87,7 @@ def transport(lang: str = "ko") -> dict:
 
 
 def facilities() -> dict:
-    """편의시설 지도 층: 장애인 화장실 · 충전기 · 공영주차장 · 관광안내소 · 약국/병원(예시)."""
+    """편의시설 지도 층: 숙소 · 약국/병원 · 공영주차장 · 관광안내소 · 장애인 화장실 · 충전기."""
     P = public_data.PUB
     return {
         "toilets": TOILETS, "toilet_meta": TOILET_META,
@@ -98,7 +98,9 @@ def facilities() -> dict:
                           "hours": "" if c.get("hours_suspect") else f"{c.get('open_summer')}~{c.get('close_summer')} (여름) / {c.get('open_winter')}~{c.get('close_winter')} (겨울)",
                           "closed": c.get("closed")}
                          for c in P.get("info_centers", []) if c.get("lat") and public_data._good(c)],
-        "medical": [{**m, "sample": True} for m in details.MED],
+        "medical": [{**m, "kind": m["kind"] if m["kind"] != "병의원" else (m["div"] or "병의원")} for m in details.MED if m["kind"] != "응급실"],
+        "lodging": [{"name": l["name"], "kind": l["kind"], "road": l["address"], "tel": l["tel"], "lat": l["lat"], "lon": l["lon"]}
+                    for l in public_data.lodging("", 0)["items"] if l.get("lat")],
     }
 
 
@@ -113,6 +115,8 @@ def sources() -> dict:
             if len(cells) == 5 and cells[0] not in ("종류", "---") and not set(cells[0]) <= {"-"}:
                 datasets.append({"name": cells[0], "file": cells[1], "count": cells[3], "as_of": cells[4]})
     datasets.append({"name": "전국공중화장실표준데이터 (동해시, 장애인용 변기 있음)", "file": "공공데이터포털", "count": str(len(TOILETS)), "as_of": TOILET_META["as_of"]})
+    datasets.append({"name": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (공공누리, 한국관광공사의 저작물에 기초): 무릉계곡·천곡동굴·망상·추암·논골담길·묵호등대 무장애 구간, 무릉건강숲·망상오토캠핑리조트 편의시설, 식당 3곳 좌석·화장실, 시내버스 번호",
+                     "file": "access.visitkorea.or.kr", "count": "장소 14곳", "as_of": "2019 작성 · 2023-09-22 수정"})
     photos = []
     pc = DATA / "photos.csv"
     if pc.exists():
@@ -130,7 +134,7 @@ CRITERIA = [
 ]
 NOTES = [
     "판정은 측정값이 있으면 위 기준으로 계산하고, 없으면 답사 때 기록한 판정을 씁니다. 정보가 없으면 '주의'로 둡니다.",
-    "이름에 '(예시)'가 붙은 식당·카페·약국·병원, '예시 시간'이라고 쓴 영업시간은 확인 전 값입니다.",
+    "이름에 '(예시)'가 붙은 식당·카페, '예시 시간'이라고 쓴 영업시간은 확인 전 값입니다.",
     "숙박업소는 공공데이터에 좌표와 객실 접근성 정보가 없어, 무장애 객실 여부는 '확인 전'으로 둡니다.",
     "장애인 화장실은 공공데이터 주소가 다른 공공데이터(관광명소·주차장·충전기)의 주소와 같을 때만 지도에 표시합니다.",
 ]

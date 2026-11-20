@@ -12,7 +12,7 @@ load_dotenv(ROOT / ".env")
 places = json.loads((ROOT / "data/places.json").read_text(encoding="utf-8")) if (ROOT / "data/places.json").exists() \
     else json.loads((ROOT / "data/places_seed.json").read_text(encoding="utf-8"))
 pts = [(p["id"], p["lat"], p["lon"]) for p in places if p.get("lat")]
-pts += [("동해역", 37.4995, 129.1240), ("묵호역", 37.5480, 129.1160)]
+pts += [("동해역", 37.498198, 129.123794), ("묵호역", 37.546824, 129.107692)]
 
 
 def est(a, b):

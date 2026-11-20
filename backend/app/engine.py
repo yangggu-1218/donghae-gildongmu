@@ -5,9 +5,9 @@ from .schemas import Segment, Place, Conditions, Course, Stop, Mode
 
 RANK = {"G": 0, "Y": 1, "R": 2}
 STARTS = {  # 출발점 좌표 (WGS84)
-    "동해역": (37.4995, 129.1240),
-    "묵호역": (37.5480, 129.1160),
-    "자가용": (37.4995, 129.1240),
+    "동해역": (37.498198, 129.123794),
+    "묵호역": (37.546824, 129.107692),
+    "자가용": (37.498198, 129.123794),
 }
 START_TIME = 10 * 60   # 10:00 출발 (남은 과제: 사용자가 고르게)
 
@@ -155,50 +155,58 @@ def rain_for(c: Conditions) -> bool:
 
 
 def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
-    from . import details, public_apis
     unavailable = []
     excluded = list(c.exclude)
     while True:
-        result = _plan_stops(places, c.model_copy(update={"exclude": excluded}), rain)
+        result = preview_stops(places, c.model_copy(update={"exclude": excluded}), rain)
         result.skipped.extend(unavailable)
-        if not result.stops:
-            result.back_at = result.start_time
+        issue = apply_driving_route(places, c, result)
+        if issue is None:
             return result
-        station = STARTS[c.start]
-        points = [(places[s.id].lat, places[s.id].lon) for s in result.stops]
-        if any(lat is None or lon is None for lat, lon in points):
-            return result
-        route = public_apis.driving_route([station, *points, station])
-        if route is None:
-            return result
-        path, durations, costs, instructions = route
-        clock = _mins(result.start_time)
-        for stop, seconds in zip(result.stops, durations[:-1], strict=True):
-            place = places[stop.id]
-            stay = _mins(stop.depart) - _mins(stop.arrive)
-            drive_minutes = math.ceil(seconds / 60)
-            arrival = clock + drive_minutes
-            ok, state, wait = details.open_check(place, result.weekday, arrival, stay)
-            if not ok or clock >= 20 * 60:
-                unavailable.append({"id": stop.id, "name": place.name_ko, "reason": "이동시간을 반영하면 방문 가능한 시간을 벗어나요"})
-                excluded.append(stop.id)
-                break
-            clock = arrival + wait + stay
-            stop.drive_min, stop.wait_min = drive_minutes, wait
-            stop.arrive, stop.depart = hhmm(arrival), hhmm(clock)
-            stop.visit_at = hhmm(arrival + wait) if wait else None
-            stop.open_state = state if state in ("always", "unknown") else "open"
-        else:
-            result.drive_source = "kakao"
-            result.driving_path = path
-            result.driving_guides = instructions
-            result.route_costs = costs
-            result.back_drive_min = math.ceil(durations[-1] / 60)
-            result.back_at = hhmm(clock + result.back_drive_min)
-            return result
+        unavailable.append(issue)
+        excluded.append(issue["id"])
 
 
-def _plan_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
+def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:
+    from . import details, public_apis
+    result.start_point = STARTS[c.start]
+    if not result.stops:
+        result.back_at = result.start_time
+        return None
+    station = STARTS[c.start]
+    points = [(places[s.id].lat, places[s.id].lon) for s in result.stops]
+    if any(lat is None or lon is None for lat, lon in points):
+        return None
+    route = public_apis.driving_route([station, *points, station])
+    if route is None:
+        return None
+    path, durations, costs, instructions, section_ranges = route
+    clock = _mins(result.start_time)
+    for stop, seconds in zip(result.stops, durations[:-1], strict=True):
+        place = places[stop.id]
+        stay = _mins(stop.depart) - _mins(stop.arrive)
+        drive_minutes = math.ceil(seconds / 60)
+        arrival = clock + drive_minutes
+        ok, state, wait = details.open_check(place, result.weekday, arrival, stay)
+        if not ok or clock >= 20 * 60:
+            return {"id": stop.id, "name": place.name_ko, "reason": "이동시간을 반영하면 방문 가능한 시간을 벗어나요"}
+        clock = arrival + wait + stay
+        stop.drive_min, stop.wait_min = drive_minutes, wait
+        stop.arrive, stop.depart = hhmm(arrival), hhmm(clock)
+        stop.visit_at = hhmm(arrival + wait) if wait else None
+        stop.open_state = state if state in ("always", "unknown") else "open"
+    else:
+        result.drive_source = "kakao"
+        result.driving_path = path
+        result.driving_sections = section_ranges
+        result.driving_guides = instructions
+        result.route_costs = costs
+        result.back_drive_min = math.ceil(durations[-1] / 60)
+        result.back_at = hhmm(clock + result.back_drive_min)
+        return None
+
+
+def preview_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
     """작업2: 요일 휴무·브레이크타임·마지막 입장까지 맞춘 코스.
     시작 시각부터 이동·체류·대기 시간을 쌓아 가며, 도착 시각에 '영업 중'인 곳만 넣는다."""
     from . import details as D
@@ -209,7 +217,7 @@ def _plan_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
     wd = weekday_of(day)
     notes, skipped = [], []
 
-    pool = [p for p in places.values() if p.type != "숙박" and p.lat is not None and p.id not in c.exclude]
+    pool = [p for p in places.values() if not p.sample and p.type != "숙박" and p.lat is not None and p.lon is not None and p.id not in c.exclude]
     if mode != "none":   # 이동에 어려움이 있으면 접근성을 확인한 곳만 (담아 둔·넣어 달라고 한 곳은 '확인 필요'로 남김)
         unv = [p for p in pool if not p.verified and p.id not in c.must]
         pool = [p for p in pool if p not in unv]
@@ -272,7 +280,7 @@ def _plan_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         stay = q15(t + p.stay_min) - t
         stops.append(Stop(id=p.id, arrive=hhmm(t), drive_min=dm, grade=grade_place(p, mode, less), kind=kind,
                           depart=hhmm(t + stay), open_state=st, hours_text=D.hours_text(p, c.lang),
-                          hours_sample=p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
+                          hours_sample=bool(p.open) and p.hours_source not in ("공공데이터", "상시 개방", "관리자 확인"), wait_min=wait,
                           notice=(notice_on(p, "warn") or {}).get("title", "")))
         t += stay
         cur, cur_id = (p.lat or cur[0], p.lon or cur[1]), p.id
@@ -361,5 +369,5 @@ def _plan_stops(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
     for s in skipped:
         notes.append(f"{D.josa(s['name'], '은는')} {s['reason']}라서 뺐어요.")
 
-    return Course(mode=mode, stops=stops, overall=worst(s.grade for s in stops) if mode != "none" else None,
+    return Course(start_point=STARTS[c.start], mode=mode, stops=stops, overall=worst(s.grade for s in stops) if mode != "none" else None,
                   back_at=hhmm(back), notes=notes, date=day.isoformat(), weekday=wd, start_time=hhmm(t0), skipped=skipped)

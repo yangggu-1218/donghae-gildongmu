@@ -27,6 +27,7 @@ FIELDS = {
     "phone": "str", "fee": "str", "intro_ko": "str", "tip_ko": "str", "carer_tip": "str",
     "walk_load": "str", "wheelchair": "str", "entrance_step": "bool", "table": "str", "indoor": "bool", "benches": "bool",
     "soft_menu": "bool", "parking_easy": "bool",
+    "facilities": "strs",   # 편의시설 이름 목록 (AI 제안 승인으로도 바뀜)
 }
 ACCESS = {"walk_load", "wheelchair", "entrance_step", "table", "indoor", "benches", "segments"}   # 근거 필수
 SEG_FIELDS = ("name", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "width_m", "surface", "note", "source")
@@ -253,6 +254,8 @@ def _clean(field: str, v):
         return sorted({int(x) for x in v if str(x) != "" and 0 <= int(x) <= 6})
     if kind == "list":
         return [str(x) for x in v][:2] if v else None
+    if kind == "strs":
+        return [str(x)[:40] for x in v if str(x).strip()][:20]
     return str(v)[:500]
 
 
@@ -401,6 +404,8 @@ def revert(hid: str) -> dict:
             db["events"].append(h["before"])
         elif a == "restore":
             raise ValueError("백업 복원은 되돌리기 대신 다른 백업을 다시 올려 주세요.")
+        elif a == "ai_models":
+            raise ValueError("AI 모델 설정은 [AI 설정]에서 다시 골라 주세요.")
         h["reverted"] = True
         _log(db, "revert", hid, None, None, f"{a} 되돌림")
         save(db)

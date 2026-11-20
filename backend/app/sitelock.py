@@ -15,6 +15,21 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 COOKIE = "gd_site"
+# 틀린 비밀번호 횟수 제한 (테스트 의견 PASS-002): 같은 접속 주소에서 10분 안에 5번 틀리면 10분 동안 막는다
+MAX_FAIL, WINDOW, LOCK = 5, 600, 600
+_FAILS: dict[str, list[float]] = {}
+
+
+def _ip(request: Request) -> str:
+    return (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "") or "?").split(",")[0].strip()
+
+
+def _locked(ip: str) -> int:
+    now = time.time()
+    xs = [t for t in _FAILS.get(ip, []) if now - t < WINDOW + LOCK]
+    _FAILS[ip] = xs
+    recent = [t for t in xs if now - t < WINDOW]
+    return int(LOCK - (now - recent[-1])) if len(recent) >= MAX_FAIL and now - recent[-1] < LOCK else 0
 OPEN = ("/api/health", "/lock", "/dongi/")   # 잠금 화면에 필요한 것만 열어 둔다
 
 
@@ -38,7 +53,7 @@ def page(msg: str = "") -> HTMLResponse:
 <title>동해 길동무</title>
 <style>
 :root{{--sea:#2462B4;--ink:#12355E;--bg:#F3F7FC;--line:#D5E0EE}}
-body{{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:18px/1.6 "IBM Plex Sans KR",system-ui,sans-serif}}
+body{{margin:0;min-height:100vh;word-break:keep-all;overflow-wrap:break-word;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:18px/1.6 "IBM Plex Sans KR",system-ui,sans-serif}}
 form{{background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px 24px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;text-align:center}}
 img{{height:72px}} h1{{margin:6px 0 4px;font-size:1.4em}} p{{margin:0 0 16px;font-size:.9em;color:#4A5A70}}
 input{{width:100%;box-sizing:border-box;min-height:52px;font:inherit;padding:8px 14px;border:1.5px solid var(--line);border-radius:12px}}
@@ -72,9 +87,18 @@ async def submit(request: Request):
     pw = (form.get("pw") or [""])[0]
     if not password():
         return RedirectResponse("/", 303)
+    ip = _ip(request)
+    wait = _locked(ip)
+    if wait:
+        return page(f"비밀번호를 여러 번 틀렸어요. {wait // 60 + 1}분 뒤에 다시 넣어 주세요.")
     if not hmac.compare_digest(pw, password()):
         time.sleep(1)   # 마구 넣어 보기 늦추기
-        return page("비밀번호가 맞지 않아요.")
+        _FAILS.setdefault(ip, []).append(time.time())
+        left = MAX_FAIL - len([t for t in _FAILS[ip] if time.time() - t < WINDOW])
+        if left <= 0:
+            return page("비밀번호를 여러 번 틀렸어요. 10분 뒤에 다시 넣어 주세요.")
+        return page("비밀번호가 맞지 않아요." + (f" {left}번 더 틀리면 10분 동안 막혀요." if left <= 2 else ""))
+    _FAILS.pop(ip, None)
     res = RedirectResponse("/", 303)
     res.set_cookie(COOKIE, token(pw), max_age=30 * 24 * 3600, httponly=True, samesite="lax",
                    secure=request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https")

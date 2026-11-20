@@ -5,8 +5,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
-declare global { interface Window { kakao: any } }
-type Pin = { lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string; detail?: string; address?: string };
+declare global { interface Window { kakao: any; gildongmuKakaoJsKey?: string } }
+type Pin = { endpoint?: "from" | "to"; id?: string; lat: number; lon: number; label: string; grade: "G" | "Y" | "R" | null; color?: string; icon?: string; detail?: string; address?: string };
 const COLOR = { G: "#1E8A3C", Y: "#F2B416", R: "#C9302C" } as const;
 
 type Guide = { lat: number; lon: number; text: string };
@@ -35,15 +35,58 @@ function numberPositions(points: XY[], width: number, height: number, gap = 34, 
   });
 }
 
+// Group facility markers at the current scale. Zoomed-in markers keep their own popup and list selection.
+function groupFacilities(map: any, maps: any, points: any[], markers: any[], name: string) {
+  const clusters: any[] = [];
+  let lastLevel: number | undefined;
+  function draw() {
+    const level = map.getLevel();
+    if (level === lastLevel) return;
+    lastLevel = level;
+    for (const cluster of clusters.splice(0)) cluster.setMap(null);
+    const groups: { point: XY; ids: number[] }[] = [];
+    const projection = map.getProjection();
+    points.forEach((pos, i) => {
+      const point = projection.containerPointFromCoords(pos);
+      const group = level > 3 && groups.find(g => Math.abs(point.x - g.point.x) < 85 && Math.abs(point.y - g.point.y) < 48);
+      if (group) group.ids.push(i);
+      else groups.push({ point, ids: [i] });
+    });
+    for (const { ids } of groups) {
+      for (const i of ids) markers[i].setMap(ids.length === 1 ? map : null);
+      if (ids.length === 1) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "facility-cluster";
+      const en = document.documentElement.lang === "en";
+      button.textContent = en ? String(ids.length) : ids.length + "곳";
+      button.setAttribute("aria-label", en ? "Zoom to " + ids.length + " " + name : name + " " + button.textContent + " 확대");
+      const position = points[ids[0]];
+      button.onclick = () => {
+        map.setLevel(Math.max(3, level - 2));
+        map.setCenter(position);
+      };
+      clusters.push(new maps.CustomOverlay({ map, position, content: button, clickable: true }));
+    }
+  }
+  draw();
+  maps.event.addListener(map, "zoom_changed", draw);
+  return () => {
+    maps.event.removeListener(map, "zoom_changed", draw);
+    clusters.forEach(cluster => cluster.setMap(null));
+  };
+}
+
 // dots: 편의시설 지도용. 색 점 + 글자 하나, 누르면 onPick(i)
-export default function KakaoMap({ pins, overview = false, dots = false, onPick, request, listPreview, label, drivingPath, guides, guidePoint, onGuideSelect }: {
+export default function KakaoMap({ pins, overview = false, dots = false, facilityType = "", nearestFirst = false, myPosition, onPick, request, listPreview, label, drivingPath, guides, guidePoint, onGuideSelect, courseFocus }: {
   pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (pin: Pin | null) => void;
+  facilityType?: string; nearestFirst?: boolean; myPosition?: [number, number] | null;
   request?: { pin: Pin } | null; listPreview?: Pin | null; label?: string;
   drivingPath?: [number, number][] | null;
-  guides?: Guide[]; guidePoint?: Guide | null; onGuideSelect?: (guide: Guide) => void;
+  courseFocus?: Pin; guides?: Guide[]; guidePoint?: Guide | null; onGuideSelect?: (guide: Guide) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || (typeof window !== "undefined" && window.gildongmuKakaoJsKey);
   const [selected, setSelected] = useState<Pin | null>(null);
   const frame = useRef<HTMLDivElement>(null);
   const activeButton = useRef<HTMLButtonElement | null>(null);
@@ -58,6 +101,9 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
   const detail = [hover, listPreview, selected].find(p => p && pins.includes(p));
   const camera = useRef<((pin: Pin) => void) | null>(null);
+  const focusRef = useRef(courseFocus);
+  focusRef.current = courseFocus;
+  const fitRoute = useRef<(() => void) | null>(null);
   const [routeMap, setRouteMap] = useState<any>(null);
   useEffect(() => {
     if (!routeMap || !guidePoint) return;
@@ -71,6 +117,17 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
     const marker = new maps.CustomOverlay({ map: routeMap, position, content: label, yAnchor: 1.45, zIndex: 6 });
     return () => marker.setMap(null);
   }, [guidePoint, routeMap]);
+  useEffect(() => {
+    if (!routeMap) return;
+    if (!courseFocus) { fitRoute.current?.(); return; }
+    const point = new window.kakao.maps.LatLng(courseFocus.lat, courseFocus.lon);
+    routeMap.setLevel(Math.min(4, routeMap.getLevel()));
+    routeMap.setCenter(point);
+    const button = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>("button.course-pin") ?? [])
+      .find(b => b.dataset.stop === courseFocus.id);
+    button?.setAttribute("aria-pressed", "true");
+    return () => button?.setAttribute("aria-pressed", "false");
+  }, [courseFocus, routeMap]);
   const pending = useRef<Pin | null>(null);
   const callback = useRef(onPick);
   callback.current = onPick;
@@ -134,24 +191,29 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         }
         const anchor = document.createElement("div");
         anchor.className = "route-anchor";
-        const badge = document.createElement("span");
-        badge.className = i === 0 ? "course-pin station" : "course-pin";
+        const badge = document.createElement("button");
+        badge.type = "button";
+        badge.dataset.stop = p.id || "";
+        badge.setAttribute("aria-label", p.endpoint ? p.icon + " · " + p.label : p.label);
+        badge.setAttribute("aria-pressed", "false");
+        badge.onclick = () => callback.current?.(p);
+        badge.className = p.endpoint ? "course-pin leg-" + p.endpoint : i === 0 ? "course-pin station" : "course-pin";
         badge.title = [p.icon, i || "", p.label].filter(Boolean).join(" ");
         const face = document.createElement("span");
         face.className = "course-pin-face";
         face.textContent = p.icon || p.label;
         badge.append(face);
-        if (i > 0) {
+        if (i > 0 && !p.endpoint) {
           const order = document.createElement("sup");
           order.textContent = String(i);
           badge.append(order);
         }
         anchor.append(badge);
-        overlays.push(new maps.CustomOverlay({ map, position: pos, content: anchor, zIndex: 4 }));
+        overlays.push(new maps.CustomOverlay({ map, position: pos, content: anchor, clickable: true, zIndex: 4 }));
       });
       const road = !!drivingPath && drivingPath.length > 1 && courseMap;
       if (courseMap) {
-        const line = road ? drivingPath.map(([lat, lon]) => new maps.LatLng(lat, lon)) : [...path, path[0]];
+        const line = road ? drivingPath.map(([lat, lon]) => new maps.LatLng(lat, lon)) : pins[0].endpoint ? path : [...path, path[0]];
         if (road) line.forEach(pos => bounds.extend(pos));
         if (road) overlays.push(new maps.Polyline({ map, path: line, strokeWeight: 10, strokeColor: "#155ca9", strokeOpacity: 1 }));
         overlays.push(new maps.Polyline({ map, path: line, strokeWeight: road ? 7 : 3, strokeOpacity: 1,
@@ -159,7 +221,16 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         if (road) overlays.push(new maps.Polyline({ map, path: line, strokeWeight: 2,
           strokeColor: "#eaf7ff", strokeOpacity: 0.96, strokeStyle: "dash" }));
       }
-      if (courseMap) map.setBounds(bounds, 56, 26, 24, 26);
+      if (courseMap) {
+        fitRoute.current = () => map.setBounds(bounds, 60, 28, 24, 28);
+        fitRoute.current();
+      }
+      else if (dots) {
+        const downtown = new maps.LatLng(37.5247, 129.1143);
+        map.setLevel(nearestFirst ? 4 : 6);
+        map.setCenter(myPosition ? new maps.LatLng(...myPosition) : nearestFirst ? path[0] : downtown);
+        if (!myPosition && !path.some(point => map.getBounds().contain(point))) map.setCenter(path[0]);
+      }
       else if (pins.length > 1) map.setBounds(bounds);
       else map.setLevel(4);
       if (courseMap) {
@@ -192,12 +263,26 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
         };
         layout();
         maps.event.addListener(map, "idle", layout);
-        const resize = new ResizeObserver(() => { map.relayout(); layout(); });
+        const resize = new ResizeObserver(() => {
+          if (!host.clientWidth || !host.clientHeight) return;
+          map.relayout();
+          const focus = focusRef.current;
+          if (focus) map.setCenter(new maps.LatLng(focus.lat, focus.lon));
+          else fitRoute.current?.();
+          layout();
+        });
         resize.observe(host);
         removeLayout = () => { resize.disconnect(); maps.event.removeListener(map, "idle", layout); };
       }
       if (dots) {
+        removeLayout = groupFacilities(map, maps, path, overlays, facilityType);
         setSdk({ map, overlays });
+        if (myPosition) {
+          const dot = document.createElement("div");
+          dot.className = "me-dot";
+          dot.title = document.documentElement.lang === "en" ? "My location" : "내 위치";
+          overlays.push(new maps.CustomOverlay({ map, position: new maps.LatLng(...myPosition), content: dot, zIndex: 3 }));
+        }
         camera.current = pin => {
           const i = pins.indexOf(pin);
           if (i < 0) return;
@@ -212,36 +297,21 @@ export default function KakaoMap({ pins, overview = false, dots = false, onPick,
     };
     const safeDraw = () => { if (!disposed) { try { draw(); } catch (e) { console.error(e); setFailed(true); } } };
     function fail() { if (!disposed) setFailed(true); }
-    function ready() { if (window.kakao?.maps) window.kakao.maps.load(safeDraw); else fail(); }
-    let script = document.querySelector<HTMLScriptElement>("script[data-gildongmu-map]");
-    if (window.kakao?.maps) ready();
-    else {
-      if (!script) {
-        script = document.createElement("script");
-        script.dataset.gildongmuMap = "loading";
-        script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`;
-        script.addEventListener("error", () => script?.remove(), { once: true });
-        document.head.appendChild(script);
-      }
-      script.addEventListener("load", ready);
-      script.addEventListener("error", fail);
-    }
+    loadKakao().then(safeDraw).catch(fail);
     return () => {
       disposed = true;
-      script?.removeEventListener("load", ready);
-      script?.removeEventListener("error", fail);
       camera.current = null;
-      if (!dots && !overview) setRouteMap(null);
+      if (!dots && !overview) { setRouteMap(null); fitRoute.current = null; }
       activeButton.current = null;
       if (dots) setSdk(null);
       removeLayout?.();
       overlays.forEach(overlay => overlay.setMap(null));
       host.replaceChildren();
     };
-  }, [key, pins, failed, overview, dots, drivingPath, guides, onGuideSelect]);
+  }, [key, pins, failed, overview, dots, facilityType, nearestFirst, myPosition, drivingPath, guides, onGuideSelect]);
 
   const mapView = !key || failed || !pins.length
-    ? <Sketch pins={pins} overview={overview} dots={dots} onPick={i => select(pins[i])} onHover={preview} selected={selected} />
+    ? <Sketch pins={pins} overview={overview} dots={dots} onPick={i => select(pins[i])} onHover={preview} selected={courseFocus || selected} />
     : <div className="map" ref={ref} style={{ display: "block" }} role={dots || guides ? "group" : "img"} aria-label={label || (overview ? "동해 관광지 지도" : "코스 지도. 아래 목록과 같은 내용입니다.")} />;
   if (!dots) {
     if (overview || !pins.length) return mapView;
@@ -316,6 +386,34 @@ function FacilityBubble({ pin, anchor, frame, map, overlay, onClose, onPreview }
   </section>, parent);
 }
 
+// 카카오 지도 SDK를 한 번만 불러온다 (주소 검색용 services 포함)
+let kakaoP: Promise<void> | null = null;
+export function loadKakao(): Promise<void> {
+  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || (typeof window !== "undefined" && window.gildongmuKakaoJsKey);
+  if (!key) return Promise.reject(new Error("no key"));
+  if (kakaoP) return kakaoP;
+  kakaoP = new Promise<void>((res, rej) => {
+    const go = () => window.kakao.maps.load(() => res());
+    if (window.kakao?.maps) { go(); return; }
+    const s = document.createElement("script");
+    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=services,clusterer`;
+    s.onload = () => (window.kakao?.maps ? go() : rej(new Error("sdk")));
+    s.onerror = () => { kakaoP = null; rej(new Error("sdk")); };
+    document.head.appendChild(s);
+  });
+  return kakaoP;
+}
+// 주소 → 좌표 (카카오 주소 검색). 못 찾으면 null
+export async function geocode(addr: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    await loadKakao();
+    const svc = window.kakao.maps.services;
+    if (!svc) return null;
+    return await new Promise((res) => new svc.Geocoder().addressSearch(addr.replace(/\s*\(.*\)\s*$/, ""), (r: any[], st: string) =>
+      res(st === svc.Status.OK && r[0] ? { lat: +r[0].y, lon: +r[0].x } : null)));
+  } catch { return null; }
+}
+
 // 지도 키가 없을 때(데모·키 발급 전): 좌표로 그린 코스 약도. 실제 지도는 아니고 순서와 방향만 보여 준다.
 function Sketch({ pins, overview = false, dots = false, onPick, onHover, selected }: { pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (i: number) => void; onHover: (pin: Pin | null) => void; selected: Pin | null }) {
   const en = typeof document !== "undefined" && document.documentElement.lang === "en";   // 언어는 page.tsx가 <html lang>에 적어 둔다
@@ -338,7 +436,7 @@ function Sketch({ pins, overview = false, dots = false, onPick, onHover, selecte
     boxes.push([left, py, w]); return true;
   });
   return (
-    <div className="map" role={dots ? "group" : "img"} aria-label={dots ? (en ? "Facilities sketch" : "편의시설 약도") : en ? "Route sketch, in the same order as the list below." : "코스 약도. 아래 목록과 같은 순서입니다."} style={{ display: "block", position: "relative" }}>
+    <div className="map" role={overview ? "img" : "group"} aria-label={dots ? (en ? "Facilities sketch" : "편의시설 약도") : en ? "Route sketch, in the same order as the list below." : "코스 약도. 아래 목록과 같은 순서입니다."} style={{ display: "block", position: "relative" }}>
       <svg viewBox={center ? `${center[0]-W/2} ${center[1]-H/2} ${W} ${H}` : `0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
         <text x={W - 14} y={22} textAnchor="end" fontSize="12" fill="var(--muted)">N ↑ {en ? (dots ? "Facilities sketch" : overview ? "Places sketch" : "Route sketch") : dots ? "편의시설 약도" : overview ? "관광지 약도" : "코스 약도"}</text>
         {!overview && !dots && <polyline points={[...pts, pts[0]].map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="6 6" />}
@@ -353,11 +451,14 @@ function Sketch({ pins, overview = false, dots = false, onPick, onHover, selecte
         {!dots && pts.map(([px, py], i) => {
           const g = pins[i].grade; const bg = g ? `var(--${g === "G" ? "go" : g === "Y" ? "warn-dot" : "stop"})` : "var(--sea)";
           return (
-            <g key={i}>
+            <g key={i} role={overview ? undefined : "button"} aria-label={overview ? undefined : pins[i].label}
+              aria-pressed={overview ? undefined : selected === pins[i]} tabIndex={overview ? undefined : 0}
+              onClick={overview ? undefined : () => onPick?.(i)}
+              onKeyDown={e => { if (!overview && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onPick?.(i); } }}>
               {!overview && <line x1={px} y1={py} x2={numbers[i].x} y2={numbers[i].y} stroke="var(--muted)" strokeWidth="2" />}
               {overview ? <circle cx={px} cy={py} r="7" fill={bg} stroke="var(--surface)" strokeWidth="3" /> :
-                <g><title>{pins[i].label}</title><rect x={numbers[i].x - 36} y={numbers[i].y - 22} width="72" height="23" rx="5" fill={i === 0 ? "#ad3427" : "#1169bd"} />
-                  <text x={numbers[i].x} y={numbers[i].y - 6} textAnchor="middle" fontSize="12" fill="white">{pins[i].icon}{i > 0 && ` ${i}`}</text></g>}
+                <g><title>{pins[i].label}</title><rect x={numbers[i].x - 36} y={numbers[i].y - 22} width="72" height="23" rx="5" fill={pins[i].endpoint === "from" ? "#197342" : pins[i].endpoint === "to" || i === 0 ? "#ad3427" : "#1169bd"} />
+                  <text x={numbers[i].x} y={numbers[i].y - 6} textAnchor="middle" fontSize="12" fill="white">{pins[i].icon}{i > 0 && !pins[i].endpoint && ` ${i}`}</text></g>}
               {overview && showLabel[i] && <text x={px > W * 0.6 ? px - 20 : px + 20} y={py + 5} textAnchor={px > W * 0.6 ? "end" : "start"} fontSize="13" fill="var(--ink)">{pins[i].label}</text>}
             </g>
           );

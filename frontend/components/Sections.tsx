@@ -7,6 +7,7 @@ import { MicButton } from "@/components/Voice";
 import { tr } from "@/lib/ko2en";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { Icon } from "@/components/Icon";
+import { AccessBadges, ACCESS_CATS, AccIcon } from "@/components/AccessBadges";
 
 // 사진 출처는 사진 위에 쓰지 않고 따로 모아 보여 준다 (lib/photos.ts 에 저작자·라이선스 보관)
 export const licName = (l: string, lang: "ko" | "en") => (l === "KOGL Type 1" ? (lang === "ko" ? "공공누리 제1유형" : "KOGL Type 1") : l);
@@ -86,13 +87,13 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
           <div className="tries" role="group" aria-label={L("이렇게 말해 보세요", "Try saying")}>
             {ex.map((x) => <button key={x} type="button" onClick={() => onAsk(x)} disabled={busy}>{x}</button>)}
           </div>
-          <a className="hero-jump" href="#courses">{L("예시 코스로 바로 시작하기 ↓", "Or start from a sample route ↓")}</a>
+          <a className="hero-jump" href="#courses">{L("추천 코스로 바로 시작하기 ↓", "Or start from a suggested route ↓")}</a>
         </div>
         {spot && (
           <a className="hero-spot" href={`#/place/${slide.place}`}>
             <span className="hero-spot-k">{L("사진 속 장소", "In this photo")}</span>
             <b>{L(spot.name_ko, spot.name_en || spot.name_ko)}</b>
-            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}{g && spot.access_source === "예시" && <small className="ex-in"> · {L("예시", "sample")}</small>}</span></span>
+            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}</span></span>
             <span className="hero-spot-m">{L("길·화장실·주차 보기", "Paths, toilets, parking")}</span>
           </a>
         )}
@@ -172,8 +173,8 @@ export function HomeFacts({ lang }: { lang: Lang }) {
   }, []);
   if (!n) return null;
   const rows: [number, string, string, string][] = [
-    [n.places, n.example >= n.places ? L("구간 판정 관광지 (예시 데이터)", "places with path grades (sample data)")
-      : n.example > 0 ? L(`구간 판정 관광지 (예시 ${n.example}곳 포함)`, `places with path grades (${n.example} sample)`)
+    [n.places, n.example >= n.places ? L("구간 판정 관광지 (현장 확인 전 포함)", "places with path grades (some not yet surveyed)")
+      : n.example > 0 ? L(`구간 판정 관광지 (현장 확인 전 ${n.example}곳 포함)`, `places with path grades (${n.example} not yet surveyed)`)
       : L("구간 판정 관광지", "places with path grades"), "#/places", L("곳", "")],
     [n.toilets, L("장애인 화장실", "accessible toilets"), "#/map", L("곳", "")],
     [n.chargers, L("전동휠체어 급속충전기", "wheelchair fast chargers"), "#/map", L("곳", "")],
@@ -252,7 +253,7 @@ export function MoreLinks({ lang }: { lang: Lang }) {
     ["#/map", L("편의시설 지도", "Facilities map"), L("장애인 화장실, 충전기, 안내소, 약국을 한 지도에서", "Accessible toilets, chargers, info centers and pharmacies")],
     ["#/events", L("행사 달력", "Events"), L("축제와 문화행사 날짜에 맞춰 코스 짜기", "Plan around festivals and cultural events")],
     ["#/stay", L("숙소", "Stay"), L("권역별 숙박업소와 확인된 정보", "Lodging by area and what has been checked")],
-    ["#/guide", L("여행 준비", "Before you go"), L("준비물, 자주 묻는 질문, 긴급 연락처", "Checklist, FAQ and emergency contacts")],
+    ["#/community/ask", L("자주 묻는 질문·문의", "FAQ & questions"), L("준비물, 자주 묻는 질문, 관리자에게 문의", "Checklist, FAQ and contact us")],
   ];
   return (
     <section className="sec wrap" aria-labelledby="more-h">
@@ -262,15 +263,40 @@ export function MoreLinks({ lang }: { lang: Lang }) {
   );
 }
 
+// 무장애 검색: 한국관광공사 열린관광의 분류·항목 이름을 그대로 쓴다 (backend/app/kto_access.py 의 access_kto.items)
+// mode = 이 분류를 고르면 카드 신호등을 어떤 기준으로 볼지 (기존 '누구 기준으로 볼까요')
+const BF: { k: string; ko: string; en: string; mode: string; opts: [string, string, string, string[]][] }[] = [
+  { k: "지체장애", ko: "지체장애", en: "Mobility", mode: "wheel", opts: [
+    ["주차여부", "주차여부", "Accessible parking", ["장애인 주차"]], ["대중교통", "대중교통", "Public transport", []], ["주 출입 접근로", "주 출입 접근로", "Step-free approach", ["출입구 턱 없음", "경사로"]],
+    ["휠체어대여", "휠체어대여", "Wheelchair rental", ["휠체어 대여"]], ["출입통로", "출입통로", "Entrance", []], ["엘리베이터", "엘리베이터", "Elevator", ["엘리베이터"]],
+    ["화장실", "화장실", "Accessible toilet", ["장애인 화장실"]], ["관람석(좌석)", "관람석(좌석)", "Seating", []], ["객실", "객실", "Rooms", []], ["지체장애 기타 상세", "지체장애 기타 상세", "Other", []]] },
+  { k: "시각장애", ko: "시각장애", en: "Low vision", mode: "none", opts: [
+    ["음성안내", "음성안내", "Audio guide", []], ["큰활자/점자 홍보물", "큰활자/점자 홍보물", "Large print / Braille", ["점자 안내"]], ["점자표지판", "점자표지판", "Braille signs", ["점자 안내"]],
+    ["시각장애 기타상세", "시각장애 기타상세", "Other", ["보조견 동반 가능"]]] },
+  { k: "청각장애", ko: "청각장애", en: "Hearing", mode: "none", opts: [["청각장애 기타상세", "청각장애 기타상세", "Other", []]] },
+  { k: "영유아가족", ko: "영유아 가족", en: "Families", mode: "stroller", opts: [
+    ["유모차 대여", "유모차 대여", "Stroller rental", []], ["수유실", "수유실", "Nursing room", ["수유실"]], ["유아용 보조의자/침대", "유아용 보조의자/침대", "Baby chair / bed", []],
+    ["영유아가족 기타상세", "영유아가족 기타상세", "Other", ["기저귀 교환대"]]] },
+  { k: "고령자", ko: "고령자", en: "Seniors", mode: "walk", opts: [["휠체어 대여", "휠체어 대여", "Wheelchair rental", ["휠체어 대여"]]] },
+];
+const HEAR = <><path d="M7.5 10a4.5 4.5 0 1 1 9 0c0 2.6-2.2 3.3-2.8 5.4-.5 1.8-1.4 3.6-3.7 3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M10.2 10.2a1.8 1.8 0 1 1 3.3 1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M4 20 20 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></>;
+const PER = 12;
+const STYLE_TAG: [string, string, string][] = [["체험", "체험", "Activity"], ["역사·문화", "역사", "History"], ["산·등산", "산", "Mountain"], ["바다 보기", "바다", "Sea"], ["자연·산책", "자연", "Nature"]];
+
 export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; onAdd: (id: string) => void; wish: string[]; gradeLabel: (g: string) => string; zone0?: string }) {
   const L = pick(lang);
   const [zone, setZone] = useState(ZONES.some((z) => z.k === zone0) ? zone0! : "all");
   useEffect(() => { if (ZONES.some((z) => z.k === zone0)) setZone(zone0!); }, [zone0]);
-  const [mode, setMode] = useState("none");
+  const [bfCat, setBfCat] = useState("");            // 무장애 검색에서 고른 분류
+  const [bfOpts, setBfOpts] = useState<string[]>([]); // 그 분류의 세부 항목 (비면 '전체')
+  const [open, setOpen] = useState<"" | "bf" | "need" | "sort">("");
+  const mode = BF.find((b) => b.k === bfCat)?.mode || "none";
   const [list, setList] = useState<any[]>([]);
   useEffect(() => { getJSON(`/api/places?mode=${mode}`).then(setList).catch(() => setList([])); }, [mode]);
   const [q, setQ] = useState("");
   const [need, setNeed] = useState<string[]>([]);
+  const [sort, setSort] = useState<"rec" | "name" | "quiet">("rec");
+  const [page, setPage] = useState(1);
   const [crowd, setCrowd] = useState<Record<string, { date: string; rate: number }[]>>({});
   useEffect(() => { getJSON("/api/crowd").then((j) => setCrowd(j.places || {})).catch(() => {}); }, []);
   const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10).replaceAll("-", "");
@@ -279,89 +305,189 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const zc = (k: string) => ZONES.find((z) => z.k === k)?.c || "#2462B4";
   const key = q.trim().toLowerCase().replace(/\s+/g, "");
   const ORDER: Record<string, number> = { G: 0, Y: 1, R: 3 };
+  const hasF = (p: any, names: string[]) => names.some((n) => (p.facilities || []).some((f: string) => f.startsWith(n)));
   const NEED_TEST: Record<string, (p: any) => boolean> = {
     sea: (p) => (p.styles || []).includes("바다 보기"), nature: (p) => (p.styles || []).includes("자연·산책"),
-    culture: (p) => (p.styles || []).includes("역사·문화"), activity: (p) => (p.styles || []).includes("체험"),
+    mountain: (p) => (p.styles || []).includes("산·등산"), culture: (p) => (p.styles || []).includes("역사·문화"), activity: (p) => (p.styles || []).includes("체험"),
     indoor: (p) => !!p.indoor, flat: (p) => p.walk_load === "평지",
-    toilet: (p) => (p.facilities || []).includes("장애인 화장실"), parking: (p) => (p.facilities || []).includes("장애인 주차"),
+    toilet: (p) => hasF(p, ["장애인 화장실"]), parking: (p) => hasF(p, ["장애인 주차"]),
     quiet: (p) => { const r = rateToday(p.id); return r != null && r < 50; },
   };
-  const filtering = !!key || need.length > 0;
+  const hasCrowd = Object.keys(crowd).length > 0;
+  const NEEDS: [string, string, string, string][] = [["sea", "바다 보기", "Sea views", "style"], ["nature", "자연·산책", "Nature walks", "style"], ["mountain", "산·등산", "Mountains & hiking", "style"],
+    ["culture", "역사·문화", "History & culture", "style"], ["activity", "체험", "Activities", "style"],
+    ["indoor", "비 와도 OK(실내)", "Indoor", "comfort"], ["flat", "덜 걷는 곳(평지)", "Flat, little walking", "comfort"], ["toilet", "장애인 화장실", "Accessible toilet", "comfort"],
+    ["parking", "장애인 주차", "Accessible parking", "comfort"], ...(hasCrowd ? [["quiet", "오늘 한산한 곳", "Quiet today", "today"] as [string, string, string, string]] : [])];
+  // 무장애 검색 세부 항목: 열린관광 항목(없음 제외)이 있거나, 같은 뜻의 편의시설이 있으면 맞음
+  const bf = BF.find((b) => b.k === bfCat);
+  const bfOk = (p: any) => {
+    if (!bf) return true;
+    const items: [string, string][] = p.access_kto?.items?.[bf.k] || [];
+    if (!bfOpts.length) return bf.mode !== "none" || items.length > 0;   // 시각·청각은 고르기만 해도 정보 있는 곳만
+    return bfOpts.every((o) => { const opt = bf.opts.find((x) => x[0] === o)!; return items.some(([k]) => k === o) || hasF(p, opt[3]); });
+  };
+  const filtering = !!key || need.length > 0 || bfOpts.length > 0 || (!!bf && bf.mode === "none");
   const exact = (p: any) => `${p.name_ko}${p.name_en || ""}${p.intro_ko || ""}${(p.facilities || []).join("")}${(p.styles || []).join("")}`.toLowerCase().replace(/\s+/g, "").includes(key);
   const sightish = (p: any) => p.type !== "숙박" && p.type !== "식당" && p.type !== "카페";
   // 그대로 찾아서 하나도 없으면 오타를 고쳐 이름으로 다시 찾는다 ("촛데바위" → 촛대바위)
   const typo = !!key && !list.some((p) => sightish(p) && exact(p)) && list.some((p) => sightish(p) && fuzzyHit(p.name_ko, key) >= 0);
   const items = list.filter((p) => sightish(p)
       && (key ? (typo ? fuzzyHit(p.name_ko, key) >= 0 : exact(p)) : true)
-      && need.every((n) => NEED_TEST[n]?.(p))
+      && need.every((n) => NEED_TEST[n]?.(p)) && bfOk(p)
       && (filtering || zone === "all" || p.zone === zone))
-    .sort((a, b) => (mode === "none" ? 0 : (ORDER[a.grade] ?? 2) - (ORDER[b.grade] ?? 2)));
+    .sort((a, b) => sort === "name" ? a.name_ko.localeCompare(b.name_ko, "ko")
+      : sort === "quiet" ? (rateToday(a.id) ?? 999) - (rateToday(b.id) ?? 999)
+      : (mode === "none" ? 0 : (ORDER[a.grade] ?? 2) - (ORDER[b.grade] ?? 2)));
+  useEffect(() => setPage(1), [zone, mode, key, need.join(), bfOpts.join(), bfCat, sort]);
+  const pages = Math.max(1, Math.ceil(items.length / PER));
+  const cur = Math.min(page, pages);
+  const shown = items.slice((cur - 1) * PER, cur * PER);
   const toggle = (k: string) => setNeed(need.includes(k) ? need.filter((x) => x !== k) : [...need, k]);
-  const hasCrowd = Object.keys(crowd).length > 0;
+  const pickCat = (k: string) => { setBfOpts([]); setBfCat(bfCat === k ? "" : k); };
+  const toggleOpt = (o: string) => setBfOpts(bfOpts.includes(o) ? bfOpts.filter((x) => x !== o) : [...bfOpts, o]);
+  const clearAll = () => { setNeed([]); setBfCat(""); setBfOpts([]); setQ(""); };
+  const SORTS: [typeof sort, string, string][] = [["rec", mode === "none" ? "추천순" : "갈 수 있는 곳 먼저", mode === "none" ? "Recommended" : "Accessible first"], ["name", "이름순", "By name"], ...(hasCrowd ? [["quiet", "오늘 한산한 순", "Quietest today"] as [typeof sort, string, string]] : [])];
+  const catIcon = (k: string) => k === "청각장애" ? HEAR : ACCESS_CATS[k]?.d;
+  const tagOf = (p: any) => STYLE_TAG.find(([s]) => (p.styles || []).includes(s));
+  const chipsOn: [string, () => void][] = [
+    ...(bf ? [[L(`${bf.ko} 기준`, `${bf.en}`), () => pickCat(bf.k)] as [string, () => void]] : []),
+    ...bfOpts.map((o) => [L(o, bf?.opts.find((x) => x[0] === o)?.[2] || o), () => toggleOpt(o)] as [string, () => void]),
+    ...need.map((n) => [L(NEEDS.find((x) => x[0] === n)?.[1] || n, NEEDS.find((x) => x[0] === n)?.[2] || n), () => toggle(n)] as [string, () => void]),
+  ];
   return (
-    <section id="places" className="sec wrap" aria-labelledby="places-h">
-      <div className="sec-head">
-        <h2 id="places-h">{L("동해 다섯 권역", "Five areas of Donghae")}</h2>
-        <p>{L("권역을 고르고 누구 기준으로 볼지 정하면, 장소마다 갈 수 있는지 신호등으로 보여요.", "Pick an area and whose needs to check; each place shows an access signal.")}</p>
+    <section id="places" className="sec wrap pl2" aria-labelledby="places-h">
+      {/* 첫 띠: 제목 + 장소 찾기 + 실제 동해 사진 */}
+      <header className="pl2-hero" style={{ ["--pl2-img" as any]: `url(${photoAt("chotdae", 1920) || ""})` }}>
+        <div className="pl2-hero-txt">
+          <h2 id="places-h">{L("가고 싶은 동해를 찾아보세요", "Find your place in Donghae")}</h2>
+          <p>{L("누구와 가는지 고르면, 갈 수 있는 곳부터 신호등으로 보여 드려요.", "Tell us who's coming and we'll show where you can go first.")}</p>
+          <form className="pl2-search" role="search" onSubmit={(e) => e.preventDefault()}>
+            <label htmlFor="psearch" className="sr-only">{L("장소 찾기", "Find a place")}</label>
+            <Icon name="pin" />
+            <input id="psearch" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("장소 찾기: 이름이나 시설 (예: 등대, 엘리베이터)", "Find a place: name or facility (e.g. lighthouse, elevator)")} />
+            {q && <button type="button" className="chip" onClick={() => setQ("")}>{L("지우기", "Clear")}</button>}
+          </form>
+        </div>
+      </header>
+
+      {/* 무장애 검색: 접힌 띠 → 분류 상자 5개 → 고른 분류의 세부 항목 */}
+      <div className={`bf2${open === "bf" ? " on" : ""}`}>
+        <button className="bf2-bar" aria-expanded={open === "bf"} aria-controls="bf2-body" onClick={() => setOpen(open === "bf" ? "" : "bf")}>
+          <span className="bf2-bar-t"><AccIcon k="지체장애" size={24} />{L("무장애 검색", "Accessibility search")}</span>
+          {bf && <span className="bf2-bar-sel">{L(bf.ko, bf.en)}{bfOpts.length ? ` · ${bfOpts.length}` : ""}</span>}
+          <Icon name="down" className={`bf2-chev${open === "bf" ? " up" : ""}`} />
+        </button>
+        {open === "bf" && (
+          <div id="bf2-body" className="bf2-body">
+            <div className="bf2-cats" role="group" aria-label={L("무장애 분류", "Access categories")}>
+              {BF.map((b) => (
+                <button key={b.k} className="bf2-cat" aria-pressed={bfCat === b.k} onClick={() => pickCat(b.k)}>
+                  <AccIcon k={b.k} size={44} />
+                  <span>{L(b.ko, b.en)}</span>
+                </button>))}
+            </div>
+            {bf ? (
+              <fieldset className="bf2-opts">
+                <legend>{L(`${bf.ko} 세부 항목`, `${bf.en} details`)}</legend>
+                <label className="bf2-ck"><input type="checkbox" checked={!bfOpts.length} onChange={() => setBfOpts([])} /><span>{L("전체", "All")}</span></label>
+                {bf.opts.map(([o, ko, en]) => (
+                  <label key={o} className="bf2-ck"><input type="checkbox" checked={bfOpts.includes(o)} onChange={() => toggleOpt(o)} /><span>{L(ko, en)}</span></label>))}
+                {bf.k === "청각장애" && <p className="muted small bf2-note">{L("동해 관광지에는 아직 청각장애 편의정보가 등록되지 않았어요 (한국관광공사 열린관광 기준).", "No hearing-access info is registered for Donghae places yet.")}</p>}
+                {bf.mode !== "none" && <p className="muted small bf2-note">{L(`카드에 ${({ wheel: "휠체어", stroller: "유모차", walk: "오래 걷기 어려움" } as any)[bf.mode]} 기준 신호등이 보여요. 세부 항목을 고르면 그 시설이 있는 곳만 남아요.`, "Cards show an access signal for this need. Tick details to keep only places with them.")}</p>}
+              </fieldset>
+            ) : <p className="muted small bf2-hint">{L("누구와 가는지 상자를 하나 골라 주세요. 다시 누르면 풀려요.", "Pick a box. Tap again to clear.")}</p>}
+          </div>)}
       </div>
-      <form className="psearch" role="search" onSubmit={(e) => e.preventDefault()}>
-        <label htmlFor="psearch">{L("장소 찾기", "Find a place")}</label>
-        <input id="psearch" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("이름이나 시설로 찾기 (예: 등대, 엘리베이터)", "Search by name or facility (e.g. lighthouse, elevator)")} />
-        {q && <button type="button" className="chip" onClick={() => setQ("")}>{L("지우기", "Clear")}</button>}
-      </form>
-      <div className="filter who">
-        <span id="mode-l">{L("누구 기준으로 볼까요?", "Check access for")}</span>
-        <div className="chips" role="group" aria-labelledby="mode-l">
-          {MODES.map(([k, ko, en]) => <button key={k} className="chip" aria-pressed={mode === k} onClick={() => setMode(k)}>{L(ko, en)}</button>)}
+
+      {/* 도구 막대: 맞춤 필터 · 정렬 (눌러서 열기) */}
+      <div className="pl2-tools">
+        <div className="pl2-pop">
+          <button className="pl2-tool" aria-expanded={open === "need"} onClick={() => setOpen(open === "need" ? "" : "need")}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5h16l-6 7.5V19l-4 1.5v-8z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>
+            {L("맞춤 필터", "Filters")}{need.length > 0 && <b className="pl2-n">{need.length}</b>}<Icon name="down" className={`bf2-chev${open === "need" ? " up" : ""}`} />
+          </button>
+          {open === "need" && (
+            <div className="pl2-panel" role="group" aria-label={L("맞춤 필터", "Filters")}>
+              {([["style", "이런 곳을 찾아요", "Kind of place"], ["comfort", "편하게 다니려면", "Comfort"], ["today", "오늘", "Today"]] as const).map(([g, ko, en]) => {
+                const xs = NEEDS.filter((x) => x[3] === g);
+                return xs.length ? <div key={g} className="pl2-grp"><p>{L(ko, en)}</p><div className="chips">
+                  {xs.map(([k, nko, nen]) => <button key={k} className="chip" aria-pressed={need.includes(k)} onClick={() => toggle(k)}>{L(nko, nen)}</button>)}</div></div> : null;
+              })}
+              <div className="pl2-panel-foot">
+                {need.length > 0 && <button className="chip plain" onClick={() => setNeed([])}>{L("필터 풀기", "Clear filters")}</button>}
+                <button className="chip go" onClick={() => setOpen("")}>{L(`${items.length}곳 보기`, `Show ${items.length}`)}</button>
+              </div>
+            </div>)}
+        </div>
+        <div className="pl2-pop right">
+          <button className="pl2-tool plain" aria-expanded={open === "sort"} onClick={() => setOpen(open === "sort" ? "" : "sort")}>
+            {SORTS.find((s) => s[0] === sort)?.[lang === "ko" ? 1 : 2]}<Icon name="down" className={`bf2-chev${open === "sort" ? " up" : ""}`} />
+          </button>
+          {open === "sort" && (
+            <ul className="pl2-panel pl2-sort" role="listbox" aria-label={L("정렬", "Sort")}>
+              {SORTS.map(([k, ko, en]) => <li key={k}><button role="option" aria-selected={sort === k} onClick={() => { setSort(k); setOpen(""); }}>{L(ko, en)}</button></li>)}
+            </ul>)}
         </div>
       </div>
-      <div className="filter needs">
-        <span id="need-l">{L("이런 곳을 찾아요", "I'm looking for")}</span>
-        <div className="chips" role="group" aria-labelledby="need-l">
-          {([["sea", "바다 보기", "Sea views"], ["nature", "자연·산책", "Nature walks"], ["culture", "역사·문화", "History & culture"], ["activity", "체험", "Activities"],
-            ["indoor", "비 와도 OK(실내)", "Indoor"], ["flat", "덜 걷는 곳(평지)", "Flat, little walking"], ["toilet", "장애인 화장실", "Accessible toilet"],
-            ["parking", "장애인 주차", "Accessible parking"], ...(hasCrowd ? [["quiet", "오늘 한산한 곳", "Quiet today"]] : [])] as [string, string, string][])
-            .map(([k, ko, en]) => <button key={k} className="chip" aria-pressed={need.includes(k)} onClick={() => toggle(k)}>{L(ko, en)}</button>)}
-          {need.length > 0 && <button className="chip plain" onClick={() => setNeed([])}>{L("모두 풀기", "Clear all")}</button>}
-        </div>
-      </div>
+      {chipsOn.length > 0 && (
+        <div className="pl2-on" aria-label={L("고른 조건", "Active filters")}>
+          {chipsOn.map(([t, off]) => <button key={t} className="pl2-onchip" onClick={off} aria-label={L(`${t} 풀기`, `Remove ${t}`)}>{t}<span aria-hidden="true">×</span></button>)}
+          <button className="link-btn" onClick={clearAll}>{L("초기화", "Reset")}</button>
+        </div>)}
+
+      {/* 지역 탭 (전체 + 다섯 권역) */}
       <div className="tabs" role="group" aria-label={L("권역", "Areas")} hidden={filtering}>
         <button aria-pressed={zone === "all"} onClick={() => setZone("all")} style={{ ["--z" as any]: "#12355E" }}>{L("전체", "All")}</button>
         {ZONES.map((z) => (
-          <button key={z.k} aria-pressed={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>
-            {L(z.ko, z.en)}
-          </button>
-        ))}
+          <button key={z.k} aria-pressed={zone === z.k} onClick={() => setZone(z.k)} style={{ ["--z" as any]: z.c }}>{L(z.ko, z.en)}</button>))}
       </div>
       {filtering
         ? <p className="zone-d" role="status">{typo && <><b className="typo-fix">{L(`'${q.trim()}'와 비슷한 이름으로 찾았어요`, `Showing names similar to '${q.trim()}'`)}</b> </>}{L(`${key ? `'${q.trim()}' ` : ""}조건에 맞는 곳 ${items.length}곳 (모든 권역)`, `${items.length} place(s) match${key ? ` '${q.trim()}'` : ""} in all areas`)}</p>
         : !Z ? <p className="zone-d"><b>{L("동해 전체", "All of Donghae")}</b> {L(`다섯 권역 ${items.length}곳을 한 번에 봐요. 권역 탭을 누르면 그 지역만 보여요.`, `${items.length} places across five areas.`)}</p>
         : <p className="zone-d"><b style={{ color: Z.c }}>{L(Z.ko, Z.en)}</b> {L(Z.d[0], Z.d[1])}</p>}
-      <div className="pgrid">
-        {items.map((p) => {
-          const g = p.grade as string | null, inW = wish.includes(p.id);
+
+      <div className="pgrid pl2-grid">
+        {shown.map((p) => {
+          const g = p.grade as string | null, inW = wish.includes(p.id), tag = tagOf(p), r = rateToday(p.id);
+          const ic: [string, JSX.Element, string, string][] = [];
+          if ((p.access_kto?.cats || []).includes("지체장애") || ["가능", "일부"].includes(p.wheelchair)) ic.push(["w", <AccIcon key="w" k="지체장애" size={18} />, "휠체어 접근 정보 있음", "Wheelchair info"]);
+          if (hasF(p, ["장애인 주차"])) ic.push(["p", <b key="p" className="pl2-P" aria-hidden="true">P</b>, "장애인 주차", "Accessible parking"]);
+          if (hasF(p, ["장애인 화장실"])) ic.push(["t", <Icon key="t" name="toilet" />, "장애인 화장실", "Accessible toilet"]);
+          if ((p.access_kto?.cats || []).includes("영유아가족")) ic.push(["s", <AccIcon key="s" k="영유아가족" size={18} />, "영유아 가족 편의", "Family facilities"]);
+          if ((p.access_kto?.cats || []).includes("시각장애")) ic.push(["v", <AccIcon key="v" k="시각장애" size={18} />, "시각장애 편의", "Low-vision support"]);
+          if ((p.access_kto?.cats || []).includes("고령자")) ic.push(["o", <AccIcon key="o" k="고령자" size={18} />, "어르신 편의", "Senior support"]);
           return (
-            <article key={p.id} className="pcard">
+            <article key={p.id} className="pcard pl2-card">
               <div className="art"><Art id={p.id} color={zc(p.zone)} />{PHOTOS[p.id] && <PlacePhoto id={p.id} lang={lang} />}
-                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}{g && p.access_source === "예시" && <small className="ex-in"> · {L("예시", "sample")}</small>}</span>}
+                {tag && <span className="pl2-tag">{L(tag[1], tag[2])}</span>}
+                {mode !== "none" && <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? gradeLabel(g) : L("확인 전", "Not checked")}</span>}
               </div>
               <div className="pb">
                 {(zone === "all" || filtering) && <span className="ztag" style={{ color: zc(p.zone) }}>{L(ZONES.find((z) => z.k === p.zone)?.ko || "", ZONES.find((z) => z.k === p.zone)?.en || "")}</span>}
-                <h3><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}</h3>
-                <p>{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.intro_en || p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
-                {rateToday(p.id) != null && <p className="small"><span className={`badge crowd-${rateToday(p.id)! >= 70 ? "high" : rateToday(p.id)! >= 40 ? "mid" : "low"}`}>
-                  {L("오늘", "Today")} {rateToday(p.id)! >= 70 ? L("붐빔 예상", "busy") : rateToday(p.id)! >= 40 ? L("보통", "moderate") : L("여유", "quiet")} {Math.round(rateToday(p.id)!)}%</span></p>}
-                {p.facilities?.length > 0 && <ul className="fac">{p.facilities.slice(0, 4).map((f: string) => <li key={f}>{tr(lang, f)}</li>)}</ul>}
-                <a className="more" href={`#/place/${p.id}`}>{L("길·화장실·주차 자세히 보기", "Paths, toilets, parking")}</a>
-                <button className={`add${inW ? " on" : ""}`} disabled={g === "R"} onClick={() => onAdd(p.id)}>
-                  {g === "R" ? L("이 기준으로는 어려워요", "Not reachable for this need") : inW ? L("✓ 담았어요", "✓ Added") : L("코스에 담기", "Add to route")}
-                </button>
+                <h3 className="pl2-name"><a className="plink" href={`#/place/${p.id}`}>{L(p.name_ko, p.name_en || p.name_ko)}</a>{p.sample && <span className="ex">{L("예시", "sample")}</span>}
+                  {r != null && <span className={`pl2-crowd crowd-${r >= 70 ? "high" : r >= 40 ? "mid" : "low"}`} title={L(`오늘 붐빔 예상 ${Math.round(r)}%`, `Today ${Math.round(r)}%`)}>{L("오늘", "Today")} {r >= 70 ? L("붐빔", "busy") : r >= 40 ? L("보통", "moderate") : L("여유", "quiet")}</span>}</h3>
+                <p className="pl2-desc">{(lang === "ko" ? (p.intro_ko || p.tip_ko) : (p.intro_en || p.tip_en || p.intro_ko)) || L("소개를 준비하고 있어요.", "Description coming soon.")}</p>
+                {ic.length > 0 && <ul className="pl2-ic" aria-label={L("편의시설", "Facilities")}>{ic.map(([k, el, ko, en]) => <li key={k} title={L(ko, en)}>{el}<span className="sr-only">{L(ko, en)}</span></li>)}</ul>}
+                {p.facilities?.length > 0 && <p className="sr-only">{p.facilities.map((f: string) => tr(lang, f)).join(", ")}</p>}
+                <div className="pl2-foot">
+                  <button className={`add${inW ? " on" : ""}`} disabled={g === "R"} onClick={() => onAdd(p.id)}>
+                    {g === "R" ? L("이 기준으로는 어려워요", "Not reachable for this need") : inW ? L("✓ 담았어요", "✓ Added") : L("코스에 담기", "Add to route")}
+                  </button>
+                  <a className="more" href={`#/place/${p.id}`} tabIndex={-1} aria-hidden="true">{L("자세히 보기", "Details")} →</a>
+                </div>
               </div>
             </article>
           );
         })}
-        {!items.length && <p className="muted">{filtering ? L("조건에 맞는 장소가 없어요. 조건을 하나씩 풀어 보세요.", "No places match. Try removing a filter.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>}
+        {!items.length && <div className="muted pl2-empty"><p>{filtering ? L("조건에 맞는 장소가 없어요. 조건을 하나씩 풀어 보세요.", "No places match. Try removing a filter.") : L("이 권역 장소는 데이터를 정리하고 있어요.", "Places for this area are being prepared.")}</p>
+          {filtering && <button className="chip" onClick={clearAll}>{L("조건 초기화", "Reset filters")}</button>}</div>}
       </div>
+      {pages > 1 && (
+        <nav className="cm-pager" aria-label={L("쪽 넘기기", "Pages")}>
+          <button disabled={cur === 1} onClick={() => setPage(cur - 1)} aria-label={L("이전 쪽", "Previous page")}>‹</button>
+          {Array.from({ length: pages }, (_, i) => i + 1).map((n) => <button key={n} aria-current={n === cur ? "page" : undefined} onClick={() => { setPage(n); document.getElementById("places")?.scrollIntoView({ behavior: "smooth" }); }}>{n}</button>)}
+          <button disabled={cur === pages} onClick={() => setPage(cur + 1)} aria-label={L("다음 쪽", "Next page")}>›</button>
+        </nav>)}
     </section>
   );
 }
@@ -376,7 +502,6 @@ export function HowToStrip({ lang, onClose }: { lang: Lang; onClose: () => void 
   ];
   return (
     <aside className="howto-strip" aria-labelledby="howto-h">
-      <img className="howto-mascot" src="/dongi/full-help.webp" alt="" />
       <h3 id="howto-h">{L("처음이세요? 이렇게 하면 돼요", "New here? Three steps")}</h3>
       <ol>{steps.map(([ic, ko, en, d], i) => <li key={ko}><span className="n" aria-hidden="true">{i + 1}</span><Icon name={ic} /><span><b>{L(ko, en)}</b><small>{d}</small></span></li>)}</ol>
       <a className="howto-more" href="#/places">{L("먼저 관광지 둘러보기", "Browse places first")}</a>
@@ -388,11 +513,11 @@ export function HowToStrip({ lang, onClose }: { lang: Lang; onClose: () => void 
 /* ---------------- 추천 코스 (예시) ---------------- */
 export const PRESETS = [
   { t: ["부모님 모시고 무릎 편한 묵호 바다", "Easy-walking Mukho seaside with parents"], who: "부모님과", move: ["오래 걷기 어려움"], style: ["바다 보기", "맛집"], start: "묵호역", photo: "zone_mukho",
-    tags: [["오래 걷기 어려움", "Limited walking"], ["부모님", "Parents"], ["기차", "By train"]], by: ["예시 코스 · 70대 부모님과", "Sample route · with parents in their 70s"] },
+    tags: [["오래 걷기 어려움", "Limited walking"], ["부모님", "Parents"], ["기차", "By train"]], by: ["추천 코스 · 70대 부모님과", "Suggested route · with parents in their 70s"] },
   { t: ["휠체어로 무릉 반나절", "Half day in Mureung by wheelchair"], who: "연인·친구", move: ["휠체어"], style: ["자연·산책", "역사·문화"], start: "자가용", photo: "valley",
-    tags: [["휠체어", "Wheelchair"], ["자연", "Nature"], ["자가용", "By car"]], by: ["예시 코스 · 휠체어 이용 2인", "Sample route · two travelers, one wheelchair"] },
+    tags: [["휠체어", "Wheelchair"], ["자연", "Nature"], ["자가용", "By car"]], by: ["추천 코스 · 휠체어 이용 2인", "Suggested route · two travelers, one wheelchair"] },
   { t: ["유모차로 비 오는 날", "Rainy day with a stroller"], who: "아이와", move: ["유모차"], style: ["역사·문화", "카페"], start: "동해역", rain: true, photo: "cave",
-    tags: [["유모차", "Stroller"], ["실내 위주", "Mostly indoors"], ["기차", "By train"]], by: ["예시 코스 · 아이 동반 가족", "Sample route · family with a toddler"] },
+    tags: [["유모차", "Stroller"], ["실내 위주", "Mostly indoors"], ["기차", "By train"]], by: ["추천 코스 · 아이 동반 가족", "Suggested route · family with a toddler"] },
 ] as const;
 export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: number) => void; busy: boolean }) {
   const L = pick(lang);
@@ -400,7 +525,7 @@ export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: numb
     <section id="courses" className="sec wrap" aria-labelledby="courses-h">
       <div className="sec-head">
         <h2 id="courses-h">{L("이렇게 다녀 보세요", "Routes to start from")}</h2>
-        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요. 예시 코스예요.", "Start from one that fits and adjust it by talking to Dongi. These are sample routes.")}</p>
+        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요.", "Start from one that fits and adjust it by talking to Dongi. These are sample routes.")}</p>
       </div>
       <div className="cgrid">
         {PRESETS.map((c, i) => (

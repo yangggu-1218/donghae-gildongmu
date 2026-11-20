@@ -3,7 +3,7 @@
 import { Course, Conditions, Extra, Stop, VisitWeather } from "@/lib/api";
 import { PlacePhoto } from "@/components/Sections";
 import { NearbyEats } from "@/components/Eateries";
-import { useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
 
 type T = (k: string, v?: Record<string, string | number>) => string;
@@ -60,10 +60,11 @@ function StopWeather({ forecast, lang }: { forecast: VisitWeather; lang: string 
 }
 
 // ---------- 시간표 카드 ----------
-export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, onRemove, onReplace, crowd, at }: {
+export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, children, onMap, onRemove, onReplace, crowd, at }: {
   s: Stop; i: number; x?: Extra; name: string; t: T; lang: string; wheel: boolean; showNear: boolean; isNew: boolean; busy: boolean;
-  onRemove: () => void; onReplace: () => void; crowd?: number | null; at?: { lat: number; lon: number };
+  children?: ReactNode; onMap?: () => void; onRemove: () => void; onReplace: () => void; crowd?: number | null; at?: { lat: number; lon: number };
 }) {
+  const dialog = useRef<HTMLDialogElement>(null);
   const [eatOpen, setEatOpen] = useState(false);
   const lv = crowd == null ? null : crowd >= 70 ? "high" : crowd >= 40 ? "mid" : "low";
   const crowdTxt = lv && ({ high: ["붐빔 예상", "Busy"], mid: ["보통", "Moderate"], low: ["여유", "Quiet"] } as const)[lv][lang === "ko" ? 0 : 1];
@@ -75,7 +76,23 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
   if (x?.benches) facts.push(t("tl.bench"));
   const med = n?.medical;
   return (
-    <article className={`tl-card${isNew ? " is-new" : ""}`} aria-label={`${i + 1}. ${name}`}>
+    <>
+      <article className="stop-overview" aria-label={`${i + 1}. ${name}`}>
+        <div className="stop-identity"><PlacePhoto id={s.id} lang={lang as "ko" | "en"} small />
+          <div><span>{s.arrive} – {s.depart}</span><h4>{name}</h4></div></div>
+        <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
+          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}{x?.access_source === "예시" ? (lang === "ko" ? " · 예시" : " · sample") : ""}</span>}</div>
+        {s.notice && <p role="note">{s.notice}</p>}
+                <div className="stop-actions">
+          <button type="button" className="chip go" onClick={() => dialog.current?.showModal()}>{lang === "ko" ? "장소 상세 보기" : "Stop details"}</button>
+          {onMap && <button type="button" className="chip" onClick={onMap}>{lang === "ko" ? "지도에서 보기" : "Show on map"}</button>}
+          <button className="chip" disabled={busy} onClick={onRemove}>{t("tl.remove")}</button>
+          <button className="chip" disabled={busy} onClick={onReplace}>{t("tl.replace")}</button>
+        </div>
+      </article>
+      <dialog className="stop-detail-dialog" ref={dialog} aria-label={name}>
+        <div className="stop-detail-bar"><b>{name}</b><button className="chip" onClick={() => dialog.current?.close()}>{lang === "ko" ? "닫기" : "Close"}</button></div>
+      <article className={`tl-card${isNew ? " is-new" : ""}`} aria-label={`${i + 1}. ${name}`}>
       <div className="tl-time" aria-hidden="true"><b>{s.arrive}</b><span>{s.depart}</span></div>
       <div className="tl-dot" aria-hidden="true">{i + 1}</div>
       <div className="tl-body">
@@ -85,9 +102,9 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           <div style={{ minWidth: 0, flex: 1 }}>
             <h4>{name}{s.kind !== "sight" && <small className="tl-kind">{t(s.kind === "lunch" ? "tl.lunch" : "tl.cafe")}</small>}
               {isNew && <small className="tl-kind new">{t("tl.new")}</small>}</h4>
-            <p className="muted tl-hours">{s.hours_text || t("tl.unknown")}{s.hours_sample && s.open_state !== "always" ? ` · ${t("tl.sample")}` : ""}</p>
+            <p className="muted tl-hours">{s.hours_text || t("tl.unknown")}</p>
           </div>
-          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}{x?.access_source === "예시" && <small className="ex-in"> · {lang === "ko" ? "예시" : "sample"}</small>}</span>}
+          {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}
         </div>
         <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
           {lv && <span className={`badge crowd-${lv}`} title={lang === "ko" ? "한국관광공사 관광지 집중률 예측" : "KTO crowd forecast"}>{crowdTxt} {Math.round(crowd!)}%</span>}</div>
@@ -115,12 +132,10 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
             {eatOpen && <NearbyEats lat={at.lat} lon={at.lon} lang={lang} r={500} limit={5} exclude={s.id} />}
           </details>
         )}
-        <div className="tl-act">
-          <button className="chip" disabled={busy} onClick={onRemove}>{t("tl.remove")}</button>
-          <button className="chip" disabled={busy} onClick={onReplace}>{t("tl.replace")}</button>
-        </div>
+
       </div>
     </article>
+    {children}</dialog></>
   );
 }
 

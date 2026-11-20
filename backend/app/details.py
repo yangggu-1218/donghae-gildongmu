@@ -1,6 +1,6 @@
 """작업1: 영업시간·어르신 접근성 상세를 장소에 붙이고, 장소마다 가까운 주차장·충전기·안내소·병원·약국을 매칭한다.
-- data/place_details.json : 영업시간, 휠체어·보행 부담·단차·테이블·벤치·보호자 꿀팁, 예시 식당·카페
-- data/medical_sample.json : 예시 병원·약국 (키를 넣으면 국립중앙의료원 실데이터로 대체)
+- data/place_details.json : 영업시간, 휠체어·보행 부담·단차·테이블·벤치·보호자 꿀팁, 식당·카페
+- data/public/medical_dh.json : 동해시 실제 약국·병의원·응급실 (국립중앙의료원 자료 저장본. 서버는 요일별 운영시간을 실시간으로 더함)
 값마다 출처(hours_source / access_source)를 남긴다. '예시'는 답사·전화로 확인 전."""
 import json
 from pathlib import Path
@@ -11,7 +11,22 @@ from . import public_data
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 _D = json.loads((DATA / "place_details.json").read_text(encoding="utf-8")) if (DATA / "place_details.json").exists() else {"details": {}, "extra_places": []}
-MED = json.loads((DATA / "medical_sample.json").read_text(encoding="utf-8"))["items"] if (DATA / "medical_sample.json").exists() else []
+def _med() -> list[dict]:
+    """동해시 실제 약국·병의원·응급실 목록 (data/public/medical_dh.json, 국립중앙의료원 자료를 저장한 것).
+    kind: 약국 / 병의원 / 응급실, div: 의원·종합병원·치과의원 등. 운영시간은 서버가 국립중앙의료원에서 받았을 때만 쓴다."""
+    f = DATA / "public" / "medical_dh.json"
+    if not f.exists():
+        return []
+    j = json.loads(f.read_text(encoding="utf-8"))
+    out = []
+    for name, div, lat, lon, tel, road in j["rows"] + j.get("er", []):
+        kind = "약국" if div == "약국" else "응급실" if div == "응급실" else "병의원"
+        out.append({"name": name, "kind": kind, "div": "" if kind == "약국" else div, "lat": lat, "lon": lon, "tel": tel, "road": road})
+    return out
+
+
+MED = _med()
+GP = ("의원", "종합병원", "보건소")   # '가까운 병원'으로 보여 줄 곳 (치과·한의원·요양병원은 지도에만)
 WD_KO = ["일", "월", "화", "수", "목", "금", "토"]
 WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -44,7 +59,11 @@ def apply(places: dict[str, Place]) -> dict[str, Place]:
                   "intro_ko", "intro_en", "intro_source", "about"):
             if k in d and d[k] is not None:
                 setattr(p, k, d[k])
-        p.closed_day_nums = list(d.get("closed_days", []))
+        if d.get("segments"):   # 공식 자료로 확인한 구간 정보가 있으면 예시 구간을 바꾼다
+            p.segments = [Segment(**x) for x in d["segments"]]
+        if d.get("facilities"):
+            p.facilities = list(d["facilities"])
+        p.closed_day_nums = list(d.get("closed_days", p.closed_day_nums if "closed_days" not in d else []))
         if p.open and not p.hours:
             p.hours = "상시 개방" if (p.open, p.close) == ("00:00", "24:00") else f"{p.open}~{p.close}"
         if p.closed_day_nums and not p.closed_days:
@@ -113,16 +132,24 @@ def medical_near(lat, lon, weekday: Optional[int] = None, at: Optional[int] = No
     if lat is None:
         return {}
     out = {}
+    from . import public_apis
+    raw = (public_apis._MED_CACHE.get("raw") or (0, {}))[1]          # 서버가 받아 둔 국립중앙의료원 목록 (요일별 운영시간)
+    week = {it.get("dutyName"): it for items in raw.values() for it in items}
     for kind in ("약국", "의원", "응급실"):
         cand = []
         for m in MED:
-            if m["kind"] != kind:
+            if not (m["kind"] == kind or (kind == "의원" and m["kind"] == "병의원" and m["div"] in GP)):
                 continue
             d = public_data.dist_m(lat, lon, m["lat"], m["lon"])
-            is_open = None
-            if weekday is not None and at is not None:
-                is_open = weekday not in m["closed_days"] and mins(m["open"]) <= at < mins(m["close"])
-            cand.append({**{k: m[k] for k in ("name", "kind", "tel", "open", "close")}, "dist_m": d, "open_then": is_open, "sample": True})
+            is_open, o, c = (True, "00:00", "24:00") if kind == "응급실" else (None, None, None)
+            it = week.get(m["name"])
+            if it and weekday is not None:
+                n = 7 if weekday == 0 else weekday           # 국립중앙의료원: 1=월 ~ 7=일
+                s, e = it.get(f"dutyTime{n}s"), it.get(f"dutyTime{n}c")
+                o, c = (f"{s[:2]}:{s[2:]}", f"{e[:2]}:{e[2:]}") if s and e else (None, None)
+                if at is not None:
+                    is_open = bool(s and e and int(s) <= at // 60 * 100 + at % 60 < int(e))
+            cand.append({"name": m["name"], "kind": kind, "tel": m["tel"], "open": o, "close": c, "road": m["road"], "dist_m": d, "open_then": is_open})
         cand.sort(key=lambda x: (x["open_then"] is False, x["dist_m"]))
         if cand:
             out[kind] = cand[0]
