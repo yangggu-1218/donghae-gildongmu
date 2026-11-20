@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Course, Conditions } from "@/lib/api";
 import KakaoMap from "./RouteMap";   // 경로선·구간 표시가 있는 코스 전용 지도
+import { Icon } from "./Icon";
 
 type StopPoint = { id: string; lat: number; lon: number; label: string; grade: null };
 type Guide = NonNullable<Course["driving_guides"]>[number][number];
@@ -10,10 +11,10 @@ type MapMode = "edit" | "official";
 type Props = {
   points: StopPoint[]; course: Course; lang: string; mode: MapMode; onMode: (mode: MapMode) => void;
   selectedId: string | null; onOverview: () => void; onSelect: (id: string) => void; busy: boolean; start: Conditions["start"];
-  onStart: (start: Conditions["start"]) => void; onEdit: (action: "replace" | "remove", id: string) => void;
+  onStart: (start: Conditions["start"]) => void; onEdit?: (action: "replace" | "remove", id: string) => void;
 };
 
-export function CourseDirections({ points, course, lang, mode, onMode, selectedId, onOverview, onSelect, busy, start, onStart, onEdit }: Props) {
+export function CourseDirections({ points, course, lang, mode, onMode, selectedId, onOverview, onSelect, busy, start, onStart }: Props) {
   const panel = useRef<HTMLDivElement>(null);
   const [large, setLarge] = useState(false);
   useEffect(() => {
@@ -34,6 +35,17 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
   }
   const ko = lang === "ko";
   const [step, setStep] = useState<Guide | null>(null);
+  // [현위치]: 브라우저 위치를 한 번 받아 지도에 점을 찍고 가운데로
+  const [me, setMe] = useState<{ lat: number; lon: number; t: number } | null>(null);
+  const [locMsg, setLocMsg] = useState("");
+  function locate() {
+    onMode("edit");
+    if (!navigator.geolocation) { setLocMsg(ko ? "이 브라우저는 위치를 쓸 수 없어요." : "Location isn't available."); return; }
+    setLocMsg(ko ? "현위치 찾는 중…" : "Locating…");
+    navigator.geolocation.getCurrentPosition((p) => { setMe({ lat: p.coords.latitude, lon: p.coords.longitude, t: Date.now() }); setLocMsg(""); },
+      () => { setLocMsg(ko ? "위치 권한을 허용해 주세요." : "Please allow location access."); window.setTimeout(() => setLocMsg(""), 4000); },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+  }
   const [device, setDevice] = useState<"mobile" | "desktop" | null>(null);
   const [part, setPart] = useState(0);
   useEffect(() => {
@@ -76,22 +88,21 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
   const legUrl = editMap && selected ? "https://map.kakao.com/link/by/car/" + segmentPins.map(p =>
     `${encodeURIComponent(p.label.replace(/[,/]/g, " "))},${p.lat},${p.lon}`).join("/") : null;
   return <div className="route-view" ref={panel} data-large={large}>
-    <div className="map-toolbar">{device === "desktop" && <div className="chips" role="group" aria-label={ko ? "지도 모드" : "Map mode"}>
-      <button type="button" className="chip" aria-pressed={editMap} onClick={() => onMode("edit")}>{ko ? "일정 편집 지도" : "Edit on map"}</button>
-      <button type="button" className="chip" aria-pressed={!editMap} onClick={() => onMode("official")}>{ko ? "카카오 공식 길찾기" : "Official directions"}</button>
-    </div>}
-    <button type="button" className="chip map-size" aria-pressed={large} onClick={toggleSize}>{large ? (ko ? "원래 크기" : "Restore size") : (ko ? "지도 크게 보기" : "Expand map")}</button></div>
-    {editMap && <div className="map-stop-editor">
-      <label><span>{ko ? "이동 구간 선택" : "Select route leg"}</span><select value={selected?.id || ""} onChange={e => { setStep(null); if (e.target.value) onSelect(e.target.value); else onOverview(); }}>
-        <option value="">{ko ? "전체 경로" : "Entire route"}</option>
-        {points.slice(1).map((p,i) => <option key={p.id} value={p.id}>{i + 1}. {points[i].label} → {p.label}{i === points.length - 2 && (ko ? " (복귀)" : " (return)")}</option>)}
-      </select></label>
-      {selected?.id === "@start" ? <label>{ko ? "출발지 변경" : "Change starting point"}<select disabled={busy} value={start} onChange={e => onStart(e.target.value as Conditions["start"])}>
-        {["동해역","묵호역","자가용"].map((s,i) => <option key={s} value={s}>{ko ? s : ["Donghae Station","Mukho Station","Car"][i]}</option>)}</select></label> :
-        selected && <div className="chips"><button type="button" className="chip" disabled={busy} onClick={() => onEdit("replace",selected.id)}>{ko ? "다른 곳으로 바꾸기" : "Replace stop"}</button>
-          <button type="button" className="chip" disabled={busy} onClick={() => onEdit("remove",selected.id)}>{ko ? "이곳 빼기" : "Remove stop"}</button></div>}
-      {selected && <button type="button" className="chip" onClick={() => { setStep(null); onOverview(); }}>{ko ? "전체 경로" : "Entire route"}</button>}
-    </div>}
+    <div className="map-ctl" role="group" aria-label={ko ? "지도" : "Map"}>
+      <button type="button" aria-pressed={editMap} onClick={() => { onMode("edit"); setStep(null); onOverview(); }}><Icon name="map" />{ko ? "지도 보기" : "Map"}</button>
+      {device === "desktop"
+        ? <button type="button" aria-pressed={!editMap} onClick={() => onMode("official")}><Icon name="route" />{ko ? "길찾기" : "Directions"}</button>
+        : <a href={active.url} target="_blank" rel="noreferrer"><Icon name="route" />{ko ? "길찾기" : "Directions"}</a>}
+    </div>
+    <div className="map-ctl-r">
+      <button type="button" className="map-round" onClick={locate} aria-label={ko ? "현위치 확인" : "My location"} title={ko ? "현위치" : "My location"}><Icon name="navi" /></button>
+      <button type="button" className="map-round" aria-pressed={large} onClick={toggleSize} aria-label={large ? (ko ? "원래 크기" : "Restore size") : (ko ? "지도 크게 보기" : "Expand map")} title={large ? (ko ? "원래 크기" : "Restore size") : (ko ? "지도 크게 보기" : "Expand map")}>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          {large ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /> : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}</svg></button>
+    </div>
+    {locMsg && <p className="map-msg" role="status">{locMsg}</p>}
+    {editMap && selected?.id === "@start" && <div className="map-stop-editor"><label>{ko ? "출발지 변경" : "Change starting point"}<select disabled={busy} value={start} onChange={e => onStart(e.target.value as Conditions["start"])}>
+        {["동해역","묵호역","자가용"].map((s,i) => <option key={s} value={s}>{ko ? s : ["Donghae Station","Mukho Station","Car"][i]}</option>)}</select></label></div>}
     {!editMap && links.length > 1 && <div className="chips">{links.map((link, i) =>
       <button type="button" className="chip" key={link.url} aria-pressed={active === link}
         onClick={() => setPart(i)}>{i + 1}. {link.label}</button>)}</div>}
@@ -101,9 +112,10 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
     {selected && <div className="leg-summary" aria-live="polite">
       <span><small>{ko ? "출발" : "From"}</small> {points[leg].label}</span><b aria-hidden="true">→</b>
       <span><small>{returning ? (ko ? "복귀" : "Return") : (ko ? "도착" : "To")}</small> {selected.label}</span>
-      {minutes != null && <strong>{ko ? `차로 약 ${minutes}분` : `About ${minutes} min by car`}</strong>}
+      {minutes != null && <strong>{ko ? `차로 ${minutes}분` : `${minutes} min by car`}</strong>}
+      <button type="button" className="chip sm" onClick={() => { setStep(null); onOverview(); }}>{ko ? "전체 경로" : "Entire route"}</button>
     </div>}
-    <KakaoMap pins={segmentPins} drivingPath={path} guides={visibleGuides} guidePoint={step && visibleGuides?.includes(step) ? step : null} onGuideSelect={setStep} onPick={pin => { if (pin?.id) { setStep(null); onSelect(pin.id); } }} />
+    <KakaoMap me={me} pins={segmentPins} drivingPath={path} guides={visibleGuides} guidePoint={step && visibleGuides?.includes(step) ? step : null} onGuideSelect={setStep} onPick={pin => { if (pin?.id) { setStep(null); onSelect(pin.id); } }} />
     </>}
     <div className="route-links">
     {editMap && !!course.driving_guides?.length && <details className="course-guidance">

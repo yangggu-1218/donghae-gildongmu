@@ -61,10 +61,10 @@ function StopWeather({ forecast, lang }: { forecast: VisitWeather; lang: string 
 }
 
 // ---------- 시간표 카드 ----------
-export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, children, onMap, onRemove, onReplace, crowd, at, handle, route, lock }: {
+export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, children, onMap, onRemove, crowd, at, handle, route, addr, onSwap, swapOpen }: {
   s: Stop; i: number; x?: Extra; name: string; t: T; lang: string; wheel: boolean; showNear: boolean; isNew: boolean; busy: boolean;
   children?: ReactNode; onMap?: () => void; onRemove: () => void; onReplace?: () => void; crowd?: number | null; at?: { lat: number; lon: number };
-  handle?: ReactNode; route?: string; lock?: ReactNode;
+  handle?: ReactNode; route?: string; addr?: string; onSwap?: () => void; swapOpen?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [eatOpen, setEatOpen] = useState(false);
@@ -82,15 +82,18 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
       <article className="stop-overview" aria-label={`${i + 1}. ${name}`}>
         {handle}
         <div className="stop-identity"><span className="so-n" aria-hidden="true">{i + 1}</span><PlacePhoto id={s.id} lang={lang as "ko" | "en"} small />
-          <div className="so-main"><span>{s.arrive} – {s.depart}</span>
+          <div className="so-main"><span className="so-time">{s.arrive} - {s.depart}</span>
             <h4><button type="button" className="so-title" onClick={() => dialog.current?.showModal()}>{name}</button></h4>
+            {addr && <p className="so-addr"><Icon name="pin" /><span>{addr}</span></p>}
             <div className="tl-badges"><OpenBadge s={s} t={t} /><AccessBadges x={x} t={t} kind={s.kind} />
-              {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}</div></div></div>
+              {s.grade && <span className={`badge g-${s.grade}`}>{t(`grade.${s.grade}`)}</span>}</div></div>
+          <span className="so-chev" aria-hidden="true">›</span></div>
         {s.notice && <p role="note" className="so-note">{s.notice}</p>}
         <div className="stop-actions">
           <button type="button" className="chip sm go" onClick={() => dialog.current?.showModal()}>{lang === "ko" ? "상세" : "Details"}</button>
           {onMap && <button type="button" className="chip sm" onClick={onMap}>{lang === "ko" ? "지도" : "Map"}</button>}
           <button className="chip sm" disabled={busy} onClick={onRemove}>{lang === "ko" ? "빼기" : "Remove"}</button>
+          {onSwap && <button type="button" className="chip sm" disabled={busy} aria-expanded={!!swapOpen} onClick={onSwap}>{lang === "ko" ? "교체하기" : "Swap"}</button>}
         </div>
       </article>
       <dialog className="stop-detail-dialog" ref={dialog} aria-label={name}>

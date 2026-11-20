@@ -661,6 +661,17 @@ def admin_probe(x_admin_token: str | None = Header(None)):
     return bigdata.probe()
 
 
+@app.post("/api/course-name")
+def course_name(body: dict):
+    """코스 이름 (AI). body {ids:[장소 id], move, who, lang}. AI가 없거나 실패하면 {by:'none'} → 화면이 규칙 이름을 쓴다."""
+    ids = [i for i in (body.get("ids") or []) if isinstance(i, str) and i in PLACES][:12]
+    if not ids:
+        return {"by": "none"}
+    t = llm.course_name([{"name": PLACES[i].name_ko, "type": PLACES[i].type, "styles": PLACES[i].styles} for i in ids],
+                        [m for m in (body.get("move") or []) if isinstance(m, str)][:5], str(body.get("who") or "")[:20], str(body.get("lang") or "ko"))
+    return {"by": "ai", "title": t} if t else {"by": "none"}
+
+
 @app.post("/api/brief")
 def brief(body: dict):
     """동이 브리핑 (AI). 화면이 보낸 근거(조건·예보·장소별 판정·붐빔·뺀 곳)로 카드 조각을 만든다. 실패하면 by=none."""

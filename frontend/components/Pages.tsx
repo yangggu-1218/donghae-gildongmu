@@ -84,8 +84,8 @@ function PlaceData({ id, lang }: { id: string; lang: Lang }) {
   // 관광지 상세: '한산한 날' 한 줄만 보이고, 그래프·표·해설·함께 간 곳·근처 이동약자 정보는 접어 둔다 (출처는 맨 아래 '정보 출처')
   return (
     <div className="panel bigdata pp2-days">
-      <h2 className="h3 pp2-h"><Icon name="crowd" />{L("방문하기 좋은 날", "Best days to visit")}</h2>
-      {quiet.length > 0 ? <p className="pp2-line"><b>{L("한산한 날", "Quiet days")}:</b> {quiet.map((q: any) => ymd(q.date)).join(", ")} <small className="muted">{L("(예측)", "(forecast)")}</small></p>
+      <h2 className="h3 pp2-h"><Icon name="crowd" />{L("빅데이터상 방문하기 좋은 날", "Best days to visit (big data)")}</h2>
+      {quiet.length > 0 ? <p className="pp2-line"><b>{L("한산한 날", "Quiet days")}:</b> {quiet.map((q: any) => ymd(q.date)).join(", ")}</p>
         : <p className="muted small">{L("붐빔 예측이 없는 곳이에요.", "No crowd forecast for this place.")}</p>}
       <details className="pp2-more"><summary>{L("붐빔 그래프·해설 듣기·함께 간 곳", "Crowd chart, audio guide, nearby picks")}</summary>
       {crowd.length > 0 && (

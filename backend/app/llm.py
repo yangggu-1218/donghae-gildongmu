@@ -164,6 +164,18 @@ def brief(evidence: dict) -> dict | None:
             "why": {k: str(v)[:40] for k, v in (data.get("why") or {}).items() if k in ids and v}}
 
 
+# ⑥-2 코스 이름: 장소 목록·이동 조건을 보고 짧은 코스 이름 하나 (예: '동해 바다와 함께하는 힐링 코스'). 실패하면 None → 화면이 규칙 이름을 쓴다.
+def course_name(places: list[dict], move: list[str], who: str, lang: str = "ko") -> str | None:
+    system = ("너는 동해시 여행 코스에 이름을 붙인다. 장소 목록과 여행자 조건을 보고 12~20자 한국어 코스 이름 하나를 지어라. "
+              "장소의 성격(바다·숲·동굴·시장·문화 등)이 드러나게, 과장·이모지·따옴표 없이 '코스' 또는 '여행'으로 끝낸다. JSON {\"title\": \"...\"} 만 출력."
+              if lang != "en" else
+              "Name a Donghae travel course. From the places and traveler needs, write one English title of 3-7 words that reflects the places "
+              "(sea, forest, cave, market, culture...). No emoji or quotes. Output only JSON {\"title\": \"...\"}.")
+    data = _ask_json(system, json.dumps({"places": places[:12], "move": move, "who": who}, ensure_ascii=False), "course_name", timeout=12, max_tokens=600)
+    t = str((data or {}).get("title") or "").strip().strip("\"'「」").strip()
+    return t if 4 <= len(t) <= 40 else None
+
+
 # ⑦ 사진으로 물어보기: 사용자가 찍은 입구·길 사진을 그 사람 조건(휠체어·유모차 등) 기준으로 판단해 카드로 돌려준다.
 SEEN = {"계단", "턱", "경사로", "급경사", "좁은 통로", "울퉁불퉁한 바닥", "공사·통제", "자동문", "손잡이", "장애물 없음",
         "stairs", "step", "ramp", "steep slope", "narrow path", "uneven surface", "construction", "automatic door", "handrail", "no obstacles"}

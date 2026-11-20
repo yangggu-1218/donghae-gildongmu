@@ -80,12 +80,13 @@ function groupFacilities(map: any, maps: any, points: any[], markers: any[], nam
 }
 
 // dots: 편의시설 지도용. 색 점 + 글자 하나, 누르면 onPick(i)
-export default function KakaoMap({ pins, overview = false, dots = false, facilityType = "", nearestFirst = false, myPosition, onPick, request, listPreview, label, drivingPath, guides, guidePoint, onGuideSelect, courseFocus }: {
+export default function KakaoMap({ pins, overview = false, dots = false, facilityType = "", nearestFirst = false, myPosition, onPick, request, listPreview, label, drivingPath, guides, guidePoint, onGuideSelect, courseFocus, me }: {
   pins: Pin[]; overview?: boolean; dots?: boolean; onPick?: (pin: Pin | null) => void;
   facilityType?: string; nearestFirst?: boolean; myPosition?: [number, number] | null;
   request?: { pin: Pin } | null; listPreview?: Pin | null; label?: string;
   drivingPath?: [number, number][] | null;
   courseFocus?: Pin; guides?: Guide[]; guidePoint?: Guide | null; onGuideSelect?: (guide: Guide) => void;
+  me?: { lat: number; lon: number; t: number } | null;   // 코스 지도 [현위치]: 내 위치 점을 찍고 가운데로
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || (typeof window !== "undefined" && window.gildongmuKakaoJsKey);
@@ -119,6 +120,17 @@ export default function KakaoMap({ pins, overview = false, dots = false, facilit
     const marker = new maps.CustomOverlay({ map: routeMap, position, content: label, yAnchor: 1.45, zIndex: 6 });
     return () => marker.setMap(null);
   }, [guidePoint, routeMap]);
+  useEffect(() => {
+    if (!routeMap || !me) return;
+    const { maps } = window.kakao;
+    const position = new maps.LatLng(me.lat, me.lon);
+    const dot = document.createElement("div");
+    dot.className = "me-dot";
+    dot.title = document.documentElement.lang === "en" ? "My location" : "현위치";
+    const marker = new maps.CustomOverlay({ map: routeMap, position, content: dot, zIndex: 7 });
+    routeMap.setCenter(position);
+    return () => marker.setMap(null);
+  }, [me, routeMap]);
   useEffect(() => {
     if (!routeMap) return;
     if (!courseFocus) { fitRoute.current?.(); return; }

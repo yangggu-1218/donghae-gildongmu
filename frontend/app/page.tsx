@@ -8,7 +8,7 @@ import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap, { geocode } from "@/components/KakaoMap";
 import { fuzzyHit as fz } from "@/lib/fuzzy";
-import { Hero, HowToStrip, Places, QuickBar, PlanAside, RecCourses, HomePlacesInfo } from "@/components/Sections";
+import { Hero, HowToStrip, Places, QuickBar, PlanAside, RecCourses, HomePlacesInfo, PlacePhoto } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
@@ -26,6 +26,8 @@ import { TripSuggestions } from "@/components/TripSuggestions";
 import { PlanningWait } from "@/components/PlanningWait";
 import { api, getJSON, Conditions, Course, CourseRes, Extra, WxDay, WX_ICON, DAY_GROUPS, tripDays, OptimizeRes } from "@/lib/api";
 import { OptimizeCompare } from "@/components/OptimizeCompare";
+import { CourseHero } from "@/components/CourseHero";
+import { ruleTitle, repPhoto, courseKeywords } from "@/lib/courseTitle";
 import { useDragSort } from "@/lib/useDragSort";
 import { climbText } from "@/lib/terrain";
 
@@ -185,6 +187,10 @@ export default function Page() {
   const [opt, setOpt] = useState<OptimizeRes | null>(null);
   const [optBusy, setOptBusy] = useState(false);
   const [locked, setLocked] = useState<string[]>([]);
+  const [swapFor, setSwapFor] = useState<string | null>(null);   // [교체하기]를 누른 장소 → 바꿀 곳 고르는 칸
+  const [swapQ, setSwapQ] = useState("");
+  const [aiTitle, setAiTitle] = useState<{ key: string; title: string } | null>(null);
+  const [myTitle, setMyTitle] = useState<{ key: string; title: string } | null>(null);   // 내 일정에서 이름을 붙여 연 코스는 그 이름으로   // AI가 붙인 코스 이름 (없으면 규칙 이름)
   const wxText = (w: WxDay) => `${lang === "ko" ? w.ko : w.en} · ${w.pop != null ? `${lang === "ko" ? "비" : "rain"} ${w.pop}%` : `${lang === "ko" ? "강수" : "rain"} ${w.mm}mm`} · ${w.tmin}~${w.tmax}°C`;
   const [toast, setToast] = useState<{ text: string; act?: { label: string; fn: () => void } } | null>(null);
   const toastT = useRef<number>(0);
@@ -231,7 +237,11 @@ export default function Page() {
       const c = m && decodePlan(m[1]);
       if (c) {
         setLang("ko"); setCond(c); setStep(Q.length + 1); setBusy(true);
-        (c.order?.length ? api.reorder(c, c.order) : api.course(c)).then((r) => { applyRes(r); setSumOpen(true); }).catch(() => say({ pose: "worry", text: t("error.server") })).finally(() => setBusy(false));
+        let fromMy = false, myT = ""; try { fromMy = sessionStorage.getItem("gd-open-my") === "1"; myT = sessionStorage.getItem("gd-open-title") || ""; sessionStorage.removeItem("gd-open-my"); sessionStorage.removeItem("gd-open-title"); } catch { /* 무시 */ }
+        (c.order?.length ? api.reorder(c, c.order) : api.course(c)).then((r) => {
+          applyRes(r); if (!fromMy) setSumOpen(true);
+          if (fromMy && myT) setMyTitle({ key: r.course.stops.map((s: any) => s.id).join(",") + "ko", title: myT });
+        }).catch(() => say({ pose: "worry", text: t("error.server") })).finally(() => setBusy(false));
         return;
       }
       setSumOpen(false);
@@ -248,9 +258,11 @@ export default function Page() {
   function saveMine() {
     if (!course) return;
     const hash = encodePlan({ ...cond, lang }, course);
-    const plans = loadPlans().filter((p) => p.hash !== hash);
-    const ok = savePlans([{ id: Math.random().toString(16).slice(2, 10), title: "", date: course.date, start_time: course.start_time, start: startName,
-      stops: course.stops.map((s) => name(s.id)), hash, saved_at: new Date().toISOString() }, ...plans].slice(0, 20));
+    const all = loadPlans(), prev = all.find((p) => p.hash === hash);   // 같은 일정을 다시 저장하면 이름·즐겨찾기는 그대로
+    const plans = all.filter((p) => p.hash !== hash);
+    const ok = savePlans([{ id: prev?.id || Math.random().toString(16).slice(2, 10), title: prev?.title || "", date: course.date, start_time: course.start_time, start: startName,
+      stops: course.stops.map((s) => name(s.id)), hash, saved_at: new Date().toISOString(),
+      ids: course.stops.map((s) => s.id), auto: shownTitle, kw: shownKw, fav: prev?.fav }, ...plans].slice(0, 20));
     setSaved(ok);
   }
   function planDate(d: string) {
@@ -533,6 +545,19 @@ export default function Page() {
       setCourse(prev.course); setRouteErr(ids);
     } finally { setRouting(false); setBusy(false); }
   }
+  // [교체하기]: 고른 장소를 그 자리에 넣는다 (나머지 순서는 그대로, 시각·이동은 다시 계산)
+  async function swapStop(oldId: string, newId: string) {
+    if (!course || busy) return;
+    const before = course.stops.map((s) => s.id);
+    const ids = before.map((x) => (x === oldId ? newId : x));
+    snapshot(); setSwapFor(null); setSwapQ(""); setBusy(true); setRouting(true);
+    try {
+      const r = await api.reorder({ ...cond, lang }, ids);
+      applyRes(r, before);
+      showToast(lang === "ko" ? `${name(oldId)} 자리에 ${name(newId)}을(를) 넣었어요.` : `Replaced ${name(oldId)} with ${name(newId)}.`);
+    } catch { showToast(t("error.server")); }
+    finally { setRouting(false); setBusy(false); }
+  }
   // AI 동선 최적화: 지금 장소 그대로 최적 순서를 계산해 변경 전후를 비교 창으로 보여 준다. [이 일정 적용하기]를 눌러야 바뀐다.
   async function optimize() {
     if (!course || busy || course.stops.length < 2) return;
@@ -761,6 +786,18 @@ export default function Page() {
     );
   };
 
+  const titleKey = course ? course.stops.map((s) => s.id).join(",") + lang : "";
+  useEffect(() => {
+    if (!course?.stops.length) return;
+    let live = true;
+    fetch("/api/course-name", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids: course.stops.map((s) => s.id), move: cond.move, who: cond.who, lang }) })
+      .then((r) => (r.ok ? r.json() : null)).then((j) => { if (live && j?.by === "ai" && j.title) setAiTitle({ key: titleKey, title: j.title }); }).catch(() => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [titleKey]);
+  const shownTitle = course ? (myTitle?.key === titleKey ? myTitle.title : aiTitle?.key === titleKey ? aiTitle.title : ruleTitle(course.stops, places as any, lang)) : "";
+  const shownKw = course ? courseKeywords(course.stops, places as any, extras, cond.move, course.overall, lang) : [];
   // 코스를 만들기 전 오른쪽: 지금까지 고른 조건이 한눈에 채워지는 카드 (예약 사이트의 '선택 요약'처럼)
   // 코스 전: 고른 조건만 한 줄로 (고른 것이 없으면 안 보임)
   const tripLine = () => {
@@ -834,21 +871,24 @@ export default function Page() {
       {/* 코스 찾기: 우리 서비스의 핵심이라 독립 탭으로 (2026-11-21 팀장 요청) */}
       {route[0] === "plan" && <>
       <section id="plan" className="sec wrap plan-page" aria-labelledby="plan-h">
-      <div className="sec-head">
+      {course ? <CourseHero lang={lang} /> : <div className="sec-head">
         <h2 id="plan-h">{t("plan.h")}</h2>
         <p>{t("plan.sub")}{(cond.wish || []).length > 0 && !course ? " " + t("plan.wished", { n: (cond.wish || []).length }) : ""}
 </p>
-      </div>
+      </div>}
       <div className={course ? "planner-shell" : undefined}>
-      {course && <div ref={barRef} className="planner-bar"><h2 tabIndex={-1}>{lang === "ko" ? "내 여행 코스" : "My itinerary"}</h2>
-        <span>{dateLabel(course.date, lang)} · {course.start_time}–{course.back_at} · {course.stops.length}{lang === "ko" ? "곳" : " stops"}</span>
+      {course && <div ref={barRef} className="planner-bar">
+        <div className="pb-info"><h2 tabIndex={-1}><Icon name="pin" />{lang === "ko" ? "내 여행 코스" : "My itinerary"}</h2><i className="pb-sep" aria-hidden="true" />
+          <span><Icon name="cal" />{dateLabel(course.date, lang)} · {course.start_time} - {course.back_at} · {course.stops.length}{lang === "ko" ? "곳" : " stops"}</span></div>
         <button type="button" className="chip planner-tools-toggle" aria-expanded={toolsOpen} onClick={() => setToolsOpen(!toolsOpen)}>{lang === "ko" ? "코스 도구" : "Course tools"}</button>
         <div className="planner-actions" data-open={toolsOpen}>
+          <button className="pb-main" disabled={busy} onClick={() => remake("other")}><Icon name="route" />{lang === "ko" ? "추천 코스 다시 찾기" : "Find another course"}</button>
           <button className="chip opt-btn" disabled={busy || course.stops.length < 2} onClick={optimize} aria-haspopup="dialog">
-            <Icon name="route" />{optBusy ? (lang === "ko" ? "동선 계산 중…" : "Optimizing…") : (lang === "ko" ? "AI 동선 최적화" : "Optimize route")}</button>
+            {optBusy ? (lang === "ko" ? "동선 계산 중…" : "Optimizing…") : (lang === "ko" ? "AI 동선 최적화" : "Optimize route")}</button>
           <button className="chip" onClick={() => { if (!chatOpen) setSmallPane("map"); setChatOpen(!chatOpen); }} aria-controls="chat-panel" aria-expanded={chatOpen}>{lang === "ko" ? "동이와 대화" : "Chat"}</button>
           <button className="chip sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
-          <button className="chip go" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
+          <button className="chip save-btn" onClick={saveMine} aria-live="polite"><Icon name="bookmark" />{saved ? t("my.saved") : t("my.save")}</button>
+          <button className="chip filter-btn" aria-pressed={settingsOpen} onClick={() => { setSettingsOpen(!settingsOpen); setSmallPane("schedule"); }}><Icon name="edit" />{lang === "ko" ? "여행 설정" : "Trip settings"}</button>
         </div>
         <div className="pane-switch" role="group" aria-label={lang === "ko" ? "보기" : "View"}>
           <button className="chip" aria-pressed={smallPane === "map"} onClick={() => setSmallPane("map")}>{lang === "ko" ? "경로 지도" : "Map"}</button>
@@ -987,48 +1027,109 @@ export default function Page() {
                 </div>)}
               {tripDays(cond.days) > 1 && <p className="muted small">{t("day.note")}</p>}
               {dayNo > 1 && !course.stops.some((s) => s.kind === "sight") && <p className="day-free"><Icon name="sea" /> {t("day.free")}</p>}
-              <div className={`course-layout${routing ? " is-routing" : ""}`} data-pane={smallPane} aria-busy={routing}>
+              <div className={`course-layout${routing ? " is-routing" : ""}`} data-pane={smallPane} aria-busy={routing}
+                style={{ ["--map-h" as any]: `${Math.min(780, Math.max(480, 330 + course.stops.length * 110))}px` }}>
                 <section ref={scheduleRef} className="course-schedule" aria-label={lang === "ko" ? "일정 편집" : "Itinerary editor"}>
-                  <div className="workspace-tabs">
-                    <button className="chip" aria-pressed={!settingsOpen} onClick={() => setSettingsOpen(false)}>{lang === "ko" ? "장소별 일정" : "Stops"}</button>
-                    <button className="chip" aria-pressed={settingsOpen} onClick={() => setSettingsOpen(true)}>{lang === "ko" ? "여행 설정" : "Trip settings"}</button>
-                  </div>
                   {settingsOpen ? <TripSettings key={JSON.stringify(cond) + dayNo} conditions={{ ...cond, lang }} busy={busy} t={t}
                     onApply={applySettings} onCancel={() => setSettingsOpen(false)} /> : <>
-                  <h3 className="sr-only">{lang === "ko" ? "장소별 일정" : "Visit schedule"}</h3>
-                  {/* 코스 전체를 한 번에: 장소마다 이동 한 줄 + 짧은 카드 (팀장 요청 2026-11-21, 예전 '이전/다음 장소' 넘김 대신) */}
-                  {routing && <p className="route-busy" role="status"><span className="spin" aria-hidden="true" />{lang === "ko" ? "경로 업데이트 중… 바뀐 순서로 이동시간과 방문 시각을 다시 계산하고 있어요." : "Updating the route…"}</p>}
-                  {routeErr && !routing && <p className="route-err" role="alert">{lang === "ko" ? "경로를 다시 계산하지 못해 원래 순서로 되돌렸어요." : "Couldn't recalculate the route. Your previous order is kept."}
-                    <button className="chip sm go" disabled={busy} onClick={() => reorderTo(routeErr)}>{lang === "ko" ? "다시 시도" : "Retry"}</button>
-                    <button className="chip sm" onClick={() => setRouteErr(null)}>{t("common.close")}</button></p>}
-                  <ol className={`tl tl-all${drag ? " sorting" : ""}`} ref={listRef}>
-                    {course.stops.map((s, i) => (
-                      <li key={s.id} data-course-stop={s.id} data-sort-id={s.id} data-selected={s.id === mapStop} data-dragging={drag?.id === s.id || undefined}
-                        style={drag?.id === s.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
-                        onPointerDown={(e) => dragStart(e, s.id, false)} onDragStart={(e) => e.preventDefault()}
-                        onClick={(e) => { if (wasDrag() || (e.target as HTMLElement).closest("button, a, dialog, summary")) return; if (mapStop === s.id) setMapStop(null); else selectMapStop(s.id); }}>
-                        <StopCard s={s} i={i} route={routePoints.length ? legUrl(i) : undefined}
-                          handle={course.stops.length > 1 ? <button type="button" className="drag-h" disabled={busy}
-                            aria-label={lang === "ko" ? `${i + 1}번 ${name(s.id)} 순서 옮기기` : `Move stop ${i + 1}, ${name(s.id)}`}
-                            onPointerDown={(e) => { e.stopPropagation(); dragStart(e, s.id, true); }} onKeyDown={(e) => dragKey(e, s.id)}><span aria-hidden="true">⋮⋮</span></button> : undefined} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
-                          onMap={routePoints.length ? () => { selectMapStop(s.id); setSmallPane("map"); } : undefined} showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
-                          onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
-                          onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))}
-                          crowd={crowdMap[s.id]?.find((c) => c.date === course.date.replaceAll("-", ""))?.rate ?? null}>
-                          <details className="tl-more"><summary>{lang === "ko" ? "이야기·걷기길·택시 더 보기" : "Stories, trails, taxis"}</summary>
-                            <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} /></details></StopCard>
-                      </li>
-                    ))}
-                    {drag && <li className="drop-line" aria-hidden="true" style={{ top: drag.lineY }} />}
-                  </ol>
                   {(() => {
                     const hm = (x: string) => { const [h, m] = x.split(":").map(Number); return h * 60 + m; };
                     const used = hm(course.back_at) - hm(course.start_time || "10:00");
                     const f = (m: number) => lang === "ko" ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}` : `${Math.floor(m / 60)}h ${m % 60}m`;
+                    const rep = repPhoto(course.stops);
+                    const title = shownTitle, kws = shownKw;
                     return <>
-                      <p className="tl-back"><b>{t("result.back", { s: startName, t: course.back_at })}</b><span className="muted"> · {lang === "ko" ? "총" : "Total"} {f(used)}</span></p>
+                      <div className="rc-head"><h3><Icon name="star" />{lang === "ko" ? "추천 코스" : "Recommended course"}</h3>
+                        <button className="chip sm" disabled={busy} onClick={() => remake("other")}>{lang === "ko" ? "다시 찾기 ›" : "Find again ›"}</button></div>
+                      <div className="rc-card">
+                        {rep && <PlacePhoto id={rep} lang={lang as "ko" | "en"} />}
+                        <div className="rc-main"><b className="rc-title">{title}</b>
+                          <span className="rc-meta"><span><Icon name="time" />{f(used)}</span><span><Icon name="pin" />{course.stops.length}{lang === "ko" ? "곳" : " stops"}</span></span></div>
+                        {kws.length > 0 && <ul className="rc-kw" aria-label={lang === "ko" ? "편의 키워드" : "Convenience"}>{kws.map((k) => <li key={k.text}><Icon name={k.icon} />{k.text}</li>)}</ul>}
+                      </div>
+                      <h4 className="rc-sub">{lang === "ko" ? "여행 일정" : "Itinerary"}</h4>
+                      {routing && <p className="route-busy" role="status"><span className="spin" aria-hidden="true" />{lang === "ko" ? "경로 업데이트 중…" : "Updating the route…"}</p>}
+                      {routeErr && !routing && <p className="route-err" role="alert">{lang === "ko" ? "경로를 다시 계산하지 못해 원래 순서로 되돌렸어요." : "Couldn't recalculate the route. Your previous order is kept."}
+                        <button className="chip sm go" disabled={busy} onClick={() => reorderTo(routeErr)}>{lang === "ko" ? "다시 시도" : "Retry"}</button>
+                        <button className="chip sm" onClick={() => setRouteErr(null)}>{t("common.close")}</button></p>}
+                      <ol className={`tl tl-all${drag ? " sorting" : ""}`} ref={listRef}>
+                        {course.stops.map((s, i) => (
+                          <li key={s.id} data-course-stop={s.id} data-sort-id={s.id} data-selected={s.id === mapStop} data-dragging={drag?.id === s.id || undefined}
+                            style={drag?.id === s.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
+                            onPointerDown={(e) => dragStart(e, s.id, false)} onDragStart={(e) => e.preventDefault()}
+                            onClick={(e) => { if (wasDrag() || (e.target as HTMLElement).closest("button, a, dialog, summary, input, .swap-pane")) return; if (mapStop === s.id) setMapStop(null); else selectMapStop(s.id); }}>
+                            <StopCard s={s} i={i} route={routePoints.length ? legUrl(i) : undefined} addr={(extras[s.id]?.address || places[s.id]?.address || "").replace(/^강원(특별자치도|도)\s*/, "")}
+                              swapOpen={swapFor === s.id} onSwap={() => { setSwapQ(""); setSwapFor(swapFor === s.id ? null : s.id); }}
+                              handle={course.stops.length > 1 ? <button type="button" className="drag-h" disabled={busy}
+                                aria-label={lang === "ko" ? `${i + 1}번 ${name(s.id)} 순서 옮기기` : `Move stop ${i + 1}, ${name(s.id)}`}
+                                onPointerDown={(e) => { e.stopPropagation(); dragStart(e, s.id, true); }} onKeyDown={(e) => dragKey(e, s.id)}><span aria-hidden="true">⋮⋮</span></button> : undefined} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
+                              onMap={routePoints.length ? () => { selectMapStop(s.id); setSmallPane("map"); } : undefined} showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
+                              onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
+                              crowd={crowdMap[s.id]?.find((c) => c.date === course.date.replaceAll("-", ""))?.rate ?? null}>
+                              <details className="tl-more"><summary>{lang === "ko" ? "이야기·걷기길·택시 더 보기" : "Stories, trails, taxis"}</summary>
+                                <StopExtra x={extras[s.id]} wheel={cond.move.includes("휠체어")} t={t} /></details></StopCard>
+                            {swapFor === s.id && (() => {
+                              const me = places[s.id], key = swapQ.trim().replace(/\s+/g, "");
+                              const inC = new Set(course.stops.map((x) => x.id));
+                              const want = s.kind === "lunch" ? "식당" : s.kind === "cafe" ? "카페" : "관광지";
+                              const km = (p: any) => (me?.lat ? Math.hypot(p.lat - me.lat, (p.lon - me.lon) * 0.79) * 111 : 0);
+                              const cands = Object.values(places).filter((p: any) => p.lat && p.type !== "숙박" && !inC.has(p.id))
+                                .filter((p: any) => !key || p.name_ko.replace(/\s+/g, "").includes(key) || fz(p.name_ko, key) >= 0)
+                                .sort((x: any, y: any) => (x.type === want ? 0 : 1) - (y.type === want ? 0 : 1) || km(x) - km(y)).slice(0, 6);
+                              return <div className="swap-pane" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+                                <label><span className="sr-only">{lang === "ko" ? "바꿀 장소 찾기" : "Find a place"}</span>
+                                  <input type="search" autoFocus value={swapQ} onChange={(e) => setSwapQ(e.target.value)} placeholder={lang === "ko" ? `${name(s.id)} 대신 갈 곳` : `Instead of ${name(s.id)}`} /></label>
+                                <ul className="add-list">{cands.map((p: any) => <li key={p.id}><button disabled={busy} onClick={() => swapStop(s.id, p.id)}>
+                                  <b>{lang === "ko" ? p.name_ko : p.name_en || p.name_ko}</b><small>{t(`opt.${p.type}`) !== `opt.${p.type}` ? t(`opt.${p.type}`) : p.type} · {km(p).toFixed(1)}km</small></button></li>)}
+                                  {cands.length === 0 && <li className="muted">{lang === "ko" ? "찾는 곳이 없어요." : "Nothing found."}</li>}</ul>
+                              </div>; })()}
+                          </li>
+                        ))}
+                        {drag && <li className="drop-line" aria-hidden="true" style={{ top: drag.lineY }} />}
+                      </ol>
+                      <div className="tl-end"><span className="tl-end-dot" aria-hidden="true"><Icon name="flag" /></span>
+                        <div className="tl-end-card"><span className="tl-end-ic" aria-hidden="true"><Icon name="train" /></span>
+                          <div><span className="so-time">{course.back_at} {lang === "ko" ? "도착" : "arrive"}</span><b>{startName}</b>
+                            <small className="muted">{lang === "ko" ? `총 ${f(used)}` : `Total ${f(used)}`}</small></div></div></div>
                     </>;
                   })()}
+                  <div className="itinerary-additions">
+                    <div className="add-row" role="group" aria-label={lang === "ko" ? "코스에 더하기" : "Add to the route"}>
+                      <button className="chip" aria-expanded={addOpen === "place"} onClick={() => { setAddOpen(addOpen === "place" ? "" : "place"); setAddQ(""); }}><Icon name="pin" />&nbsp;{lang === "ko" ? "장소 더 추가하기" : "Add a place"}</button>
+                      {stay ? <span className="chip stay-on"><Icon name="bed" />&nbsp;{stay.name}<button className="stay-x" onClick={() => setStay(null)} aria-label={lang === "ko" ? "숙소 빼기" : "Remove stay"}>×</button></span>
+                        : <button className="chip" aria-expanded={addOpen === "stay"} onClick={openStay}><Icon name="bed" />&nbsp;{lang === "ko" ? "숙소 추가하기" : "Add a stay"}</button>}
+                    </div>
+                    {addOpen && (() => {
+                      const key = addQ.trim().replace(/\s+/g, "");
+                      const inCourse = new Set(course.stops.map((s) => s.id));
+                      const cands = addOpen === "place"
+                        ? Object.values(places).filter((p: any) => p.lat && p.type !== "숙박" && !inCourse.has(p.id))
+                            .filter((p: any) => !key || p.name_ko.replace(/\s+/g, "").includes(key) || fz(p.name_ko, key) >= 0).slice(0, 8)
+                        : [...Object.values(places).filter((p: any) => p.type === "숙박" && p.lat).map((p: any) => ({ name: p.name_ko, road: p.address || "", lat: p.lat, lon: p.lon })), ...stays]
+                            .filter((r: any, i: number, all: any[]) => all.findIndex((x: any) => x.name.replace(/\s+/g, "") === r.name.replace(/\s+/g, "")) === i)
+                            .filter((r: any) => !key || `${r.name}${r.road}`.replace(/\s+/g, "").includes(key) || fz(r.name, key) >= 0).slice(0, 8);
+                      return (
+                        <div className="add-pane panel">
+                          <label><span className="sr-only">{addOpen === "place" ? (lang === "ko" ? "넣을 장소 찾기" : "Find a place") : (lang === "ko" ? "숙소 찾기" : "Find your stay")}</span>
+                            <input type="search" autoFocus value={addQ} onChange={(e) => setAddQ(e.target.value)}
+                              placeholder={addOpen === "place" ? (lang === "ko" ? "넣을 장소 이름 (예: 논골담길, 카페)" : "Place name") : (lang === "ko" ? "숙소 이름이나 주소 (예: 망상, 호텔)" : "Stay name or address")} /></label>
+                          <ul className="add-list">
+                            {cands.map((p: any) => addOpen === "place"
+                              ? <li key={p.id}><button disabled={busy} onClick={() => { setAddOpen(""); edit("add", p.id, lang === "ko" ? `${p.name_ko} 넣어 줘` : `Add ${p.name_en || p.name_ko}`); }}>
+                                  <b>{lang === "ko" ? p.name_ko : p.name_en || p.name_ko}</b><small>{t(`opt.${p.type}`) !== `opt.${p.type}` ? t(`opt.${p.type}`) : p.type}</small></button></li>
+                              : <li key={p.name + p.road}><button onClick={() => pickStay(p)}><b>{p.name}</b><small>{(p.road || "").replace("강원특별자치도 ", "")}</small></button></li>)}
+                            {cands.length === 0 && <li className="muted">{lang === "ko" ? "찾는 곳이 없어요. 이름을 조금 다르게 적어 보세요." : "Nothing found. Try another name."}</li>}
+                          </ul>
+                          {addOpen === "place" && <p className="muted small">{lang === "ko" ? "고르면 영업시간과 순서를 다시 맞춰서 넣어 드려요." : "We'll fit it in with opening hours and order."}</p>}
+                          {addOpen === "stay" && <p className="muted small" role="status">{stayMsg || (lang === "ko" ? "숙소는 코스의 마지막 도착지로 지도와 길찾기에 붙어요. 동해시 숙박 공공데이터예요." : "Your stay becomes the last stop on the map and directions.")}</p>}
+                        </div>);
+                    })()}
+                    {stay && stayMin != null && <p className="muted">{lang === "ko" ? `마지막 장소에서 숙소까지 차로 약 ${stayMin}분 (추정)` : `Last stop to lodging: about ${stayMin} min by car (estimate)`}</p>}
+                    {stay && kakaoRoute && <a className="chip" href={kakaoRoute} target="_blank" rel="noreferrer">{lang === "ko" ? "숙소까지 카카오 길찾기" : "Directions to lodging"}</a>}
+                  </div>
+                  <p className="rc-info"><Icon name="info" /><span>{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
+                    : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</span>
+                    <button className="link-btn" onClick={startOver} disabled={busy}>{lang === "ko" ? "처음부터 새로 짜기" : "Start over"}</button></p>
                   <RouteCosts course={course} lang={lang} />
                   </>}
                 </section>
@@ -1042,50 +1143,6 @@ export default function Page() {
                     onEdit={(action, id) => edit(action, id, t(action === "remove" ? "edit.removeSay" : "edit.replaceSay",
                       { n: course.stops.findIndex((s) => s.id === id) + 1, p: name(id) }))} />
                     : <KakaoMap pins={pins} />}
-                </div>
-              </div>
-              <div className="itinerary-additions">
-                <div className="add-row" role="group" aria-label={lang === "ko" ? "코스에 더하기" : "Add to the route"}>
-                  <button className="chip" aria-expanded={addOpen === "place"} onClick={() => { setAddOpen(addOpen === "place" ? "" : "place"); setAddQ(""); }}><Icon name="pin" />&nbsp;{lang === "ko" ? "장소 더 넣기" : "Add a place"}</button>
-                  {stay ? <span className="chip stay-on"><Icon name="bed" />&nbsp;{stay.name}<button className="stay-x" onClick={() => setStay(null)} aria-label={lang === "ko" ? "숙소 빼기" : "Remove stay"}>×</button></span>
-                    : <button className="chip" aria-expanded={addOpen === "stay"} onClick={openStay}><Icon name="bed" />&nbsp;{lang === "ko" ? "내 숙소 넣기" : "Add my stay"}</button>}
-                </div>
-                {addOpen && (() => {
-                  const key = addQ.trim().replace(/\s+/g, "");
-                  const inCourse = new Set(course.stops.map((s) => s.id));
-                  const cands = addOpen === "place"
-                    ? Object.values(places).filter((p: any) => p.lat && p.type !== "숙박" && !inCourse.has(p.id))
-                        .filter((p: any) => !key || p.name_ko.replace(/\s+/g, "").includes(key) || fz(p.name_ko, key) >= 0).slice(0, 8)
-                    : [...Object.values(places).filter((p: any) => p.type === "숙박" && p.lat).map((p: any) => ({ name: p.name_ko, road: p.address || "", lat: p.lat, lon: p.lon })), ...stays]
-                        .filter((r: any, i: number, all: any[]) => all.findIndex((x: any) => x.name.replace(/\s+/g, "") === r.name.replace(/\s+/g, "")) === i)
-                        .filter((r: any) => !key || `${r.name}${r.road}`.replace(/\s+/g, "").includes(key) || fz(r.name, key) >= 0).slice(0, 8);
-                  return (
-                    <div className="add-pane panel">
-                      <label><span className="sr-only">{addOpen === "place" ? (lang === "ko" ? "넣을 장소 찾기" : "Find a place") : (lang === "ko" ? "숙소 찾기" : "Find your stay")}</span>
-                        <input type="search" autoFocus value={addQ} onChange={(e) => setAddQ(e.target.value)}
-                          placeholder={addOpen === "place" ? (lang === "ko" ? "넣을 장소 이름 (예: 논골담길, 카페)" : "Place name") : (lang === "ko" ? "숙소 이름이나 주소 (예: 망상, 호텔)" : "Stay name or address")} /></label>
-                      <ul className="add-list">
-                        {cands.map((p: any) => addOpen === "place"
-                          ? <li key={p.id}><button disabled={busy} onClick={() => { setAddOpen(""); edit("add", p.id, lang === "ko" ? `${p.name_ko} 넣어 줘` : `Add ${p.name_en || p.name_ko}`); }}>
-                              <b>{lang === "ko" ? p.name_ko : p.name_en || p.name_ko}</b><small>{t(`opt.${p.type}`) !== `opt.${p.type}` ? t(`opt.${p.type}`) : p.type}</small></button></li>
-                          : <li key={p.name + p.road}><button onClick={() => pickStay(p)}><b>{p.name}</b><small>{(p.road || "").replace("강원특별자치도 ", "")}</small></button></li>)}
-                        {cands.length === 0 && <li className="muted">{lang === "ko" ? "찾는 곳이 없어요. 이름을 조금 다르게 적어 보세요." : "Nothing found. Try another name."}</li>}
-                      </ul>
-                      {addOpen === "place" && <p className="muted small">{lang === "ko" ? "고르면 영업시간과 순서를 다시 맞춰서 넣어 드려요." : "We'll fit it in with opening hours and order."}</p>}
-                      {addOpen === "stay" && <p className="muted small" role="status">{stayMsg || (lang === "ko" ? "숙소는 코스의 마지막 도착지로 지도와 길찾기에 붙어요. 동해시 숙박 공공데이터예요." : "Your stay becomes the last stop on the map and directions.")}</p>}
-                    </div>);
-                })()}
-                {stay && stayMin != null && <p className="muted">{lang === "ko" ? `마지막 장소에서 숙소까지 차로 약 ${stayMin}분 (추정)` : `Last stop to lodging: about ${stayMin} min by car (estimate)`}</p>}
-                {stay && kakaoRoute && <a className="chip" href={kakaoRoute} target="_blank" rel="noreferrer">{lang === "ko" ? "숙소까지 카카오 길찾기" : "Directions to lodging"}</a>}
-              </div>
-              <div className="tl-head">
-                <div>
-                  <p className="tl-date">{t("tl.head", { d: dateLabel(course.date, lang), w: wdName(course.weekday, lang), s: course.start_time })} · {startName}</p>
-                  <p className="muted">{!course.overall ? t("result.noMode") : course.overall === "G" ? t("result.allOk")
-                    : t("result.caution", { n: course.stops.filter((s) => s.grade && s.grade !== "G").length })}</p>
-                </div>
-                <div className="chips">
-                  <button className="chip" onClick={startOver} disabled={busy}>{lang === "ko" ? "처음부터 새로 짜기" : "Start over"}</button>
                 </div>
               </div>
               {course.skipped.length > 0 && (

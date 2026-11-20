@@ -116,8 +116,10 @@ function ClusterDetail({ c, d, tok, call, can, reload, onBack }: Any) {
         <span className={`via ${c.sum_by === "ai" || c.by === "ai" ? "via-llm" : "via-rule"} ca2-by`}>{c.edited ? "담당자 수정" : c.sum_by === "ai" || c.by === "ai" ? "AI 요약" : "규칙 정리"}</span>
         {c.privacy && <span className="ca2-priv" title="사진에 얼굴·번호판이 보일 수 있어요 (공개 금지)"><Picto name="warn" size={18} label="개인정보 포함" />공개 금지 사진</span>}
       </header>
-      <p className="ca2-sum">{c.summary}</p>
-      {c.action && <p className="ca2-do"><b>할 일</b>{c.action}</p>}
+      <div className="ca2-ai" aria-label={c.sum_by === "ai" || c.by === "ai" ? "AI 요약" : "요약"}>
+        <p className="ca2-sum"><b>요약</b><span>{c.summary}</span></p>
+        {c.action && <p className="ca2-do"><b>할 일</b><span>{c.action}</span></p>}
+      </div>
       <div className="ca2-loc">
         <Icon name="pin" /><span><b>위치</b> {where || "지도 위치만 있음"}</span>
         {c.lat && <span className="ca2-links"><a href={`https://map.kakao.com/link/map/${encodeURIComponent(c.title)},${c.lat},${c.lon}`} target="_blank" rel="noreferrer">지도 보기 ↗</a><a href={`https://map.kakao.com/link/roadview/${c.lat},${c.lon}`} target="_blank" rel="noreferrer">로드뷰 ↗</a></span>}

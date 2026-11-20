@@ -3497,3 +3497,246 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
 .map-chat-host > .panel.chat .chat-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 @media (min-width: 901px) { .planner-shell .course-layout > .res-map > .map-chat-host { left: 18px; } }
 @media (max-width: 900px) { .planner-shell .res-map:has(.map-chat-host > .panel.chat) { min-height: min(78dvh, 680px); } }
+
+/* ===== 코스 추천 결과 새 디자인 (2026-11-21 레퍼런스 반영) ===== */
+/* 배너: 왼쪽 문구, 오른쪽 동해 관광지 사진 + 동이 */
+.course-hero { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 200px; margin: 0 0 18px; padding: 28px 40px;
+  border-radius: 24px; overflow: hidden; color: #12355E;
+  background: linear-gradient(90deg, #E9F2FD 0%, #E9F2FD 34%, rgba(233,242,253,.82) 46%, rgba(233,242,253,0) 66%), var(--ch-photo, none) right 40% / cover no-repeat, #DCEBFA;
+  box-shadow: 0 14px 34px -24px rgba(18, 53, 94, .55); }
+.ch-text { position: relative; z-index: 1; max-width: 560px; }
+.ch-text h2 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 400; font-size: clamp(28px, 3.1vw, 46px); line-height: 1.14; color: #12355E; letter-spacing: -.01em; }
+.ch-text p { margin: 0; font-size: 1.05em; color: #33496A; font-weight: 600; }
+.ch-art { position: relative; z-index: 1; align-self: flex-end; margin: -10px 0 -30px; }
+.ch-dongi { display: block; height: 196px; width: auto; filter: drop-shadow(0 10px 16px rgba(12, 35, 64, .35)); }
+@media (max-width: 760px) {
+  .course-hero { min-height: 140px; padding: 18px 18px; border-radius: 18px;
+    background: linear-gradient(90deg, #E9F2FD 0%, rgba(233,242,253,.9) 52%, rgba(233,242,253,.15) 80%), var(--ch-photo, none) right 40% / cover no-repeat, #DCEBFA; }
+  .ch-text h2 { font-size: 24px; }
+  .ch-text p { font-size: .88em; }
+  .ch-dongi { height: 118px; }
+  .ch-art { margin: -6px -4px -18px 0; }
+}
+
+/* 버튼 줄: 카드 밖에 알약 모양으로 */
+.planner-shell { border: 0 !important; background: transparent !important; border-radius: 0 !important; }
+.planner-shell .planner-bar { background: transparent; border: 0; border-radius: 0; padding: 0 0 16px; gap: 10px 14px; }
+.pb-info { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; min-height: 52px; padding: 6px 22px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
+  box-shadow: 0 6px 18px -14px rgba(18, 53, 94, .5); font-variant-numeric: tabular-nums; }
+.pb-info h2 { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 1.05em; color: var(--sea-deep); }
+.pb-info .ic { width: 20px; height: 20px; color: var(--sea); }
+.pb-info > span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.pb-sep { width: 1px; height: 22px; background: var(--line); }
+.planner-shell .planner-actions { gap: 8px; align-items: center; }
+.planner-shell .planner-actions .chip { min-height: 48px; padding: 0 18px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); font-weight: 700; color: var(--ink); box-shadow: 0 6px 16px -14px rgba(18,53,94,.5); }
+.planner-shell .planner-actions .chip .ic { width: 18px; height: 18px; margin-right: 4px; }
+.planner-shell .planner-actions .chip:hover { border-color: var(--sea); color: var(--sea-deep); }
+.pb-main { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 26px; border: 0; border-radius: 999px; background: var(--sea); color: #fff; font: inherit; font-weight: 800; cursor: pointer;
+  box-shadow: 0 10px 22px -12px rgba(36, 98, 180, .8); }
+.pb-main:hover { background: var(--sea-deep); }
+.pb-main:disabled { opacity: .55; cursor: default; }
+.pb-main .ic { width: 20px; height: 20px; }
+.planner-shell .planner-actions .chip.save-btn { background: var(--glow); border-color: var(--sun); color: var(--sun-deep); }
+.planner-shell .planner-actions .chip.save-btn:hover { background: var(--sun); color: #3A1F00; }
+.planner-shell .planner-actions .chip.filter-btn[aria-pressed="true"] { background: var(--sea-soft); border-color: var(--sea); color: var(--sea-deep); }
+
+/* 두 카드: 왼쪽 일정 | 오른쪽 지도 (지도 높이는 장소 수에 맞춘 고정값) */
+.planner-shell .course-layout { height: auto !important; min-height: 0 !important; gap: 24px !important; align-items: start !important; }
+@media (min-width: 901px) { .planner-shell .course-layout { grid-template-columns: minmax(400px, 1fr) minmax(0, 1fr) !important; } }
+.planner-shell .course-layout > .course-schedule { padding: 22px 22px 18px !important; border: 1px solid var(--line) !important; border-radius: 22px; background: var(--surface);
+  box-shadow: 0 16px 40px -30px rgba(18, 53, 94, .55); max-height: none; overflow: visible; }
+.planner-shell .course-layout > .res-map { height: var(--map-h, 560px) !important; min-height: 0; padding: 0 !important; border: 1px solid var(--line) !important; border-radius: 22px; overflow: hidden;
+  background: var(--surface); box-shadow: 0 16px 40px -30px rgba(18, 53, 94, .55); }
+@media (min-width: 901px) { .planner-shell .course-layout > .res-map { position: sticky; top: calc(var(--hdr, 64px) + 12px); } .planner-shell .course-layout > .res-map > .map-chat-host { left: 0; } }
+@media (max-width: 900px) { .planner-shell .course-layout > .res-map { height: clamp(420px, var(--map-h, 560px), 640px) !important; } }
+.res-map .route-view { position: relative; flex: 1 1 auto; height: 100%; gap: 0; }
+.res-map .route-view .map, .res-map .route-view .course-route-frame { flex: 1 1 0%; height: 0; min-height: 200px; border: 0; border-radius: 0; }
+.res-map .route-caption { display: none; }
+.res-map .route-links { padding: 0 12px; }
+.res-map .route-links:empty { display: none; }
+/* 지도 안 버튼 */
+.map-ctl { position: absolute; z-index: 5; top: 14px; left: 14px; display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px; background: var(--surface); box-shadow: 0 8px 22px -10px rgba(12, 35, 64, .5); }
+.map-ctl > :is(button, a) { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.map-ctl > :is(button, a) .ic { width: 18px; height: 18px; }
+.map-ctl > button[aria-pressed="true"] { background: var(--sea); color: #fff; }
+.map-ctl-r { position: absolute; z-index: 5; top: 14px; right: 14px; display: grid; gap: 8px; }
+.map-round { width: 48px; height: 48px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--surface); color: var(--sea); cursor: pointer; box-shadow: 0 8px 22px -10px rgba(12, 35, 64, .5); }
+.map-round .ic { width: 22px; height: 22px; }
+.map-round:hover { color: var(--sea-deep); background: var(--sea-soft); }
+.map-msg { position: absolute; z-index: 5; top: 70px; left: 14px; margin: 0; padding: 8px 14px; border-radius: 999px; background: var(--surface); font-weight: 700; font-size: .9em; box-shadow: 0 8px 22px -10px rgba(12, 35, 64, .5); }
+.res-map .map-stop-editor { position: absolute; z-index: 5; top: 70px; left: 14px; padding: 10px 12px; border-radius: 14px; background: var(--surface); box-shadow: 0 8px 22px -10px rgba(12, 35, 64, .5); }
+.res-map .leg-summary { position: absolute; z-index: 5; left: 14px; right: 14px; bottom: 14px; margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 14px; border-radius: 14px; background: var(--surface); box-shadow: 0 8px 22px -10px rgba(12, 35, 64, .5); }
+.res-map .leg-summary .chip { margin-left: auto; }
+
+/* 추천 코스 카드 */
+.rc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
+.rc-head h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 1.35em; color: var(--ink); }
+.rc-head h3 .ic { width: 26px; height: 26px; color: var(--sun); }
+.rc-card { display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; align-items: center; gap: 12px 16px; padding: 10px 14px 10px 10px; border-radius: 18px; background: var(--mist); border: 1px solid var(--line); }
+.rc-card .ph { width: 140px; height: 100px; margin: 0; border-radius: 12px; overflow: hidden; }
+.rc-card .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rc-main { display: grid; gap: 6px; min-width: 0; }
+.rc-title { font-size: 1.22em; color: var(--sea-deep); line-height: 1.3; }
+.rc-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-weight: 600; }
+.rc-meta > span { display: inline-flex; align-items: center; gap: 4px; }
+.rc-meta .ic { width: 18px; height: 18px; }
+.rc-kw { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rc-kw li { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: var(--surface); color: var(--sea-deep); font-size: .82em; font-weight: 700; white-space: nowrap; border: 1px solid var(--line); }
+.rc-kw .ic { width: 16px; height: 16px; color: var(--sea); }
+.rc-sub { margin: 20px 0 12px; padding-left: 10px; border-left: 4px solid var(--sea); font-size: 1.1em; color: var(--ink); }
+@media (max-width: 1180px) and (min-width: 901px), (max-width: 600px) {
+  .rc-card { grid-template-columns: 108px minmax(0, 1fr); }
+  .rc-card .ph { width: 108px; height: 80px; }
+  .rc-kw { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+}
+
+/* 일정 타임라인 카드 */
+.course-schedule .tl-all { gap: 12px !important; }
+.course-schedule .tl-all > li { position: relative; padding-left: 44px; cursor: pointer; }
+.course-schedule .tl-all > li:not(.drop-line)::before { content: ""; position: absolute; left: 14px; top: 0; bottom: -12px; width: 2px; background: repeating-linear-gradient(var(--sea) 0 4px, transparent 4px 9px); opacity: .45; }
+.course-schedule .tl-all .stop-overview { position: relative; padding: 12px 14px 12px 34px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 8px 20px -18px rgba(18, 53, 94, .6); transition: border-color .15s, box-shadow .15s; }
+.course-schedule .tl-all > li:hover .stop-overview { border-color: var(--sea); }
+.course-schedule .tl-all > li[data-selected="true"] .stop-overview { border-color: var(--sea); box-shadow: 0 0 0 3px var(--sea-soft), 0 12px 26px -18px rgba(18, 53, 94, .6); }
+.course-schedule .tl-all .so-n { position: absolute; left: -44px; top: 14px; width: 30px; height: 30px; margin: 0; background: var(--sea); color: #fff; font-size: .95em; box-shadow: 0 0 0 4px var(--surface); z-index: 1; }
+.course-schedule .tl-all .stop-identity { align-items: center; gap: 14px; }
+.course-schedule .tl-all .stop-identity .ph-s { width: 78px; height: 78px; border-radius: 12px; overflow: hidden; }
+.course-schedule .tl-all .so-main { gap: 3px; }
+.course-schedule .so-time { color: var(--sea-deep); font-weight: 700; font-size: .92em; font-variant-numeric: tabular-nums; }
+.course-schedule .tl-all .stop-identity h4 { font-size: 1.15em; margin: 0; }
+.so-addr { display: flex; align-items: center; gap: 4px; margin: 0; color: var(--muted); font-size: .86em; min-width: 0; }
+.so-addr .ic { width: 15px; height: 15px; flex: none; }
+.so-addr span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.so-chev { margin-left: auto; align-self: center; flex: none; font-size: 28px; line-height: 1; color: var(--muted); transition: transform .2s; }
+.course-schedule .tl-all > li[data-selected="true"] .so-chev { transform: rotate(90deg); color: var(--sea); }
+.course-schedule .tl-all .stop-actions { margin: 10px 0 0 92px; gap: 6px; }
+.course-schedule .tl-all .tl-badges { gap: 4px; }
+.course-schedule .tl-all .tl-badges .badge { font-size: .78em; padding: 2px 9px; }
+@media (max-width: 600px) {
+  .course-schedule .tl-all > li { padding-left: 36px; }
+  .course-schedule .tl-all > li:not(.drop-line)::before { left: 11px; }
+  .course-schedule .tl-all .so-n { left: -36px; width: 26px; height: 26px; }
+  .course-schedule .tl-all .stop-identity .ph-s { width: 62px; height: 62px; }
+  .course-schedule .tl-all .stop-actions { margin-left: 0; }
+}
+/* 교체하기: 바꿀 곳 고르기 */
+.swap-pane { margin: 8px 0 0; padding: 10px; border-radius: 14px; border: 1.5px solid var(--sea); background: var(--sea-soft); cursor: default; }
+.swap-pane input { width: 100%; min-height: 44px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line-strong); font: inherit; background: var(--surface); color: var(--ink); box-sizing: border-box; }
+.swap-pane .add-list { margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; max-height: 280px; overflow: auto; }
+.swap-pane .add-list button { min-height: 44px; padding: 6px 10px; }
+/* 최종 도착 카드 */
+.tl-end { position: relative; padding-left: 44px; margin-top: 12px; }
+.tl-end-dot { position: absolute; left: 0; top: 18px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--sea-deep); color: #fff; box-shadow: 0 0 0 4px var(--surface); }
+.tl-end-dot .ic { width: 16px; height: 16px; }
+.tl-end-card { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; border: 1px dashed var(--sea); background: var(--sea-soft); }
+.tl-end-card > div { display: grid; gap: 2px; }
+.tl-end-card b { font-size: 1.1em; }
+.tl-end-ic { width: 62px; height: 62px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--surface); color: var(--sea); }
+.tl-end-ic .ic { width: 30px; height: 30px; }
+@media (max-width: 600px) { .tl-end { padding-left: 36px; } .tl-end-ic { width: 50px; height: 50px; } }
+/* 장소·숙소 추가하기, 아래 안내 */
+.course-schedule .itinerary-additions { margin: 16px 0 0; }
+.course-schedule .add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.course-schedule .add-row > .chip { justify-content: center; min-height: 48px; border-radius: 14px; border: 1.5px dashed var(--sea); background: var(--surface); color: var(--sea-deep); font-weight: 700; }
+.course-schedule .add-row > .chip[aria-expanded="true"] { background: var(--sea-soft); border-style: solid; }
+.rc-info { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 16px 0 0; padding: 12px 16px; border-radius: 14px; background: var(--sea-soft); color: var(--sea-deep); font-weight: 600; }
+.rc-info .ic { width: 20px; height: 20px; flex: none; }
+.rc-info .link-btn { margin-left: auto; font-weight: 700; }
+.rc-card .ph { position: relative; inset: auto; }
+.course-hero { background-size: 100% 100%, 68% auto, auto; background-position: 0 0, right 72%, 0 0; }
+@media (max-width: 760px) { .course-hero { background-size: 100% 100%, cover, auto; background-position: 0 0, 70% 70%, 0 0; } }
+@media (min-width: 901px) { .planner-shell .planner-actions .chip { padding: 0 14px; min-height: 46px; } .pb-main { padding: 0 20px; min-height: 48px; } .pb-info { min-height: 48px; } }
+
+/* ===== 내 일정 새 디자인 (2026-11-21 레퍼런스 반영) ===== */
+.my-page .course-hero { margin-bottom: 22px; }
+.my-page .my-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 8px; }
+.my-page .my-search { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 0 14px; min-height: 46px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.my-page .my-search .ic { width: 18px; height: 18px; color: var(--muted); }
+.my-page .my-search input { border: 0; outline: 0; background: transparent; font: inherit; color: var(--ink); min-width: 200px; }
+.my-page .my-gh { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; font-size: 1.4em; color: var(--ink); }
+.my-count { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 999px; background: var(--sea-soft); color: var(--sea-deep); font-size: .62em; font-weight: 800; }
+.my-page .my-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) !important; gap: 14px; }
+.trip2 { position: relative; display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; align-items: center; gap: 14px 22px; padding: 14px 18px 14px 14px;
+  border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: 0 14px 34px -28px rgba(18, 53, 94, .55); transition: border-color .15s, box-shadow .15s; }
+.trip2:hover { border-color: var(--sea); box-shadow: 0 0 0 3px var(--sea-soft), 0 14px 34px -28px rgba(18, 53, 94, .55); }
+.trip2.is-fav { border-color: var(--sun); }
+.trip2-photo { all: unset; display: block; width: 220px; height: 136px; border-radius: 14px; overflow: hidden; cursor: pointer; background: var(--mist); }
+.trip2-photo .ph { position: relative; inset: auto; width: 100%; height: 100%; margin: 0; }
+.trip2-photo .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.trip2-noph { display: grid; place-items: center; width: 100%; height: 100%; color: var(--sea); }
+.trip2-noph .ic { width: 40px; height: 40px; }
+.trip2-main { display: grid; gap: 8px; min-width: 0; padding-right: 70px; }
+.trip2-title { margin: 0; font-size: 1.25em; line-height: 1.3; }
+.trip2-title button { all: unset; cursor: pointer; color: var(--ink); font-weight: 800; }
+.trip2-title button:hover, .trip2-title button:focus-visible { color: var(--sea-deep); text-decoration: underline; }
+.trip2-when { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.trip2-when .ic { width: 18px; height: 18px; color: var(--sea); }
+.trip2-when .dday { margin-left: 4px; }
+.trip2-kw { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.trip2-kw li { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: var(--mist); color: var(--sea-deep); font-size: .85em; font-weight: 700; }
+.trip2-kw .ic { width: 16px; height: 16px; color: var(--sea); }
+.trip2-act { display: grid; gap: 8px; justify-items: stretch; align-self: end; }
+.trip2-go { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 22px; border: 1.5px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--sea-deep); font: inherit; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.trip2-go span { font-size: 1.4em; line-height: 1; }
+.trip2-go:hover { border-color: var(--sea); background: var(--sea); color: #fff; }
+.trip2-share { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--glow); color: var(--sun-deep); font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.trip2-share .ic { width: 17px; height: 17px; }
+.trip2-share:hover { background: var(--sun); color: #3A1F00; }
+.trip2-tools { position: absolute; top: 12px; right: 14px; display: flex; gap: 4px; }
+.trip2-ic { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.trip2-ic:hover, .trip2-ic[aria-expanded="true"] { background: var(--mist); color: var(--sea-deep); }
+.trip2-ic .ic { width: 22px; height: 22px; }
+.trip2-ic .star-on { color: var(--sun); fill: var(--sun); }
+.trip2-menu { position: absolute; top: 44px; right: 0; z-index: 20; min-width: 168px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 18px 40px -16px rgba(12, 35, 64, .45); display: grid; gap: 2px; }
+.trip2-menu > button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.trip2-menu > button:hover { background: var(--mist); }
+.trip2-menu > button.danger { color: var(--stop); }
+.trip2-menu .ic { width: 18px; height: 18px; }
+.trip2-sure { padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.trip2-sure p { margin: 0 0 4px; width: 100%; font-weight: 700; }
+.trip2 .trip-name { display: flex; flex-wrap: wrap; gap: 6px; }
+.trip2 .trip-name input { flex: 1 1 180px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.my-outro { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 30px 0 0; padding: 26px 36px; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(120deg, #E3EEFC 0%, #D3E4FA 60%, #C4DAF6 100%); color: #12355E; }
+.my-outro p { margin: 0; font-family: var(--f-display); font-size: clamp(20px, 2.2vw, 30px); line-height: 1.35; }
+.my-outro p b { font-weight: 400; color: var(--sea); }
+.my-outro img { height: 150px; width: auto; margin: -20px 0 -30px; filter: drop-shadow(0 8px 14px rgba(12, 35, 64, .3)); }
+@media (max-width: 900px) {
+  .trip2 { grid-template-columns: 150px minmax(0, 1fr); }
+  .trip2-photo { width: 150px; height: 110px; }
+  .trip2-act { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .trip2 { grid-template-columns: 96px minmax(0, 1fr); gap: 10px 12px; padding: 12px; border-radius: 16px; }
+  .trip2-photo { width: 96px; height: 96px; border-radius: 12px; }
+  .trip2-main { padding-right: 76px; gap: 6px; }
+  .trip2-title { font-size: 1.05em; }
+  .trip2-kw li { font-size: .78em; padding: 4px 9px; }
+  .trip2-tools { top: 8px; right: 8px; }
+  .my-page .my-search { margin-left: 0; width: 100%; }
+  .my-page .my-search input { min-width: 0; width: 100%; }
+  .my-outro { padding: 18px; }
+  .my-outro img { height: 104px; }
+}
+.my-page .my-list > li.trip2 { display: grid; justify-content: initial; flex-wrap: initial; }
+.my-page .my-list .trip2-kw li { display: inline-flex; justify-content: initial; }
+.my-page .trip2-main { padding-right: 0; }
+.my-page .trip2-title { padding-right: 88px; }
+.my-page .trip2-kw { flex-direction: row; }
+.my-page .my-list .trip2-kw li { width: auto; flex: 0 0 auto; margin: 0; }
+@media (max-width: 600px) {
+  .my-page .trip2 { align-items: start; }
+  .my-page .trip2-title { padding-right: 80px; }
+  .my-page .trip2-when { font-size: .86em; gap: 4px; }
+  .my-page .trip2-kw { grid-column: 1 / -1; }
+  .my-page .trip2-main { display: contents; }
+  .my-page .trip2-main > .trip2-title, .my-page .trip2-main > .trip-name { grid-column: 2; }
+  .my-page .trip2-main > .trip2-when { grid-column: 2; }
+  .my-page .trip2-main > .trip2-kw { grid-column: 1 / -1; }
+  .my-page .trip2-photo { grid-row: 1 / span 2; }
+}
+/* 제보 묶음: AI 요약·할 일을 한 상자에 */
+.ca2-ai { display: grid; gap: 8px; margin: 10px 0 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--mist); }
+.ca2-ai p { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); gap: 10px; margin: 0; line-height: 1.55; }
+.ca2-ai b { color: var(--sea-deep); font-weight: 800; }
+.ca2-ai .ca2-sum { font-weight: 600; font-size: 1em; }
+.ca2-ai .ca2-do { padding-top: 8px; border-top: 1px dashed var(--line); }
