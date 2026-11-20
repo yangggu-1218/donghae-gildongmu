@@ -6,7 +6,7 @@ import { PHOTOS, photoAt } from "@/lib/photos";
 import { MicButton } from "@/components/Voice";
 import { tr } from "@/lib/ko2en";
 import { fuzzyHit } from "@/lib/fuzzy";
-import { Icon } from "@/components/Icon";
+import { Icon, Solid } from "@/components/Icon";
 import { AccessBadges, ACCESS_CATS, AccIcon } from "@/components/AccessBadges";
 
 // 사진 출처는 사진 위에 쓰지 않고 따로 모아 보여 준다 (lib/photos.ts 에 저작자·라이선스 보관)
@@ -127,7 +127,7 @@ export function QuickBar({ lang }: { lang: Lang }) {
   ];
   return (
     <nav className="quickbar wrap" aria-label={L("바로가기", "Shortcuts")}>
-      <ul>{rows.map(([h, ic, ko, en, c]) => <li key={h}><a href={h}><img className="qb-3d" src={`/icons3d/${ic}.webp`} alt="" width="30" height="30" />{L(ko, en)}</a></li>)}</ul>
+      <ul>{rows.map(([h, ic, ko, en, c]) => <li key={h}><a href={h}><Solid name={ic === "map" ? "pin" : ic} size={30} className="qb-ic" />{L(ko, en)}</a></li>)}</ul>
     </nav>
   );
 }
@@ -325,15 +325,13 @@ export function HomePlacesInfo({ lang, site }: { lang: Lang; site: { banner: any
       <section className="hm-sec" aria-labelledby="hi-h">
         <SecHead id="hi-h" title={L("여행 정보", "Travel info")} sub={L("다양한 소식과 유용한 정보를 확인하세요!", "News and useful info")} more={["#/events", L("더보기", "More")]} />
         <ul className="hi-list">
-          <li><a href="#/events"><span className="hi-ic"><Icon name="cal" /></span>
+          <li><a href="#/events"><span className="hi-ic"><Solid name="cal" size={26} /></span>
             <span className="hi-txt"><small>{onNow ? L("오늘의 행사", "On today") : L("다가오는 행사", "Coming up")}</small>
               <b>{e0 ? e0.name : L("예정된 행사가 없어요", "No upcoming events")}</b>
               {e0 && <em>{md(e0.start)}{e0.end && e0.end !== e0.start ? ` ~ ${md(e0.end)}` : ""}{e0.venue ? ` · ${e0.venue}` : ""}</em>}</span><ChevR /></a></li>
           <li><a href={notice ? "#/" : "#/community/ask"} onClick={(e) => { if (notice) { e.preventDefault(); document.querySelector(".site-notes")?.scrollIntoView({ behavior: "smooth", block: "center" }); } }}>
-            <span className="hi-ic"><Icon name="warn" /></span>
+            <span className="hi-ic"><Solid name="megaphone" size={26} /></span>
             <span className="hi-txt"><small>{L("공지사항", "Notice")}</small><b>{notice || L("동해 길동무 이용 안내", "How to use Donghae Gildongmu")}</b></span><ChevR /></a></li>
-          <li><a href="#/map"><span className="hi-ic"><Icon name="toilet" /></span>
-            <span className="hi-txt"><small>{L("편의시설", "Facilities")}</small><b>{L("장애인 화장실·충전기·주차장 지도", "Accessible toilets, chargers, parking")}</b></span><ChevR /></a></li>
         </ul>
       </section>
     </div>

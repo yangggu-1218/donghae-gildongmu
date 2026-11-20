@@ -345,6 +345,12 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
       </header>
       {!stay && <AiStatus id={id} lang={lang} />}
 
+      {/* 방문자 팁 (팀장 요청 2026-11-21: 이동약자 이용 정보 위로) */}
+      {tipsAll.length > 0 && <section className="pp4-tips" aria-labelledby="pp4-tips-h">
+        <h2 id="pp4-tips-h"><Icon name="bulb" />{L("방문자 팁", "Visitor tips")}</h2>
+        <ul>{tipsAll.map((t) => <li key={t}><Icon name="check" />{t}</li>)}</ul>
+      </section>}
+
       {/* 2. 이동약자 이용 정보: 좋은 점·조심할 곳·알아 둘 것 + 구간 줄 + 상세 동선 */}
       <section className="panel pp4-access" aria-labelledby="pp4-acc-h">
         <div className="pp4-h-row">
@@ -362,14 +368,14 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
                 <Icon name="pin" /><span>{s.name}{d && ` ${d}`}</span>
                 <span className={`badge g-${s.grade}`}>{s.measured && s.level ? L(`${s.level}단계 · ${s.level_name}`, GRADE[s.grade as "G" | "Y" | "R"][1]) : L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span>
                 {s.optional && <span className="badge b-plain">{L("선택 구간", "Optional")}</span>}
-                {s.measured && (s.why?.length > 0 || s.uphill_min) && <small className="seg-why">{[...(s.why || []), s.uphill_min ? L(`오르막 참고 약 ${s.uphill_min}분 (김충식 외 2010 실험 속도)`, `~${s.uphill_min} min uphill`) : ""].filter(Boolean).join(" · ")}</small>}</li>;
+                {s.measured && (s.why?.length > 0 || s.uphill_min) && <small className="seg-why">{[...(s.why || []), s.uphill_min ? L(`오르막 약 ${s.uphill_min}분`, `~${s.uphill_min} min uphill`) : ""].filter(Boolean).join(" · ")}</small>}</li>;
             })}</ol>
           {moreBtn}
         </div>}
         {segs.length === 0 && moreBtn && <div className="pp4-route">{moreBtn}</div>}
         {p.osm?.surface_m && Object.keys(p.osm.surface_m).length > 0 && <p className="muted small pp4-osm">
           {L("주변 250m 보행로 노면", "Nearby path surfaces")}: {Object.entries(p.osm.surface_m).map(([k, m]: any) => `${k} 약 ${m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`}`).join(" · ")}
-          {p.osm.min_width_m ? ` · ${L("가장 좁은 폭", "narrowest")} ${p.osm.min_width_m}m` : ""} <span className="osm-src">(© OpenStreetMap 기여자, {p.osm.checked} 기준 · 참고 정보)</span></p>}
+          {p.osm.min_width_m ? ` · ${L("가장 좁은 폭", "narrowest")} ${p.osm.min_width_m}m` : ""}</p>}
         <div id="pp4-route-more" hidden={!routeOpen && !(stay || noPath || j.state === "fail")}>
           {!stay && !noPath && <AiJudge j={j} lang={lang} chips={chips} carerTip={lang === "ko" ? p.carer_tip || "" : ""} />}
           {(stay || noPath || j.state === "fail") && chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
@@ -384,7 +390,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
             <h2 id="pp4-before-h" className="h3 pp4-h"><Picto name="tip" size={24} />{L("정보", "Info")}</h2>
             {p.phone && <a className="pp4-call" href={`tel:${p.phone}`}><Icon name="phone" />{L("전화 문의", "Call")}</a>}
           </div>
-          <div className="pp4-info2-grid">
+          <div className={`pp4-info2-grid${infoFee.length > 2 ? " wide-fee" : ""}`}>
             {infoClosed && <div className="pp4-ig ig-closed"><h3><Icon name="cal" />{L("휴무", "Closed")}</h3><p>{infoClosed}</p></div>}
             {infoFee.length > 0 && <div className="pp4-ig ig-fee"><h3><Icon name="ticket" />{L("입장료", "Admission")}</h3>
               <dl>{infoFee.map(([k, v]) => <div key={k}>{!/^(입장료|Admission)$/.test(k) && <dt>{k}</dt>}<dd>{lines2(v)}</dd></div>)}</dl></div>}
@@ -394,12 +400,6 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           </div>
         </section>
       </div>
-
-      {/* 4. 방문자 팁 */}
-      {tipsAll.length > 0 && <section className="pp4-tips" aria-labelledby="pp4-tips-h">
-        <h2 id="pp4-tips-h"><Icon name="bulb" />{L("방문자 팁", "Visitor tips")}</h2>
-        <ul>{tipsAll.map((t) => <li key={t}><Icon name="check" />{t}</li>)}</ul>
-      </section>}
 
       {/* 5. 가까운 식당(숙소면 예약) | 방문하기 좋은 날 */}
       <div className="pp2-row two">
@@ -761,7 +761,7 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
     .sort((a, b) => ((a.m - today.getMonth() - 1 + 12) % 12) - ((b.m - today.getMonth() - 1 + 12) % 12));
   return (
     <section className="sec wrap">
-      <Head mascot="full-nongak" lang={lang} photo="mureung_lavender" title={L("행사·축제 달력", "Events calendar")} sub={L(`동해시 문화행사·축제 공공데이터 (기준일 ${d?.as_of || "-"})`, "Donghae events from public data")} />
+      <Head mascot="full-nongak" lang={lang} photo="mureung_lavender" title={L("행사·축제 달력", "Events calendar")} sub={L("동해시 문화행사·축제", "Donghae events and festivals")} />
       <div className="ev-grid">
         <div className="cal">
           <div className="cal-head">
@@ -1032,6 +1032,14 @@ export function SourcesPage({ lang }: { lang: Lang }) {
             <tbody>{d.photos.map((x: any) => <tr key={x.id}><td>{x.id}</td><td>{x["저작자"]}</td><td>{x["라이선스"] === "KOGL Type 1" ? L("공공누리 제1유형", "KOGL Type 1") : x["라이선스"]}</td><td>{x["출처"] ? <a href={x["출처"]} target="_blank" rel="noopener">{L("위키미디어 공용", "Wikimedia Commons")}</a> : L("확인 중", "Being confirmed")}</td></tr>)}</tbody>
           </table></div>
           <p className="muted small">{L("사진이 없는 장소는 그림으로 보여 줘요.", "Places without a photo show an illustration.")}</p>
+        </div>
+        <div className="panel">
+          <h2 className="h3">{L("지도·길 자료", "Map & path data")}</h2>
+          <ul className="plain">
+            <li>{L("관광지 주변 보행로 노면·폭, 코스 준비 중 예시 지도: ", "Path surfaces/widths near places and the sample planning map: ")}<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap {L("기여자", "contributors")}</a> (ODbL)</li>
+            <li>{L("지도 화면·길찾기: 카카오맵", "Maps and directions: Kakao Map")}</li>
+            <li>{L("대중교통 길찾기: ODsay LAB", "Public transit routes: ODsay LAB")}</li>
+          </ul>
         </div>
         <div className="panel">
           <h2 className="h3">{L("서비스 안에서 쓰는 AI", "AI used inside the service")}</h2>

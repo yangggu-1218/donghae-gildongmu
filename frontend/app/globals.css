@@ -3188,3 +3188,21 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
   .hm-split .hi-list { flex: 1; grid-auto-rows: 1fr; }
 }
 @media (min-width: 1001px) { .hm-split .hi-list > li { display: flex; } .hm-split .hi-list > li > a { flex: 1; } }
+/* 바로가기 띠·여행 정보: 한 색 채움 픽토그램 */
+.quickbar .qb-ic { color: var(--sea); flex: none; }
+.hi-ic { color: #2462B4; }
+.hi-ic .solid { width: 26px; height: 26px; }
+.sf-src { margin-left: 10px; font-size: .85em; color: inherit; opacity: .85; }
+/* 관광지 상세 '정보' 칸 높이: 주차비용이 없으면 휴무·입장료 두 칸 높이를 같게, 있으면 왼쪽 두 칸이 입장료 칸 높이를 함께 채움 */
+@media (min-width: 761px) {
+  .pp4-info2-grid:not(:has(.ig-park)) { grid-template-areas: "closed fee"; grid-template-rows: auto; }
+  .pp4-info2-grid:not(:has(.ig-park)) .ig-closed { grid-row: auto; align-self: stretch; }
+  .pp4-info2-grid .ig-park { align-self: stretch; }
+  .pp4-info2-grid:not(:has(.ig-fee)) .ig-closed, .pp4-info2-grid:not(:has(.ig-fee)) .ig-park { align-self: stretch; }
+}
+/* 정보 칸 배치 다시 (2026-11-21): 입장료 항목이 많을 때만 '왼쪽 휴무·주차 | 오른쪽 넓은 입장료', 아니면 같은 높이의 칸을 나란히 */
+@media (min-width: 761px) {
+  .pp4-info2-grid:not(.wide-fee) { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; grid-template-areas: none !important; grid-template-rows: auto !important; align-items: stretch; }
+  .pp4-info2-grid:not(.wide-fee) > .pp4-ig { grid-area: auto !important; grid-row: auto !important; align-self: stretch !important; }
+  .pp4-info2-grid.wide-fee:not(:has(.ig-park)) { grid-template-areas: "closed fee"; grid-template-rows: auto; }
+}

@@ -99,3 +99,18 @@ export function Icon({ name, className = "" }: { name: string; className?: strin
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={d} /></svg>
   );
 }
+
+// 채움 픽토그램 (2026-11-21 팀장 요청: 알록달록한 3D 그림 대신 같은 색 한 벌). 바로가기 띠·여행 정보에 쓴다.
+const SOLID: Record<string, string> = {
+  pin: "M12 1.5a7.5 7.5 0 0 0-7.5 7.5c0 5.6 7.5 13.5 7.5 13.5s7.5-7.9 7.5-13.5A7.5 7.5 0 0 0 12 1.5Zm0 4.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z",
+  camera: "M8.8 3.5h6.4l1.7 2.6H20a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.1a2 2 0 0 1 2-2h3.1l1.7-2.6ZM12 8.3a4.9 4.9 0 1 0 0 9.8 4.9 4.9 0 0 0 0-9.8Zm0 2.3a2.6 2.6 0 1 1 0 5.2 2.6 2.6 0 0 1 0-5.2Z",
+  star: "M12 2.2l2.95 6.1 6.7.85-4.95 4.6 1.3 6.6L12 17.05 5.95 20.35l1.3-6.6L2.3 9.15l6.75-.85L12 2.2Z",
+  info: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.35 8.3h2.7V17.5h-2.7v-7.2ZM12 5.9a1.65 1.65 0 1 1 0 3.3 1.65 1.65 0 0 1 0-3.3Z",
+  cal: "M7 2h2.2v2h5.6V2H17v2h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2ZM5.2 9v9.8h13.6V9H5.2Zm1.6 1.6h2.6v2.4H6.8v-2.4Zm4 0h2.4v2.4h-2.4v-2.4Zm3.8 0h2.6v2.4h-2.6v-2.4Zm-7.8 3.8h2.6v2.4H6.8v-2.4Zm4 0h2.4v2.4h-2.4v-2.4Zm3.8 0h2.6v2.4h-2.6v-2.4Z",
+  megaphone: "M18.5 3.2v17.1l-8-3.6H8.6l1.1 4.3H7.1L5.7 16.7H5A2.5 2.5 0 0 1 2.5 14.2v-3.9A2.5 2.5 0 0 1 5 7.8h5.5l8-4.6ZM20.2 9a3.3 3.3 0 0 1 0 6.5V9Z",
+};
+export function Solid({ name, size = 28, className = "" }: { name: string; size?: number; className?: string }) {
+  const d = SOLID[name];
+  if (!d) return null;
+  return <svg className={`solid${className ? " " + className : ""}`} viewBox="0 0 24 24" width={size} height={size} fill="currentColor" fillRule="evenodd" aria-hidden="true" focusable="false"><path d={d} /></svg>;
+}

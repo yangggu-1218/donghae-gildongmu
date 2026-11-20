@@ -8,7 +8,7 @@ import Dongi from "@/components/Dongi";
 import KakaoMap, { geocode } from "@/components/KakaoMap";
 import { fuzzyHit as fz } from "@/lib/fuzzy";
 import { Hero, HowToStrip, Places, QuickBar, PlanAside, RecCourses, HomePlacesInfo } from "@/components/Sections";
-import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks } from "@/components/Pages";
+import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks, SourcesPage } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
 import { buildQuestions, applyExtra, summarize, ExtraQ, ExtraAns } from "@/lib/followup";
@@ -782,6 +782,7 @@ export default function Page() {
       {route[0] === "stay" && <StayPage lang={lang} />}
       {route[0] === "guide" && <CommunityPage lang={lang} sub="ask" onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
       {route[0] === "admin" && <AdminPage lang={lang} />}
+      {route[0] === "sources" && <SourcesPage lang={lang} />}
       {route[0] === "login" && <LoginPage lang={lang} />}
       {route[0] === "me" && <ProfilePage lang={lang} wish={cond.wish || []} places={places} onRemoveWish={removeWish} />}
       {route[0] === "community" && <CommunityPage lang={lang} sub={route[1]} onUse={(ids) => { setCond((c) => ({ ...c, wish: ids })); location.hash = "#plan"; }} />}
