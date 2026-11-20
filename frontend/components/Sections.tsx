@@ -69,8 +69,9 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
             "Say who you're with, and get a route checked for opening hours, crowds and path conditions.")}</p>
           <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAsk(v.trim()); setV(""); } }}>
             <svg className="ask-ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <label htmlFor="hero-ask" className="sr-only">{L("동이에게 말하기", "Talk to Dongi")}</label>
-            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("어떤 여행을 계획하고 계신가요?", "What kind of trip are you planning?")} />
+            <label htmlFor="hero-ask" className="sr-only">{L("AI 동이에게 여행 조건 말하기", "Tell AI Dongi about your trip")}</label>
+            <span className="via via-llm ask-ai" aria-hidden="true">AI</span>
+            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("AI 동이에게 말해 보세요 (예: 엄마랑 휠체어로 바다 보고 싶어요)", "Tell AI Dongi (e.g. wheelchair, sea views, with my mum)")} />
             <MicButton lang={lang} className="ask-mic" disabled={busy} onText={(x) => { setV(x); setMicMsg(""); }} onError={setMicMsg} />
             <button className="ask-go" disabled={busy} aria-label={L("코스 짜기", "Plan my route")}>
               <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
@@ -123,26 +124,13 @@ export function QuickBar({ lang }: { lang: Lang }) {
   const rows: [string, string, string, string, string][] = [
     ["#plan", "pin", "코스 짜기", "Plan a route", "c1"],
     ["#/places", "camera", "관광지", "Places", "c2"],
-    ["#courses", "star", "추천 코스", "Suggested", "c3"],
+    ["#/map", "map", "편의시설 지도", "Facilities map", "c3"],
     ["#/community/ask", "info", "이용 안내", "Help", "c4"],
   ];
   return (
     <nav className="quickbar wrap" aria-label={L("바로가기", "Shortcuts")}>
       <ul>{rows.map(([h, ic, ko, en, c]) => <li key={h}><a href={h}><img className="qb-3d" src={`/icons3d/${ic}.webp`} alt="" width="44" height="44" />{L(ko, en)}</a></li>)}</ul>
     </nav>
-  );
-}
-
-/* ---------------- 동이 안내 띠 (첫 화면 맨 아래) ---------------- */
-export function DongiBanner({ lang }: { lang: Lang }) {
-  const L = pick(lang);
-  return (
-    <section className="dongi-banner wrap" aria-labelledby="db-h">
-      <img src="/dongi/full-captain.webp" alt="" />
-      <div><h2 id="db-h">{L("오늘의 코스는 어떠세요?", "How about a route for today?")}</h2>
-        <p>{L("동이가 함께 가는 분과 걸음에 맞춰 코스를 짜 드려요.", "Dongi plans around who you're with and how you get around.")}</p></div>
-      <a className="db-go" href="#plan">{L("코스 추천 받기", "Get a route")}<span aria-hidden="true">›</span></a>
-    </section>
   );
 }
 
@@ -308,13 +296,11 @@ const BF: { k: string; ko: string; en: string; mode: string; opts: [string, stri
     ["주차여부", "주차여부", "Accessible parking", ["장애인 주차"]], ["대중교통", "대중교통", "Public transport", []], ["주 출입 접근로", "주 출입 접근로", "Step-free approach", ["출입구 턱 없음", "경사로"]],
     ["휠체어대여", "휠체어대여", "Wheelchair rental", ["휠체어 대여"]], ["출입통로", "출입통로", "Entrance", []], ["엘리베이터", "엘리베이터", "Elevator", ["엘리베이터"]],
     ["화장실", "화장실", "Accessible toilet", ["장애인 화장실"]], ["관람석(좌석)", "관람석(좌석)", "Seating", []], ["객실", "객실", "Rooms", []], ["지체장애 기타 상세", "지체장애 기타 상세", "Other", []]] },
-  { k: "청각장애", ko: "청각장애", en: "Hearing", mode: "none", opts: [["청각장애 기타상세", "청각장애 기타상세", "Other", []]] },
   { k: "영유아가족", ko: "영유아 가족", en: "Families", mode: "stroller", opts: [
     ["유모차 대여", "유모차 대여", "Stroller rental", []], ["수유실", "수유실", "Nursing room", ["수유실"]], ["유아용 보조의자/침대", "유아용 보조의자/침대", "Baby chair / bed", []],
     ["영유아가족 기타상세", "영유아가족 기타상세", "Other", ["기저귀 교환대"]]] },
   { k: "고령자", ko: "고령자", en: "Seniors", mode: "walk", opts: [["휠체어 대여", "휠체어 대여", "Wheelchair rental", ["휠체어 대여"]]] },
 ];
-const HEAR = <><path d="M7.5 10a4.5 4.5 0 1 1 9 0c0 2.6-2.2 3.3-2.8 5.4-.5 1.8-1.4 3.6-3.7 3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M10.2 10.2a1.8 1.8 0 1 1 3.3 1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M4 20 20 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></>;
 const PER = 12;
 const STYLE_TAG: [string, string, string][] = [["체험", "체험", "Activity"], ["역사·문화", "역사", "History"], ["산·등산", "산", "Mountain"], ["바다 보기", "바다", "Sea"], ["자연·산책", "자연", "Nature"]];
 
@@ -358,7 +344,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const bfOk = (p: any) => {
     if (!bf) return true;
     const items: [string, string][] = p.access_kto?.items?.[bf.k] || [];
-    if (!bfOpts.length) return bf.mode !== "none" || items.length > 0;   // 시각·청각은 고르기만 해도 정보 있는 곳만
+    if (!bfOpts.length) return bf.mode !== "none" || items.length > 0;
     return bfOpts.every((o) => { const opt = bf.opts.find((x) => x[0] === o)!; return items.some(([k]) => k === o) || hasF(p, opt[3]); });
   };
   const filtering = !!key || need.length > 0 || bfOpts.length > 0 || (!!bf && bf.mode === "none");
@@ -382,7 +368,7 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
   const toggleOpt = (o: string) => setBfOpts(bfOpts.includes(o) ? bfOpts.filter((x) => x !== o) : [...bfOpts, o]);
   const clearAll = () => { setNeed([]); setBfCat(""); setBfOpts([]); setQ(""); };
   const SORTS: [typeof sort, string, string][] = [["rec", mode === "none" ? "추천순" : "갈 수 있는 곳 먼저", mode === "none" ? "Recommended" : "Accessible first"], ["name", "이름순", "By name"], ...(hasCrowd ? [["quiet", "오늘 한산한 순", "Quietest today"] as [typeof sort, string, string]] : [])];
-  const catIcon = (k: string) => k === "청각장애" ? HEAR : ACCESS_CATS[k]?.d;
+  const catIcon = (k: string) => ACCESS_CATS[k]?.d;
   const tagOf = (p: any) => STYLE_TAG.find(([s]) => (p.styles || []).includes(s));
   const chipsOn: [string, () => void][] = [
     ...(bf ? [[L(`${bf.ko} 기준`, `${bf.en}`), () => pickCat(bf.k)] as [string, () => void]] : []),
@@ -427,7 +413,6 @@ export function Places({ lang, onAdd, wish, gradeLabel, zone0 }: { lang: Lang; o
                 <label className="bf2-ck"><input type="checkbox" checked={!bfOpts.length} onChange={() => setBfOpts([])} /><span>{L("전체", "All")}</span></label>
                 {bf.opts.map(([o, ko, en]) => (
                   <label key={o} className="bf2-ck"><input type="checkbox" checked={bfOpts.includes(o)} onChange={() => toggleOpt(o)} /><span>{L(ko, en)}</span></label>))}
-                {bf.k === "청각장애" && <p className="muted small bf2-note">{L("동해 관광지에는 아직 청각장애 편의정보가 등록되지 않았어요.", "No hearing-access info is registered for Donghae places yet.")}</p>}
                 {bf.mode !== "none" && <p className="muted small bf2-note">{L(`카드에 ${({ wheel: "휠체어", stroller: "유모차", walk: "오래 걷기 어려움" } as any)[bf.mode]} 기준 신호등이 보여요. 세부 항목을 고르면 그 시설이 있는 곳만 남아요.`, "Cards show an access signal for this need. Tick details to keep only places with them.")}</p>}
               </fieldset>
             ) : <p className="muted small bf2-hint">{L("누구와 가는지 상자를 하나 골라 주세요. 다시 누르면 풀려요.", "Pick a box. Tap again to clear.")}</p>}
@@ -541,41 +526,6 @@ export function HowToStrip({ lang, onClose }: { lang: Lang; onClose: () => void 
       <a className="howto-more" href="#/places">{L("먼저 관광지 둘러보기", "Browse places first")}</a>
       <button className="howto-x" onClick={onClose} aria-label={L("사용법 닫기", "Close the guide")}>×</button>
     </aside>
-  );
-}
-
-/* ---------------- 추천 코스 (예시) ---------------- */
-export const PRESETS = [
-  { t: ["부모님 모시고 무릎 편한 묵호 바다", "Easy-walking Mukho seaside with parents"], who: "부모님과", move: ["오래 걷기 어려움"], style: ["바다 보기", "맛집"], start: "묵호역", photo: "zone_mukho",
-    tags: [["오래 걷기 어려움", "Limited walking"], ["부모님", "Parents"], ["기차", "By train"]], by: ["추천 코스 · 70대 부모님과", "Suggested route · with parents in their 70s"] },
-  { t: ["휠체어로 무릉 반나절", "Half day in Mureung by wheelchair"], who: "연인·친구", move: ["휠체어"], style: ["자연·산책", "역사·문화"], start: "자가용", photo: "valley",
-    tags: [["휠체어", "Wheelchair"], ["자연", "Nature"], ["자가용", "By car"]], by: ["추천 코스 · 휠체어 이용 2인", "Suggested route · two travelers, one wheelchair"] },
-  { t: ["유모차로 비 오는 날", "Rainy day with a stroller"], who: "아이와", move: ["유모차"], style: ["역사·문화", "카페"], start: "동해역", rain: true, photo: "cave",
-    tags: [["유모차", "Stroller"], ["실내 위주", "Mostly indoors"], ["기차", "By train"]], by: ["추천 코스 · 아이 동반 가족", "Suggested route · family with a toddler"] },
-] as const;
-export function Courses({ lang, onStart, busy }: { lang: Lang; onStart: (i: number) => void; busy: boolean }) {
-  const L = pick(lang);
-  return (
-    <section id="courses" className="sec wrap" aria-labelledby="courses-h">
-      <div className="sec-head">
-        <h2 id="courses-h">{L("추천 코스", "Suggested routes")}</h2>
-        <p>{L("조건이 비슷하면 그대로 시작하고, 동이에게 말로 고치면 돼요.", "Start from one that fits and adjust it by talking to Dongi.")}</p>
-      </div>
-      <ul className="cgrid2">
-        {PRESETS.map((c, i) => (
-          <li key={i}>
-            <button className="ccard2" disabled={busy} onClick={() => onStart(i)}>
-              <PlacePhoto id={c.photo} lang={lang} />
-              <span className="cc2-badge">{L("추천", "Pick")}</span>
-              <span className="cc2-t"><b>{L(c.t[0], c.t[1])}</b>
-                <span className="cc2-m"><Icon name="cal" />{L("당일", "Day trip")}<i aria-hidden="true">·</i>{c.tags.map((x) => L(x[0], x[1])).join(" · ")}</span></span>
-              <span className="cc2-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
-              <span className="sr-only">{L("이 조건으로 코스 짜기", "Plan with these needs")}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 

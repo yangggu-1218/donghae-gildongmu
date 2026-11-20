@@ -2567,8 +2567,6 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 
 /* 동이 메뉴: 단추가 먼저(키보드 순서), 목록은 위에 보이게 / 코스가 있으면 '동이에게 고쳐 달라고 하기' 단추 위로 */
 .dongi-menu { flex-direction: column-reverse; }
-.dongi-menu.lifted { bottom: 104px; }
-@media (max-width: 760px) { .dongi-menu.lifted { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-width: 600px) { .pp4-info { gap: 12px 0; } }
 .dongi-menu[hidden] { display: none; }
 .pp4-row > .panel, .pp4-row > .panel + .panel { margin: 0 !important; }
@@ -2618,3 +2616,7 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .go-k { font-weight: 700; min-width: 6em; }
 .go-note { flex-basis: 100%; }
 .warn-txt { color: var(--warn); font-weight: 700; }
+/* 3번 사진: '.trip dl > div'(84px 1fr)가 조건 카드까지 덮어써 값 칸이 40px로 좁아지던 것 — 카드 안은 라벨 위·값 아래 */
+.trip .trip-facts > div { display: block; padding: 8px 12px; border-bottom: 0; }
+.ask .ask-ai { flex: none; align-self: center; }
+.steps-reset { display: block; margin: -4px 0 8px auto; }

@@ -808,13 +808,13 @@ export function BookLinks({ name, lang }: { name: string; lang: Lang }) {
 // 한국관광공사 이동약자 여행 정보에 올라 있는 동해시 숙소 (객실·출입 정보가 실제로 있는 곳)
 // 목록에서는 편의시설을 픽토그램으로만, 자세한 내용은 펼쳐서 (IMP-013). 같은 자료의 음식점은 아래에 따로 접어 둠
 const BF_PICTO: [string, string, string, string][] = [["parking", "P", "장애인 주차", "Accessible parking"], ["route", "wheel", "출입 접근로", "Step-free approach"], ["elevator", "elev", "엘리베이터", "Elevator"],
-  ["restroom", "toilet", "장애인 화장실", "Accessible toilet"], ["room", "bed", "장애인 객실", "Accessible room"], ["lactationroom", "family", "수유실", "Nursing room"], ["braileblock", "vision", "점자블록", "Tactile paving"]];
+  ["restroom", "toilet", "장애인 화장실", "Accessible toilet"], ["room", "bed", "장애인 객실", "Accessible room"], ["lactationroom", "family", "수유실", "Nursing room"]];
 function BfPicto({ facts, lang }: { facts: Record<string, string>; lang: Lang }) {
   const L = pick(lang);
   const has = BF_PICTO.filter(([k]) => facts[k] && !/없음/.test(facts[k]));
   if (!has.length) return null;
   return <ul className="pl2-ic bf-picto" aria-label={L("편의시설", "Facilities")}>{has.map(([k, ic, ko, en]) => <li key={k} title={L(ko, en)}>
-    {ic === "P" ? <b className="pl2-P" aria-hidden="true">P</b> : ic === "wheel" ? <AccIcon k="지체장애" size={18} /> : ic === "family" ? <AccIcon k="영유아가족" size={18} /> : ic === "vision" ? <AccIcon k="시각장애" size={18} />
+    {ic === "P" ? <b className="pl2-P" aria-hidden="true">P</b> : ic === "wheel" ? <AccIcon k="지체장애" size={18} /> : ic === "family" ? <AccIcon k="영유아가족" size={18} />
       : ic === "elev" ? <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M9 9l3-3 3 3M9 15l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> : <Icon name={ic} />}
     <span className="sr-only">{L(ko, en)}</span></li>)}</ul>;
 }

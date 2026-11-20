@@ -143,18 +143,28 @@ function TripCard({ p, lang, onFav, onRename, onDelete }: { p: SavedPlan; lang: 
 }
 
 // 자세히 보기: 저장해 둔 조건으로 코스를 다시 계산해 시간표처럼 보여 준다 (영업시간·판정은 오늘 기준 최신 값)
+// 예보가 없는 까닭을 사실대로: 지난 날짜 / 16일 이후 / 불러오기 실패 (예전엔 늘 '16일 앞까지만')
+function wxWhy(date: string, failed: boolean, L: (ko: string, en: string) => string): string {
+  if (failed) return L("예보를 불러오지 못함", "Couldn't load the forecast");
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const days = Math.round((Date.parse(date) - Date.parse(today)) / 864e5);
+  if (days < 0) return L("지난 날짜", "Past date");
+  if (days > 15) return L("16일 이후 날짜 — 예보 전", "More than 16 days ahead");
+  return L("예보 없음", "No forecast");
+}
+
 function TripDetail({ p, lang }: { p: SavedPlan; lang: Lang }) {
   const L = pick(lang);
   const [r, setR] = useState<any>(null);
   const [err, setErr] = useState(false);
   const [names, setNames] = useState<Record<string, any>>({});
-  const [wx, setWx] = useState<any>(null);
+  const [wx, setWx] = useState<any>(undefined);
   useEffect(() => {
     const c = decodePlan(p.hash);
     if (!c) { setErr(true); return; }
     api.course({ ...c, lang } as any).then(setR).catch(() => setErr(true));
     api.places().then((l) => setNames(Object.fromEntries(l.map((x: any) => [x.id, x])))).catch(() => {});
-    getJSON("/api/weather").then((w: any) => setWx((w.days || []).find((d: any) => d.date === p.date) || null)).catch(() => {});
+    getJSON("/api/weather").then((w: any) => { const ds = w.days || []; setWx(ds.length ? ds.find((d: any) => d.date === p.date) || null : "fail"); }).catch(() => setWx("fail"));
   }, [p.hash, p.date, lang]);
   if (err) return <p className="muted">{L("이 일정을 다시 계산하지 못했어요. '코스 화면에서 열기'로 열어 보세요.", "Couldn't rebuild this trip. Try 'Open & edit'.")}</p>;
   if (!r) return <p className="muted" role="status">{L("일정을 불러오는 중…", "Loading…")}</p>;
@@ -166,7 +176,7 @@ function TripDetail({ p, lang }: { p: SavedPlan; lang: Lang }) {
       <dl className="trip-facts">
         <div><dt>{L("누구와", "Who")}</dt><dd>{lang === "ko" ? c.who : WHO_W[c.who] || c.who}</dd></div>
         <div><dt>{L("걸음", "Walking")}</dt><dd>{(c.move || []).length ? c.move.map((m: string) => (lang === "ko" ? m : MOVE_W[m] || m)).join(", ") : L("문제 없음", "No limits")}</dd></div>
-        <div><dt>{L("날씨", "Weather")}</dt><dd>{wx ? <><Icon name={wx.icon} /> {lang === "ko" ? wx.ko : wx.en} · {wx.tmin}~{wx.tmax}°C</> : L("예보는 16일 앞까지만 나와요", "Forecast covers 16 days only")}</dd></div>
+        <div><dt>{L("날씨", "Weather")}</dt><dd>{wx && wx !== "fail" ? <><Icon name={wx.icon} /> {lang === "ko" ? wx.ko : wx.en} · {wx.tmin}~{wx.tmax}°C</> : wxWhy(p.date, wx === "fail", L)}</dd></div>
         <div><dt>{L("돌아오는 시각", "Back at")}</dt><dd>{course.back_at} · {p.start}</dd></div>
       </dl>
       <ol className="trip-tl">

@@ -7,7 +7,7 @@ import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
 import KakaoMap, { geocode } from "@/components/KakaoMap";
 import { fuzzyHit as fz } from "@/lib/fuzzy";
-import { Hero, HomeFacts, HowToStrip, NowDonghae, ZoneTiles, MoreLinks, Places, Courses, PRESETS, QuickBar, DongiBanner, PlanAside } from "@/components/Sections";
+import { Hero, HomeFacts, HowToStrip, NowDonghae, ZoneTiles, MoreLinks, Places, QuickBar, PlanAside } from "@/components/Sections";
 import { PlacePage, TransportPage, MapPage, EventsPage, StayPage, GuidePage, AdminPage, BookLinks } from "@/components/Pages";
 import Calendar from "@/components/Calendar";
 import { MicButton } from "@/components/Voice";
@@ -360,7 +360,7 @@ export default function Page() {
   function startOver() {
     snapshot(); setCourse(null); setTrip({}); dayRef.current = 1; setDayNo(1); setPendingTalk(null);
     setAns({}); setStep(0); setKind(null); setXq(null); setOffer(false); setTalkState({}); setFresh([]);
-    setCond((c) => ({ ...c, must: [], exclude: [], lunch: null, cap: null, rest: null, flat_only: false, weather_pref: "", rain: null }));
+    setCond((c) => ({ ...c, must: [], exclude: [], lunch: null, cap: null, rest: null, flat_only: false, toilet_first: false, budget_min: null, weather_pref: "", rain: null }));
     setLog([]); toPlan();
   }
   async function make() {
@@ -368,13 +368,6 @@ export default function Page() {
     await makeWith(c, `${t(`opt.${c.days}`)} · ${t(`opt.${c.start}`)}${c.memo ? " · " + c.memo : ""}`);
   }
   const toPlan = () => { if (location.hash.startsWith("#/")) location.hash = "#plan"; else { const el = document.querySelector("#plan .grid"); el?.scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => el?.scrollIntoView({ block: "start" }), 600); } };
-  // 추천 코스(예시)의 조건 그대로 코스 만들기
-  async function startPreset(i: number) {
-    const pr = PRESETS[i] as any;
-    const c: Conditions = { ...cond, who: pr.who, move: [...pr.move], style: [...pr.style], start: pr.start, rain: pr.rain ?? null, days: "당일", lang } as Conditions;
-    setAns({ who: [pr.who], move: [...pr.move], style: [...pr.style] }); toPlan();
-    await makeWith(c, [t(`opt.${pr.who}`), ...pr.move.map((m: string) => t(`opt.${m}`)), t(`opt.${pr.start}`)].join(", "));
-  }
   // 관광지 카드의 '코스에 담기': 코스가 있으면 동이에게 넣어 달라고 하고, 없으면 담아 두었다가 코스를 만들 때 넣는다
   // 담기는 언제나 '담은 곳' 목록에 들어가고(다시 누르면 빠짐), 화면 아래 알림으로 바로 알려 준다.
   // 이미 만든 코스가 있으면 알림의 버튼으로 지금 코스에 넣을 수 있다.
@@ -650,7 +643,7 @@ export default function Page() {
         </div>
         {calOpen && <Calendar value={d0} lang={lang} onChange={(d) => { setCond({ ...cond, date: d }); setCalOpen(false); }} />}
         <div className="wrow" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
-          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) && <Icon name={wxOf(d0)!.icon} />}{wxOf(d0) ? " " + wxText(wxOf(d0)!) : (lang === "ko" ? "예보는 16일 앞까지만 나와요" : "Forecast covers 16 days")}</span>
+          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) && <Icon name={wxOf(d0)!.icon} />}{wxOf(d0) ? " " + wxText(wxOf(d0)!) : !wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>
           {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
             <button key={v} type="button" className="chip sm" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{l}</button>)}
         </div>
@@ -772,9 +765,6 @@ export default function Page() {
         </div></div>}
       {planning && !course && <PlanningWait lang={lang} />}
       <div hidden={planning && !course} className={`grid${course ? " has-course" : ""}`}>
-        {course && !chatOpen && (
-          <button className="chat-fab mini" onClick={() => setChatOpen(true)} aria-expanded={false} aria-controls="chat-panel" aria-label={lang === "ko" ? "동이에게 고쳐 달라고 하기" : "Ask Dongi to change it"}>
-            <img src="/dongi/wave.webp" alt="" /><span><b>{lang === "ko" ? "동이에게 고쳐 달라고 하기" : "Ask Dongi to change it"}</b><small>{lang === "ko" ? "대화·빠른 수정 열기" : "Open chat & quick edits"}</small></span></button>)}
         {!course && <PlanAside lang={lang} />}
         <section id="chat-panel" className={`panel chat${course ? (chatOpen ? " widget open" : " widget") : ""}`} aria-label={t("nav.plan")}
           onKeyDown={(e) => { if (e.key === "Escape" && course) setChatOpen(false); }}>
@@ -792,6 +782,7 @@ export default function Page() {
           <ol className="steps" aria-label={lang === "ko" ? "진행 단계" : "Progress"}>
             {STEPS[lang].map((x, i) => <li key={x} className={i < step ? "done" : i === step ? "cur" : ""} aria-current={i === step ? "step" : undefined}>{x}</li>)}
           </ol>
+          {!course && log.some((m) => m.me) && <button className="link-btn small steps-reset" onClick={startOver} disabled={busy}>{lang === "ko" ? "처음부터 다시" : "Start over"}</button>}
           {!course && tripLine()}
           {personalize && <details className="cr-suggest" open={suggestOpen} onToggle={(e) => setSuggestOpen((e.target as HTMLDetailsElement).open)}>
             <summary>{lang === "ko" ? "지금 조건에 맞는 후보 미리 보기" : "Preview places for your choices"}</summary>
@@ -1051,12 +1042,13 @@ export default function Page() {
       </div>
 
       </section>
-      <Courses lang={lang} busy={busy} onStart={startPreset} />
-      <NowDonghae lang={lang} />
-      <HomeFacts lang={lang} />
-      <ZoneTiles lang={lang} />
-      <MoreLinks lang={lang} />
-      <DongiBanner lang={lang} />
+      {/* 코스를 만들면 아래 둘러보기 섹션은 접고 결과에 집중 (1번 사진: 추천 코스·동이 안내 띠는 코스 짜기와 겹쳐 뺌) */}
+      {!course && <>
+        <NowDonghae lang={lang} />
+        <HomeFacts lang={lang} />
+        <ZoneTiles lang={lang} />
+        <MoreLinks lang={lang} />
+      </>}
       </>}
       </main>
       <nav className="tabbar" aria-label={t("nav.main")}>
@@ -1065,7 +1057,8 @@ export default function Page() {
       </nav>
       {/* 동이 메뉴: 서 있는 동이 하나. 마우스를 대거나(포커스) 누르면 메뉴가 펼쳐지고, 밖으로 나가거나 Esc면 접힌다.
           위쪽 메뉴에서 뺀 '교통'은 여기로 옮겼다 (팀장 요청 2026-11-20) */}
-      <nav hidden={!!course && chatOpen} className={`dongi-menu${quickOpen ? " open" : ""}${course ? " lifted" : ""}`} aria-label={lang === "ko" ? "동이 메뉴" : "Dongi menu"}
+      {/* 떠 있는 동이는 이것 하나: 코스가 있으면 맨 위 항목이 '대화로 코스 고치기' (예전 동그란 대화 단추를 합침, 5번 사진) */}
+      <nav hidden={!!course && chatOpen} className={`dongi-menu${quickOpen ? " open" : ""}`} aria-label={lang === "ko" ? "동이 메뉴" : "Dongi menu"}
         onMouseEnter={() => { if (quickT.current) clearTimeout(quickT.current); setQuickOpen(true); }}
         onMouseLeave={() => { quickT.current = setTimeout(() => setQuickOpen(false), 400); }}
         onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setQuickOpen(false); }}
@@ -1074,7 +1067,8 @@ export default function Page() {
           <img src="/dongi/full-basic.webp" alt="" /><span className="sr-only">{lang === "ko" ? "동이 메뉴" : "Dongi menu"}</span></button>
         <ul id="dongi-menu-list" className="dm-list" hidden={!quickOpen}>
           <li><button className="dm-sos" onClick={() => { setQuickOpen(false); openSafety(); }}><Icon name="shield" />{t("tool.safety")}</button></li>
-          <li><a href="#plan" onClick={() => setQuickOpen(false)}><Icon name="route" />{lang === "ko" ? "코스 짜기" : "Plan"}</a></li>
+          {course ? <li><button className="dm-ai" aria-controls="chat-panel" onClick={() => { setQuickOpen(false); location.hash = "#plan"; setChatOpen(true); }}><Icon name="story" />{lang === "ko" ? "AI 동이와 대화로 코스 고치기" : "Edit the route with AI Dongi"}</button></li>
+            : <li><a href="#plan" onClick={() => setQuickOpen(false)}><Icon name="route" />{lang === "ko" ? "AI 동이와 코스 짜기" : "Plan with AI Dongi"}</a></li>}
           <li><a href="#/transport" onClick={() => setQuickOpen(false)}><Icon name="bus" />{lang === "ko" ? "교통" : "Getting around"}</a></li>
           <li><a href="#/map" onClick={() => setQuickOpen(false)}><Icon name="toilet" />{lang === "ko" ? "화장실·편의" : "Toilets"}</a></li>
           <li><a href="#/events" onClick={() => setQuickOpen(false)}><Icon name="event" />{lang === "ko" ? "행사" : "Events"}</a></li>
