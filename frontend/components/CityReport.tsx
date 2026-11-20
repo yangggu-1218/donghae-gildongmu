@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import KakaoMap from "@/components/KakaoMap";
 import { Icon, Picto } from "@/components/Icon";
+import { AccIcon } from "@/components/AccessBadges";
 import { MicButton } from "@/components/Voice";
 import { getJSON } from "@/lib/api";
 
@@ -11,6 +12,7 @@ type T = (k: string, v?: Record<string, string | number>) => string;
 type Lang = "ko" | "en";
 export const CR_CATS: [string, string][] = [["step", "stairs"], ["sidewalk", "crack"], ["ramp", "ramp"], ["parking", "block"], ["toilet", "toilet"], ["lift", "lift"], ["works", "cone"], ["etc", "info"]];
 const WHO = ["휠체어", "유모차", "걷기 힘듦"];
+const TYPE_IC: Record<string, string> = { "휠체어": "지체장애", "유모차": "영유아가족", "걷기 힘듦": "고령자" };   // 이동 유형 고르기 옆 그림
 const STEPS = ["접수", "확인", "처리 중", "완료"];
 const STN: [number, number] = [37.4995, 129.124];
 const KEY = "gd-my-reports";
@@ -102,8 +104,16 @@ export function ReportForm({ t, lang, places, placeId = "", source = "불편 알
         <div className="cr-cats" role="group">
           {CR_CATS.map(([k, ic]) => <button type="button" key={k} className="cr-cat" aria-pressed={cat === k} onClick={() => setCat(cat === k ? "" : k)}><Icon name={ic} /><span>{t(`cr.c.${k}`)}</span></button>)}
         </div>
-        <p className="cr-who"><b>{t("cr.who")}</b>{WHO.map((w) => <button type="button" key={w} className="chip sm" aria-pressed={who.includes(w)}
-          onClick={() => setWho(who.includes(w) ? who.filter((x) => x !== w) : [...who, w])}>{t(`cr.w.${w}`)}</button>)}</p>
+        <label className="cr-type">
+          <span className="cr-type-k">{lang === "ko" ? "이동 유형" : "Travel type"}{lang === "ko" && <small>Travel Type</small>}</span>
+          <span className="cr-type-box">
+            <span className="cr-type-ic" aria-hidden="true">{who[0] ? <AccIcon k={TYPE_IC[who[0]]} size={22} /> : <Icon name="walk" />}</span>
+            <select value={who[0] || ""} onChange={(e) => setWho(e.target.value ? [e.target.value] : [])}>
+              <option value="">{lang === "ko" ? "일반 여행객" : "General traveler"}</option>
+              {WHO.map((w) => <option key={w} value={w}>{t(`cr.w.${w}`)}{lang === "ko" ? (w === "걷기 힘듦" ? "" : " 이용") : ""}</option>)}
+            </select>
+          </span>
+        </label>
       </fieldset>
 
       <fieldset className="cr-step"><legend><span className="cr-n">3</span>{t("cr.s3")}</legend>

@@ -198,10 +198,10 @@ function PlaceEditor({ places, db, tok, call }: any) {
         <div className="wide">
           <h2 className="h3">도착부터 떠날 때까지 구간</h2>
           <div className="tbl-wrap"><table className="tbl seg-edit">
-            <thead><tr><th>구간</th><th>경사(°)</th><th>턱(cm)</th><th>폭(m)</th><th>계단</th><th>바닥</th><th>메모</th><th>출처</th><th /></tr></thead>
+            <thead><tr><th>구간</th><th>경사(°)</th><th>높이(m)</th><th>턱(cm)</th><th>폭(m)</th><th>계단</th><th>바닥</th><th>메모</th><th>출처</th><th /></tr></thead>
             <tbody>{segs.map((s, i) => (
               <tr key={i}>
-                {(["name", "slope_deg", "curb_cm", "width_m", "steps", "surface", "note", "source"] as const).map((k) =>
+                {(["name", "slope_deg", "rise_m", "curb_cm", "width_m", "steps", "surface", "note", "source"] as const).map((k) =>
                   <td key={k}><input aria-label={k} value={s[k] ?? ""} onChange={(e) => setSegs(segs.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))} /></td>)}
                 <td><button type="button" className="chip" onClick={() => setSegs(segs.filter((_, j) => j !== i))} aria-label="구간 삭제">삭제</button></td>
               </tr>))}</tbody>
@@ -302,7 +302,7 @@ function AiQuick({ pid, name, f, tok, onFill, feeDone }: any) {
 const tri = (v: any) => (v === true ? "yes" : v === false ? "no" : "");
 const untri = (v: string) => (v === "yes" ? true : v === "no" ? false : null);
 const norm = (v: any) => (v === "" || v === undefined ? null : v);
-const segKey = (s: any) => ["name", "slope_deg", "curb_cm", "width_m", "steps", "surface", "note", "source"].map((k) => (s[k] === "" || s[k] == null ? null : String(s[k])));
+const segKey = (s: any) => ["name", "slope_deg", "rise_m", "curb_cm", "width_m", "steps", "surface", "note", "source"].map((k) => (s[k] === "" || s[k] == null ? null : String(s[k])));
 
 /* ---------- 공지·알림: 긴급 알림(휴무·주의) · 일반 공지(모든 화면 위 공지·장소 안내) · 행사 안내를 한 탭에서 ---------- */
 // 저장 구조(알림·배너·행사)와 API는 그대로. 등록할 종류만 골라 쓰고, 목록은 하나로 모아 종류를 표시한다.

@@ -192,6 +192,7 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
           <h2 id="sum-h">{t("sum.title")}</h2>
           <p className="sum-date">{dateLabel(course.date, lang)} ({wdName(course.weekday, lang)}) · {course.start_time} {lang === "ko" ? `${start} 출발` : `from ${start}`}</p>
           {course.drive_source === "kakao" && <p className="muted">{t("sum.driveSource")}</p>}
+          {course.drive_source === "transit" && <p className="muted">{t("sum.transitSource")}</p>}
           <RouteCosts course={course} lang={lang} />
         </header>
         <ol className="sum-list">
@@ -202,7 +203,7 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
                 <span className="sum-t">{s.arrive}</span>
                 <div>
                   <b className="sum-n">{name(s.id)}</b>
-                  <p className="sum-s">{t(course.drive_source === "kakao" ? "result.drive" : "result.estDrive", { m: s.drive_min })} · {s.wait_min > 0 && <>{t("tl.wait", { m: s.wait_min })} · </>}{s.depart} {lang === "ko" ? "출발" : "depart"}</p>
+                  <p className="sum-s">{t(course.drive_source === "transit" ? "result.transit" : course.drive_source === "kakao" ? "result.drive" : "result.estDrive", { m: s.drive_min })} · {s.wait_min > 0 && <>{t("tl.wait", { m: s.wait_min })} · </>}{s.depart} {lang === "ko" ? "출발" : "depart"}</p>
                   <p className="sum-b">
                     {s.open_state === "always" ? t("tl.always") : s.open_state === "open" ? t("tl.open", { t: s.visit_at || s.arrive }) : t("tl.unknown")}
                     {x?.walk_load && x.walk_load !== "확인 전" ? ` · ${t(`walk.${x.walk_load}`)}` : ""}
@@ -214,7 +215,7 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
             );
           })}
         </ol>
-        <p className="sum-back">{course.back_drive_min != null && <>{t("result.drive", { m: course.back_drive_min })} · </>}{t("sum.back", { s: start, t: course.back_at })}</p>
+        <p className="sum-back">{course.back_drive_min != null && <>{t(course.drive_source === "transit" ? "result.transit" : "result.drive", { m: course.back_drive_min })} · </>}{t("sum.back", { s: start, t: course.back_at })}</p>
         <div className="sum-emer">
           <p><b>{t("sum.emer")}</b> 119 ({t("safety.119")}) · 1330 ({t("safety.1330")})</p>
           {first?.["약국"] && <p>{t("tl.pharmacy")}: {first["약국"].name} {first["약국"].tel}</p>}

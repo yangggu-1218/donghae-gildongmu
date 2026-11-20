@@ -284,7 +284,6 @@
   "cr.w.휠체어": "Wheelchair",
   "cr.w.유모차": "Stroller",
   "cr.w.걷기 힘듦": "Limited walking",
-  "cr.w.시각": "Low vision",
   "cr.c.step": "Step or stairs",
   "cr.c.sidewalk": "Broken pavement",
   "cr.c.ramp": "No ramp / steep",
@@ -344,5 +343,7 @@
   "opt.평탄한 길만": "Flat paths only",
   "opt.장애인 화장실 우선": "Accessible toilets first",
   "opt.중간에 쉬는 곳": "A place to rest",
-  "opt.동해종합버스터미널": "Donghae Bus Terminal"
+  "opt.동해종합버스터미널": "Donghae Bus Terminal",
+  "result.transit": "Transit {m} min",
+  "sum.transitSource": "Times from ODsay transit routing (waiting not included; walking at your pace)."
 }

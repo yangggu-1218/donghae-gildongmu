@@ -142,23 +142,52 @@ export function makeApi(DATA) {
   const RANK = { G: 0, Y: 1, R: 2 };
   const STARTS = { "동해역": [37.498198, 129.123794], "묵호역": [37.546824, 129.107692], "동해종합버스터미널": [37.5213, 129.1137], "자가용": [37.498198, 129.123794] };   // engine.py 와 같게 (2026-11 바로잡음)
   const worst = (gs) => { gs = gs.filter(Boolean); return gs.length ? gs.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null; };
+  // engine.assess 와 같게: 이동 난이도 5단계 (docs/22_ACCESS_GRADING.md)
+  const LEVEL_GRADE = { 1: "G", 2: "G", 3: "Y", 4: "Y", 5: "R" }, GRADE_LEVEL = { G: 2, Y: 3, R: 5 };
+  const SLOPE = [[3.18, 1, "1/18 이하 — 법: 접근로 기준"], [4.76, 2, "1/12 이하 — 법: 경사로 기준"],
+    [5.71, 3, "1/10 이하 — 김충식 외 2010: 1/12와 차이 작음"], [7.13, 4, "1/8 이하 — 김충식 외 2010: 높이 15cm 넘으면 부담 큼"],
+    [9.46, 4, "1/6 미만 — 김충식 외 2010: 사용성 크게 낮음"]];
+  const ratioOf = (deg) => { const t = Math.tan(deg * Math.PI / 180); return t > 0 ? `1/${pyRound(1 / t)}` : "평지"; };
+  const measuredOf = (s) => [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null);
+  function assess(s, mode) {
+    if (!measuredOf(s)) return [GRADE_LEVEL[s.grade || "Y"] || 3, [`측정값 없음 — 자료(${s.source || "출처 없음"}) 판정`]];
+    let lv = 1; const why = [];
+    const up = (n, text) => { if (n > lv) lv = n; if (n >= 3) why.push(text); };
+    const surface = (s.surface || "").trim();
+    if (s.slope_deg != null) {
+      const deg = s.slope_deg;
+      if (mode === "walk") {
+        const n = deg <= 3.18 ? 1 : deg <= 4.76 ? 2 : deg <= 7.13 ? 3 : 4;
+        up(n, `경사 ${deg}°(${ratioOf(deg)}) — ` + (n === 3 ? "법 기준 초과 (팀: 걷기 주의)" : "급경사 (팀: 보조 필요)"));
+      } else {
+        let n = 5, txt = "1/6 이상 — 김충식 외 2010: 지양";
+        for (const [lim, l, t] of SLOPE) if (deg <= lim) { n = l; txt = t; break; }
+        if (n === 4 && deg <= 7.13 && s.rise_m != null && s.rise_m <= 0.15) { n = 3; txt = "1/8 이하·높이 15cm 이하 — 김충식 외 2010: 완화 가능"; }
+        if (n >= 2 && n <= 3 && s.rise_m != null && s.rise_m > 0.75) { n += 1; txt += " · 높이 0.75m 초과 — 법: 중간 참 필요"; }
+        up(n, `경사 ${deg}°(${ratioOf(deg)}) — ${txt}`);
+      }
+    }
+    if (s.curb_cm != null && s.curb_cm > 2) {
+      if (mode === "walk") up(s.curb_cm <= 5 ? 3 : 4, `턱 ${s.curb_cm}cm — 법 기준(2cm) 초과`);
+      else { const n = s.curb_cm <= 5 ? 3 : s.curb_cm <= 10 ? 4 : 5; up(n, `턱 ${s.curb_cm}cm — 법 기준(2cm) 초과` + (n === 3 ? "" : " (팀: 5cm 넘으면 보조, 10cm 넘으면 불가)")); }
+    }
+    if (s.width_m != null && mode !== "walk" && s.width_m < 1.2) {
+      const n = s.width_m >= 0.9 ? 3 : s.width_m >= 0.7 ? 4 : 5;
+      up(n, `폭 ${s.width_m}m — ` + (n === 3 ? "법: 기존 시설 완화(0.9m) 수준" : "김충식 외 2010: 휠체어 폭 0.7m" + (n === 5 ? " 미만" : " 근접")));
+    }
+    if ((s.steps || 0) > 0) {
+      if (mode === "walk") up(s.steps <= 10 ? 3 : 5, `계단 ${s.steps}개` + (s.steps > 10 ? " (팀: 10개 넘으면 계단이 어려운 분은 통행 불가)" : ""));
+      else if (s.alt_route) up(4, `계단 ${s.steps}개 · 대체 경로(${s.alt_route}) — 법: 경사로·승강기로 대체`);
+      else up(5, `계단 ${s.steps}개 · 대체 경로 없음`);
+    }
+    if (["모래", "흙길", "산길"].includes(surface)) up(mode !== "walk" || ["모래", "산길"].includes(surface) ? 5 : 3, `노면 ${surface} (팀 기준)`);
+    else if (["자갈", "데크 이음새"].includes(surface)) up(3, `노면 ${surface} (팀 기준)`);
+    if (mode === "walk" && (s.distance_m || 0) > 300) up(3, `거리 ${s.distance_m}m (팀: 300m 넘으면 주의)`);
+    return [lv, why];
+  }
   function gradeSegment(s, mode) {
-    const measured = [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null);
-    let g;
-    if (measured) {
-      g = "G"; const surface = (s.surface || "").trim();
-      if ((s.steps || 0) > 0) g = s.alt_route ? "Y" : "R";
-      if (s.curb_cm != null) { if (s.curb_cm > 5) g = worst([g, "R"]); else if (s.curb_cm > 2) g = worst([g, "Y"]); }
-      if (s.slope_deg != null) { if (s.slope_deg > 7.1) g = worst([g, "R"]); else if (s.slope_deg > 4.8) g = worst([g, "Y"]); }
-      if (s.width_m != null) { if (s.width_m < 0.9) g = worst([g, "R"]); else if (s.width_m < 1.2) g = worst([g, "Y"]); }
-      if (["모래", "흙길", "산길"].includes(surface)) g = worst([g, "R"]); else if (["자갈", "데크 이음새"].includes(surface)) g = worst([g, "Y"]);
-    } else g = s.grade || "Y";
-    if (mode === "walk") {
-      const hard = (s.steps || 0) > 10 || ["산길", "모래"].includes(s.surface || "");
-      if (g === "R" && measured && !hard) g = "Y";
-      if ((s.distance_m || 0) > 300) g = worst([g, "Y"]);
-    } else if (mode === "stroller" && s.curb_cm != null && s.curb_cm > 2 && s.curb_cm <= 5) g = worst([g, "Y"]);
-    return g;
+    if (!measuredOf(s)) { let g = s.grade || "Y"; if (mode === "walk" && (s.distance_m || 0) > 300) g = worst([g, "Y"]); return g; }
+    return LEVEL_GRADE[assess(s, mode)[0]];
   }
   function gradePlace(p, mode, lessWalk = false) {
     if (mode === "none") return null;
@@ -966,14 +995,14 @@ export function makeApi(DATA) {
   }
   function segClean(sg) {
     const o = {};
-    for (const k of ["name", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "width_m", "surface", "note", "source"]) {
+    for (const k of ["name", "distance_m", "steps", "alt_route", "curb_cm", "slope_deg", "rise_m", "width_m", "surface", "note", "source"]) {
       let v = sg[k]; if (v === "" || v == null) continue;
-      if (["distance_m", "curb_cm", "slope_deg", "width_m"].includes(k)) v = +v; else if (k === "steps") v = parseInt(v, 10); else if (k === "alt_route") v = !!v; else v = String(v).slice(0, 200);
+      if (["distance_m", "curb_cm", "slope_deg", "rise_m", "width_m"].includes(k)) v = +v; else if (k === "steps") v = parseInt(v, 10); else if (k === "alt_route") v = !!v; else v = String(v).slice(0, 200);
       o[k] = v;
     }
     return o;
   }
-  const SEG_DEFAULT = { distance_m: null, steps: 0, alt_route: false, curb_cm: null, slope_deg: null, width_m: null, surface: null, note: "", source: "" };
+  const SEG_DEFAULT = { distance_m: null, steps: 0, alt_route: false, curb_cm: null, slope_deg: null, rise_m: null, width_m: null, surface: null, note: "", source: "" };
   function rebuild() {
     for (const k of Object.keys(PLACES)) delete PLACES[k];
     for (const p of JSON.parse(BASE)) PLACES[p.id] = p;
@@ -1125,9 +1154,18 @@ export function makeApi(DATA) {
       if (s.slope_deg != null) facts.push(`경사 ${s.slope_deg}°`);
       if (s.width_m != null) facts.push(`폭 ${s.width_m}m`);
       if (s.surface) facts.push(s.surface);
+      const [lv, why] = assess(s, m);
       return { name: s.name, grade: gradeSegment(s, m), facts, note: s.note || "", source: s.source || "", optional: !!s.optional,
-        measured: [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null) };
+        measured: [s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface].some((v) => v != null),
+        level: lv, level_name: LEVEL_NAME[lv], why, uphill_min: uphillMin(s, m) };
     });
+  }
+  const LEVEL_NAME = { 1: "매우 쉬움", 2: "쉬움", 3: "주의", 4: "보조 필요", 5: "통행 불가" };
+  const UPHILL = [[4.09, 0.43], [4.76, 0.41], [5.71, 0.385], [7.13, 0.315], [9.46, 0.255]];   // pages.UPHILL 과 같게 (김충식 외 2010)
+  function uphillMin(s, mode) {
+    if (mode !== "wheel" || s.slope_deg == null || !s.distance_m || s.slope_deg < 3.18) return null;
+    const hit = UPHILL.find(([lim]) => s.slope_deg <= lim);
+    return hit ? Math.ceil(s.distance_m / hit[1] / 60) : null;
   }
   function placePage(p, lang, mode) {
     const now = kstNow(), wd = weekdayOf(now.date), at = mins(now.time);
@@ -1255,5 +1293,5 @@ export function makeApi(DATA) {
     if (path === "/api/health") return { ok: true, demo: true, places: Object.keys(PLACES).length };
     throw new Error("404 " + path);
   }
-  return { handle, plan, talk, course, edit, parseDate, parseTime, setForecast };
+  return { handle, plan, talk, course, edit, parseDate, parseTime, setForecast, assess, gradeSegment };
 }

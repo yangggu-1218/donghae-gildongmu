@@ -105,6 +105,101 @@ def driving_route(points):
         return None
 
 
+# ---------- ODsay 대중교통 길찾기 (2026-11-21) ----------
+# 키(ODSAY_API_KEY)가 있고 출발이 역·터미널일 때 구간마다 부른다. 실패하면 None → 엔진은 추정(차량 기준) 그대로.
+# 걷는 부분은 ODsay 시간 대신 이용자 속도(1.0 / 이동 조건이 있으면 0.7 m/s)로 다시 계산한다. 배차 대기 시간은 모른다(미포함).
+ODSAY = "https://api.odsay.com/v1/api/searchPubTransPathT"
+TRANSIT_STATS = {"calls": 0, "ok": 0, "fail": 0, "walk_only": 0, "last_error": ""}
+
+
+def odsay_available() -> bool:
+    return bool(os.getenv("ODSAY_API_KEY"))
+
+
+@lru_cache(maxsize=256)
+def _odsay(sx: float, sy: float, ex: float, ey: float, time_bucket: int) -> dict:
+    timeout = _route_timeout()
+    if timeout < 0.5:
+        raise TimeoutError("route budget used up")
+    TRANSIT_STATS["calls"] += 1
+    res = httpx.get(ODSAY, params={"apiKey": os.environ["ODSAY_API_KEY"], "SX": sx, "SY": sy, "EX": ex, "EY": ey, "OPT": 0}, timeout=timeout)
+    res.raise_for_status()
+    return res.json()
+
+
+def _km(a, b) -> float:
+    la1, lo1, la2, lo2 = map(math.radians, (*a, *b))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371.0 * math.asin(math.sqrt(h))
+
+
+def transit_leg(a, b, speed_mps: float) -> dict | None:
+    """(위도, 경도) a → b 대중교통 한 구간. {mode: transit|walk, min, ride_min, walk_m, walk_min, transfers, lines, payment}"""
+    if not odsay_available():
+        return None
+    try:
+        j = _odsay(round(a[1], 6), round(a[0], 6), round(b[1], 6), round(b[0], 6), int(time.monotonic() // 600))
+        err = j.get("error")
+        if err:
+            code = str((err[0] if isinstance(err, list) and err else err).get("code", ""))
+            if code == "-98":   # 출발·도착이 700m 안 → 걸어서
+                TRANSIT_STATS["walk_only"] += 1
+                m = round(_km(a, b) * 1000 * 1.3)
+                wm = math.ceil(m / speed_mps / 60)
+                return {"mode": "walk", "min": wm, "ride_min": 0, "walk_m": m, "walk_min": wm, "transfers": 0, "lines": [], "payment": 0}
+            raise ValueError(f"odsay error {code}")
+        p = j["result"]["path"][0]
+        subs = p["subPath"]
+        ride = sum(int(s.get("sectionTime") or 0) for s in subs if s.get("trafficType") in (1, 2))
+        walk_m = sum(int(s.get("distance") or 0) for s in subs if s.get("trafficType") == 3)
+        walk_min = math.ceil(walk_m / speed_mps / 60) if walk_m else 0
+        lines = []
+        for s in subs:
+            if s.get("trafficType") == 2:
+                lines += [f"버스 {ln.get('busNo')}" for ln in (s.get("lane") or [])[:2] if ln.get("busNo")]
+            elif s.get("trafficType") == 1:
+                lines += [ln.get("name") for ln in (s.get("lane") or [])[:1] if ln.get("name")]
+        info = p.get("info") or {}
+        rides = int(info.get("busTransitCount") or 0) + int(info.get("subwayTransitCount") or 0)
+        TRANSIT_STATS["ok"] += 1
+        return {"mode": "transit", "min": ride + walk_min, "ride_min": ride, "walk_m": walk_m, "walk_min": walk_min,
+                "transfers": max(0, rides - 1), "lines": lines[:4], "payment": info.get("payment")}
+    except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError, TimeoutError, AttributeError) as e:
+        TRANSIT_STATS["fail"] += 1
+        TRANSIT_STATS["last_error"] = type(e).__name__
+        return None
+
+
+# ---------- 국토교통부 TAGO 버스정류소정보: 좌표 근처 정류장 (DATA_GO_KR_KEY, 활용신청 필요) ----------
+TAGO_STOPS = "https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList"
+TAGO_STATS = {"calls": 0, "ok": 0, "fail": 0, "last_error": ""}
+
+
+@lru_cache(maxsize=256)
+def _tago_near(lat: float, lon: float, day: str) -> tuple:
+    TAGO_STATS["calls"] += 1
+    r = httpx.get(TAGO_STOPS, params={"serviceKey": unquote(KEY), "gpsLati": lat, "gpsLong": lon, "numOfRows": 10, "pageNo": 1, "_type": "json"}, timeout=3)
+    r.raise_for_status()
+    items = (r.json()["response"]["body"].get("items") or {})
+    it = items.get("item", []) if isinstance(items, dict) else []
+    return tuple((str(x.get("nodenm") or ""), float(x["gpslati"]), float(x["gpslong"]), str(x.get("nodeid") or "")) for x in ([it] if isinstance(it, dict) else it))
+
+
+def bus_stops_near(lat, lon, limit: int = 2) -> list[dict]:
+    """가까운 버스 정류장 (반경 약 500m, 가까운 순). 키가 없거나 실패하면 []."""
+    if not KEY or lat is None:
+        return []
+    try:
+        rows = _tago_near(round(lat, 5), round(lon, 5), dt.date.today().isoformat())
+        TAGO_STATS["ok"] += 1
+    except (httpx.HTTPError, KeyError, ValueError, TypeError, AttributeError) as e:
+        TAGO_STATS["fail"] += 1
+        TAGO_STATS["last_error"] = type(e).__name__
+        return []
+    out = sorted(({"name": n, "lat": la, "lon": lo, "id": i, "dist_m": _dist_m(lat, lon, la, lo)} for n, la, lo, i in rows if n), key=lambda x: x["dist_m"])
+    return out[:limit]
+
+
 def _items(xml_text: str) -> list[dict]:
     root = ET.fromstring(xml_text)
     return [{c.tag: (c.text or "").strip() for c in it} for it in root.iter("item")]

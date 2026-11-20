@@ -68,8 +68,11 @@ def apply(places: dict[str, Place]) -> dict[str, Place]:
             p.hours = "상시 개방" if (p.open, p.close) == ("00:00", "24:00") else f"{p.open}~{p.close}"
         if p.closed_day_nums and not p.closed_days:
             p.closed_days = "·".join(WD_KO[i] for i in p.closed_day_nums) + "요일"
+    osm = json.loads((DATA / "public" / "osm_paths.json").read_text(encoding="utf-8")) if (DATA / "public" / "osm_paths.json").exists() else {"places": {}}
     for p in places.values():
         _derive(p)
+        if p.id in osm["places"]:
+            p.osm = {**osm["places"][p.id], "checked": osm.get("checked", "")}
     return places
 
 

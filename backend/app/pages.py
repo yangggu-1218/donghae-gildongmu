@@ -5,6 +5,7 @@
 """
 import datetime as dt
 import json
+import math
 from pathlib import Path
 
 from . import details, engine, public_data
@@ -51,9 +52,22 @@ def segments(p: Place, mode: str) -> list[dict]:
         if s.slope_deg is not None: facts.append(f"경사 {s.slope_deg:g}°")
         if s.width_m is not None: facts.append(f"폭 {s.width_m:g}m")
         if s.surface: facts.append(s.surface)
+        lv, why = engine.assess(s, m)
         out.append({"name": s.name, "grade": g, "facts": facts, "note": s.note or "", "source": s.source or "", "optional": s.optional,
-                    "measured": any(v is not None for v in (s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface))})
+                    "measured": any(v is not None for v in (s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface)),
+                    "level": lv, "level_name": engine.LEVEL_NAME[lv], "why": why, "uphill_min": uphill_min(s, m)})
     return out
+
+
+# 휠체어 오르막 참고 속도 (m/s): 김충식 외 2010 그림 3의 근삿값 (젊은 이용자·수동휠체어·오르막만). 내리막·유모차·걷기는 근거 없음 → 계산 안 함
+UPHILL = [(4.09, 0.43), (4.76, 0.41), (5.71, 0.385), (7.13, 0.315), (9.46, 0.255)]
+
+
+def uphill_min(s, mode: str):
+    if mode != "wheel" or s.slope_deg is None or not s.distance_m or s.slope_deg < 3.18:
+        return None
+    v = next((v for lim, v in UPHILL if s.slope_deg <= lim), None)
+    return math.ceil(s.distance_m / v / 60) if v else None
 
 
 def place_page(p: Place, lang: str = "ko", mode: str = "wheel") -> dict:
@@ -62,8 +76,10 @@ def place_page(p: Place, lang: str = "ko", mode: str = "wheel") -> dict:
     ok, why, _ = details.open_check(p, wd, at, 0)
     today = ("closed" if why == "closed_day" else "always" if why == "always" else "unknown" if why == "unknown"
              else "open" if ok else "closed_now")
+    from . import public_apis
     return {"segments": segments(p, mode), "today": today, "hours_text": details.hours_text(p, lang),
-            "nearby": details.nearby(p, lang, wd, at), "toilets": toilets_near(p.lat, p.lon)}
+            "nearby": details.nearby(p, lang, wd, at), "toilets": toilets_near(p.lat, p.lon),
+            "bus_stops": public_apis.bus_stops_near(p.lat, p.lon) if p.type not in ("숙박",) else []}
 
 
 def transport(lang: str = "ko") -> dict:
@@ -125,15 +141,23 @@ def sources() -> dict:
     return {"datasets": datasets, "criteria": CRITERIA, "notes": NOTES, "photos": photos}
 
 
+# 이동 난이도 5단계 (engine.assess 와 같은 값). 1·2 = 이동 가능, 3·4 = 주의(4는 보조 필요), 5 = 통행 불가
 CRITERIA = [
-    {"item": "경사로 기울기", "ok": "1/18 이하 (약 3.2°)", "warn": "1/12 이하 (약 4.8°)까지", "no": "1/8 넘음 (약 7.1°)", "law": "장애인등편의법 시행규칙 별표1"},
-    {"item": "출입구·통로 턱", "ok": "2cm 이하", "warn": "2~5cm", "no": "5cm 넘음", "law": "장애인등편의법 시행규칙 별표1"},
-    {"item": "통로 폭", "ok": "1.2m 이상", "warn": "0.9~1.2m", "no": "0.9m 미만", "law": "장애인등편의법 시행규칙 별표1"},
-    {"item": "계단", "ok": "없음", "warn": "있지만 우회로·경사로 있음", "no": "우회로 없음", "law": "현장 답사 기준"},
-    {"item": "바닥", "ok": "포장·데크", "warn": "자갈·데크 이음새", "no": "모래·흙길·산길", "law": "현장 답사 기준"},
+    {"item": "경사 (휠체어·유모차)", "l1": "1/18 이하 (3.18°)", "l2": "1/12 이하 (4.76°)", "l3": "1/10 이하 (5.71°) · 높이 15cm 이하면 1/8까지",
+     "l4": "1/8 이하 (7.13°) · 1/6 미만 (9.46°)", "l5": "1/6 이상", "law": "법(1/18·1/12) · 김충식 외 2010(1/10·1/8·1/6·높이 15cm)"},
+    {"item": "경사 높이", "l1": "", "l2": "", "l3": "높이 0.75m 넘고 중간 참 없으면 한 단계 위", "l4": "", "l5": "", "law": "법(0.75m마다 참)"},
+    {"item": "턱 (휠체어·유모차)", "l1": "2cm 이하", "l2": "2cm 이하", "l3": "2~5cm", "l4": "5~10cm", "l5": "10cm 넘음", "law": "법(2cm) · 팀(5·10cm)"},
+    {"item": "폭 (휠체어·유모차)", "l1": "1.2m 이상", "l2": "1.2m 이상", "l3": "0.9~1.2m", "l4": "0.7~0.9m", "l5": "0.7m 미만", "law": "법(1.2m·기존 0.9m) · 김충식 외 2010(휠체어 폭 0.7m)"},
+    {"item": "계단 (휠체어·유모차)", "l1": "없음", "l2": "없음", "l3": "", "l4": "대체 경로(경사로·승강기) 있음", "l5": "대체 경로 없음", "law": "법(경사로·승강기 대체)"},
+    {"item": "노면", "l1": "포장·데크", "l2": "포장·데크", "l3": "자갈·데크 이음새 (걷기: 흙길)", "l4": "", "l5": "모래·흙길·산길 (걷기: 모래·산길)", "law": "팀 기준"},
+    {"item": "걷기 불편 — 경사", "l1": "1/18 이하", "l2": "1/12 이하", "l3": "1/8 이하", "l4": "1/8 넘음", "l5": "", "law": "법(1/18·1/12) · 팀(1/8)"},
+    {"item": "걷기 불편 — 계단·거리", "l1": "", "l2": "", "l3": "계단 10개 이하 · 300m 넘는 구간", "l4": "", "l5": "계단 10개 넘음", "law": "팀 기준"},
 ]
 NOTES = [
-    "판정은 측정값이 있으면 위 기준으로 계산하고, 없으면 답사 때 기록한 판정을 씁니다. 정보가 없으면 '주의'로 둡니다.",
+    "단계: 1 매우 쉬움 · 2 쉬움 → 이동 가능 / 3 주의 · 4 보조 필요 → 주의 / 5 통행 불가. 구간에서 가장 어려운 항목이 그 구간의 단계예요.",
+    "법 = 장애인·노인·임산부 등의 편의증진 보장에 관한 법률 시행규칙 별표1. 김충식 외 2010 = 「경사로의 기울기와 높이에 따른 휠체어 사용자의 사용성 및 생리적 특성 분석」(대한인간공학회지 29권 4호). 팀 = 근거 문헌이 없어 팀이 정한 값.",
+    "휠체어 오르막 참고 시간은 김충식 외 2010의 실험 속도(1/12 약 0.41m/s, 1/8 약 0.32m/s, 젊은 이용자·수동휠체어·오르막만)로 계산해요. 내리막·유모차·걷기는 근거가 없어 계산하지 않아요.",
+    "측정값(경사·턱·폭·계단·노면)이 있으면 위 기준으로 계산하고, 없으면 출처 자료의 판정을 그대로 써요.",
     "이름에 '(예시)'가 붙은 식당·카페, '예시 시간'이라고 쓴 영업시간은 확인 전 값입니다.",
     "숙박업소는 공공데이터에 좌표와 객실 접근성 정보가 없어, 이동약자 객실 여부는 '확인 전'으로 둡니다.",
     "장애인 화장실은 공공데이터 주소가 다른 공공데이터(관광명소·주차장·충전기)의 주소와 같을 때만 지도에 표시합니다.",

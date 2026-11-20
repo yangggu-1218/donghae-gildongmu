@@ -587,6 +587,10 @@ export default function Page() {
     if (!pt) { setStayMsg(lang === "ko" ? "주소로 위치를 찾지 못했어요. 다른 숙소를 골라 주세요." : "Couldn't find that address. Try another place."); return; }
     setStay({ name: r.name, addr: r.road || "", ...pt }); setAddOpen(""); setStayMsg(""); setMapMode("edit");
   };
+  // 대중교통 구간 한 줄: '대중교통 24분 · 버스 12-4 · 걷기 350m(9분) · 환승 1번' (ODsay, 걷는 시간은 이동 조건 속도)
+  const legText = (leg: any, m: number) => !leg ? t("result.transit", { m }) : leg.mode === "walk"
+    ? (lang === "ko" ? `걸어서 ${leg.walk_min}분 (${leg.walk_m}m)` : `Walk ${leg.walk_min} min (${leg.walk_m} m)`)
+    : [t("result.transit", { m }), ...(leg.lines || []), leg.walk_m ? (lang === "ko" ? `걷기 ${leg.walk_m}m(${leg.walk_min}분)` : `walk ${leg.walk_m} m`) : "", leg.transfers ? (lang === "ko" ? `환승 ${leg.transfers}번` : `${leg.transfers} transfer(s)`) : ""].filter(Boolean).join(" · ");
   const q = Q[step];
   const shareUrl = typeof window !== "undefined" && course ? `${location.origin}${location.pathname}#plan=${encodePlan({ ...cond, lang }, course)}` : "";
   const startName = cond.start === "자가용" ? (lang === "ko" ? "동해역 (자가용 기준점)" : "Donghae Station (car)") : t(`opt.${cond.start}`);
@@ -629,29 +633,34 @@ export default function Page() {
     const strip = Array.from({ length: 7 }, (_, i) => plusDays(i));   // 일주일만 보이고, 그 뒤는 달력에서
     const far = !strip.includes(d0);
     return (
-      <div className="when">
-        <div className="dstrip" role="group" aria-label={lang === "ko" ? "날짜" : "Date"}>
-          {strip.map((d, i) => { const wd = wdOf(d); return (
-            <button key={d} type="button" className={`dchip${wd === 0 ? " sun" : wd === 6 ? " sat" : ""}`} aria-pressed={d0 === d}
-              aria-label={`${dateLabel(d, lang)} ${wdName(wd, lang)}`} onClick={() => setCond({ ...cond, date: d })}>
-              <small>{i === 0 ? (lang === "ko" ? "오늘" : "Today") : i === 1 ? (lang === "ko" ? "내일" : "Tmrw") : wdName(wd, lang)}</small>
-              <b>{Number(d.slice(8))}</b>
-              {wxOf(d) && <i className={`wx${wxOf(d)!.rain ? " wet" : ""}`} aria-hidden="true"><Icon name={wxOf(d)!.icon} /></i>}</button>); })}
-          <button type="button" className={`dchip more${far ? " picked" : ""}`} aria-expanded={calOpen} aria-pressed={far} onClick={() => setCalOpen(!calOpen)}
+      <div className="when when2">
+        <p className="when-k">{lang === "ko" ? "날짜 및 시간" : "Date & time"}</p>
+        <div className="dstrip2" role="group" aria-label={lang === "ko" ? "날짜" : "Date"}>
+          {strip.map((d, i) => { const wd = wdOf(d), w = wxOf(d); return (
+            <button key={d} type="button" className={`dcard${wd === 0 ? " sun" : wd === 6 ? " sat" : ""}${w?.rain ? " wet" : ""}`} aria-pressed={d0 === d}
+              aria-label={`${dateLabel(d, lang)} ${wdName(wd, lang)}${w ? ` ${lang === "ko" ? w.ko : w.en} ${Math.round(w.tmax)}~${Math.round(w.tmin)}도` : ""}`} onClick={() => setCond({ ...cond, date: d })}>
+              {i === 0 ? <span className="dc-today">{lang === "ko" ? "오늘" : "Today"}</span>
+                : <span className="dc-wd">{i === 1 ? (lang === "ko" ? "내일" : "Tmrw") : wdName(wd, lang)}</span>}
+              <b className="dc-day">{Number(d.slice(8))}</b>
+              {w ? <><span className="dc-ic" aria-hidden="true"><Icon name={w.icon} /></span>
+                <span className="dc-t">{Math.round(w.tmax)}° <small>/ {Math.round(w.tmin)}°</small></span></> : <span className="dc-none" aria-hidden="true">–</span>}</button>); })}
+          <button type="button" className={`dcard more${far ? " picked" : ""}`} aria-expanded={calOpen} aria-pressed={far} onClick={() => setCalOpen(!calOpen)}
             aria-label={far ? (lang === "ko" ? `달력에서 고른 날 ${dateLabel(d0, lang)}. 다른 날 고르기` : `Picked ${dateLabel(d0, lang)}. Pick another day`) : (lang === "ko" ? "다음 주 이후 날짜는 달력에서 고르기" : "Pick a later date from the calendar")}>
-            <Icon name="cal" /><small>{far ? `${+d0.slice(5, 7)}/${+d0.slice(8)}` : (lang === "ko" ? "달력" : "Later")}</small></button>
+            <span className="dc-ic"><Icon name="cal" /></span><span className="dc-wd">{far ? `${+d0.slice(5, 7)}/${+d0.slice(8)}` : (lang === "ko" ? "달력" : "Later")}</span></button>
         </div>
         {calOpen && <Calendar value={d0} lang={lang} onChange={(d) => { setCond({ ...cond, date: d }); setCalOpen(false); }} />}
-        <div className="wrow" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
-          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) && <Icon name={wxOf(d0)!.icon} />}{wxOf(d0) ? " " + wxText(wxOf(d0)!) : !wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>
-          {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
-            <button key={v} type="button" className="chip sm" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{l}</button>)}
-        </div>
-        <div className="trow" role="group" aria-label={t("when.time")}>
-          <span>{t("when.time")}</span>
-          {TIMES.map((h) => <button key={h} type="button" className="chip" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
-          <label className="chip pick">{t("when.other")}
+        <div className="trow2" role="group" aria-label={t("when.time")}>
+          <span className="when-sub">{t("when.time")}</span>
+          {TIMES.map((h) => <button key={h} type="button" className="tpill" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
+          <label className="tpill pick">{t("when.other")}
             <input type="time" value={cond.start_time || "10:00"} step={600} onChange={(e) => e.target.value && setCond({ ...cond, start_time: e.target.value })} /></label>
+        </div>
+        <div className="wrow2" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
+          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) && <Icon name={wxOf(d0)!.icon} />}{wxOf(d0) ? " " + wxText(wxOf(d0)!) : !wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>
+          <span className="wseg">
+            {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
+              <button key={v} type="button" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{v === "" && <Icon name="sun" />}{l}</button>)}
+          </span>
         </div>
         <button className="chip go" disabled={busy} onClick={onDone}>
           {dateLabel(d0, lang)}({wdName(wdOf(d0), lang)}) {cond.start_time} · {label}</button>
@@ -835,7 +844,7 @@ export default function Page() {
                 {cond.start !== "자가용" && <div className="go-how" role="group" aria-label={lang === "ko" ? "출발하는 곳" : "Starting point"}>
                   <span className="go-k">{lang === "ko" ? "출발하는 곳" : "Start at"}</span>
                   {(["동해역", "묵호역", "동해종합버스터미널"] as const).map((s) => <button key={s} className="chip" aria-pressed={cond.start === s} onClick={() => setCond({ ...cond, start: s })}>{t(`opt.${s}`)}</button>)}
-                  <small className="muted go-note">{lang === "ko" ? "장소 사이 이동시간: 차량(택시) 기준 추정 · 버스 시간표·환승·정류장 도보 미포함" : "Times between stops are car/taxi estimates; bus schedules, transfers and walks to stops are not included."}</small>
+                  <small className="muted go-note">{lang === "ko" ? "장소 사이 이동시간: ODsay 대중교통 길찾기로 계산 (연결이 안 되면 차량·택시 기준 추정) · 배차 대기 미포함" : "Times between stops are car/taxi estimates; bus schedules, transfers and walks to stops are not included."}</small>
                 </div>}
                 <input aria-label={t("plan.memo")} placeholder={t("plan.memoPh")} value={cond.memo} onChange={(e) => setCond({ ...cond, memo: e.target.value })} />
                 <button className="chip go" disabled={busy} onClick={make}>{t("plan.make")}</button>
@@ -905,7 +914,7 @@ export default function Page() {
                     onEdit={(action, id) => edit(action, id, t(action === "remove" ? "edit.removeSay" : "edit.replaceSay",
                       { n: course.stops.findIndex((s) => s.id === id) + 1, p: name(id) }))} />
                     : <KakaoMap pins={pins} />}
-                  <p className="muted small route-note">{course.drive_source === "kakao" ? t("sum.driveSource")
+                  <p className="muted small route-note">{course.drive_source === "transit" ? t("sum.transitSource") : course.drive_source === "kakao" ? t("sum.driveSource")
                     : (lang === "ko" ? "이동시간은 거리로 어림한 값이에요. 실제 길은 [카카오맵으로 경로 보기]에서 확인해 주세요." : "Driving times are distance-based estimates. Check the real route in Kakao Map.")}</p>
                 </div>
                 <section ref={scheduleRef} className="course-schedule" aria-label={lang === "ko" ? "일정 편집" : "Itinerary editor"}>
@@ -924,7 +933,7 @@ export default function Page() {
                   <div className="tl">
                     {course.stops.map((s, i) => i === stopIndex && (
                       <div key={s.id} data-course-stop={s.id} data-selected={s.id === mapStop}>
-                        <p className="muted tl-drive">{t(course.drive_source === "kakao" ? "result.kakaoDrive" : "result.estDrive", { m: s.drive_min })}</p>
+                        <p className="muted tl-drive">{course.drive_source === "transit" ? legText(course.transit_legs?.[i], s.drive_min) : t(course.drive_source === "kakao" ? "result.kakaoDrive" : "result.estDrive", { m: s.drive_min })}</p>
                         <StopCard s={brief?.why[s.id] ? { ...s, why: brief.why[s.id] } : s} i={i} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
                           onMap={routePoints.length ? () => { selectMapStop(s.id); setSmallPane("map"); } : undefined} showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
                           onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
@@ -935,15 +944,15 @@ export default function Page() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">{course.back_drive_min != null && <>{t("result.kakaoDrive", { m: course.back_drive_min })} · </>}{t("result.back", { s: startName, t: course.back_at })}</p>
+                  <p className="muted">{course.back_drive_min != null && <>{course.drive_source === "transit" ? legText(course.transit_legs?.[course.stops.length], course.back_drive_min) : t("result.kakaoDrive", { m: course.back_drive_min })} · </>}{t("result.back", { s: startName, t: course.back_at })}</p>
                   {lang === "ko" && (() => {   // 쓸 수 있는 시간과 예상 소요 비교 (7-3), 대중교통이면 이동시간 기준을 밝힘
                     const hm = (x: string) => { const [h, m] = x.split(":").map(Number); return h * 60 + m; };
                     const used = hm(course.back_at) - hm(course.start_time || "10:00");
                     const budget = ans.time?.[0] ? BUDGET[ans.time[0]] : null;
                     const f = (m: number) => `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}`;
                     return <p className={`muted small${budget && used > budget ? " warn-txt" : ""}`}>
-                      {`예상 소요 ${f(used)}${budget ? ` (설정 ${ans.time![0]}${used > budget ? " 초과" : ""})` : ""} · 이동은 차량 기준 추정, 머무는 시간 포함, 휴식 미포함`}
-                      {cond.start !== "자가용" && " · 버스 시간표·환승·정류장 도보 미포함"}</p>;
+                      {`예상 소요 ${f(used)}${budget ? ` (설정 ${ans.time![0]}${used > budget ? " 초과" : ""})` : ""} · ${course.drive_source === "transit" ? "이동은 ODsay 대중교통 기준(배차 대기 미포함)" : course.drive_source === "kakao" ? "이동은 카카오 자동차 기준" : "이동은 차량 기준 추정"}, 머무는 시간 포함, 휴식 미포함`}
+                      {cond.start !== "자가용" && course.drive_source !== "transit" && " · 버스 시간표·환승·정류장 도보 미포함"}</p>;
                   })()}
                   <RouteCosts course={course} lang={lang} />
                   </>}

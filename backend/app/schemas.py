@@ -21,6 +21,7 @@ class Segment(BaseModel):
     curb_cm: Optional[float] = None      # 가장 높은 턱
     slope_deg: Optional[float] = None    # 가장 가파른 기울기(도)
     width_m: Optional[float] = None      # 가장 좁은 폭
+    rise_m: Optional[float] = None       # 경사 구간이 오르는 높이(m) — 김충식 외 2010: 높이 15cm 이하면 1/8까지 완화
     surface: Optional[str] = None        # 포장, 데크, 자갈, 모래, 흙길 ...
     alt_route: Optional[str] = None      # 엘리베이터 등 대체 경로가 있으면 설명
     note: str = ""
@@ -84,6 +85,7 @@ class Place(BaseModel):
     access_scope: dict = Field(default_factory=dict)
     fee_detail: dict = Field(default_factory=dict)   # 공식 확인 요금 {"어른": "5,000원", ..., "주차": "..."} (없으면 표시 안 함)
     verify: dict = Field(default_factory=dict)       # 관리자용 검증 기록 {"url", "checked", "confidence"}
+    osm: dict = Field(default_factory=dict)          # 주변 보행로 노면·폭 (OpenStreetMap, data/public/osm_paths.json) — 참고 정보, 판정에는 안 씀
 
     @property
     def verified(self) -> bool:
@@ -151,7 +153,8 @@ class Course(BaseModel):
     start_point: Optional[tuple[float, float]] = None          # 출발·복귀 위치 (역 좌표)
     driving_guides: list[list[dict]] = Field(default_factory=list)   # 구간별 길안내 [{text, lat, lon}]
     back_drive_min: Optional[int] = None                       # 마지막 장소 → 출발역 (카카오)
-    drive_source: Literal["kakao", "estimate"] = "estimate"    # 이동시간이 카카오 길찾기인지 추정인지
+    drive_source: Literal["kakao", "transit", "estimate"] = "estimate"    # 이동시간: 카카오 자동차 / ODsay 대중교통 / 추정
+    transit_legs: Optional[list[dict]] = None                  # 대중교통 구간 (ODsay): 노선·환승·걷는 거리
     driving_path: Optional[list[tuple[float, float]]] = None   # 지도에 그릴 경로선
     driving_sections: list[tuple[int, int]] = Field(default_factory=list)   # 구간마다 경로선의 [시작, 끝)
     route_costs: Optional[RouteCosts] = None

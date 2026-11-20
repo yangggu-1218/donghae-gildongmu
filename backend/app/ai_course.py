@@ -266,11 +266,11 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool, hint: str = "") ->
     from . import public_apis
     tok = public_apis.route_deadline()
     try:
-        issue = engine.apply_driving_route(places, c, course)
+        issue = engine.apply_route(places, c, course)
     finally:
         public_apis._ROUTE_DEADLINE.reset(tok)
     if issue is not None:
-        why = f"AI 코스에 카카오 실제 이동시간을 넣으니 '{issue['name']}'에 {issue['reason']} — 규칙 코스로 바꿨어요"
+        why = f"AI 코스에 {'대중교통' if issue.get('via') == 'transit' else '카카오'} 실제 이동시간을 넣으니 '{issue['name']}'에 {issue['reason']} — 규칙 코스로 바꿨어요"
         ai.LAST["course"] = {"why": why, "at": __import__("time").strftime("%Y-%m-%d %H:%M:%S")}
         return None, {"reason": why}
     used = engine._mins(course.back_at) - engine._mins(course.start_time)

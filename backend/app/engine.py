@@ -18,33 +18,88 @@ def worst(grades):
     return max(gs, key=lambda g: RANK[g]) if gs else None
 
 
-def grade_segment(s: Segment, mode: Mode) -> str:
-    """측정값이 있으면 규칙으로 판정하고, 없으면 저장된 휠체어 기준 판정을 쓴다."""
+# ---------------- 이동 난이도 5단계 (docs/22_ACCESS_GRADING.md) ----------------
+# 1 매우 쉬움 · 2 쉬움 → G / 3 주의 · 4 보조 필요 → Y / 5 통행 불가 → R
+# 근거: 법 = 장애인등편의법 시행규칙 별표1 (접근로 1/18, 부득이 1/12, 단차 2cm, 유효폭 1.2m·기존 0.9m, 경사로 높이 0.75m마다 참)
+#       김충식 외 2010 = 「경사로의 기울기와 높이에 따른 휠체어 사용자의 사용성 및 생리적 특성 분석」 대한인간공학회지 29(4)
+#       팀 = 근거 문헌이 없어 팀이 정한 값 (화면에 '팀 기준'으로 밝힘)
+LEVEL_NAME = {1: "매우 쉬움", 2: "쉬움", 3: "주의", 4: "보조 필요", 5: "통행 불가"}
+LEVEL_GRADE = {1: "G", 2: "G", 3: "Y", 4: "Y", 5: "R"}
+GRADE_LEVEL = {"G": 2, "Y": 3, "R": 5}            # 측정값 없이 자료가 정한 등급
+SLOPE = [(3.18, 1, "1/18 이하 — 법: 접근로 기준"), (4.76, 2, "1/12 이하 — 법: 경사로 기준"),
+         (5.71, 3, "1/10 이하 — 김충식 외 2010: 1/12와 차이 작음"), (7.13, 4, "1/8 이하 — 김충식 외 2010: 높이 15cm 넘으면 부담 큼"),
+         (9.46, 4, "1/6 미만 — 김충식 외 2010: 사용성 크게 낮음")]
+
+
+def _ratio(deg: float) -> str:
+    t = math.tan(math.radians(deg))
+    return f"1/{round(1 / t)}" if t > 0 else "평지"
+
+
+def assess(s: Segment, mode: Mode) -> tuple[int, list[str]]:
+    """측정값으로 5단계와 그 까닭(근거)을 낸다. 측정값이 없으면 자료의 등급(G/Y/R)을 단계로 옮긴다."""
     measured = any(v is not None for v in (s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface))
-    if measured:
-        g = "G"
-        surface = (s.surface or "").strip()
-        if (s.steps or 0) > 0:
-            g = "Y" if s.alt_route else "R"
-        if s.curb_cm is not None:
-            if s.curb_cm > 5: g = worst([g, "R"])
-            elif s.curb_cm > 2: g = worst([g, "Y"])
-        if s.slope_deg is not None:
-            if s.slope_deg > 7.1: g = worst([g, "R"])
-            elif s.slope_deg > 4.8: g = worst([g, "Y"])
-        if s.width_m is not None:
-            if s.width_m < 0.9: g = worst([g, "R"])
-            elif s.width_m < 1.2: g = worst([g, "Y"])
-        if surface in ("모래", "흙길", "산길"): g = worst([g, "R"])
-        elif surface in ("자갈", "데크 이음새"): g = worst([g, "Y"])
-    else:
-        g = s.grade or "Y"   # 정보 없음 = 확인 필요(주의)
-    if mode == "walk":       # 오래 걷기·계단 어려움: 측정값으로 계단 10개 이하·산길 아님이 확인될 때만 불가를 주의로
-        hard = (s.steps or 0) > 10 or (s.surface or "") in ("산길", "모래")
-        if g == "R" and measured and not hard: g = "Y"
-        if (s.distance_m or 0) > 300: g = worst([g, "Y"])
-    elif mode == "stroller" and s.curb_cm is not None and 2 < s.curb_cm <= 5:
-        g = worst([g, "Y"])
+    if not measured:
+        return GRADE_LEVEL.get(s.grade or "Y", 3), ["측정값 없음 — 자료(" + (s.source or "출처 없음") + ") 판정"]
+    lv, why = 1, []
+
+    def up(n, text):
+        nonlocal lv
+        if n > lv:
+            lv = n
+        if n >= 3:
+            why.append(text)
+    surface = (s.surface or "").strip()
+    if s.slope_deg is not None:
+        deg = s.slope_deg
+        if mode == "walk":       # 걷기: 법의 1/12까지 쉬움, 그 위는 휠체어 근거 준용 없이 '주의'·'보조 필요'(팀)
+            n = 1 if deg <= 3.18 else 2 if deg <= 4.76 else 3 if deg <= 7.13 else 4
+            up(n, f"경사 {deg:g}°({_ratio(deg)}) — " + ("법 기준 초과 (팀: 걷기 주의)" if n == 3 else "급경사 (팀: 보조 필요)"))
+        else:
+            n, txt = 5, "1/6 이상 — 김충식 외 2010: 지양"
+            for lim, lv_, t in SLOPE:
+                if deg <= lim:
+                    n, txt = lv_, t
+                    break
+            if n == 4 and deg <= 7.13 and s.rise_m is not None and s.rise_m <= 0.15:
+                n, txt = 3, "1/8 이하·높이 15cm 이하 — 김충식 외 2010: 완화 가능"
+            if 2 <= n <= 3 and s.rise_m is not None and s.rise_m > 0.75:
+                n, txt = n + 1, txt + " · 높이 0.75m 초과 — 법: 중간 참 필요"
+            up(n, f"경사 {deg:g}°({_ratio(deg)}) — {txt}")
+    if s.curb_cm is not None and s.curb_cm > 2:
+        if mode == "walk":
+            up(3 if s.curb_cm <= 5 else 4, f"턱 {s.curb_cm:g}cm — 법 기준(2cm) 초과")
+        else:
+            n = 3 if s.curb_cm <= 5 else 4 if s.curb_cm <= 10 else 5
+            up(n, f"턱 {s.curb_cm:g}cm — 법 기준(2cm) 초과" + ("" if n == 3 else " (팀: 5cm 넘으면 보조, 10cm 넘으면 불가)"))
+    if s.width_m is not None and mode != "walk" and s.width_m < 1.2:
+        n = 3 if s.width_m >= 0.9 else 4 if s.width_m >= 0.7 else 5
+        up(n, f"폭 {s.width_m:g}m — " + ("법: 기존 시설 완화(0.9m) 수준" if n == 3 else "김충식 외 2010: 휠체어 폭 0.7m" + (" 미만" if n == 5 else " 근접")))
+    if (s.steps or 0) > 0:
+        if mode == "walk":
+            up(3 if s.steps <= 10 else 5, f"계단 {s.steps}개" + (" (팀: 10개 넘으면 계단이 어려운 분은 통행 불가)" if s.steps > 10 else ""))
+        elif s.alt_route:
+            up(4, f"계단 {s.steps}개 · 대체 경로({s.alt_route}) — 법: 경사로·승강기로 대체")
+        else:
+            up(5, f"계단 {s.steps}개 · 대체 경로 없음")
+    if surface in ("모래", "흙길", "산길"):
+        up(5 if mode != "walk" or surface in ("모래", "산길") else 3, f"노면 {surface} (팀 기준)")
+    elif surface in ("자갈", "데크 이음새"):
+        up(3, f"노면 {surface} (팀 기준)")
+    if mode == "walk" and (s.distance_m or 0) > 300:
+        up(3, f"거리 {s.distance_m:g}m (팀: 300m 넘으면 주의)")
+    return lv, why
+
+
+def grade_segment(s: Segment, mode: Mode) -> str:
+    """5단계를 G/Y/R로. 측정값이 없으면 자료의 등급을 그대로 (어르신 모드도 '불가'를 낮추지 않음)."""
+    lv, _ = assess(s, mode)
+    g = LEVEL_GRADE[lv]
+    measured = any(v is not None for v in (s.steps, s.curb_cm, s.slope_deg, s.width_m, s.surface))
+    if not measured:
+        g = s.grade or "Y"
+        if mode == "walk" and (s.distance_m or 0) > 300:
+            g = worst([g, "Y"])
     return g
 
 
@@ -186,7 +241,7 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         result = preview_stops(places, c, rain)
         for _ in range(MAX_REPLAN + 1):
             result.skipped.extend(unavailable)
-            issue = apply_driving_route(places, c, result)
+            issue = apply_route(places, c, result)
             if issue is None:
                 return result
             if len(unavailable) >= MAX_REPLAN:
@@ -202,6 +257,54 @@ def plan(places: dict[str, Place], c: Conditions, rain: bool) -> Course:
         return result
     finally:
         public_apis._ROUTE_DEADLINE.reset(tok)
+
+
+def apply_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:
+    """역·터미널 출발이면 ODsay 대중교통으로, 안 되면(키 없음·실패) 카카오 자동차로, 그것도 안 되면 추정 그대로."""
+    issue = apply_transit_route(places, c, result)
+    if result.drive_source == "transit" or issue is not None:
+        return issue
+    return apply_driving_route(places, c, result)
+
+
+def apply_transit_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:
+    """ODsay 대중교통 시간으로 도착·출발 시각을 다시 계산한다. 문제없으면 None(적용), 못 가게 된 곳이 생기면 그 장소."""
+    from . import details, public_apis
+    if c.start == "자가용" or not result.stops or not public_apis.odsay_available():
+        return None
+    station = STARTS[c.start]
+    pts = [station, *[(places[s.id].lat, places[s.id].lon) for s in result.stops], station]
+    if any(lat is None or lon is None for lat, lon in pts):
+        return None
+    speed = 0.7 if c.move else 1.0      # m/s — public_data.transit 과 같은 근거
+    legs = []
+    for a, b in zip(pts, pts[1:]):
+        leg = public_apis.transit_leg(a, b, speed)
+        if leg is None:
+            return None
+        legs.append(leg)
+    clock = _mins(result.start_time)
+    planned = [(s.arrive, s.depart, s.drive_min, s.wait_min, s.visit_at, s.open_state) for s in result.stops]
+    for stop, leg in zip(result.stops, legs[:-1]):
+        place = places[stop.id]
+        stay = _mins(stop.depart) - _mins(stop.arrive)
+        arrival = clock + leg["min"]
+        ok, state, wait = details.open_check(place, result.weekday, arrival, stay)
+        if not ok or clock >= 20 * 60:
+            for s, old in zip(result.stops, planned):
+                s.arrive, s.depart, s.drive_min, s.wait_min, s.visit_at, s.open_state = old
+            return {"id": stop.id, "name": place.name_ko, "reason": "대중교통 시간을 반영하면 방문 가능한 시간을 벗어나요", "via": "transit"}
+        clock = arrival + wait + stay
+        stop.drive_min, stop.wait_min = leg["min"], wait
+        stop.arrive, stop.depart = hhmm(arrival), hhmm(clock)
+        stop.visit_at = hhmm(arrival + wait) if wait else None
+        stop.open_state = state if state in ("always", "unknown") else "open"
+    names = [c.start, *[places[s.id].name_ko for s in result.stops], c.start]
+    result.drive_source = "transit"
+    result.transit_legs = [{**leg, "from": a, "to": b} for leg, a, b in zip(legs, names, names[1:])]
+    result.back_drive_min = legs[-1]["min"]
+    result.back_at = hhmm(clock + result.back_drive_min)
+    return None
 
 
 def apply_driving_route(places: dict[str, Place], c: Conditions, result: Course) -> dict | None:

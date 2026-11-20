@@ -272,6 +272,8 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
     ...(toilet ? [["toilet", L("장애인 화장실", "Accessible toilet"), toilet.name, toilet.dist_m] as [string, string, string, number | undefined]] : []),
     ...(n.parking ? [["parking", L("주차장", "Parking"), `${n.parking.name}${n.parking.spaces ? ` (${n.parking.spaces}${L("면", "")})` : ""}`, n.parking.dist_m] as [string, string, string, number | undefined]] : []),
     ...(n.medical?.["응급실"] ? [["shield", L("응급실", "ER"), n.medical["응급실"].name, n.medical["응급실"].dist_m] as [string, string, string, number | undefined]] : []),
+    ...((p.bus_stops || []).slice(0, 1).map((b: any) => ["bus", L("버스 정류장", "Bus stop"),
+      `${b.name} · ${L(`걸어서 약 ${Math.max(1, Math.ceil(b.dist_m * 1.3 / 0.7 / 60))}분 (0.7m/s 기준)`, `~${Math.max(1, Math.ceil(b.dist_m * 1.3 / 0.7 / 60))} min walk`)}`, b.dist_m] as [string, string, string, number | undefined])),
   ];
 
   const moreBtn = !stay && !noPath ? <button className="pp4-more" aria-expanded={routeOpen} aria-controls="pp4-route-more" onClick={() => setRouteOpen(!routeOpen)}>
@@ -351,12 +353,16 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
               const d = s.facts.find((f: string) => DIST_RE.test(f))?.match(DIST_RE)?.[0] || "";
               return <li key={s.name} title={[...s.facts, s.note].filter(Boolean).join(" · ") || undefined}>
                 <Icon name="pin" /><span>{s.name}{d && ` ${d}`}</span>
-                <span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span>
-                {s.optional && <span className="badge b-plain">{L("선택 구간", "Optional")}</span>}</li>;
+                <span className={`badge g-${s.grade}`}>{s.measured && s.level ? L(`${s.level}단계 · ${s.level_name}`, GRADE[s.grade as "G" | "Y" | "R"][1]) : L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span>
+                {s.optional && <span className="badge b-plain">{L("선택 구간", "Optional")}</span>}
+                {s.measured && (s.why?.length > 0 || s.uphill_min) && <small className="seg-why">{[...(s.why || []), s.uphill_min ? L(`오르막 참고 약 ${s.uphill_min}분 (김충식 외 2010 실험 속도)`, `~${s.uphill_min} min uphill`) : ""].filter(Boolean).join(" · ")}</small>}</li>;
             })}</ol>
           {moreBtn}
         </div>}
         {segs.length === 0 && moreBtn && <div className="pp4-route">{moreBtn}</div>}
+        {p.osm?.surface_m && Object.keys(p.osm.surface_m).length > 0 && <p className="muted small pp4-osm">
+          {L("주변 250m 보행로 노면", "Nearby path surfaces")}: {Object.entries(p.osm.surface_m).map(([k, m]: any) => `${k} 약 ${m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`}`).join(" · ")}
+          {p.osm.min_width_m ? ` · ${L("가장 좁은 폭", "narrowest")} ${p.osm.min_width_m}m` : ""} <span className="osm-src">(© OpenStreetMap 기여자, {p.osm.checked} 기준 · 참고 정보)</span></p>}
         <div id="pp4-route-more" hidden={!routeOpen && !(stay || noPath || j.state === "fail")}>
           {!stay && !noPath && <AiJudge j={j} lang={lang} chips={chips} carerTip={lang === "ko" ? p.carer_tip || "" : ""} />}
           {(stay || noPath || j.state === "fail") && chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
@@ -909,7 +915,7 @@ export function GuidePage({ lang, embedded = false }: { lang: Lang; embedded?: b
     { t: L("겨울 바닷가 (11~2월)", "Winter by the sea (Nov–Feb)"), i: [L("바닷바람이 차요 — 모자·장갑·무릎 담요", "Sea wind is cold: hat, gloves, lap blanket"), L("해 지는 시각이 5시 반 무렵이라 실외는 오후 4시 전에", "Sunset ~5:30pm; finish outdoors by 4pm"), L("해맞이는 새벽이라 춥고 붐벼요. 출렁다리는 보통 오전 9시부터", "Sunrise is cold and crowded; the bridge usually opens at 9am"), L("눈·비 오는 날은 데크가 미끄러워요 — 실내 위주로", "Wet decks are slippery; go indoors")] },
   ];
   const faq = [
-    [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("초록은 그 기준으로 갈 수 있어요, 노랑은 도움이 있거나 조심하면 갈 수 있어요, 빨강은 어려워요. 경사로 기울기·출입구 턱·통로 폭을 장애인등편의법 기준과 비교해 정해요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
+    [L("초록·노랑·빨강은 무슨 뜻이에요?", "What do the colors mean?"), L("5단계로 나눠요: 1 매우 쉬움·2 쉬움(초록, 이동 가능) / 3 주의·4 보조 필요(노랑) / 5 통행 불가(빨강). 경사·턱·폭·계단·노면을 장애인등편의법 시행규칙 기준(경사 1/18·1/12, 턱 2cm, 폭 1.2m)과 휠체어 경사로 연구(김충식 외 2010: 1/10·1/8·1/6)에 비교해 가장 어려운 항목으로 정해요. 측정값이 없는 구간은 출처 자료의 판정을 그대로 써요.", "Green = accessible, yellow = with care, red = not accessible, based on ramp slope, steps and path width under Korean accessibility law.")],
     [L("영업시간이 맞나요?", "Are opening hours accurate?"), L("운영시간은 바뀔 수 있으니 출발 전에 전화로 한 번 더 확인해 주세요.", "Public data where available; others are marked as samples. Call ahead.")],
     [L("제가 입력한 정보가 저장되나요?", "Is my information stored?"), L("이동 조건은 서버에 저장하지 않아요. [내 일정]도 이 기기에만 남아요.", "No. Saved trips stay on this device.")],
     [L("현장과 다른 정보를 봤어요.", "I found wrong information."), L("코스 결과 아래 [현장 제보]로 사진과 함께 알려 주세요. 팀이 확인한 뒤 반영해요.", "Use the report form below a route; the team reviews it.")],
@@ -994,8 +1000,9 @@ export function SourcesPage({ lang }: { lang: Lang }) {
         <div className="panel">
           <h2 className="h3">{L("판정 기준", "Grading rules")}</h2>
           <div className="tbl-wrap"><table className="tbl">
-            <thead><tr><th>{L("항목", "Item")}</th><th><span className="badge g-G">{L("갈 수 있어요", "OK")}</span></th><th><span className="badge g-Y">{L("주의", "Caution")}</span></th><th><span className="badge g-R">{L("어려워요", "No")}</span></th><th>{L("근거", "Basis")}</th></tr></thead>
-            <tbody>{d.criteria.map((c: any) => <tr key={c.item}><td>{tr(lang, c.item)}</td><td>{tr(lang, c.ok)}</td><td>{tr(lang, c.warn)}</td><td>{tr(lang, c.no)}</td><td><small>{tr(lang, c.law)}</small></td></tr>)}</tbody>
+            <thead><tr><th>{L("항목", "Item")}</th>{([["G", "1 매우 쉬움"], ["G", "2 쉬움"], ["Y", "3 주의"], ["Y", "4 보조 필요"], ["R", "5 통행 불가"]] as const).map(([g, t]) =>
+              <th key={t}><span className={`badge g-${g}`}>{t}</span></th>)}<th>{L("근거", "Basis")}</th></tr></thead>
+            <tbody>{d.criteria.map((c: any) => <tr key={c.item}><td>{tr(lang, c.item)}</td>{["l1", "l2", "l3", "l4", "l5"].map((k) => <td key={k}>{c[k] ? tr(lang, c[k]) : "—"}</td>)}<td><small>{tr(lang, c.law)}</small></td></tr>)}</tbody>
           </table></div>
           <ul className="plain">{(lang === "ko" ? d.notes : SOURCE_NOTES_EN).map((n: string) => <li key={n} className="muted">{n}</li>)}</ul>
         </div>

@@ -15,7 +15,7 @@ export type Course = {
   driving_path?: [number, number][] | null;
   driving_sections?: [number, number][];
   route_costs?: { distance_m: number | null; toll_won: number | null; taxi_won: number | null; quote_parts: number } | null;
-  drive_source?: "kakao" | "estimate"; back_drive_min?: number | null;
+  drive_source?: "kakao" | "transit" | "estimate"; transit_legs?: any[] | null; back_drive_min?: number | null;
   mode: string; stops: Stop[]; overall: Grade; back_at: string; notes: string[];
   date: string; weekday: number; start_time: string; skipped: { id: string; name: string; reason: string }[];
 };
