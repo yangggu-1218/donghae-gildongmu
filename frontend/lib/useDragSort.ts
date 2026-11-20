@@ -21,6 +21,7 @@ export function useDragSort(ids: string[], onDrop: (next: string[]) => void, dis
   const listRef = useRef<HTMLOListElement>(null);
   const [st, setSt] = useState<DragState | null>(null);
   const prevRects = useRef<Map<string, DOMRect>>(new Map());
+  const dragged = useRef(false);   // 방금 끌어서 놓았으면 이어지는 클릭(카드 고르기)을 무시
   const key = ids.join("|");
 
   const snapshot = () => {
@@ -57,6 +58,7 @@ export function useDragSort(ids: string[], onDrop: (next: string[]) => void, dis
     }
     const list = listRef.current;
     if (!list) return;
+    dragged.current = false;
     const from = ids.indexOf(id);
     const rects = snapshot();
     const listTop = list.getBoundingClientRect().top;
@@ -107,6 +109,7 @@ export function useDragSort(ids: string[], onDrop: (next: string[]) => void, dis
       if (raf) cancelAnimationFrame(raf);
       document.body.classList.remove("is-sorting");
       const fin = latest;
+      if (active) dragged.current = true;
       setSt(null);
       if (ok && active && fin && fin.over !== from) {
         const next = ids.filter((o) => o !== id);
@@ -136,5 +139,6 @@ export function useDragSort(ids: string[], onDrop: (next: string[]) => void, dis
     requestAnimationFrame(() => listRef.current?.querySelector<HTMLElement>(`[data-sort-id="${id}"] .drag-h`)?.focus());
   };
 
-  return { listRef, st, onPointerDown, onKey };
+  const wasDrag = () => { const d = dragged.current; dragged.current = false; return d; };
+  return { listRef, st, onPointerDown, onKey, wasDrag };
 }

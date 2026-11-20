@@ -23,7 +23,7 @@ export const TERRAIN_NOTE = (lang: string) => lang === "ko"
 // 걷는 구간(내린 정류장 → 장소) 오르막: 5m 미만이면 말하지 않음
 export function climbText(c: Climb | undefined | null, lang: string): string {
   if (!c || c.up_m < 5) return "";
-  return lang === "ko" ? `걷는 길 오르막 약 ${c.up_m}m(지형 추정)` : `uphill walk ~${c.up_m} m (terrain est.)`;
+  return lang === "ko" ? `걷는 길 오르막 약 ${c.up_m}m` : `uphill walk ~${c.up_m} m`;
 }
 
 // 관리자: 언덕 지형인데 현장 답사 구간이 없는 곳

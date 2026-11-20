@@ -196,7 +196,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
         </div>
       </div>
       {!pid && <p className="muted small pe-hint">장소를 고른 뒤 [수동 변경] 또는 [AI 자동 변경]을 누르세요.{places.some(needsVisit) ? ` 언덕 지형인데 현장 답사 구간이 없는 곳 ${places.filter(needsVisit).length}곳은 목록에 '언덕·답사 필요'로 표시돼요.` : ""}</p>}
-      {pid && (() => { const pl = places.find((x: any) => x.id === pid); return pl?.terrain?.elev_m != null ? <p className={`small pe-terrain${needsVisit(pl) ? " warn" : ""}`}><b>지형(DEM 90m 추정)</b> {terrainText(pl.terrain, "ko")}
+      {pid && (() => { const pl = places.find((x: any) => x.id === pid); return pl?.terrain?.elev_m != null ? <p className={`small pe-terrain${needsVisit(pl) ? " warn" : ""}`}><b>지형</b> {terrainText(pl.terrain, "ko")}
         {needsVisit(pl) ? " 언덕 지형인데 현장 답사 구간이 없어요. 가는 길 경사·계단을 현장에서 재 주세요." : ""}</p> : null; })()}
       {pid && orig && <div className="pe-pane" ref={paneRef}>
       {filled && mode === "manual" && <p className="ok pe-filled" role="status">{filled} <button type="button" className="link-btn" onClick={() => go("ai")}>AI 자동 변경으로 돌아가기</button></p>}

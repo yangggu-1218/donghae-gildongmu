@@ -15,7 +15,7 @@ import { PICTO } from "@/lib/mapPicto";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { PlaceTalk } from "@/components/Community";
 import { AiJudge, AiStatus, useJudge, verdictText } from "@/components/AiCards";
-import { terrainText, TERRAIN_NOTE } from "@/lib/terrain";
+import { terrainText } from "@/lib/terrain";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -374,7 +374,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           {moreBtn}
         </div>}
         {segs.length === 0 && moreBtn && <div className="pp4-route">{moreBtn}</div>}
-        {p.terrain?.elev_m != null && <p className="small pp4-terrain"><b>{L("지형", "Terrain")}</b> {terrainText(p.terrain, lang)} <span className="muted" title={TERRAIN_NOTE(lang)}>{L("(지형 자료 추정)", "(terrain estimate)")}</span></p>}
+        {p.terrain?.elev_m != null && <p className="small pp4-terrain"><b>{L("지형", "Terrain")}</b> {terrainText(p.terrain, lang)}</p>}
         {p.osm?.surface_m && Object.keys(p.osm.surface_m).length > 0 && <p className="muted small pp4-osm">
           {L("주변 250m 보행로 노면", "Nearby path surfaces")}: {Object.entries(p.osm.surface_m).map(([k, m]: any) => `${k} 약 ${m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`}`).join(" · ")}
           {p.osm.min_width_m ? ` · ${L("가장 좁은 폭", "narrowest")} ${p.osm.min_width_m}m` : ""}</p>}

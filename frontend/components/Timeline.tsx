@@ -63,7 +63,7 @@ function StopWeather({ forecast, lang }: { forecast: VisitWeather; lang: string 
 // ---------- 시간표 카드 ----------
 export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy, children, onMap, onRemove, onReplace, crowd, at, handle, route, lock }: {
   s: Stop; i: number; x?: Extra; name: string; t: T; lang: string; wheel: boolean; showNear: boolean; isNew: boolean; busy: boolean;
-  children?: ReactNode; onMap?: () => void; onRemove: () => void; onReplace: () => void; crowd?: number | null; at?: { lat: number; lon: number };
+  children?: ReactNode; onMap?: () => void; onRemove: () => void; onReplace?: () => void; crowd?: number | null; at?: { lat: number; lon: number };
   handle?: ReactNode; route?: string; lock?: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -91,8 +91,6 @@ export function StopCard({ s, i, x, name, t, lang, wheel, showNear, isNew, busy,
           <button type="button" className="chip sm go" onClick={() => dialog.current?.showModal()}>{lang === "ko" ? "상세" : "Details"}</button>
           {onMap && <button type="button" className="chip sm" onClick={onMap}>{lang === "ko" ? "지도" : "Map"}</button>}
           <button className="chip sm" disabled={busy} onClick={onRemove}>{lang === "ko" ? "빼기" : "Remove"}</button>
-          <button className="chip sm" disabled={busy} onClick={onReplace}>{lang === "ko" ? "바꾸기" : "Replace"}</button>
-          {lock}
         </div>
       </article>
       <dialog className="stop-detail-dialog" ref={dialog} aria-label={name}>

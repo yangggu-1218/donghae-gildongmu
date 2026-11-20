@@ -2,6 +2,7 @@
 // 코스 만들기 화면의 최소 구현(동이와 대화 → 코스 → 말로 수정 → 안심).
 // 관광지·추천 코스·후기 섹션은 프로토타입 v2의 구조를 그대로 옮겨 붙이면 된다 (README의 '화면 옮기기' 참고).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ko from "@/i18n/ko.json";
 import en from "@/i18n/en.json";
 import Dongi from "@/components/Dongi";
@@ -160,6 +161,7 @@ export default function Page() {
   const [chatOpen, setChatOpen] = useState(true);
   const barRef = useRef<HTMLDivElement>(null);
   const scheduleRef = useRef<HTMLElement>(null);
+  const [mapHost, setMapHost] = useState<HTMLDivElement | null>(null);   // 코스가 나온 뒤 [동이와 대화]는 지도 칸 위에 뜬다
   function selectMapStop(id: string) {
     setMapStop(id);
     setMapMode("edit");
@@ -670,7 +672,7 @@ export default function Page() {
     return [station, ...course.stops.map((s) => ({ id: s.id, lat: places[s.id].lat, lon: places[s.id].lon, label: name(s.id), grade: null })), station];
   }, [course, places, cond.start, lang]);
   const stopIndex = Math.max(0, course?.stops.findIndex((s) => s.id === mapStop) ?? 0);
-  const { listRef, st: drag, onPointerDown: dragStart, onKey: dragKey } = useDragSort(course?.stops.map((s) => s.id) || [], reorderTo, busy);
+  const { listRef, st: drag, onPointerDown: dragStart, onKey: dragKey, wasDrag } = useDragSort(course?.stops.map((s) => s.id) || [], reorderTo, busy);
   // 구간마다 카카오맵 길찾기 (자가용이면 자동차, 역·터미널 출발이면 대중교통). 휠체어 통행 확인 경로가 아님
   const kakaoBy = cond.start === "자가용" ? "car" : "traffic";
   const legUrl = (i: number) => {
@@ -844,7 +846,7 @@ export default function Page() {
         <div className="planner-actions" data-open={toolsOpen}>
           <button className="chip opt-btn" disabled={busy || course.stops.length < 2} onClick={optimize} aria-haspopup="dialog">
             <Icon name="route" />{optBusy ? (lang === "ko" ? "동선 계산 중…" : "Optimizing…") : (lang === "ko" ? "AI 동선 최적화" : "Optimize route")}</button>
-          <button className="chip" onClick={() => setChatOpen(!chatOpen)} aria-controls="chat-panel" aria-expanded={chatOpen}>{lang === "ko" ? "동이와 대화" : "Chat"}</button>
+          <button className="chip" onClick={() => { if (!chatOpen) setSmallPane("map"); setChatOpen(!chatOpen); }} aria-controls="chat-panel" aria-expanded={chatOpen}>{lang === "ko" ? "동이와 대화" : "Chat"}</button>
           <button className="chip sum-btn" onClick={() => setSumOpen(true)}>{t("sum.open")}</button>
           <button className="chip go" onClick={saveMine} aria-live="polite">{saved ? t("my.saved") : t("my.save")}</button>
         </div>
@@ -856,6 +858,7 @@ export default function Page() {
       {opt && course && <OptimizeCompare opt={opt} before={course.stops} name={name} lang={lang} onApply={applyOpt} onKeep={() => setOpt(null)} />}
       <div hidden={planning && !course} className={`grid${course ? " has-course" : ""}`}>
         {!course && <PlanAside lang={lang} />}
+        {(() => { const chatEl = (
         <section id="chat-panel" className={`panel chat${course ? (chatOpen ? " widget open" : " widget") : ""}`} aria-label={t("nav.plan")}
           onKeyDown={(e) => { if (e.key === "Escape" && course) setChatOpen(false); }}>
           {course && <div className="widget-bar"><b>{lang === "ko" ? "동이와 대화" : "Chat with Dongi"}</b>
@@ -968,6 +971,7 @@ export default function Page() {
           </div>
           </>}
         </section>
+        ); return course && chatOpen && mapHost ? createPortal(chatEl, mapHost) : chatEl; })()}
 
         <section className={`panel${course ? " res" : ""}`} aria-live="polite" id="timeline">
           {!course ? null : (
@@ -997,20 +1001,16 @@ export default function Page() {
                   {routeErr && !routing && <p className="route-err" role="alert">{lang === "ko" ? "경로를 다시 계산하지 못해 원래 순서로 되돌렸어요." : "Couldn't recalculate the route. Your previous order is kept."}
                     <button className="chip sm go" disabled={busy} onClick={() => reorderTo(routeErr)}>{lang === "ko" ? "다시 시도" : "Retry"}</button>
                     <button className="chip sm" onClick={() => setRouteErr(null)}>{t("common.close")}</button></p>}
-                  {course.stops.length > 1 && <p id="drag-help" className="drag-help muted small">{lang === "ko" ? "⋮⋮ 손잡이(또는 카드)를 끌어서 방문 순서를 바꿀 수 있어요. 키보드는 손잡이에서 ↑·↓." : "Drag ⋮⋮ (or a card) to reorder. Keyboard: ↑/↓ on the handle."}</p>}
                   <ol className={`tl tl-all${drag ? " sorting" : ""}`} ref={listRef}>
                     {course.stops.map((s, i) => (
                       <li key={s.id} data-course-stop={s.id} data-sort-id={s.id} data-selected={s.id === mapStop} data-dragging={drag?.id === s.id || undefined}
                         style={drag?.id === s.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
-                        onPointerDown={(e) => dragStart(e, s.id, false)} onDragStart={(e) => e.preventDefault()}>
-                        <p className="muted tl-drive">{legLine(i, s.drive_min)}{routePoints.length > 0 && !routing && <a className="leg-go" href={legUrl(i)} target="_blank" rel="noreferrer">{lang === "ko" ? "길찾기" : "Directions"}<span className="sr-only">{lang === "ko" ? ` (${i === 0 ? startName : name(course.stops[i - 1].id)} → ${name(s.id)}, 카카오맵 새 창)` : " (Kakao Map, new tab)"}</span></a>}</p>
+                        onPointerDown={(e) => dragStart(e, s.id, false)} onDragStart={(e) => e.preventDefault()}
+                        onClick={(e) => { if (wasDrag() || (e.target as HTMLElement).closest("button, a, dialog, summary")) return; if (mapStop === s.id) setMapStop(null); else selectMapStop(s.id); }}>
                         <StopCard s={s} i={i} route={routePoints.length ? legUrl(i) : undefined}
-                          handle={course.stops.length > 1 ? <button type="button" className="drag-h" disabled={busy} aria-describedby="drag-help"
+                          handle={course.stops.length > 1 ? <button type="button" className="drag-h" disabled={busy}
                             aria-label={lang === "ko" ? `${i + 1}번 ${name(s.id)} 순서 옮기기` : `Move stop ${i + 1}, ${name(s.id)}`}
-                            onPointerDown={(e) => { e.stopPropagation(); dragStart(e, s.id, true); }} onKeyDown={(e) => dragKey(e, s.id)}><span aria-hidden="true">⋮⋮</span></button> : undefined}
-                          lock={course.stops.length > 1 ? <button type="button" className="chip sm lock" aria-pressed={locked.includes(s.id)} disabled={busy}
-                            title={lang === "ko" ? "AI 동선 최적화가 이 장소의 순서를 옮기지 않아요 (예약·고정 방문)" : "Optimizer keeps this stop in place"}
-                            onClick={() => setLocked((l) => (l.includes(s.id) ? l.filter((x) => x !== s.id) : [...l, s.id]))}>{lang === "ko" ? <><span className="lock-l">순서 </span>고정{locked.includes(s.id) ? "됨" : ""}</> : locked.includes(s.id) ? "Pinned" : "Pin"}</button> : undefined} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
+                            onPointerDown={(e) => { e.stopPropagation(); dragStart(e, s.id, true); }} onKeyDown={(e) => dragKey(e, s.id)}><span aria-hidden="true">⋮⋮</span></button> : undefined} x={extras[s.id]} at={places[s.id]?.lat ? { lat: places[s.id].lat, lon: places[s.id].lon } : undefined} name={name(s.id)} t={t} lang={lang} wheel={cond.move.includes("휠체어")}
                           onMap={routePoints.length ? () => { selectMapStop(s.id); setSmallPane("map"); } : undefined} showNear={showNear} isNew={fresh.includes(s.id)} busy={busy}
                           onRemove={() => edit("remove", s.id, t("edit.removeSay", { n: i + 1, p: name(s.id) }))}
                           onReplace={() => edit("replace", s.id, t("edit.replaceSay", { n: i + 1, p: name(s.id) }))}
@@ -1026,10 +1026,6 @@ export default function Page() {
                     const used = hm(course.back_at) - hm(course.start_time || "10:00");
                     const f = (m: number) => lang === "ko" ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}` : `${Math.floor(m / 60)}h ${m % 60}m`;
                     return <>
-                      {course.back_drive_min != null && <p className="muted tl-drive">{legLine(course.stops.length, course.back_drive_min)}{routePoints.length > 0 && !routing && <a className="leg-go" href={legUrl(course.stops.length)} target="_blank" rel="noreferrer">{lang === "ko" ? "길찾기" : "Directions"}</a>}</p>}
-                      {(cond.move.includes("휠체어") || cond.move.includes("유모차")) && <p className="muted small access-note">{course.drive_source === "transit"
-                        ? (lang === "ko" ? "대중교통 사이 걷는 구간은 일반 보행 경로로 계산했어요. 휠체어·유모차 통행(계단·경사)은 확인되지 않은 구간이에요." : "Walking parts between transit are general walking routes, not verified for wheelchairs or strollers.")
-                        : (lang === "ko" ? "이동시간은 자동차 경로 기준이에요. 차에서 내린 뒤 입구까지의 휠체어·유모차 동선은 장소마다 [상세]의 접근 정보를 확인하세요." : "Times are by car. Check each stop's access details for the path from parking to the entrance.")}</p>}
                       <p className="tl-back"><b>{t("result.back", { s: startName, t: course.back_at })}</b><span className="muted"> · {lang === "ko" ? "총" : "Total"} {f(used)}</span></p>
                     </>;
                   })()}
@@ -1037,6 +1033,7 @@ export default function Page() {
                   </>}
                 </section>
                 <div className="res-map">
+                  <div className="map-chat-host" ref={setMapHost} />
                   <h3 className="sr-only">{lang === "ko" ? "경로 지도" : "Route map"}</h3>
                   {routePoints.length ? <CourseDirections key={[course.date, course.start_time, cond.start, lang, ...course.stops.map((s) => s.id)].join("|")}
                     points={routePoints} course={course} lang={lang} mode={mapMode} onMode={setMapMode}

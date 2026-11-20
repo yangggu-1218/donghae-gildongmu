@@ -48,7 +48,6 @@ export function PlanningWait({ lang }: { lang: string }) {
         </g>}
         <use className="planning-guide-static" style={still ? { display: "block" } : undefined} href={"#" + markerId} x="556.5" y="175"/>
       </svg>
-      <div className="planning-map-meta"><span>{ko ? "묵호 해안" : "Mukho coast · sample route"}</span></div>
     </div>
   </section>;
 }

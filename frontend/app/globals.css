@@ -3476,3 +3476,24 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; -webkit-user-s
 .pe-terrain { margin: 8px 0 0; padding: 8px 12px; border-radius: var(--r-m); background: var(--mist); }
 .pe-terrain.warn { background: var(--warn-bg); color: var(--warn); }
 .pe-terrain b { margin-right: 6px; }
+/* 머리글 조금 크게 (넓은 화면) */
+@media (min-width: 901px) {
+  .bar { padding-block: 14px; }
+  .brand { font-size: 30px; }
+  .brand img { height: 50px; width: 50px; }
+  .nav a { font-size: 1.08em; padding: 10px 14px; }
+  .tools .sos, .tools .box { min-height: 48px; font-size: 1.02em; padding: 0 16px; }
+}
+/* 일정 카드: 상세·지도·빼기 버튼은 카드를 골랐을 때만 */
+.tl-all > li:not([data-selected="true"]) .stop-actions { display: none; }
+.tl-all > li { cursor: pointer; }
+.tl-all { gap: 8px; }
+/* [동이와 대화]: 지도 칸 위에 뜨고 × 로 닫음 */
+.res-map { position: relative; }
+.map-chat-host:empty { display: none; }
+.map-chat-host { position: absolute; inset: 0; z-index: 30; display: flex; }
+.map-chat-host > .panel.chat { display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0; border: 1.5px solid var(--sea); border-radius: var(--r-m);
+  background: var(--surface); box-shadow: 0 18px 40px -20px rgba(12, 35, 64, .45); overflow: hidden; }
+.map-chat-host > .panel.chat .chat-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+@media (min-width: 901px) { .planner-shell .course-layout > .res-map > .map-chat-host { left: 18px; } }
+@media (max-width: 900px) { .planner-shell .res-map:has(.map-chat-host > .panel.chat) { min-height: min(78dvh, 680px); } }
