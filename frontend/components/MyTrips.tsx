@@ -57,7 +57,7 @@ export function MyPage({ lang }: { lang: Lang }) {
   const nFav = plans.filter((p) => p.fav).length;
   return (
     <section className="sec wrap">
-      <Head lang={lang} mascot="full-cheer" photo="haerang" title={L("내 일정", "My trips")} sub={L("저장한 일정은 이 기기에만 남아요. 서버에는 아무것도 저장하지 않아요.", "Saved only on this device; nothing is stored on a server.")} />
+      <Head lang={lang} mascot="full-cheer" photo="haerang" title={L("내 일정", "My trips")} />
       {!plans.length ? (
         <div className="panel empty">
           <img src="/dongi/full-cheer.webp" alt="" />
