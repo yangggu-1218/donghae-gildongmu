@@ -52,7 +52,7 @@ export function CommunityPage({ lang, sub, onUse }: { lang: Lang; sub?: string; 
   return <Hub lang={lang} n={posts.length} />;
 }
 
-// 커뮤니티 첫 화면: 이야기 나누기 / 문의하기 중 고르기
+// 커뮤니티 첫 화면: 소통하기 / 문의하기 중 고르기
 function Hub({ lang, n }: { lang: Lang; n: number }) {
   const L = pick(lang);
   return (
@@ -60,16 +60,14 @@ function Hub({ lang, n }: { lang: Lang; n: number }) {
       <Head lang={lang} mascot="full-cheer" title={L("커뮤니티", "Community")} sub={L("다녀온 사람들의 이야기를 보거나, 궁금한 점을 물어보세요.", "Read trips from other travelers or ask us a question.")} />
       <div className="cm-hub">
         <a className="cm-door talk" href="#/community/talk">
-          <span className="cm-door-k"><Icon name="story" />{L("이야기 나누기", "Trips & stories")}</span>
+          <span className="cm-door-k"><Icon name="story" />{L("소통하기", "Trips & stories")}</span>
           <b>{L("다녀온 길", "Trips people took")}</b>
           <span>{L("다녀온 코스와 길 메모를 보고, 마음에 드는 코스는 그대로 짜 보세요.", "Routes and path notes. Plan any of them in one tap.")}</span>
-          <small>{L(`글 ${n}개`, `${n} posts`)}</small>
         </a>
         <a className="cm-door ask" href="#/community/ask">
           <span className="cm-door-k"><Icon name="info" />{L("문의하기", "Questions")}</span>
           <b>{L("자주 묻는 질문 · 문의하기", "FAQ & contact us")}</b>
           <span>{L("자주 묻는 질문과 여행 준비물을 먼저 보고, 없으면 관리자에게 물어보세요.", "Check the FAQ and trip checklist, then ask our team.")}</span>
-          <small>{L("답변은 [내 문의]에서 확인", "Answers appear in My questions")}</small>
         </a>
       </div>
     </section>

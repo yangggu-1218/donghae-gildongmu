@@ -2870,3 +2870,11 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
   .pp4-info2-grid:not(:has(.ig-park)) .ig-closed { grid-row: 1 / span 2; }
 }
 @media (min-width: 761px) { .pp4-info2-grid { grid-template-rows: auto 1fr; } .ig-park, .ig-closed { align-self: start; } }
+/* 편의시설 지도 층 버튼: 체크 표시 없이 색으로만 켜짐/꺼짐 (꺼지면 그림도 흐리게) */
+.layers .chip[aria-pressed]::before { content: none !important; }
+.layers .chip[aria-pressed="false"] { background: var(--surface); border-color: var(--line); color: var(--muted); }
+.layers .chip[aria-pressed="false"] .mpicto { filter: grayscale(1); opacity: .45; }
+.layers .chip[aria-pressed="true"] { background: var(--glow); border-color: var(--sun-deep); color: var(--ink); }
+/* 커뮤니티 두 입구 카드: 내용 세로 위치를 같게 */
+.cm-hub { align-items: stretch; }
+.cm-door { align-content: center; }
