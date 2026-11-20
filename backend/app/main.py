@@ -15,7 +15,31 @@ from .schemas import trip_days, Place, Conditions, ChatEdit
 from . import ai, ai_course, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
-app = FastAPI(title="동해 길동무 API")
+from contextlib import asynccontextmanager, suppress
+import asyncio
+import logging
+from . import admin_health
+
+
+@asynccontextmanager
+async def lifespan(app):
+    async def monitor():
+        while True:
+            try:
+                await asyncio.to_thread(admin_health.snapshot, len(PLACES))
+            except Exception:
+                logging.getLogger(__name__).exception("서비스 상태 점검 실패")
+            await asyncio.sleep(900)
+    worker = asyncio.create_task(monitor())
+    try:
+        yield
+    finally:
+        worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await worker
+
+
+app = FastAPI(title="동해 길동무 API", lifespan=lifespan)
 from . import sitelock
 app.middleware("http")(sitelock.middleware)   # SITE_PASSWORD 가 있으면 비밀번호 화면부터
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
@@ -480,6 +504,33 @@ def admin_probe(x_admin_token: str | None = Header(None)):
     return bigdata.probe()
 
 
+@app.get("/api/admin/health")
+def admin_health_check(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "data")
+    from .admin_health import snapshot
+    return snapshot(len(PLACES))
+
+
+@app.post("/api/admin/import")
+def admin_import(target: str = Form(...), context: str = Form(""), url: str = Form(""),
+                 file: UploadFile | None = File(None), x_admin_token: str | None = Header(None)):
+    from . import admin_source as source
+    if target not in source.FIELDS:
+        raise HTTPException(400, "지원하지 않는 양식이에요.")
+    _admin(x_admin_token, "place" if target == "hours" else "site")
+    if bool(file) == bool(url.strip()):
+        raise HTTPException(400, "링크 또는 파일 하나를 넣어 주세요.")
+    try:
+        data, mime = (file.file.read(source.LIMIT+1), "") if file else source.fetch_link(url.strip())
+        return source.draft(target, context, data, mime)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(422, "자료를 읽지 못했어요. 공개 링크나 열 수 있는 파일인지 확인해 주세요.") from exc
+
+
 @app.post("/api/brief")
 def brief(body: dict):
     """동이 브리핑 (AI). 화면이 보낸 근거(조건·예보·장소별 판정·붐빔·뺀 곳)로 카드 조각을 만든다. 실패하면 by=none."""
@@ -680,6 +731,12 @@ def admin_banner(body: dict, x_admin_token: str | None = Header(None)):
 def admin_add_event(body: dict, x_admin_token: str | None = Header(None)):
     _admin(x_admin_token, "site")
     return _guard(lambda: cms.add_event(body))
+
+
+@app.post("/api/admin/events/{eid}/edit")
+def admin_edit_event(eid: str, body: dict, x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token, "site")
+    return _guard(lambda: cms.add_event(body, eid))
 
 
 @app.post("/api/admin/events/{eid}/delete")

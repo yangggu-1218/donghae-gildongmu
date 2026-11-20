@@ -4,6 +4,7 @@
 // 팀 현장 확인 기록과 이용자 제보 검수, 관리자 계정 관리도 여기서 한다. (관리 화면은 팀용이라 한국어만)
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { Probe, SourceImport } from "@/components/AdminTools";
 import { Icon } from "@/components/Icon";
 import { SourcesPage } from "@/components/Pages";
 
@@ -17,7 +18,7 @@ const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·
 const LEVEL: Record<string, string> = { closed: "임시 휴무 (코스에서 빠짐)", warn: "주의 (공사·우회 등)", info: "안내" };
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const ACTION: Record<string, string> = { place: "장소 정보 수정", notice_add: "알림 올림", notice_remove: "알림 내림", banner: "공지 배너", event_add: "행사 추가",
-  event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경", ai_models: "AI 모델 설정" };
+  event_update: "행사 수정", event_remove: "행사 삭제", revert: "되돌리기", restore: "백업 복원", reset: "처음 상태로", account_add: "계정 만듦", account_update: "계정 바꿈", password: "비밀번호 변경", ai_models: "AI 모델 설정" };
 const STATUS = ["접수", "확인 중", "반영", "반려"];
 const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
@@ -73,7 +74,7 @@ export function AdminPage({ lang }: { lang: Lang }) {
 function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; user: User; setUser: (u: User) => void; onLogout: () => void; onExpired: () => void }) {
   const can = (perm: string | null) => !perm || user.perms.includes(perm);
   const tabs = TABS.filter(([, , perm]) => can(perm));
-  const [tab, setTab] = useState<TabKey>(user.must_change ? "me" : "home");
+  const [tab, setTab] = useState<TabKey>(user.must_change ? "me" : tabs.find(([key]) => key === window.location.hash.split("/")[2])?.[0] || "home");
   const [db, setDb] = useState<any>(null);
   const [places, setPlaces] = useState<any[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
@@ -130,8 +131,11 @@ function PlaceEditor({ places, db, tok, call }: any) {
   const [reason, setReason] = useState("");
   const [orig, setOrig] = useState<any>(null);
   useEffect(() => {
+    let current = true;
+    setOrig(null);
     if (!pid) return;
     api.place(pid).then((p: any) => {
+      if (!current) return;
       setOrig(p); setReason("");
       setF({ open: p.open || "", close: p.close || "", b0: p.break_time?.[0] || "", b1: p.break_time?.[1] || "", closed_day_nums: p.closed_day_nums || [],
         last_entry: p.last_entry || "", stay_min: p.stay_min, phone: p.phone || "", fee: p.fee || "", intro_ko: p.intro_ko || "", tip_ko: p.tip_ko || "",
@@ -139,6 +143,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
         indoor: tri(p.indoor), benches: tri(p.benches) });
       setSegs((p.segments || []).map((s: any) => ({ ...s })));
     });
+    return () => { current = false; };
   }, [pid, db]);
   const set = (k: string, v: any) => setF({ ...f, [k]: v });
   function diff() {
@@ -162,6 +167,7 @@ function PlaceEditor({ places, db, tok, call }: any) {
           {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
       {pid && orig && (<form className="visit-form" onSubmit={(e) => { e.preventDefault();
         call(() => api.post(`/api/admin/places/${pid}`, { fields: d.fields, segments: d.segments, reason }, tok), `${orig.name_ko} 정보를 바꿨어요. 코스 추천과 장소 페이지에 바로 반영됐어요.`, `#/place/${pid}`); }}>
+        <SourceImport key={pid} tok={tok} target="hours" context={orig.name_ko} values={f} apply={fields=>setF((v:any)=>({...v,...fields}))} />
         <h2 className="h3">운영시간 {Object.keys(ov).some((k) => ["open", "close", "break_time", "closed_day_nums"].includes(k)) && <span className="badge b-plain">관리자 확인</span>}</h2>
         <Field label="여는 시각"><input type="time" value={f.open} onChange={(e) => set("open", e.target.value)} /></Field>
         <Field label="닫는 시각 (상시 개방은 24:00)"><input value={f.close} placeholder="18:00" onChange={(e) => set("close", e.target.value)} /></Field>
@@ -250,8 +256,9 @@ function Notices({ places, db, tok, call, name }: any) {
 function SiteEditor({ db, tok, call }: any) {
   const [b, setB] = useState<any>({ text: "", level: "info", until: "" });
   useEffect(() => { if (db?.banner) setB({ until: "", ...db.banner }); }, [db?.banner]);
-  const blank = { name: "", start: today(), end: "", venue: "", tel: "", url: "", access: "" };
+  const blank = { name: "", start: "", end: "", venue: "", tel: "", url: "", access: "" };
   const [e, setE] = useState<any>(blank);
+  const [draftKey,setDraftKey] = useState(0);
   return (<>
     <form className="panel visit-form" onSubmit={(ev) => { ev.preventDefault(); call(() => api.post("/api/admin/banner", b, tok), "첫 화면 공지를 바꿨어요.", "#/"); }}>
       <h2 className="h3">모든 화면 위 공지 {db?.banner && <span className="badge b-open">게시 중</span>}</h2>
@@ -263,8 +270,9 @@ function SiteEditor({ db, tok, call }: any) {
         {db?.banner && <button type="button" className="chip" onClick={() => call(() => api.post("/api/admin/banner", {}, tok), "공지를 내렸어요.").then(() => setB({ text: "", level: "info", until: "" }))}>내리기</button>}
       </div>
     </form>
-    <form className="panel visit-form" onSubmit={(ev) => { ev.preventDefault(); call(() => api.post("/api/admin/events", e, tok), "행사를 추가했어요. 행사 달력과 코스 추천에 바로 보여요.", "#/events").then(() => setE(blank)); }}>
-      <h2 className="h3">행사 추가 <span className="muted small">(공공데이터에 없는 행사)</span></h2>
+    <form className="panel visit-form" onSubmit={(ev) => { ev.preventDefault(); call(() => api.post(e.id ? `/api/admin/events/${e.id}/edit` : "/api/admin/events", e, tok), "행사를 저장했어요.", "#/events").then(() => {setE(blank);setDraftKey(n=>n+1);}).catch(()=>{}); }}>
+      <h2 id="event-editor" className="h3">{e.id ? "행사 수정" : "행사 등록"}</h2>
+      <SourceImport key={String(e.id || draftKey)} tok={tok} target="event" context={e.id ? (db?.events || []).find((v:any)=>v.id===e.id)?.name || "" : "행사 등록"} values={e} apply={fields=>setE((v:any)=>({...v,...fields}))} />
       <Field label="행사 이름" wide><input value={e.name} onChange={(x) => setE({ ...e, name: x.target.value })} /></Field>
       <Field label="시작일"><input type="date" value={e.start} onChange={(x) => setE({ ...e, start: x.target.value })} /></Field>
       <Field label="끝일"><input type="date" value={e.end} onChange={(x) => setE({ ...e, end: x.target.value })} /></Field>
@@ -272,12 +280,14 @@ function SiteEditor({ db, tok, call }: any) {
       <Field label="문의 전화"><input value={e.tel} onChange={(x) => setE({ ...e, tel: x.target.value })} /></Field>
       <Field label="안내 링크" wide><input value={e.url} placeholder="https://" onChange={(x) => setE({ ...e, url: x.target.value })} /></Field>
       <Field label="접근성 메모 (휠체어석·장애인 화장실·셔틀 등)" wide><input value={e.access} onChange={(x) => setE({ ...e, access: x.target.value })} /></Field>
-      <button className="chip go" disabled={!e.name.trim() || !e.start}>추가하고 바로 반영</button>
+      <button className="chip go" disabled={!e.name.trim() || !e.start}>{e.id ? "수정하고 반영" : "추가하고 바로 반영"}</button>
+      {e.id && <button type="button" className="chip" onClick={()=>setE(blank)}>수정 취소</button>}
     </form>
     <ul className="rv-list">
       {(db?.events || []).map((x: any) => (
         <li key={x.id} className="panel"><div className="seg-top"><b>{x.name}</b><small className="muted">{x.start}{x.end && x.end !== x.start ? ` ~ ${x.end}` : ""} · {x.venue}</small></div>
           {x.access && <p className="muted">휠체어 접근: {x.access}</p>}
+          <button className="chip" onClick={()=>{setE({...blank,...x});document.getElementById("event-editor")?.scrollIntoView({block:"center"});}}>수정</button>
           <button className="chip" onClick={() => call(() => api.post(`/api/admin/events/${x.id}/delete`, {}, tok), "행사를 지웠어요.")}>삭제</button></li>))}
     </ul>
   </>);
@@ -480,27 +490,6 @@ function Visits({ places, tok, call, me }: any) {
 }
 
 /* ---------- 변경 이력·백업 ---------- */
-// 공공 빅데이터 API 응답 점검 (캐시를 비우고 모든 서비스를 한 번씩 부른다)
-function Probe({ tok }: { tok: string }) {
-  const [r, setR] = useState<any>(null);
-  const [busy, setBusy] = useState(false);
-  const NAMES: Record<string, string> = { bf_food: "무장애 음식점", bf_stay: "무장애 숙소", bf_sight: "무장애 관광지", crowd: "집중률 예측(장소 수)",
-    related: "연관 관광지(장소 수)", visitors: "방문자수(일 수)", audio: "오디오 가이드", photo: "관광사진" };
-  async function run() { setBusy(true); try { setR(await api.get("/api/admin/probe", tok)); } catch (e: any) { setR({ error: String(e.message || e) }); } setBusy(false); }
-  return (
-    <div className="panel">
-      <p className="muted">공공데이터포털에서 활용 신청한 API가 실제로 응답하는지 확인해요. 1분쯤 걸릴 수 있어요. 0건이면 신청·승인 상태를 확인하세요.</p>
-      <button className="chip go" onClick={run} disabled={busy}>{busy ? "확인하는 중…" : "지금 점검하기"}</button>
-      {r && !r.error && (
-        <table className="tbl" style={{ marginTop: 12 }}><tbody>
-          {Object.keys(NAMES).map((k) => <tr key={k}><th>{NAMES[k]}</th><td>{r[k] > 0 ? `✓ ${r[k]}건` : "✗ 0건"}</td></tr>)}
-        </tbody></table>
-      )}
-      {r && <details style={{ marginTop: 12 }}><summary>자세한 응답</summary><pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{JSON.stringify(r, null, 1)}</pre></details>}
-    </div>
-  );
-}
-
 function History({ db, tok, call, name, canBackup }: any) {
   const [sure, setSure] = useState(false);
   const rows: any[] = db?.history || [];

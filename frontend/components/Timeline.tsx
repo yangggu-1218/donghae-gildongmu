@@ -3,7 +3,7 @@
 import { Course, Conditions, Extra, Stop, VisitWeather } from "@/lib/api";
 import { PlacePhoto } from "@/components/Sections";
 import { NearbyEats } from "@/components/Eateries";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
 
 type T = (k: string, v?: Record<string, string | number>) => string;
@@ -177,6 +177,12 @@ export function summaryText(course: Course, extras: Record<string, Extra>, name:
 export function Summary({ course, extras, name, t, lang, start, url, onClose }: {
   course: Course; extras: Record<string, Extra>; name: (id: string) => string; t: T; lang: string; start: string; url: string; onClose: () => void;
 }) {
+  const modal = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = modal.current;
+    dialog?.showModal();
+    return () => dialog?.close();
+  }, []);
   const first = extras[course.stops[0]?.id]?.nearby?.medical;
   async function share() {
     const text = summaryText(course, extras, name, t, lang, start, url);
@@ -186,9 +192,10 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
     try { await navigator.clipboard.writeText(text); alertBox(t("sum.copied")); } catch { alertBox(text); }
   }
   return (
-    <div className="sum" role="dialog" aria-modal="true" aria-labelledby="sum-h">
+    <dialog ref={modal} className="sum" aria-labelledby="sum-h" onCancel={e => { e.preventDefault(); onClose(); }}>
       <div className="sum-in">
         <header className="sum-head">
+          <button className="chip sum-close" autoFocus onClick={onClose}>{t("common.close")}</button>
           <h2 id="sum-h">{t("sum.title")}</h2>
           <p className="sum-date">{dateLabel(course.date, lang)} ({wdName(course.weekday, lang)}) · {course.start_time} {lang === "ko" ? `${start} 출발` : `from ${start}`}</p>
           {course.drive_source === "kakao" && <p className="muted">{t("sum.driveSource")}</p>}
@@ -227,7 +234,7 @@ export function Summary({ course, extras, name, t, lang, start, url, onClose }: 
           <button className="chip" onClick={onClose}>{t("common.close")}</button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

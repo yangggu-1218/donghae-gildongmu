@@ -587,9 +587,10 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
         {LAYERS.slice(2).map(l => layerButton(l, L(l.ko, l.en)))}
       </div>
       {!d ? <Loading err={err} lang={lang} /> : (<>
+        <div className="facility-explorer">
         <KakaoMap pins={pins} dots facilityType={categoryName} nearestFirst={!!me} myPosition={me} request={request} listPreview={preview} onPick={pin => setSelected(pin ? pins.findIndex(p => p === pin) : null)}
           label={L("편의시설 지도", "Facilities map")} />
-        <h2 className="facility-list-title">{categoryName} {L("목록", "list")}<small>{me ? L("가까운 순 · ", "Nearest first · ") : ""}{items.length}{L("곳", " places")}</small></h2>
+        <div className="facility-directory"><h2 className="facility-list-title">{categoryName} {L("목록", "list")}<small>{me ? L("가까운 순 · ", "Nearest first · ") : ""}{items.length}{L("곳", " places")}</small></h2>
         <ul className="fac-list">
           {items.map((x, i) => (
             <li key={x.id}><button type="button" aria-current={selected === i ? "location" : undefined}
@@ -600,6 +601,7 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
               <span><b>{x.name}</b>{x.dm != null && <span className="muted"> · {dist(x.dm)}</span>}<br /><small className="muted">{x.desc}{x.road ? ` · ${x.road}` : ""}</small></span>
             </button></li>))}
         </ul>
+        </div></div>
         {layer === "toilets" && unmapped.length > 0 && (
           <details className="panel">
             <summary>{L(`지도 위치를 아직 못 정한 장애인 화장실 ${unmapped.length}곳 (주소로 보기)`, `${unmapped.length} accessible toilets without map position`)}</summary>

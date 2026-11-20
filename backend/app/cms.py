@@ -349,16 +349,29 @@ def set_banner(b: dict | None) -> dict:
         return db["banner"]
 
 
-def add_event(e: dict) -> dict:
+def add_event(e: dict, eid: str | None = None) -> dict:
     if not (e.get("name") and e.get("start")):
         raise ValueError("행사 이름과 시작일을 적어 주세요.")
-    rec = {"id": secrets.token_hex(5), "name": e["name"][:80], "start": e["start"], "end": e.get("end") or e["start"],
+    from datetime import date
+    if date.fromisoformat(e.get("end") or e["start"]) < date.fromisoformat(e["start"]):
+        raise ValueError("끝일은 시작일 이후로 입력해 주세요.")
+    if e.get("url") and not e["url"].lower().startswith(("https://","http://")):
+        raise ValueError("안내 링크는 HTTP 또는 HTTPS 주소를 입력해 주세요.")
+    rec = {"id": eid or secrets.token_hex(5), "name": e["name"][:80], "start": e["start"], "end": e.get("end") or e["start"],
            "venue": (e.get("venue") or "")[:80], "tel": (e.get("tel") or "")[:30], "url": (e.get("url") or "")[:300],
            "kind": (e.get("kind") or "행사")[:30], "access": (e.get("access") or "")[:200], "added_by_admin": True}
     with _lock:
         db = load()
-        db["events"].append(rec)
-        _log(db, "event_add", rec["id"], None, rec)
+        if eid:
+            index = next((i for i, old in enumerate(db["events"]) if old["id"] == eid), None)
+            if index is None:
+                raise ValueError("수정할 행사를 찾지 못했어요.")
+            old = db["events"][index]
+            db["events"][index] = {**old, **rec}
+            _log(db, "event_update", eid, old, db["events"][index])
+        else:
+            db["events"].append(rec)
+            _log(db, "event_add", rec["id"], None, rec)
         save(db)
     return rec
 
@@ -400,6 +413,13 @@ def revert(hid: str) -> dict:
             db["banner"] = h["before"]
         elif a == "event_add":
             db["events"] = [e for e in db["events"] if e["id"] != h["target"]]
+        elif a == "event_update":
+            for i, event in enumerate(db["events"]):
+                if event["id"] == h["target"] and event == h["after"]:
+                    db["events"][i] = h["before"]
+                    break
+            else:
+                raise ValueError("나중 변경부터 되돌려 주세요.")
         elif a == "event_remove":
             db["events"].append(h["before"])
         elif a == "restore":

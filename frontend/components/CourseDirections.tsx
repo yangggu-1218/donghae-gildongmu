@@ -34,13 +34,7 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
   }
   const ko = lang === "ko";
   const [step, setStep] = useState<Guide | null>(null);
-  const [device, setDevice] = useState<"mobile" | "desktop" | null>(null);
   const [part, setPart] = useState(0);
-  useEffect(() => {
-    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    setDevice(mobile ? "mobile" : "desktop");
-  }, []);
   const links = useMemo(() => {
     const routes: { url: string; label: string }[] = [];
     // 카카오맵 바로가기는 출발·도착 외에 경유지 다섯 곳까지 받는다.
@@ -70,16 +64,16 @@ export function CourseDirections({ points, course, lang, mode, onMode, selectedI
     return range && course.driving_path?.slice(range[0], range[1]);
   }, [leg, course.driving_path, course.driving_sections]);
   const visibleGuides = leg < 0 ? guides : course.driving_guides?.[leg];
-  const editMap = device !== "desktop" || mode === "edit";
+  const editMap = mode === "edit";
   if (!links.length) return null;
   const active = links[part] ?? links[0];
   const legUrl = editMap && selected ? "https://map.kakao.com/link/by/car/" + segmentPins.map(p =>
     `${encodeURIComponent(p.label.replace(/[,/]/g, " "))},${p.lat},${p.lon}`).join("/") : null;
   return <div className="route-view" ref={panel} data-large={large}>
-    <div className="map-toolbar">{device === "desktop" && <div className="chips" role="group" aria-label={ko ? "지도 모드" : "Map mode"}>
+    <div className="map-toolbar"><div className="chips" role="group" aria-label={ko ? "지도 모드" : "Map mode"}>
       <button type="button" className="chip" aria-pressed={editMap} onClick={() => onMode("edit")}>{ko ? "일정 편집 지도" : "Edit on map"}</button>
       <button type="button" className="chip" aria-pressed={!editMap} onClick={() => onMode("official")}>{ko ? "카카오 공식 길찾기" : "Official directions"}</button>
-    </div>}
+    </div>
     <button type="button" className="chip map-size" aria-pressed={large} onClick={toggleSize}>{large ? (ko ? "원래 크기" : "Restore size") : (ko ? "지도 크게 보기" : "Expand map")}</button></div>
     {editMap && <div className="map-stop-editor">
       <label><span>{ko ? "이동 구간 선택" : "Select route leg"}</span><select value={selected?.id || ""} onChange={e => { setStep(null); if (e.target.value) onSelect(e.target.value); else onOverview(); }}>

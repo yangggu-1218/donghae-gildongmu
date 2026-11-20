@@ -3,7 +3,6 @@
 import { getJSON } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { PHOTOS, photoAt } from "@/lib/photos";
-import { MicButton } from "@/components/Voice";
 import { tr } from "@/lib/ko2en";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { Icon } from "@/components/Icon";
@@ -25,86 +24,6 @@ export function PlacePhoto({ id, lang, small = false, alt = "" }: { id: string; 
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
-
-/* ---------------- 히어로: 실제 동해 사진 위에 '갈 수 있는지' 판정을 얹는다 ---------------- */
-const GRADE_TXT: Record<string, [string, string]> = { G: ["갈 수 있어요", "Accessible"], Y: ["주의해서 가요", "Go with care"], R: ["어려워요", "Hard to reach"] };
-// 첫 화면 배경: 동해 사진 4장이 천천히 바뀐다. place = '사진 속 장소' 카드에 보여 줄 장소, pos = 사진에서 보일 부분(PC / 휴대폰)
-const SLIDES = [
-  { photo: "chotdae", place: "chotdae", alt: ["해 뜰 무렵의 추암 촛대바위", "Chotdae Rock at sunrise"], pos: "50% 62%", posM: "42% 40%" },
-  { photo: "cheongok_port", place: "cheongok_port", alt: ["천곡항 바닷가의 GOOD 글자 조형물", "GOOD letters by the sea at Cheongok Port"], pos: "60% 55%", posM: "62% 50%" },
-  { photo: "hohaejeong_2", place: "hohaejeong", alt: ["소나무 숲속 정자 호해정", "Hohaejeong pavilion in the pines"], pos: "55% 50%", posM: "58% 50%" },
-  { photo: "betel_2", place: "betel", alt: ["베틀바위 산성길 능선의 바위 봉우리", "Rock spires on the Betelbawi ridge"], pos: "50% 40%", posM: "55% 40%" },
-];
-const SLIDE_MS = 7000;
-export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => void; busy: boolean }) {
-  const L = pick(lang);
-  const [v, setV] = useState("");
-  const [micMsg, setMicMsg] = useState("");
-  const [graded, setGraded] = useState<Record<string, any>>({});   // 사진 속 장소들의 실제 판정 (휠체어 기준)
-  const [broken, setBroken] = useState<string[]>([]);               // 못 불러온 사진은 건너뛴다
-  const [cur, setCur] = useState(0);
-  const [seen, setSeen] = useState(1);                               // 이미 보여 준 장수 (다음 사진만 미리 불러온다)
-  const [paused, setPaused] = useState(false);
-  const [still, setStill] = useState(false);                         // '동작 줄이기'를 켠 사람은 넘기지 않는다
-  useEffect(() => { getJSON("/api/places?mode=wheel").then((l) => setGraded(Object.fromEntries((l || []).map((p: any) => [p.id, p])))).catch(() => {}); }, []);
-  useEffect(() => { try { setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch { /* 무시 */ } }, []);
-  const slides = SLIDES.filter((s) => !broken.includes(s.photo));
-  const bad = slides.length === 0;
-  const idx = slides.length ? cur % slides.length : 0;
-  useEffect(() => {
-    if (paused || still || slides.length < 2) return;
-    const id = window.setInterval(() => { if (!document.hidden) { setCur((c) => (c + 1) % slides.length); setSeen((n) => Math.max(n, 2)); } }, SLIDE_MS);
-    return () => window.clearInterval(id);
-  }, [paused, still, slides.length]);
-  useEffect(() => { setSeen((n) => Math.min(slides.length, Math.max(n, idx + 2))); }, [idx, slides.length]);
-  const slide = slides[idx];
-  const spot = slide ? graded[slide.place] || null : null;
-  const ex = lang === "ko"
-    ? ["엄마랑 가는데 무릎이 안 좋으세요", "휠체어 타는 친구랑 묵호역에서 출발해요", "아기랑 유모차로 바다 보러 가요", "친구랑 바다 보고 사진 찍고 싶어요"]
-    : ["Travelling with my mom, her knees hurt", "My friend uses a wheelchair, starting at Mukho Station", "Stroller trip to see the sea", "Sea views and photo spots with a friend"];
-  const g = spot?.grade as string | undefined;
-  return (
-    <section className={`hero${bad ? " hero-plain" : ""}`} aria-labelledby="hero-h">
-      {slides.slice(0, seen).map((s, i) => (
-        <img key={s.photo} className={`hero-bg${i === idx ? " on" : ""}`} src={photoAt(s.photo, 960)} srcSet={`${photoAt(s.photo, 960)} 960w, ${photoAt(s.photo, 1920)} 1920w`} sizes="100vw"
-          style={{ ["--pos" as any]: s.pos, ["--pos-m" as any]: s.posM }} alt={i === idx ? L(s.alt[0], s.alt[1]) : ""} aria-hidden={i === idx ? undefined : true}
-          fetchPriority={i === 0 ? "high" : "low"} decoding="async" onError={() => setBroken((b) => [...b, s.photo])} />
-      ))}
-      <div className="hero-in">
-        <div className="hero-copy">
-          <h1 id="hero-h">{L("가기 전에, 갈 수 있는 길인지 먼저 알려 드려요", "Know the way is passable before you go")}</h1>
-          <p className="lead">{L(
-            "친구와도, 가족과도, 휠체어나 유모차와 함께여도 괜찮아요. 누구와 어떻게 다니는지 말하면 영업시간, 붐빔 예상, 길 상태까지 맞춘 동해 코스를 짜 드려요.",
-            "With friends, family, a wheelchair or a stroller. Say who you're with, and get a Donghae route checked for opening hours, crowds and path conditions.")}</p>
-          <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAsk(v.trim()); setV(""); } }}>
-            <img className="ask-dongi" src="/dongi/wave.webp" alt="" />
-            <label htmlFor="hero-ask" className="sr-only">{L("동이에게 말하기", "Talk to Dongi")}</label>
-            <input id="hero-ask" value={v} onChange={(e) => setV(e.target.value)} placeholder={L("예: 휠체어로 바다 보러 가요", "e.g. Beach by wheelchair")} />
-            <MicButton lang={lang} className="ask-mic" disabled={busy} onText={(x) => { setV(x); setMicMsg(""); }} onError={setMicMsg} />
-            <button disabled={busy}>{L("코스 짜기", "Plan my route")}</button>
-          </form>
-          {micMsg && <p className="hero-msg" role="status">{micMsg}</p>}
-          <div className="tries" role="group" aria-label={L("이렇게 말해 보세요", "Try saying")}>
-            {ex.map((x) => <button key={x} type="button" onClick={() => onAsk(x)} disabled={busy}>{x}</button>)}
-          </div>
-          <a className="hero-jump" href="#courses">{L("추천 코스로 바로 시작하기 ↓", "Or start from a suggested route ↓")}</a>
-        </div>
-        {spot && (
-          <a className="hero-spot" href={`#/place/${slide.place}`}>
-            <span className="hero-spot-k">{L("사진 속 장소", "In this photo")}</span>
-            <b>{L(spot.name_ko, spot.name_en || spot.name_ko)}</b>
-            <span className="hero-spot-g">{L("휠체어 기준", "By wheelchair")} <span className={`badge ${g ? "g-" + g : "g-N"}`}>{g ? L(...GRADE_TXT[g]) : L("확인 전", "Not checked")}</span></span>
-            <span className="hero-spot-m">{L("길·화장실·주차 보기", "Paths, toilets, parking")}</span>
-          </a>
-        )}
-      </div>
-      {slides.length > 1 && !still && (
-        <button type="button" className="hero-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>
-          {paused ? L("사진 다시 넘기기", "Play photos") : L("사진 멈추기", "Pause photos")}</button>
-      )}
-    </section>
-  );
-}
 
 /* ---------------- 지금의 동해: 오늘 날씨·붐빔·행사·공지를 한 줄에 ---------------- */
 export function NowDonghae({ lang }: { lang: Lang }) {
@@ -246,21 +165,80 @@ export function ZoneTiles({ lang }: { lang: Lang }) {
 }
 
 /* ---------------- 더 알아보기 ---------------- */
+const featuredPlaces = [
+  { id: "chotdae", name: ["추암 촛대바위", "Chotdae Rock"], area: ["추암권역", "Chuam area"] },
+  { id: "yongchu", name: ["용추폭포·쌍폭포", "Yongchu Falls & Ssang Falls"], area: ["무릉권역", "Mureung area"] },
+  { id: "mukho_lighthouse", name: ["묵호등대", "Mukho Lighthouse"], area: ["묵호권역", "Mukho area"] },
+  { id: "hanseom", name: ["한섬해변", "Hanseom Beach"], area: ["천곡권역", "Cheongok area"] },
+  { id: "mureung", name: ["무릉별유천지", "Mureung Byeolyucheonji"], area: ["무릉권역", "Mureung area"] },
+  { id: "bookvillage", name: ["동호지구 바닷가책방마을", "Dongho Seaside Book Village"], area: ["묵호권역", "Mukho area"] },
+  { id: "chuam_bridge", name: ["추암출렁다리", "Chuam Suspension Bridge"], area: ["추암권역", "Chuam area"] },
+  { id: "haerang", name: ["도째비골 해랑전망대", "Haerang Observatory"], area: ["묵호권역", "Mukho area"] },
+  { id: "nature_park", name: ["자연학습체험공원", "Nature Learning Park"], area: ["천곡권역", "Cheongok area"] },
+  { id: "cheongok_port", name: ["천곡항", "Cheongok Port"], area: ["천곡권역", "Cheongok area"] },
+  { id: "pencil_museum", name: ["연필뮤지엄", "Pencil Museum"], area: ["묵호권역", "Mukho area"] },
+  { id: "chuam_sculpture", name: ["추암조각공원", "Chuam Sculpture Park"], area: ["추암권역", "Chuam area"] },
+  { id: "dokkaebi", name: ["도째비골 스카이밸리", "Dojjaebigol Sky Valley"], area: ["묵호권역", "Mukho area"] },
+  { id: "gamchu", name: ["감추해변", "Gamchu Beach"], area: ["천곡권역", "Cheongok area"] },
+  { id: "little_prince", name: ["어린왕자포토존·별빛마을전망대", "Little Prince Photo Zone & Byeolbit Village Observatory"], area: ["묵호권역", "Mukho area"] },
+  { id: "daejin", name: ["대진해변", "Daejin Beach"], area: ["묵호권역", "Mukho area"] },
+  { id: "gobulgae", name: ["고불개해변", "Gobulgae Beach"], area: ["천곡권역", "Cheongok area"] },
+] as const;
+
+function FeaturedPlace({ lang }: { lang: Lang }) {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [reading, setReading] = useState(false);
+  useEffect(() => {
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setPaused(motion.matches);
+    sync();
+    motion.addEventListener("change", sync);
+    return () => motion.removeEventListener("change", sync);
+  }, []);
+  useEffect(() => {
+    if (paused || reading) return;
+    const next = (index + 1) % featuredPlaces.length;
+    const preload = new Image();
+    preload.src = photoAt(featuredPlaces[next].id, 960);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) setIndex(next);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [index, paused, reading]);
+  const place = featuredPlaces[index];
+  const language = lang === "ko" ? 0 : 1;
+  return <figure className="planner-place">
+    <img src={photoAt(place.id, 960)} alt="" />
+    <button type="button" className="place-playback" onClick={() => setPaused(!paused)}
+      aria-label={paused ? (lang === "ko" ? "사진 자동 전환 재생" : "Play slideshow") : (lang === "ko" ? "사진 자동 전환 일시정지" : "Pause slideshow")}>
+      <span aria-hidden="true">{paused ? "▶" : "Ⅱ"}</span>
+    </button>
+    <figcaption><span><Icon name="pin" />{place.area[language]}</span>
+      <a href={`#/place/${place.id}`} onFocus={() => setReading(true)} onBlur={() => setReading(false)}>{place.name[language]} <span aria-hidden="true">↗</span></a>
+    </figcaption>
+  </figure>;
+}
+
 export function MoreLinks({ lang }: { lang: Lang }) {
   const L = pick(lang);
-  const rows: [string, string, string][] = [
-    ["#/transport", L("교통", "Getting around"), L("역에서 나오는 길, 휠체어 탑승 차량, 주차 요금 면제", "From the station, wheelchair vans, parking fee waivers")],
-    ["#/map", L("편의시설 지도", "Facilities map"), L("장애인 화장실, 충전기, 안내소, 약국을 한 지도에서", "Accessible toilets, chargers, info centers and pharmacies")],
-    ["#/events", L("행사 달력", "Events"), L("축제와 문화행사 날짜에 맞춰 코스 짜기", "Plan around festivals and cultural events")],
-    ["#/stay", L("숙소", "Stay"), L("권역별 숙박업소와 확인된 정보", "Lodging by area and what has been checked")],
-    ["#/community/ask", L("자주 묻는 질문·문의", "FAQ & questions"), L("준비물, 자주 묻는 질문, 관리자에게 문의", "Checklist, FAQ and contact us")],
+  const rows = [
+    ["bus", "#/transport", L("교통·주차", "Transport and parking"), L("역에서 나오는 길과 휠체어 탑승 차량", "Station exits and wheelchair transport")],
+    ["map", "#/map", L("편의시설 지도", "Facilities map"), L("장애인 화장실과 전동휠체어 충전기", "Accessible toilets and wheelchair chargers")],
+    ["food", "https://www.dh.go.kr/tour/contents.do?key=1910", L("음식점 편의시설", "Restaurant accessibility"), L("동해시가 안내하는 음식점별 시설 현황", "Facility listings from Donghae City")],
+    ["cal", "#/events", L("축제·행사", "Festivals and events"), L("여행 날짜에 열리는 지역 행사", "Local events on your travel dates")],
+    ["bed", "#/stay", L("숙박", "Accommodation"), L("여행할 권역의 숙소 찾기", "Places to stay by area")],
+    ["phone", "#/community/ask", L("여행 문의", "Travel enquiries"), L("자주 묻는 질문과 문의하기", "Common questions and enquiries")],
   ];
-  return (
-    <section className="sec wrap" aria-labelledby="more-h">
-      <div className="sec-head"><h2 id="more-h">{L("떠나기 전에 확인하세요", "Check before you leave")}</h2></div>
-      <ul className="more-grid">{rows.map(([href, t, d]) => <li key={href}><a href={href}><b>{t}</b><span>{d}</span></a></li>)}</ul>
-    </section>
-  );
+  return <section className="sec wrap" aria-labelledby="more-h">
+    <FeaturedPlace lang={lang} />
+    <div className="city-info">
+    <div className="sec-head"><h2 id="more-h">{L("여행 안내", "Visitor information")}</h2></div>
+    <ul className="more-grid visitor-links">{rows.map(([icon, href, title, detail]) =>
+      <li key={href}><a href={href}><Icon name={icon} /><div><b>{title}</b><span>{detail}</span></div>
+        <i aria-hidden="true">{href.startsWith("https:") ? "↗" : "›"}</i></a></li>)}</ul>
+    </div>
+  </section>;
 }
 
 // 무장애 검색: 한국관광공사 열린관광의 분류·항목 이름을 그대로 쓴다 (backend/app/kto_access.py 의 access_kto.items)
