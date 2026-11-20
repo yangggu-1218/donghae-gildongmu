@@ -5,7 +5,7 @@
 // AI를 못 쓰면(키 없음·오류·데모) 규칙 판정이나 아무것도 안 보이게 조용히 물러난다.
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Icon } from "@/components/Icon";
+import { Icon, Picto, VERDICT_PICTO } from "@/components/Icon";
 
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
@@ -39,28 +39,28 @@ export function AiJudge({ id, mode, lang }: { id: string; mode: string; lang: La
       <p className="ai-by"><Icon name="info" />{L("AI 판정관이 길 정보와 최근 제보를 읽는 중이에요…", "The AI is reading the path data and recent reports…")}</p>
     </div>);
   const v = d.verdict in VERDICT ? d.verdict : "U";
+  const ai = d.by === "ai";
+  const dots = d.confidence === "high" ? 3 : d.confidence === "medium" ? 2 : 1;
+  // 정보 밀도: 제목 글 대신 픽토그램(✓ 근거 · ⚠ 조심 · ☎ 물어보기 · i 도움말), 출처·설명은 마우스를 올리면(title) 보이게
+  const generic = !ai && /구간 정보로 계산/.test(d.headline || "");
   return (
     <div className={`ai-card ai-judge v-${v}`} aria-live="polite">
-      <div className="ai-top">
-        <span className={`badge ${v === "U" ? "b-unknown" : `g-${v}`}`}>{L(VERDICT[v][0], VERDICT[v][1])}</span>
-        <span className="badge b-plain">{L(CONF[d.confidence]?.[0] || "", CONF[d.confidence]?.[1] || "")}</span>
-        <span className="ai-by small">{d.by === "ai" ? L("AI 판정관", "AI judge") : L("구간 정보로 계산", "From path data")}</span>
+      <div className="aj-top">
+        <Picto name={VERDICT_PICTO[v]} size={30} />
+        <b className="aj-verdict">{L(VERDICT[v][0], VERDICT[v][1])}</b>
+        <span className="aj-conf" role="img" aria-label={L(CONF[d.confidence]?.[0] || "", CONF[d.confidence]?.[1] || "")}
+          title={L(CONF[d.confidence]?.[0] || "", CONF[d.confidence]?.[1] || "")}>{[1, 2, 3].map((i) => <i key={i} className={i <= dots ? "on" : ""} />)}</span>
+        <span className={`via ${ai ? "via-llm" : "via-rule"}`} title={ai
+          ? L(`AI가 근거 ${d.evidence_count ?? 0}가지(최근 제보 ${d.reports_used ?? 0}건 포함)를 읽고 낸 의견이에요. 현장 상황은 바뀔 수 있어요.`, `AI opinion from ${d.evidence_count ?? 0} pieces of evidence.`)
+          : L("AI를 쓸 수 없어 구간 정보만으로 계산했어요.", "Calculated from path data only.")}>{ai ? "AI" : L("구간 계산", "Path data")}</span>
       </div>
-      {d.headline && <p className="ai-head">{d.headline}</p>}
-      {d.reasons.length > 0 && <>
-        <h3 className="ai-sub">{L("이렇게 판단했어요", "Why")}</h3>
-        <ul className="ai-list">{d.reasons.map((r, i) => <li key={i}>{r.text}{r.source && <small className="muted"> ({L("근거", "source")}: {r.source})</small>}</li>)}</ul></>}
-      {d.cautions.length > 0 && <>
-        <h3 className="ai-sub">{L("조심할 곳", "Watch out")}</h3>
-        <ul className="ai-list warn">{d.cautions.map((c, i) => <li key={i}>{c}</li>)}</ul></>}
-      {d.ask_before.length > 0 && <>
-        <h3 className="ai-sub">{L("가기 전에 전화로 물어보세요", "Ask before you go")}</h3>
-        <ul className="ai-list">{d.ask_before.map((c, i) => <li key={i}>{c}</li>)}</ul></>}
-      {d.tip && <p className="tl-tip"><b>{L("도움말", "Tip")}</b> {d.tip}</p>}
-      <p className="muted small">{d.by === "ai"
-        ? L(`AI가 근거 ${d.evidence_count ?? 0}가지(최근 제보 ${d.reports_used ?? 0}건 포함)를 읽고 낸 의견이에요. 현장 상황은 바뀔 수 있어요.`,
-          `AI opinion from ${d.evidence_count ?? 0} pieces of evidence. Conditions on site can change.`)
-        : L("AI 판정을 쓸 수 없어 구간 정보만으로 계산했어요.", "AI is unavailable, so this is calculated from the path data only.")}</p>
+      {d.headline && !generic && <p className="aj-head">{d.headline}</p>}
+      <ul className="aj-list">
+        {d.reasons.map((r, i) => <li key={"r" + i} title={r.source ? `${L("근거", "Source")}: ${r.source}` : undefined}><Picto name="ok" size={18} label={L("근거", "Reason")} />{r.text}</li>)}
+        {d.cautions.map((c, i) => <li key={"c" + i} className="aj-warn"><Picto name="warn" size={18} label={L("조심", "Caution")} />{c}</li>)}
+        {d.ask_before.map((c, i) => <li key={"a" + i}><Picto name="call" size={18} label={L("가기 전에 물어보기", "Ask ahead")} />{c}</li>)}
+        {d.tip && <li><Picto name="tip" size={18} label={L("도움말", "Tip")} />{d.tip}</li>}
+      </ul>
     </div>
   );
 }
@@ -83,15 +83,12 @@ export function AiStatus({ id, lang }: { id: string; lang: Lang }) {
     <section className={`ai-card ai-status s-${d.state}`} aria-labelledby="ai-st-h">
       <div className="ai-top">
         <h2 id="ai-st-h" className="h3 pp2-h"><Icon name="walk" />{L("최근 길 상태", "Recent path status")}</h2>
-        <span className={`badge ${d.state === "issue" ? "g-R" : d.state === "caution" ? "g-Y" : "g-G"}`}>{L(STATE[d.state]?.[0] || "", STATE[d.state]?.[1] || "")}</span>
+        <span className="aj-state" title={d.by === "ai" ? L(`최근 90일 이용자 제보 ${d.count}건을 AI가 정리했어요. 사이트 정보는 관리자가 확인한 뒤에 바뀌어요.`, `AI summary of ${d.count} visitor reports (90 days).`) : L(`최근 90일 제보 ${d.count}건`, `${d.count} reports (90 days)`)}><Picto name={d.state === "issue" ? "stop" : d.state === "caution" ? "warn" : "ok"} size={20} />{L(STATE[d.state]?.[0] || "", STATE[d.state]?.[1] || "")} · {L(`제보 ${d.count}건`, `${d.count} reports`)}</span>
       </div>
       <p className="ai-head">{d.headline}</p>
       {(d.items || []).length > 0 && <ul className="ai-list">{d.items!.map((x, i) => (
         <li key={i}><b>{x.kind}</b> {x.text}{(x.since || x.count > 1) && <small className="muted"> ({[x.since && L(`${x.since}부터`, `since ${x.since}`), x.count > 1 && L(`${x.count}건`, `${x.count} reports`)].filter(Boolean).join(", ")})</small>}</li>))}
       </ul>}
-      <p className="muted small">{d.by === "ai"
-        ? L(`최근 90일 이용자 제보 ${d.count}건을 AI가 정리했어요. 사이트 정보는 관리자가 확인한 뒤에 바뀌어요.`, `AI summary of ${d.count} visitor reports from the last 90 days. Site info changes only after staff review.`)
-        : L(`최근 90일 이용자 제보 ${d.count}건이 있어요.`, `${d.count} visitor reports in the last 90 days.`)}</p>
     </section>
   );
 }

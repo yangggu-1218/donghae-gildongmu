@@ -76,6 +76,8 @@ export default function Page() {
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState("");
   const [safety, setSafety] = useState<any>(null);
+  const [quickOpen, setQuickOpen] = useState(false);   // 빠른 메뉴 펼침
+  const quickT = useRef<any>(null);
   const [extras, setExtras] = useState<Record<string, Extra>>({});
   // 한국관광공사 관광지 집중률 예측(앞으로 30일). 못 불러오면 배지를 숨긴다.
   const [crowdMap, setCrowdMap] = useState<Record<string, { date: string; rate: number }[]>>({});
@@ -639,12 +641,12 @@ export default function Page() {
       {howto && !course && <HowToStrip lang={lang} onClose={closeHowto} />}
       <div className={`grid${course ? " has-course" : ""}`}>
         {course && !chatOpen && (
-          <button className="chat-fab" onClick={() => setChatOpen(true)} aria-expanded={false} aria-controls="chat-panel">
+          <button className="chat-fab mini" onClick={() => setChatOpen(true)} aria-expanded={false} aria-controls="chat-panel" aria-label={lang === "ko" ? "동이에게 고쳐 달라고 하기" : "Ask Dongi to change it"}>
             <img src="/dongi/wave.webp" alt="" /><span><b>{lang === "ko" ? "동이에게 고쳐 달라고 하기" : "Ask Dongi to change it"}</b><small>{lang === "ko" ? "대화·빠른 수정 열기" : "Open chat & quick edits"}</small></span></button>)}
         <section id="chat-panel" className={`panel chat${course ? (chatOpen ? " widget open" : " widget") : ""}`} aria-label={t("nav.plan")}
           onKeyDown={(e) => { if (e.key === "Escape" && course) setChatOpen(false); }}>
           {course && <div className="widget-bar"><b>{lang === "ko" ? "동이와 대화" : "Chat with Dongi"}</b>
-            <button className="chip sm" onClick={() => setChatOpen(false)} aria-controls="chat-panel" aria-expanded={true}>{lang === "ko" ? "접기" : "Hide"}</button></div>}
+            <button className="widget-x" onClick={() => setChatOpen(false)} aria-controls="chat-panel" aria-expanded={true} aria-label={lang === "ko" ? "대화 접기" : "Hide chat"}>×</button></div>}
           {forkOpen ? (
             <div className="fork-stage">
               <p className="fork-hi"><img src="/dongi/wave.webp" alt="" /><span><b>{t("dongi")}</b>{t("plan.greet")}</span></p>
@@ -888,12 +890,18 @@ export default function Page() {
         {([["#plan", "nav.plan", "", "route"], ["#/places", "nav.places", "places", "pin"], ["#/transport", "nav.transport", "transport", "bus"], ["#/map", "nav.map", "map", "map"], ["#/community", "nav.community", "community", "story"], ["#/my", "nav.my", "my", "cal"]] as const).map(([h, k, r, ic]) =>
           <a key={h} href={h} aria-current={route[0] === r || (r === "places" && route[0] === "place") ? "page" : undefined}><Icon name={ic} className="tab-ic" />{t(k)}</a>)}
       </nav>
-      <nav className="quick" aria-label={lang === "ko" ? "빠른 메뉴" : "Quick menu"}>
-        <a href="#plan"><Icon name="route" />{lang === "ko" ? "코스 짜기" : "Plan"}</a>
-        <a href="#/map"><Icon name="toilet" />{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
-        <a href="#/events"><Icon name="event" />{lang === "ko" ? "행사" : "Events"}</a>
-        <button onClick={openSafety}><Icon name="shield" />{lang === "ko" ? "긴급·도움" : "Help"}</button>
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Icon name="top" />{lang === "ko" ? "맨 위로" : "Top"}</button>
+      {/* 빠른 메뉴: 평소엔 작은 단추 하나, 마우스를 가까이 대거나(포커스) 누르면 펼쳐지고, × 나 밖으로 나가면 다시 작아진다.
+          긴급·도움은 머리말 빨간 단추 하나로 합쳤다 (같은 버튼이 두 곳에 있던 것 정리) */}
+      <nav className={`quick${quickOpen ? " open" : ""}`} aria-label={lang === "ko" ? "빠른 메뉴" : "Quick menu"}
+        onMouseEnter={() => { if (quickT.current) clearTimeout(quickT.current); setQuickOpen(true); }}
+        onMouseLeave={() => { quickT.current = setTimeout(() => setQuickOpen(false), 500); }}
+        onFocus={() => setQuickOpen(true)} onKeyDown={(e) => { if (e.key === "Escape") setQuickOpen(false); }}>
+        {!quickOpen ? <button className="quick-mini" aria-expanded={false} onClick={() => setQuickOpen(true)}><Icon name="route" /><span>{lang === "ko" ? "메뉴" : "Menu"}</span></button> : <>
+          <button className="quick-x" aria-label={lang === "ko" ? "빠른 메뉴 접기" : "Close quick menu"} onClick={(e) => { e.stopPropagation(); setQuickOpen(false); (e.currentTarget.closest("nav") as HTMLElement)?.blur(); }}>×</button>
+          <a href="#plan"><Icon name="route" />{lang === "ko" ? "코스 짜기" : "Plan"}</a>
+          <a href="#/map"><Icon name="toilet" />{lang === "ko" ? "화장실·편의" : "Toilets"}</a>
+          <a href="#/events"><Icon name="event" />{lang === "ko" ? "행사" : "Events"}</a>
+          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Icon name="top" />{lang === "ko" ? "맨 위로" : "Top"}</button></>}
       </nav>
       {toast && (
         <div className="toast" role="status">

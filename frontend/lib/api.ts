@@ -106,5 +106,6 @@ export const api = {
         stay?: any; move?: any; events?: any[]; events_on_day?: boolean }>(r)),
   place: (id: string, lang = "ko", mode = "wheel") => fetch(`/api/places/${id}?lang=${lang}&mode=${mode}`).then((r) => j<any>(r)),
   get: (path: string, token?: string) => fetch(path, { headers: token ? { "x-admin-token": token } : {} }).then((r) => j<any>(r)),
+  form: (path: string, fd: FormData, token?: string) => fetch(path, { method: "POST", headers: token ? { "x-admin-token": token } : {}, body: fd }).then((r) => j<any>(r)),
   post: (path: string, body: any, token?: string) => fetch(path, { method: "POST", headers: { "content-type": "application/json", ...(token ? { "x-admin-token": token } : {}) }, body: JSON.stringify(body) }).then((r) => j<any>(r)),
 };

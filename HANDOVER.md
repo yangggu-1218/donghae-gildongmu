@@ -43,7 +43,8 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 | 11-20 | c1595d8 | 개발자 테스트 피드백(BUG 6건·IMP) 반영 |
 | 11-20 | 4d02613 | **AI 기능 3가지**(코스 설계 에이전트·접근성 판정관·최근 길 상태+관리자 승인), Sonnet 선택, 지도 숫자 묶음·내 위치, 새 6곳 사진 13장·소개 |
 | 11-20 | 3d5d520 | 묵호등대 운영시간 09:00~17:00, 개인 촬영자 사진 2장 사용 허락 반영 |
-| 11-20 | (0f4308f 다음 커밋, push·배포 전) | **AI 요청 수 제한**(같은 주소 10분 20번·하루 $2, 넘으면 규칙으로) + **사용량 파일**(`ai_usage.json`, 날짜별) + 관리자 [AI 설정]에 오늘 사용량·한도 표시 |
+| 11-20 | 6406f23 (push·배포 전) | **AI 요청 수 제한**(같은 주소 10분 20번·하루 $2, 넘으면 규칙으로) + **사용량 파일**(`ai_usage.json`, 날짜별) + 관리자 [AI 설정]에 오늘 사용량·한도 표시 |
+| 11-21 | (6406f23 다음 커밋, push·배포 전) | **정보 밀도·픽토그램**(AI 판정 카드·관광지 상세 줄이기), 코스 전 대화 메신저형, 긴급·도움 하나로, 빠른 메뉴·챗봇 단추 접힘, 관리자 탭 7개+[더 보기], **자료로 채우기(AI: 한글·PDF·링크 → 장소 정보 초안)**, 반응형 점검 — 자세히는 CHANGELOG 11-21 |
 
 ### AI 기능 (4d02613) 핵심
 - 공통 모듈 `backend/app/ai.py`: 작업별 모델(기본 Haiku 5.5, 코스 설계·판정은 Sonnet 5.5), Sonnet은 서버 측 대체(fallbacks) 켬, 결과 캐시, 사용량·비용 집계
@@ -74,6 +75,8 @@ unset AI_COURSE; py tests/test_ai_features.py   # → AI 점검 실패 0건 (가
 **배포 뒤 추가한 문서 (아직 커밋 안 함)**
 - `docs/18_MENTORING_PREP.md` — 멘토링 준비: 2분 소개, 기술 구조, 약점 8가지, 질문 14개, 시간 배분, 예상 질문. 8장에 **소프트웨어 전공 멘토께 보여 드릴 기술 설명 순서(5~7분)**, 9장에 **구조도 이미지용 GPT 프롬프트**
 - `HANDOVER.md` — 이 파일
+
+**11-21 작업은 커밋했지만 push·배포 전** (위 표 11-21 줄). `backend/requirements.txt`에 `olefile` 추가 → 배포 때 Render가 설치.
 
 **커밋은 했지만 아직 push·배포 안 한 것**: (위 두 문서는 0f4308f로 커밋됨) AI 요청 수 제한·사용량 파일 작업 — `backend/app/ai.py`·`llm.py`·`talk.py`·`main.py`, `frontend/components/Admin.tsx`, `tests/test_ai_features.py`, `.gitignore`, `.env.example`, `docs/12_CHANGELOG.md`, 빌드 결과 `web/index.html`·`docs/index.html`, 이 파일. 그 밖에 `build/package-lock.json`, `data/cache/`, `frontend/tsconfig.tsbuildinfo`는 일부러 커밋하지 않음.
 

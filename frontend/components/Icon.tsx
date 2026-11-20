@@ -52,6 +52,29 @@ const P: Record<string, string> = {
 export type IconName = keyof typeof P;
 export const hasIcon = (n?: string | null) => !!n && n in P;
 
+// 안전 표지 느낌의 색 픽토그램 (ISO 7010 표지 모양을 본떠 팀이 직접 그림 — 라이선스 걱정 없음).
+//  ok = 초록 원+체크(가능), warn = 노란 삼각형+느낌표(주의), stop = 빨간 원+사선(어려움), ask = 회색 원+물음표(확인 필요),
+//  call = 파란 원+전화(가기 전 물어보기), tip = 파란 원+i(도움말)
+export type PictoName = "ok" | "warn" | "stop" | "ask" | "call" | "tip";
+export function Picto({ name, label, size = 22 }: { name: PictoName; label?: string; size?: number }) {
+  const a = label ? { role: "img", "aria-label": label } : { "aria-hidden": true as const };
+  const s = { width: size, height: size, viewBox: "0 0 24 24", className: `picto picto-${name}`, focusable: false as const, ...a };
+  if (name === "warn") return (
+    <svg {...s}><path d="M12 2.2 1.3 21h21.4L12 2.2Z" fill="#F7C600" stroke="#1A1A1A" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12 8.6v6.2" stroke="#1A1A1A" strokeWidth="2.4" strokeLinecap="round" /><circle cx="12" cy="17.9" r="1.35" fill="#1A1A1A" /></svg>);
+  if (name === "stop") return (
+    <svg {...s}><circle cx="12" cy="12" r="10" fill="#fff" stroke="#C8102E" strokeWidth="3" /><path d="M5.2 5.2l13.6 13.6" stroke="#C8102E" strokeWidth="3" /></svg>);
+  if (name === "ok") return (
+    <svg {...s}><circle cx="12" cy="12" r="11" fill="#1A7F3C" /><path d="M6.6 12.4l3.6 3.6 7.2-7.6" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>);
+  if (name === "ask") return (
+    <svg {...s}><circle cx="12" cy="12" r="11" fill="#6B7A90" /><path d="M9.2 9.2a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.2v.6" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" /><circle cx="12" cy="17.8" r="1.3" fill="#fff" /></svg>);
+  if (name === "call") return (
+    <svg {...s}><circle cx="12" cy="12" r="11" fill="#2462B4" /><path d="M8.3 6.5h2l1.2 3-1.5 1a7 7 0 0 0 3.5 3.5l1-1.5 3 1.2v2a1.3 1.3 0 0 1-1.3 1.3A9.6 9.6 0 0 1 7 7.8a1.3 1.3 0 0 1 1.3-1.3Z" fill="#fff" /></svg>);
+  return (
+    <svg {...s}><circle cx="12" cy="12" r="11" fill="#2462B4" /><circle cx="12" cy="7.2" r="1.5" fill="#fff" /><path d="M12 10.8v6.6" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" /></svg>);
+}
+export const VERDICT_PICTO: Record<string, PictoName> = { G: "ok", Y: "warn", R: "stop", U: "ask" };
+
 export function Icon({ name, className = "" }: { name: string; className?: string }) {
   const d = P[name];
   if (!d) return null;

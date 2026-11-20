@@ -31,6 +31,8 @@ SYSTEM = """너는 '동해 길동무'의 접근성 판정관이다. 동해시 �
 5. 안전이 걸린 일이라 애매하면 한 단계 보수적으로(G 대신 Y) 판정하고 직접 확인을 권한다.
 6. ask_before 에는 가기 전에 전화로 물어보면 좋은 구체적인 질문을 적는다 (예: "엘리베이터가 지금 운행하나요?").
 7. 쉬운 존댓말로 짧게 쓴다. 언어가 en 이면 영어로 쓴다.
+8. 화면에는 픽토그램 옆에 한 줄씩 보인다. headline 은 30자, reasons·cautions·ask_before·tip 은 항목마다 25자 안팎으로 줄인다.
+   reasons 는 3개, cautions·ask_before 는 2개까지. text 안에 출처·근거 이름을 쓰지 않는다(출처는 source 에만).
 """
 
 SCHEMA = {
@@ -91,9 +93,9 @@ def judge(p: Place, mode: str, lang: str, reports: list[dict]) -> dict:
             "verdict": data["verdict"] if data.get("verdict") in ("G", "Y", "R", "U") else "U",
             "confidence": data["confidence"] if data.get("confidence") in ("high", "medium", "low") else "low",
             "headline": _clip(data.get("headline"), 140),
-            "reasons": [{"text": _clip(r.get("text"), 200), "source": _clip(r.get("source"), 90)} for r in (data.get("reasons") or [])[:5] if isinstance(r, dict) and r.get("text")],
-            "cautions": [_clip(c, 160) for c in (data.get("cautions") or [])[:4] if c],
-            "ask_before": [_clip(c, 120) for c in (data.get("ask_before") or [])[:3] if c],
+            "reasons": [{"text": _clip(r.get("text"), 200), "source": _clip(r.get("source"), 90)} for r in (data.get("reasons") or [])[:3] if isinstance(r, dict) and r.get("text")],
+            "cautions": [_clip(c, 160) for c in (data.get("cautions") or [])[:2] if c],
+            "ask_before": [_clip(c, 120) for c in (data.get("ask_before") or [])[:2] if c],
             "tip": _clip(data.get("tip"), 200),
         }
         if not out["reasons"] and out["verdict"] != "U":   # 근거 없는 판정은 믿지 않는다

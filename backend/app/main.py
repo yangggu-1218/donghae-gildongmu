@@ -2,6 +2,7 @@
 실행: cd backend && uvicorn app.main:app --reload --port 8000
 키가 없어도 data/places.json(없으면 data/places_seed.json) 예시 데이터로 동작한다."""
 import io, json, os, uuid, datetime as dt
+import anyio
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -12,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from .schemas import trip_days, Place, Conditions, ChatEdit
-from . import ai, ai_course, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
+from . import ai, ai_course, ai_extract, ai_judge, ai_status as ai_stat, cms, edits, pages, engine, llm, public_apis, public_data, details, kto_access, bigdata, talk as talk_mod
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 app = FastAPI(title="동해 길동무 API")
@@ -256,6 +257,28 @@ def admin_ai_refresh(x_admin_token: str | None = Header(None)):
         new += ai_stat.save_proposals(pid, out.get("proposals", []) or [])
         done += 1
     return {"places": done, "new_proposals": new}
+
+
+@app.post("/api/admin/ai/extract")
+async def admin_ai_extract(place_id: str = Form(...), url: str = Form(""), file: UploadFile | None = File(None), x_admin_token: str | None = Header(None)):
+    """④ 한글·PDF 파일이나 공개 링크를 AI가 읽고 [장소 정보] 칸에 넣을 초안을 만든다. 저장은 관리자가 확인한 뒤에."""
+    _admin(x_admin_token, "place")
+    p = PLACES.get(place_id)
+    if not p:
+        raise HTTPException(404, "알 수 없는 장소예요")
+    try:
+        if file is not None and file.filename:
+            data = await file.read(ai_extract.MAX_FILE + 1)
+            if len(data) > ai_extract.MAX_FILE:
+                raise ai_extract.BadInput("파일이 너무 커요 (15MB까지).")
+            kind, name = ai_extract.kind_of(file.filename, data), file.filename
+        elif url.strip():
+            kind, data, name = await anyio.to_thread.run_sync(ai_extract.fetch_url, url.strip())
+        else:
+            raise ai_extract.BadInput("파일을 올리거나 링크를 넣어 주세요.")
+        return await anyio.to_thread.run_sync(ai_extract.extract, p.model_dump(), kind, data, name)
+    except ai_extract.BadInput as e:
+        raise HTTPException(400, str(e))
 
 
 @app.get("/api/admin/ai/settings")

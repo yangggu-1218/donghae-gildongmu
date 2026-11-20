@@ -10,7 +10,7 @@ import { AccessPanel, AccessBadges, AccIcon } from "@/components/AccessBadges";
 import { PHOTOS, GALLERY, photoAt } from "@/lib/photos";
 import { WHEEL_EN } from "@/components/Timeline";
 import { tr, dot, SOURCE_NOTES_EN, nm, ad } from "@/lib/ko2en";
-import { Icon } from "@/components/Icon";
+import { Icon, Picto, VERDICT_PICTO } from "@/components/Icon";
 import { fuzzyHit } from "@/lib/fuzzy";
 import { PlaceTalk } from "@/components/Community";
 import { AiJudge, AiStatus } from "@/components/AiCards";
@@ -236,12 +236,11 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
           <h2 className="h3 pp2-h"><Icon name="time" />{L("이용 안내", "Visiting info")}</h2>
           <dl>
             <div><dt><Icon name="time" />{L("오늘", "Today")}</dt><dd><span className={`badge ${p.today === "open" || p.today === "always" ? "b-open" : "b-unknown"}`}>{today}</span></dd></div>
-            <div><dt><Icon name="cal" />{L("운영시간", "Hours")}</dt><dd>{(p.hours_text || "").split(" · ").filter((x: string) => !/휴무|closed/.test(x)).join(" · ") || L("확인 전", "Not checked")}</dd></div>
+            <div><dt><Icon name="cal" />{L("운영시간", "Hours")}</dt><dd title={p.hours_source ? `${L("출처", "Source")}: ${p.hours_source}` : undefined}>{(p.hours_text || "").split(" · ").filter((x: string) => !/휴무|closed/.test(x)).join(" · ") || L("확인 전", "Not checked")}</dd></div>
             {closedTxt && <div><dt><Icon name="closed" />{L("휴무일", "Closed")}</dt><dd>{closedTxt}</dd></div>}
             {p.fee && <div><dt><Icon name="ticket" />{L("입장료", "Fee")}</dt><dd>{tr(lang, p.fee)}</dd></div>}
             {p.phone && <div><dt><Icon name="phone" />{L("문의전화", "Phone")}</dt><dd><a href={`tel:${p.phone}`}>{p.phone}</a></dd></div>}
           </dl>
-          {p.hours_source && <p className="muted small">{L("운영시간 출처", "Hours source")}: {p.hours_source}</p>}
         </div>
         <div className="panel pp2-photos">
           {GALLERY[p.id] ? <>
@@ -255,27 +254,24 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
 
       {/* 3. 이동 및 접근성 (하나의 큰 영역) */}
       <div className="panel pp2-access">
-        <div className="pp2-h-row">
-          <h2 className="h3 pp2-h"><Icon name="walk" />{L("이동 및 접근성", "Getting around & access")}</h2>
-          <span className="muted small">{L(`${MODES.find((m) => m[0] === mode)?.[1]} 기준`, `For: ${MODES.find((m) => m[0] === mode)?.[2]}`)}</span>
-        </div>
+        <h2 className="h3 pp2-h"><Icon name="walk" />{L("이동 및 접근성", "Getting around & access")}</h2>
         {p.type !== "숙박" && <AiJudge id={id} mode={mode} lang={lang} />}
         {chips.length > 0 && <div className="tl-badges">{chips.map((c) => <span key={c} className="badge b-plain">{c}</span>)}</div>}
-        {p.access_source === "예시" && <p className="seg-ex" role="note">{L("이 장소의 길 판정은 아직 팀이 현장에서 직접 재 보기 전이에요. 가기 전에 전화로 한 번 더 확인해 주세요.", "These grades are samples, not yet surveyed on site. Please call ahead.")}{p.phone && <> <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>}
         <ol className="pp2-segs">
           {(p.segments || []).map((s: any) => (
             <li key={s.name}>
               <b className="pp2-seg-n"><Icon name="pin" />{s.name}</b>
-              {s.facts.length > 0 && <p>{s.facts.join(" · ")}</p>}
-              {s.note && <p className="muted">{s.note}</p>}
-              <span className={`badge g-${s.grade}`}>{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span>
-              <p className="muted seg-src">{s.source === "예시" ? L("현장 확인 전이에요", "Not yet surveyed")
-                : <>{s.measured ? L("측정값으로 판정", "Graded from measurements") : L("답사 기록 판정", "Graded from survey notes")} · {L("출처", "Source")}: {s.source || "-"}</>}</p>
+              <span className={`badge g-${s.grade}`} title={s.source === "예시" ? L("현장 확인 전이에요", "Not yet surveyed")
+                : `${s.measured ? L("측정값으로 판정", "Graded from measurements") : L("답사 기록 판정", "Graded from survey notes")} · ${L("출처", "Source")}: ${s.source || "-"}`}>
+                <Picto name={VERDICT_PICTO[s.grade] || "ask"} size={16} />{L(GRADE[s.grade as "G" | "Y" | "R"][0], GRADE[s.grade as "G" | "Y" | "R"][1])}</span>
+              {(s.facts.length > 0 || s.note) && <p className="muted">{[...s.facts, s.note].filter(Boolean).join(" · ")}</p>}
             </li>))}
           {!(p.segments || []).length && <li className="muted">{L("아직 구간 정보가 없어요.", "No path data yet.")}</li>}
         </ol>
-        {p.carer_tip && lang === "ko" && <p className="tl-tip"><b>{L("보호자 꿀팁", "Tip for carers")}</b> {p.carer_tip}</p>}
-        <p className="muted small"><Icon name="info" /> {p.last_visit ? L(`팀 현장 확인: ${p.last_visit.date}${p.last_visit.who ? ` (${p.last_visit.who})` : ""}. 방문 전 전화로 한 번 더 확인해 주세요.`, `Team visit: ${p.last_visit.date}`) : L("아직 팀 현장 확인 전이에요. 방문 전 전화로 확인해 주세요.", "Not yet checked on site by the team. Please call ahead.")}</p>
+        {p.carer_tip && lang === "ko" && <p className="pp2-line"><Picto name="tip" size={18} label="보호자 꿀팁" />{p.carer_tip}</p>}
+        <p className="pp2-line muted small">{p.last_visit ? <Picto name="ok" size={16} /> : <Picto name="warn" size={16} />}
+          {p.last_visit ? L(`팀 현장 확인 ${p.last_visit.date}${p.last_visit.who ? ` (${p.last_visit.who})` : ""}`, `Team visit: ${p.last_visit.date}`) : L("현장 확인 전 · 가기 전 전화 확인", "Not surveyed yet · call ahead")}
+          {p.phone && <> · <a href={`tel:${p.phone}`}>{p.phone}</a></>}</p>
         {p.access_kto?.cats?.length > 0 && <details className="pp2-more"><summary>{L("무장애 편의정보 자세히 (한국관광공사)", "Accessibility details (KTO)")}</summary><AccessPanel a={p.access_kto} lang={lang} /></details>}
       </div>
 
@@ -311,8 +307,8 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
 
       {/* 6. 알고 가면 더 좋아요 */}
       {(p.about?.length > 0 || p.stories?.length > 0 || p.trail_info?.length > 0) && (
-        <div className="panel about pp2-know">
-          <h2 className="h3 pp2-h"><Icon name="story" />{L("알고 가면 더 좋아요", "Good to know")}</h2>
+        <details className="panel about pp2-know">
+          <summary><h2 className="h3 pp2-h"><Icon name="story" />{L("알고 가면 더 좋아요", "Good to know")}</h2></summary>
           <div className="pp2-know-cols">
             {(p.about || []).map((a: any) => (
               <div key={a.t[0]}><h3>{L(a.t[0], a.t[1])}</h3><ul>{a.i.map((x: string[]) => <li key={x[0]}>{L(x[0], x[1])}</li>)}</ul></div>))}
@@ -321,7 +317,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
                 {p.stories?.slice(0, 2).map((s: any) => <p key={s.name}><b>{s.name}</b> {s.intro?.slice(0, 120)}</p>)}
                 {p.trail_info?.map((t: any) => <p key={t.name} className="muted ic-row"><Icon name="trail" />{t.name} · {t.length_km}km · {t.duration}</p>)}</div>)}
           </div>
-        </div>)}
+        </details>)}
     </section>
   );
 }

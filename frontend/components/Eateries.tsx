@@ -27,16 +27,22 @@ export function NearbyEats({ lat, lon, lang, r = 600, limit = 6, title, exclude 
   return (
     <div className="eats">
       {title && <h3 className="h4">{title}</h3>}
-      <p className="muted small">{ko ? `반경 ${dist(r, ko)} 안 ${d.total}곳` : `${d.total} within ${dist(r, ko)}`}</p>
-      <div className="chips eat-g" role="group" aria-label={ko ? "음식 종류" : "Cuisine"}>
-        <button className="chip" aria-pressed={!group} onClick={() => setGroup("")}>{ko ? "전체" : "All"}</button>
-        {d.groups.map(([g, n]) => <button key={g} className="chip" aria-pressed={group === g} onClick={() => setGroup(g)}>{ko ? g : G_EN[g] || g} <small>{n}</small></button>)}
+      {/* 정보 밀도: 종류·정렬은 고르기 상자 한 줄, 출처·고른 기준은 (i)에 마우스를 올리면 */}
+      <div className="eat-bar">
+        <span className="muted small" title={ko ? "출처: 동해시 일반음식점 인허가 현황(2026-03) · 영업 연수는 인허가 연도 기준 · 휠체어 접근은 가기 전 전화로 확인해 주세요."
+          : "Source: Donghae restaurant licences (2026-03). Call ahead to check wheelchair access."}>{ko ? `반경 ${dist(r, ko)} 안 ${d.total}곳` : `${d.total} within ${dist(r, ko)}`} <Icon name="info" /></span>
+        <label><span className="sr-only">{ko ? "음식 종류" : "Cuisine"}</span>
+          <select className="box sm" value={group} onChange={(e) => setGroup(e.target.value)}>
+            <option value="">{ko ? "전체" : "All"}</option>
+            {d.groups.map(([g, n]) => <option key={g} value={g}>{ko ? g : G_EN[g] || g} ({n})</option>)}
+          </select></label>
+        <label><span className="sr-only">{ko ? "정렬" : "Sort"}</span>
+          <select className="box sm" value={sort} onChange={(e) => setSort(e.target.value as any)}
+            title={sort === "pick" ? (ko ? "무장애 정보 확인 · 오래 영업한 곳 · 가까운 곳을 함께 따져 골랐어요." : "Weighs access info, years in business and distance.") : undefined}>
+            {([["pick", "길동무 추천순", "Recommended"], ["dist", "가까운 순", "Nearest"], ["old", "오래된 가게 순", "Longest-running"], ["access", "무장애 정보 먼저", "Access info first"]] as const).map(([k, a, b]) =>
+              <option key={k} value={k}>{ko ? a : b}</option>)}
+          </select></label>
       </div>
-      <div className="eat-sort" role="group" aria-label={ko ? "정렬" : "Sort"}>
-        {([["pick", "길동무 추천순", "Recommended"], ["dist", "가까운 순", "Nearest"], ["old", "오래된 가게 순", "Longest-running"], ["access", "무장애 정보 먼저", "Access info first"]] as const).map(([k, a, b]) =>
-          <button key={k} className="chip sm" aria-pressed={sort === k} onClick={() => setSort(k)}>{ko ? a : b}</button>)}
-      </div>
-      {sort === "pick" && <p className="muted small eat-why">{ko ? "무장애 정보 확인 · 오래 영업한 곳 · 가까운 곳을 함께 따져 골랐어요." : "Weighs access info, years in business and distance."}</p>}
       <ul className="eat-list">
         {items.map((x) => (
           <li key={x.name + x.address}>
@@ -49,8 +55,6 @@ export function NearbyEats({ lat, lon, lang, r = 600, limit = 6, title, exclude 
           </li>))}
         {!items.length && <li className="muted">{ko ? "이 반경엔 해당 식당이 없어요." : "None in this radius."}</li>}
       </ul>
-      <p className="muted small">{ko ? "출처: 동해시 일반음식점 인허가 현황(2026-03) · 영업 연수는 인허가 연도 기준 · 리뷰 점수는 공개 데이터가 없어 쓰지 않았어요 · 휠체어 접근은 가기 전 전화로 확인해 주세요."
-        : "Source: Donghae restaurant licences (2026-03). Call ahead to check wheelchair access."}</p>
     </div>
   );
 }

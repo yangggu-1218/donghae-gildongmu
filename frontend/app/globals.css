@@ -1734,3 +1734,122 @@ body.big .quick a, body.big .quick button { width: 88px; font-size: 14px; }
 .ai-prop.done { opacity: .65; }
 .ai-models td, .ai-models th { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--line); }
 .ai-models { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+
+/* =====================================================================
+   2026-11-21 정보 밀도 · 반응형 정리 (팀 의견: 글·상자는 줄이고 픽토그램으로)
+   ===================================================================== */
+.picto { flex: none; display: inline-block; vertical-align: -.2em; }
+
+/* AI 판정 카드: 큰 표지 하나 + 한 줄 항목들 */
+.ai-card { padding: 10px 12px; margin: 8px 0 10px; }
+.aj-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.aj-verdict { font-size: 1.12em; color: var(--ink); }
+.aj-conf { display: inline-flex; gap: 3px; margin-left: 2px; }
+.aj-conf i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.aj-conf i.on { background: var(--sea); }
+.aj-top .via { margin-left: auto; cursor: help; }
+.aj-head { margin: 6px 0 2px; font-weight: 600; }
+.aj-list, .ai-status .ai-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.aj-list li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
+.aj-list li[title] { cursor: help; }
+.aj-list .picto { margin-top: .1em; }
+.aj-warn { font-weight: 600; }
+.aj-state { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .9em; cursor: help; }
+.ai-status .ai-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+.ai-status .ai-top h2 { margin: 0; }
+.ai-head { margin: 6px 0 0; }
+
+/* 관광지 상세: 구간은 한 줄 카드, 설명 줄은 픽토그램 한 줄 */
+.pp2-segs { gap: 8px; margin: 8px 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.pp2-segs > li { padding: 10px 12px; gap: 4px; border-radius: 12px; }
+.pp2-segs .badge { display: inline-flex; align-items: center; gap: 5px; cursor: help; }
+.pp2-segs p.muted { font-size: .88em; }
+.pp2-line { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 0; }
+.pp2-line .picto { margin-top: .15em; }
+details.pp2-know > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+details.pp2-know > summary::-webkit-details-marker { display: none; }
+details.pp2-know > summary::after { content: "▾"; color: var(--sea-deep); font-size: 1.1em; }
+details.pp2-know[open] > summary::after { content: "▴"; }
+details.pp2-know > summary h2 { margin: 0; }
+.pp2-info dd[title] { cursor: help; text-decoration: underline dotted var(--line-strong); text-underline-offset: 3px; }
+
+/* 근처 식당: 종류·정렬은 고르기 상자 한 줄 */
+.eat-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 8px; }
+.eat-bar > span { cursor: help; display: inline-flex; align-items: center; gap: 4px; margin-right: auto; }
+.box.sm { min-height: 40px; font-size: .9em; padding: 0 8px; }
+
+/* 코스 짜기 전 대화: 메신저처럼 가운데 한 장, 말풍선은 작게, 답 고르기도 동이 말풍선 안에 */
+.grid:not(.has-course) { grid-template-columns: minmax(0, 1fr); }
+.grid:not(.has-course) > #timeline { display: none; }
+.grid:not(.has-course) > .panel.chat { width: 100%; max-width: 820px; justify-self: center; height: auto;
+  max-height: min(720px, calc(100dvh - var(--hdr, 64px) - var(--tab, 0px) - 20px)); }
+.grid:not(.has-course) > .panel.chat .chat-log { min-height: 0; max-height: 300px; }
+.chat-log .says { margin: 6px 0; gap: 8px; }
+.chat-log .says img { height: 40px; }
+.chat-log .says.quiet img { visibility: hidden; height: 1px; width: 40px; }
+.chat-log .bubble { padding: 7px 12px; border-radius: 16px 16px 16px 4px; max-width: min(85%, 560px); font-size: .97em; line-height: 1.5; }
+.chat-log .bubble > b:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.chat-log .me { margin: 6px 0; }
+.chat-log .me span { padding: 7px 12px; border-radius: 16px 16px 4px 16px; max-width: min(80%, 480px); }
+.chat-dock { border-top: 0; padding: 4px 14px 12px; gap: 8px; }
+.dock-opts:not(:empty) { margin-left: 48px; background: var(--mist); border: 1px solid var(--line); border-radius: 16px 16px 16px 4px; padding: 10px; }
+.chat-dock .big-chips .chip { min-height: 44px; padding: 0 14px; font-size: .95em; }
+.steps { padding: 8px 12px 0; font-size: .78em; }
+.steps li { padding: 4px 2px; }
+.dchip { width: 48px; min-height: 54px; }
+.composer input { min-height: 44px; }
+@media (max-width: 600px) {
+  .dock-opts:not(:empty) { margin-left: 0; }
+  .chat-log .says img { height: 32px; }
+  .chat-log .bubble { max-width: 88%; }
+}
+
+/* 빠른 메뉴: 평소엔 작은 단추, 가까이 가면 펼침 (넓은 화면 · 태블릿에서도) */
+.quick { padding: 4px; gap: 0; transition: box-shadow .2s; }
+.quick-mini { display: grid; justify-items: center; gap: 2px; width: 52px; padding: 8px 2px; border: 0; background: none; border-radius: 12px; font: inherit; font-size: .7em; font-weight: 700; color: var(--sea-deep); cursor: pointer; }
+.quick-mini .ic { width: 24px; height: 24px; color: var(--sea); }
+.quick-x { align-self: flex-end; width: 32px; height: 32px; border: 0; background: none; border-radius: 50%; font-size: 1.3em; line-height: 1; color: var(--muted); cursor: pointer; }
+.quick-x:hover { background: var(--mist); }
+.quick.open { box-shadow: 0 18px 40px -18px rgba(18, 53, 94, .7); }
+@media (max-width: 1320px) { .quick { display: flex; } }
+@media (max-width: 760px) { .quick { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .quick.open a, .quick.open > button:not(.quick-x) { animation: q-in .18s ease-out both; } @keyframes q-in { from { opacity: 0; transform: translateX(8px); } } }
+
+/* 챗봇 단추: 평소엔 동이 얼굴 동그라미, 마우스를 올리거나 포커스하면 글이 펼쳐짐 */
+.chat-fab.mini { padding: 6px; gap: 0; min-height: 0; }
+.chat-fab.mini span { max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0; transition: max-width .25s, opacity .2s, margin .25s; }
+.chat-fab.mini:hover span, .chat-fab.mini:focus-visible span { max-width: 260px; opacity: 1; margin: 0 12px 0 8px; }
+.widget-x { margin-left: auto; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--mist); color: var(--sea-deep); font-size: 1.4em; line-height: 1; cursor: pointer; }
+.widget-x:hover { background: var(--sea-soft); }
+.pp2-line a[href^="tel:"] { white-space: nowrap; }
+@media (max-width: 600px) {
+  .pp2-segs > li { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 8px; padding: 8px 10px; }
+  .pp2-segs .pp2-seg-n { flex: 1 1 60%; font-size: .95em; }
+  .pp2-segs p.muted { flex-basis: 100%; }
+  .aj-top .via { margin-left: 0; }
+}
+
+/* 관리자: 탭 줄 + [더 보기], 자료로 채우기 */
+.admin-more select { min-height: 44px; border: 0; background: none; font: inherit; font-weight: 600; color: var(--muted); padding: 0 8px; cursor: pointer; }
+.admin-more.on select { color: var(--ink); font-weight: 700; box-shadow: inset 0 -3px 0 var(--sea); }
+.import-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; padding: 10px 12px; border: 1.5px dashed var(--sea); border-radius: var(--r-m); background: var(--sea-soft); }
+.import-h { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
+.import-file { display: inline-flex; align-items: center; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-url { flex: 1 1 220px; min-width: 0; min-height: 44px; font: inherit; padding: 0 10px; border: 1.5px solid var(--line); border-radius: var(--r-s); background: var(--surface); color: inherit; }
+.import-box .err { flex-basis: 100%; margin: 0; }
+.ai-fill { margin: 8px 0; padding: 10px 12px; border-left: 4px solid var(--sea); background: var(--mist); border-radius: var(--r-s); }
+.ai-fill p { margin: 0 0 6px; }
+.ai-missing { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+@media (max-width: 600px) { .admin-tabs { flex-wrap: nowrap; overflow-x: auto; } .admin-tabs > * { flex: none; } }
+.import-h .via { margin-left: 2px; }
+.admin-more, .eat-bar label { position: relative; }
+/* 360px 폰(갤럭시 등)에서 머리말 단추가 넘치지 않게 */
+@media (max-width: 420px) {
+  .bar { min-width: 0; }
+  .tools { gap: 4px; min-width: 0; flex-shrink: 1; }
+  .tools .sos { padding: 0 8px; }
+  .tools #lang { max-width: 72px; padding: 0 4px; }
+  .tools .bigt { padding: 0 6px; }
+}
+.pp2-info dl > div { grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); } .pp2-info dd { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 420px) { .pp2-info dl > div { grid-template-columns: minmax(0, 6.2em) minmax(0, 1fr); gap: 6px; } }

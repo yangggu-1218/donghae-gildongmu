@@ -1108,9 +1108,10 @@ export function makeApi(DATA) {
       demoCheck(q.__token, path === "/api/admin/ai/settings" && method === "POST" ? "accounts" : "reports");
       if (path === "/api/admin/ai/proposals") return [];
       if (path === "/api/admin/ai/refresh") return { places: 0, new_proposals: 0, demo: true };
+      if (path === "/api/admin/ai/extract") return { ok: false, why: "데모에는 AI가 없어 자료를 읽을 수 없어요. 실제 사이트에서 써 주세요." };
       if (path === "/api/admin/ai/settings") {
         const models = { fast: "claude-haiku-5-5", smart: "claude-sonnet-5-5" };
-        const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];
+        const T = [["course", "AI 코스 설계", "smart"], ["judge", "AI 접근성 판정", "smart"], ["status", "최근 길 상태 요약", "fast"], ["talk", "대화형 동이", "fast"], ["extract", "자료로 장소 정보 채우기 (관리자)", "fast"], ["etc", "브리핑·사진 분석·조건 해석", "fast"]];
         return { models, price_per_mtok: { "claude-haiku-5-5": [0.1, 0.5], "claude-sonnet-5-5": [2, 10] }, connected: false, usage: {}, last: {},
           tasks: T.map(([key, ko, tier]) => ({ key, ko, tier, default: tier, model: models[tier] })) };
       }

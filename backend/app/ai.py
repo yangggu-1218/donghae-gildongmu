@@ -31,6 +31,7 @@ TASKS: dict[str, dict] = {
     "judge": {"tier": "smart", "ko": "AI 접근성 판정", "effort": "medium"},
     "status": {"tier": "fast", "ko": "최근 길 상태 요약", "effort": "low"},
     "talk": {"tier": "fast", "ko": "대화형 동이", "effort": "low"},
+    "extract": {"tier": "fast", "ko": "자료로 장소 정보 채우기 (관리자)", "effort": "low"},
     "etc": {"tier": "fast", "ko": "브리핑·사진 분석·조건 해석", "effort": "low"},
 }
 FALLBACK_BETA = "server-side-fallback-2026-07-01"

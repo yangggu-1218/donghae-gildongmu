@@ -9,8 +9,10 @@ import { SourcesPage } from "@/components/Pages";
 
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
+// 위에 늘 보이는 탭 = 운영할 때 매일 쓰는 것. 가끔 쓰는 것은 [더 보기] 안에 (기능은 그대로)
 const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "임시 알림", "notice"], ["site", "공지·행사", "site"], ["reports", "제보 검수", "reports"], ["inquiries", "문의", "reports"], ["aiprops", "AI 제안", "reports"], ["aiset", "AI 설정", "reports"],
   ["visits", "현장 확인 기록", "visits"], ["history", "변경 이력·백업", "history"], ["data", "공공데이터 점검", "data"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
+const MAIN_TABS = new Set(["home", "place", "notice", "site", "reports", "inquiries", "aiprops"]);
 type TabKey = (typeof TABS)[number][0];
 type User = { id: string; name: string; role: string; role_name: string; perms: string[]; must_change?: boolean; expires_at?: string };
 const ROLE_INFO: Record<string, string> = { owner: "모든 일 + 계정 관리·백업·초기화", editor: "장소·알림·공지·행사·제보·현장 기록·되돌리기", surveyor: "현장 확인 기록 입력과 제보 검수만" };
@@ -23,6 +25,35 @@ const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)
 
 function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <label className={wide ? "wide" : undefined}>{label}{children}</label>;
+}
+
+// 자료로 채우기: 한글·PDF 파일이나 공개 링크 → AI가 [장소 정보] 칸 초안을 만든다 (저장은 관리자가 확인한 뒤)
+function ImportBox({ pid, tok, onDraft }: { pid: string; tok: string; onDraft: (r: any) => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  async function run() {
+    setErr(""); setBusy(true);
+    const fd = new FormData(); fd.append("place_id", pid);
+    if (file) fd.append("file", file); else fd.append("url", url.trim());
+    try {
+      const r = await api.form("/api/admin/ai/extract", fd, tok);
+      if (r.ok) onDraft(r); else setErr(r.why || "AI가 자료를 읽지 못했어요.");
+    } catch (e: any) { setErr(e.message || "자료를 읽지 못했어요."); }
+    setBusy(false);
+  }
+  return (
+    <div className="import-box">
+      <b className="import-h"><Icon name="story" />자료로 채우기 <span className="via via-llm">AI</span></b>
+      <label className="chip import-file"><input type="file" accept=".hwp,.hwpx,.pdf,.txt" hidden onChange={(e) => { setFile(e.target.files?.[0] || null); setUrl(""); }} />
+        {file ? file.name : "한글·PDF 파일"}</label>
+      <span className="muted small">또는</span>
+      <input className="import-url" type="url" placeholder="정보가 공개된 링크 (https://…)" value={url} onChange={(e) => { setUrl(e.target.value); setFile(null); }} />
+      <button type="button" className="chip go" disabled={busy || (!file && !/^https?:\/\/\S+/.test(url.trim()))} onClick={run}>{busy ? "읽는 중…" : "AI로 정리"}</button>
+      {err && <p className="err small" role="alert">{err}</p>}
+    </div>
+  );
 }
 
 export function AdminPage({ lang }: { lang: Lang }) {
@@ -91,17 +122,20 @@ function Console({ tok, user, setUser, onLogout, onExpired }: { tok: string; use
   return (
     <section className="sec wrap admin">
       <div className="page-head admin-top">
-        <div><nav className="crumb"><a href="#/">처음</a> › 관리자</nav><h1>관리자</h1>
-          <p className="muted">저장하면 바로 사이트에 보여요. 잘못 바꿨으면 [변경 이력]에서 되돌리세요.</p></div>
+        <div><nav className="crumb"><a href="#/">처음</a> › 관리자</nav><h1 title="저장하면 바로 사이트에 보여요. 잘못 바꿨으면 [더 보기 › 변경 이력]에서 되돌리세요.">관리자</h1></div>
         <div className="admin-who">
           <span className="who-badge"><b>{user.name}</b> <small className={`role-${user.role}`}>{user.role_name}</small></span>
-          {user.expires_at && <small className="muted">{user.expires_at.slice(11, 16)}까지 로그인 유지</small>}
           <button className="chip" onClick={onLogout}>로그아웃</button>
         </div>
       </div>
       {user.must_change && tab !== "me" && <p className="admin-msg bad" role="alert">처음 받은 임시 비밀번호예요. [내 계정]에서 비밀번호를 바꿔 주세요. <button className="link-btn" onClick={() => setTab("me")}>지금 바꾸기</button></p>}
       <div className="tabs admin-tabs" role="group" aria-label="관리 메뉴">
-        {tabs.map(([k, t]) => <button key={k} aria-pressed={tab === k} onClick={() => { setTab(k); setMsg(null); }}>{t}</button>)}
+        {tabs.filter(([k]) => MAIN_TABS.has(k)).map(([k, t]) => <button key={k} aria-pressed={tab === k} onClick={() => { setTab(k); setMsg(null); }}>{t}</button>)}
+        <label className={`admin-more${MAIN_TABS.has(tab) ? "" : " on"}`}><span className="sr-only">더 보기</span>
+          <select value={MAIN_TABS.has(tab) ? "" : tab} onChange={(e) => { if (e.target.value) { setTab(e.target.value as TabKey); setMsg(null); } }}>
+            <option value="">더 보기 ▾</option>
+            {tabs.filter(([k]) => !MAIN_TABS.has(k)).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+          </select></label>
       </div>
       {msg && <p role="status" className={`admin-msg ${msg.ok ? "ok" : "bad"}`}>{msg.ok ? "✓ " : "! "}{msg.text}{msg.link && <> · <a href={msg.link}>사이트에서 보기</a></>}</p>}
       {tab === "home" && <Dashboard tok={tok} user={user} go={(k: TabKey) => setTab(k)} can={can} onExpired={onExpired} />}
@@ -129,7 +163,9 @@ function PlaceEditor({ places, db, tok, call }: any) {
   const [segs, setSegs] = useState<any[]>([]);
   const [reason, setReason] = useState("");
   const [orig, setOrig] = useState<any>(null);
+  const [aiFill, setAiFill] = useState<any>(null);       // AI가 채운 초안 결과 (근거·빈칸)
   useEffect(() => {
+    setAiFill(null);
     if (!pid) return;
     api.place(pid).then((p: any) => {
       setOrig(p); setReason("");
@@ -160,6 +196,19 @@ function PlaceEditor({ places, db, tok, call }: any) {
       <label className="pick-place">고칠 장소
         <select value={pid} onChange={(e) => setPid(e.target.value)}><option value="">고르세요</option>
           {places.map((p: any) => <option key={p.id} value={p.id}>{p.name_ko}{p.sample ? " (예시)" : ""}{db?.overrides?.[p.id] || db?.segments?.[p.id] ? " · 수정됨" : ""}</option>)}</select></label>
+      {pid && orig && <ImportBox pid={pid} tok={tok} onDraft={(r: any) => {
+        const x = r.fields || {};
+        const g: any = { ...f };
+        for (const k of ["open", "close", "last_entry", "phone", "fee", "intro_ko", "tip_ko", "carer_tip", "walk_load", "wheelchair", "entrance_step", "table", "indoor", "benches", "closed_day_nums"]) if (k in x) g[k] = x[k];
+        if (x.break_start) g.b0 = x.break_start; if (x.break_end) g.b1 = x.break_end;
+        setF(g); setAiFill(r);
+        if (!reason.trim()) setReason(`자료로 AI 정리: ${r.source} (관리자 확인 필요)`);
+      }} />}
+      {aiFill && <div className="ai-fill" role="status">
+        <p><b>AI가 {Object.keys(aiFill.fields).length}칸을 채웠어요.</b> 아래 칸을 확인하고 저장해 주세요. {aiFill.truncated && <span className="muted">(자료가 길어 앞부분만 읽었어요)</span>}</p>
+        {aiFill.missing_ko.length > 0 && <p className="ai-missing">⚠ 자료에 없어 비워 둔 칸: {aiFill.missing_ko.map((m: string) => <span key={m} className="badge b-unknown">{m}</span>)}</p>}
+        {aiFill.evidence.length > 0 && <details><summary>근거 문장 {aiFill.evidence.length}개 보기</summary><ul className="ai-list">{aiFill.evidence.map((e: any, i: number) => <li key={i}><b>{e.label}</b> “{e.quote}”</li>)}</ul></details>}
+      </div>}
       {pid && orig && (<form className="visit-form" onSubmit={(e) => { e.preventDefault();
         call(() => api.post(`/api/admin/places/${pid}`, { fields: d.fields, segments: d.segments, reason }, tok), `${orig.name_ko} 정보를 바꿨어요. 코스 추천과 장소 페이지에 바로 반영됐어요.`, `#/place/${pid}`); }}>
         <h2 className="h3">운영시간 {Object.keys(ov).some((k) => ["open", "close", "break_time", "closed_day_nums"].includes(k)) && <span className="badge b-plain">관리자 확인</span>}</h2>
