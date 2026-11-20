@@ -30,10 +30,9 @@ type Lang = "ko" | "en";
 type Msg = { me?: boolean; pose?: string; text: string; cards?: { kind: string; data: any }[]; via?: "llm" | "rule"; got?: string[]; img?: string; photo?: any };
 type Hint = { stay: any; move: any; events: any[]; onDay: boolean };
 type Snap = { course: Course; extras: Record<string, Extra>; cond: Conditions; hint: Hint | null };
-// 작업2: 큰 버튼 질문 (날짜·시각 → 누구와 → 걸음 → 식사 → 취향)
+// 작업2: 큰 버튼 질문 (날짜·시각 → 누구와 → 걸음 → 식사 → 취향). '쓸 수 있는 시간' 질문은 팀장 요청으로 뺌(2026-11-21, 엔진의 budget_min은 그대로)
 const Q = [
   { k: "when", q: "q.when", multi: false, o: [] as string[] },
-  { k: "time", q: "q.time", multi: false, o: ["2시간", "3시간", "4시간", "하루 종일"] },
   { k: "who", q: "q.who", multi: false, o: ["혼자", "연인·친구", "부모님과", "아이와", "단체"] },
   { k: "move", q: "q.move", multi: true, none: "일반", o: ["휠체어", "보행보조기·유모차", "거동 불편 어르신", "일반"] },
   { k: "need", q: "q.need", multi: true, none: "없어요", o: ["평탄한 길만", "장애인 화장실 우선", "중간에 쉬는 곳", "없어요"] },
@@ -48,12 +47,18 @@ const toMove = (xs: string[] = []) => Array.from(new Set(xs.flatMap((x) => MOVE_
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
 const nextWd = (wd: number) => plusDays((wd - new Date().getDay() + 7) % 7);
-const TIMES = ["09:00", "10:00", "11:00", "13:00", "14:00"];
-const STEPS = { ko: ["날짜", "시간", "누구와", "걸음", "필요한 것", "식사", "취향", "출발"], en: ["Date", "Time", "Who", "Walking", "Needs", "Meals", "Style", "Start"] };
+// 출발 시각: 알약은 앞으로 3시간만(오늘이면 지금 다음 정시부터, 다른 날은 09·10·11시), 나머지는 옆 선택 상자에서 (팀장 요청 2026-11-21)
+const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
+const OTHER_TIMES = Array.from({ length: 27 }, (_, i) => `${String(7 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);   // 07:00~20:00, 30분 간격
+function nextTimes(date: string, today: string): string[] {
+  if (date !== today) return [hh(9), hh(10), hh(11)];
+  const now = new Date(); const h = Math.max(8, now.getHours() + 1);
+  return [h, h + 1, h + 2].filter((x) => x <= 20).map(hh);
+}
+const STEPS = { ko: ["날짜", "누구와", "걸음", "필요한 것", "식사", "취향", "출발"], en: ["Date", "Who", "Walking", "Needs", "Meals", "Style", "Start"] };
 const BUDGET: Record<string, number | null> = { "2시간": 120, "3시간": 180, "4시간": 240, "하루 종일": null };
 // 앞 답을 받아 한 줄 반응 + 다음 질문 문장을 그 답에 맞게 (규칙: 빠르고 비용 없음, 자유 입력은 /api/talk)
 const ACK: Record<string, Record<string, string>> = {
-  time: { "2시간": "2시간 안에 돌아오는 코스로 짤게요.", "3시간": "3시간 안에 돌아오는 코스로 짤게요.", "4시간": "4시간 안에 돌아오는 코스로 짤게요.", "하루 종일": "하루 일정으로 짤게요." },
   who: { "혼자": "혼자 여행이시군요.", "연인·친구": "함께 가는 여행이군요.", "부모님과": "부모님과 함께하는 여행이군요.", "아이와": "아이와 함께하는 여행이군요.", "단체": "단체 여행이군요." },
   move: { "휠체어": "휠체어로 다닐 수 있는 길만 고를게요.", "보행보조기·유모차": "턱·계단이 없는 길을 먼저 볼게요.", "거동 불편 어르신": "계단·급경사가 있는 곳은 뺄게요.", "일반": "걷는 데 제한 없이 고를게요." },
 };
@@ -636,6 +641,8 @@ export default function Page() {
     const d0 = cond.date || plusDays(0);
     const strip = Array.from({ length: 7 }, (_, i) => plusDays(i));   // 일주일만 보이고, 그 뒤는 달력에서
     const far = !strip.includes(d0);
+    const times3 = nextTimes(d0, plusDays(0));
+    const otherOn = !!cond.start_time && !times3.includes(cond.start_time);
     return (
       <div className="when when2">
         <p className="when-k">{lang === "ko" ? "날짜 및 시간" : "Date & time"}</p>
@@ -655,12 +662,15 @@ export default function Page() {
         {calOpen && <Calendar value={d0} lang={lang} onChange={(d) => { setCond({ ...cond, date: d }); setCalOpen(false); }} />}
         <div className="trow2" role="group" aria-label={t("when.time")}>
           <span className="when-sub">{t("when.time")}</span>
-          {TIMES.map((h) => <button key={h} type="button" className="tpill" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
-          <label className="tpill pick">{t("when.other")}
-            <input type="time" value={cond.start_time || "10:00"} step={600} onChange={(e) => e.target.value && setCond({ ...cond, start_time: e.target.value })} /></label>
+          {times3.map((h) => <button key={h} type="button" className="tpill" aria-pressed={cond.start_time === h} onClick={() => setCond({ ...cond, start_time: h })}>{h}</button>)}
+          <select className={`tpill tsel${otherOn ? " on" : ""}`} aria-label={t("when.other")} value={otherOn ? cond.start_time : ""}
+            onChange={(e) => e.target.value && setCond({ ...cond, start_time: e.target.value })}>
+            <option value="">{t("when.other")}</option>
+            {Array.from(new Set([...OTHER_TIMES, ...(otherOn && cond.start_time ? [cond.start_time] : [])])).sort().map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
         </div>
         <div className="wrow2" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
-          <span className={`wline${wxOf(d0)?.rain ? " wet" : ""}`}>{wxOf(d0) && <Icon name={wxOf(d0)!.icon} />}{wxOf(d0) ? " " + wxText(wxOf(d0)!) : !wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>
+          {!wxOf(d0) && <span className="wline">{!wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>}
           <span className="wseg">
             {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
               <button key={v} type="button" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{v === "" && <Icon name="sun" />}{l}</button>)}
@@ -776,7 +786,8 @@ export default function Page() {
           <button className="chip" aria-pressed={smallPane === "map"} onClick={() => setSmallPane("map")}>{lang === "ko" ? "경로 지도" : "Map"}</button>
           <button className="chip" aria-pressed={smallPane === "schedule"} onClick={() => setSmallPane("schedule")}>{lang === "ko" ? "일정·설정" : "Itinerary"}</button>
         </div></div>}
-      {planning && !course && <PlanningWait lang={lang} />}
+      {planning && !course && <PlanningWait lang={lang} conditions={previewConditions} places={places}
+        start={{ lat: (KAKAO_START[cond.start] || KAKAO_START["동해역"])[0], lon: (KAKAO_START[cond.start] || KAKAO_START["동해역"])[1], label: cond.start === "자가용" ? t("opt.동해역") : t(`opt.${cond.start}`) }} />}
       <div hidden={planning && !course} className={`grid${course ? " has-course" : ""}`}>
         {!course && <PlanAside lang={lang} />}
         <section id="chat-panel" className={`panel chat${course ? (chatOpen ? " widget open" : " widget") : ""}`} aria-label={t("nav.plan")}
@@ -795,7 +806,6 @@ export default function Page() {
           <ol className="steps" aria-label={lang === "ko" ? "진행 단계" : "Progress"}>
             {STEPS[lang].map((x, i) => <li key={x} className={i < step ? "done" : i === step ? "cur" : ""} aria-current={i === step ? "step" : undefined}>{x}</li>)}
           </ol>
-          {!course && log.some((m) => m.me) && <button className="link-btn small steps-reset" onClick={startOver} disabled={busy}>{lang === "ko" ? "처음부터 다시" : "Start over"}</button>}
           {!course && tripLine()}
           {personalize && <details className="cr-suggest" open={suggestOpen} onToggle={(e) => setSuggestOpen((e.target as HTMLDetailsElement).open)}>
             <summary>{lang === "ko" ? "지금 조건에 맞는 후보 미리 보기" : "Preview places for your choices"}</summary>
@@ -848,7 +858,6 @@ export default function Page() {
                 {cond.start !== "자가용" && <div className="go-how" role="group" aria-label={lang === "ko" ? "출발하는 곳" : "Starting point"}>
                   <span className="go-k">{lang === "ko" ? "출발하는 곳" : "Start at"}</span>
                   {(["동해역", "묵호역", "동해종합버스터미널"] as const).map((s) => <button key={s} className="chip" aria-pressed={cond.start === s} onClick={() => setCond({ ...cond, start: s })}>{t(`opt.${s}`)}</button>)}
-                  <small className="muted go-note">{lang === "ko" ? "장소 사이 이동시간: ODsay 대중교통 길찾기로 계산 (연결이 안 되면 차량·택시 기준 추정) · 배차 대기 미포함" : "Times between stops are car/taxi estimates; bus schedules, transfers and walks to stops are not included."}</small>
                 </div>}
                 <input aria-label={t("plan.memo")} placeholder={t("plan.memoPh")} value={cond.memo} onChange={(e) => setCond({ ...cond, memo: e.target.value })} />
                 <button className="chip go" disabled={busy} onClick={make}>{t("plan.make")}</button>

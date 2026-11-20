@@ -2326,6 +2326,11 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .planning-map-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 12px; background: var(--surface); font-size: .8em; color: var(--muted); }
 .planning-map-meta a { color: inherit; }
 .planning-guide-static { display: none; }
+/* 실제 후보 코스 애니메이션: 번호 원 안 숫자는 흰 글씨(테두리 없이) */
+.planning-pin-label text.pw-num { fill: #fff; stroke: none; font-size: 15px; }
+.planning-live { background: #f1efe9; }
+.planning-live .planning-trace { animation-name: planning-draw-live; }
+@keyframes planning-draw-live { 0% { stroke-dashoffset: 1; } 92%, 100% { stroke-dashoffset: 0; } }
 @media (max-width: 600px) {
   .planning-map svg { height: clamp(240px, 70vw, 320px); }
   .planning-pin-label text { font-size: 24px; }
@@ -2711,6 +2716,25 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .tpill { min-height: 44px; padding: 0 18px; border: 1.5px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .tpill[aria-pressed="true"] { background: var(--sea-deep); border-color: var(--sea-deep); color: var(--sea-ink); }
 .tpill.pick input { border: 0; background: transparent; font: inherit; color: inherit; }
+/* '다른 시각' 선택 상자: 알약과 같은 모양, 고르면 알약처럼 진하게 */
+.tpill.tsel { appearance: none; -webkit-appearance: none; padding: 0 36px 0 18px;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23334' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center; }
+.tpill.tsel.on { background-color: var(--sea-deep); border-color: var(--sea-deep); color: var(--sea-ink);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E"); }
+.tpill.tsel option { color: var(--ink); background: var(--surface); }
+/* 스크롤 막대 줄이기: 넓은 화면은 날짜 8칸이 한 줄에 다 들어가게(가로 스크롤 없음), 좁은 화면은 밀어서 보되 막대는 숨김.
+   대화 전 답 칸(dock)은 자체 스크롤 없이 다 보이고, 위 대화 기록만 줄어든다. */
+@media (min-width: 640px) {
+  .dstrip2 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); overflow: visible; }
+  .dstrip2 .dcard { width: auto; min-height: 112px; padding: 8px 2px; }
+  .dstrip2 .dcard[aria-pressed="true"] { padding: 6.5px 0.5px; }
+  .dstrip2 .dc-day { font-size: 22px; }
+}
+.dstrip2 { scrollbar-width: none; }
+.dstrip2::-webkit-scrollbar { display: none; }
+.grid:not(.has-course) > .panel.chat .chat-dock { max-height: none; overflow: visible; }
+.grid:not(.has-course) > .panel.chat .dock-opts { overflow: visible; }
+.grid:not(.has-course) > .panel.chat .chat-log { flex: 1 1 auto; max-height: 300px; min-height: 72px; scrollbar-width: thin; }
 .wseg { display: inline-flex; border: 1.5px solid var(--line-strong); border-radius: 999px; overflow: hidden; background: var(--surface); }
 .wseg button { min-height: 44px; padding: 0 14px; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .wseg button + button { border-left: 1px solid var(--line); }
