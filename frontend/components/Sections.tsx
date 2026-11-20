@@ -81,7 +81,6 @@ export function Hero({ lang, onAsk, busy }: { lang: Lang; onAsk: (m: string) => 
           </ul>
         </div>
       </div>
-      <a className="hero-cue" href="#rec" aria-label={L("아래로 스크롤하세요", "Scroll down")}><span className="hero-mouse" aria-hidden="true" />{L("아래로 스크롤하세요", "Scroll down")}</a>
       {slides.length > 1 && !still && (
         <button type="button" className="hero-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>
           {paused ? L("사진 다시 넘기기", "Play photos") : L("사진 멈추기", "Pause photos")}</button>

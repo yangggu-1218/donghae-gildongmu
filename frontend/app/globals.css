@@ -3166,3 +3166,25 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 .hm-split .hm-head h2 { grid-column: 1; }
 .hm-split .hm-head p { grid-column: 1; }
 .hm-split .hm-head .hm-more { grid-column: 2; grid-row: 1 / span 2; margin-left: 0; }
+/* 행사 달력: 왼쪽 달력과 오른쪽(곧 열리는 행사·행사 목록) 높이를 같게 */
+@media (min-width: 761px) {
+  .ev-grid { align-items: stretch; }
+  .ev-grid > .cal { max-width: none; display: flex; flex-direction: column; }
+  .ev-grid > .cal .cal-grid { flex: 1; align-content: space-between; }
+  .ev-side { display: flex; flex-direction: column; min-height: 100%; }
+  .ev-side > .ev-next { margin-bottom: 12px; }
+  .ev-side > h2 { margin: 4px 0 10px; }
+  .ev-side > .ev-list { flex: 1; margin: 0; align-content: stretch; }
+  .ev-side > .ev-list > li { display: flex; flex-direction: column; }
+  .ev-side > .ev-list > li > .chips { margin-top: auto; padding-top: 8px; }
+}
+/* 첫 화면 '동해 관광지 | 여행 정보' 두 칸 높이를 같게: 사진 칸이 오른쪽 목록 높이만큼 */
+@media (min-width: 1001px) {
+  .hm-split { align-items: stretch; }
+  .hm-split > .hm-sec { display: flex; flex-direction: column; }
+  .hm-split .hp-grid { flex: 1; }
+  .hm-split .hp-grid > li { display: flex; }
+  .hm-split .hp-tile { flex: 1; aspect-ratio: auto; min-height: 240px; }
+  .hm-split .hi-list { flex: 1; grid-auto-rows: 1fr; }
+}
+@media (min-width: 1001px) { .hm-split .hi-list > li { display: flex; } .hm-split .hi-list > li > a { flex: 1; } }

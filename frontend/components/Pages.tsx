@@ -488,7 +488,7 @@ export function TransportPage({ lang }: { lang: Lang }) {
               <div><dt>{L("요금", "Fare")}</dt><dd>{L("4km까지 1,100원, 넘으면 1km마다 100원", "₩1,100 up to 4 km, then ₩100/km")}</dd></div>
             </dl>
             <p>{L("다른 지역에 사는 등록 장애인 관광객도 이용할 수 있어요(동해시 확인). 앱·누리집으로도 예약돼요.", "Registered disabled visitors from other regions can use it too (confirmed by Donghae City). You can also book in the app or online.")}
-              {m.app ? <> <span className="muted">({nm(lang, m.app)}{m.web ? ` · ${m.web}` : ""})</span></> : null}</p>
+</p>
             <details className="tr-more"><summary>{L("이용할 수 있는 사람·자세한 요금", "Who can use it, full fares (in Korean)")}</summary>
               {m.who && <ol className="tr-who">{String(m.who).split(/\d\.\s*/).filter(Boolean).map((w: string) => <li key={w}>{w.trim()}</li>)}</ol>}
               <p className="muted">{m.fare}</p>
@@ -529,8 +529,8 @@ export function TransportPage({ lang }: { lang: Lang }) {
             <details className="tr-more"><summary>{L(`도는 곳 ${d.city_tour_stops.length}곳 보기`, `See all ${d.city_tour_stops.length} stops`)}</summary>
               <ol className="tr-route">{d.city_tour_stops.map((s: string) => <li key={s}>{nm(lang, s)}</li>)}</ol>
             </details>
-            <p className="muted small">{L(`요금·휠체어 안내는 동해문화관광재단에 확인했어요(2026년 11월). 공공데이터에는 어른 5,000원으로 나와 있어 타기 전 한 번 더 확인해 주세요. 문의 ${d.city_tour.contact}`,
-              `Fare and access confirmed with Donghae Culture & Tourism Foundation (Nov 2026). Public data lists ₩5,000 for adults, so please check before boarding. ${nm(lang, d.city_tour.contact)}`)}</p>
+            <p className="muted small">{L(`요금·휠체어 안내는 동해문화관광재단에 확인했어요(2026년 11월). 공공데이터에는 어른 5,000원으로 나와 있어 타기 전 한 번 더 확인해 주세요.`,
+              `Fare and access confirmed with Donghae Culture & Tourism Foundation (Nov 2026). Public data lists ₩5,000 for adults, so please check before boarding.`)}</p>
           </section>
         )}
 
@@ -599,7 +599,6 @@ export function TransportPage({ lang }: { lang: Lang }) {
               <ul className="tr-list compact">{(allR ? d.rentals : d.rentals.slice(0, 6)).map((r: any) => <li key={r.name}><div><b>{nm(lang, r.name)}</b><small className="muted">{L(`승용 ${r.cars} · 승합 ${r.vans}`, `${r.cars} cars · ${r.vans} vans`)}</small></div>
                 {r.tel && <a className="chip sm" href={`tel:${r.tel}`}><Icon name="phone" />&nbsp;{L("전화", "Call")}</a>}</li>)}</ul>
               <More n={6} total={d.rentals.length} open={allR} onToggle={() => setAllR(!allR)} lang={lang} />
-              <p className="muted small">{L("휠체어 리프트 차량이 있는지는 업체에 꼭 물어보세요.", "Ask the company about lift-equipped vans.")}</p>
             </div>
           </div>
         </section>
@@ -780,7 +779,7 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
             })}
           </div>
         </div>
-        <div>
+        <div className="ev-side">
           {upcoming.length > 0 && !day && <div className="ev-next panel"><b>{L("곧 열리는 행사", "Coming up")}</b>
             <ul className="plain">{upcoming.slice(0, 3).map((e) => <li key={e.name + e.start}><span className="badge g-G">{e.start.slice(5).replace("-", "/")}{e.end && e.end !== e.start ? `~${e.end.slice(5).replace("-", "/")}` : ""}</span> {e.name}{e.venue ? <small className="muted"> · {e.venue}</small> : null}</li>)}</ul></div>}
           <h2 className="h3">{day ? L(`${day} 행사`, `Events on ${day}`) : L(`${m + 1}월 행사`, "This month")}</h2>
@@ -804,10 +803,8 @@ export function EventsPage({ lang, onPlanDate }: { lang: Lang; onPlanDate: (d: s
       </div>
       <section className="panel ev-yearly" aria-labelledby="ev-y-h">
         <h2 id="ev-y-h" className="h3">{L("해마다 열리는 축제", "Festivals held every year")}</h2>
-        <p className="muted small">{L("올해 열린 때를 기준으로 보여 줘요. 내년 날짜는 아직 발표 전이라 확인이 필요해요. 날짜가 정해지면 관리자가 [공지·행사]에서 올리면 달력에 바로 보여요.", "Based on this year's dates. Next year's dates aren't announced yet.")}</p>
         <ol className="ev-y-list">{yearly.map((e) => <li key={e.name}><span className="ev-m">{L(`${e.m}월`, new Date(2026, e.m - 1, 1).toLocaleDateString("en", { month: "short" }))}</span>
-          <div><b>{e.name}</b><small className="muted">{L(`올해 ${e.last}`, `this year ${e.last}`)}{e.venue ? ` · ${e.venue}` : ""}</small></div><span className="badge b-unknown">{L("올해 날짜 미발표", "Date TBC")}</span></li>)}</ol>
-        <p className="muted small">{L("2023년처럼 안전 문제로 해맞이 행사를 열지 않은 해도 있어요.", "Some years the sunrise event was cancelled for safety.")}</p>
+          <div><b>{e.name}</b><small className="muted">{L(`올해 ${e.last}`, `this year ${e.last}`)}{e.venue ? ` · ${e.venue}` : ""}</small></div></li>)}</ol>
       </section>
     </section>
   );
