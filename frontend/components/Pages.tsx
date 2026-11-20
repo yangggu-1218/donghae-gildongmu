@@ -334,7 +334,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
             {[[p.id, name, name] as [string, string, string], ...gallery].slice(0, 4).map(([g, ko, en]) => (
               <li key={g}><button type="button" aria-pressed={shown === g} onClick={() => setMainPh(g)} aria-label={L(`${ko} 크게 보기`, `Show ${en}`)}><PlacePhoto id={g} lang={lang} small /></button></li>))}</ul>}
         </div>
-        {intro && <div className="pp4-intro"><p className={introOpen ? "" : "clamp2"}>{intro}</p>
+        {intro && <div className="pp4-intro"><p className={introOpen ? "" : "clamp2"}><b className="pp4-intro-k">{L("한줄 소개:", "In short:")}</b> {intro}</p>
           {intro.length > 90 && <button className="link-btn small" aria-expanded={introOpen} onClick={() => setIntroOpen(!introOpen)}>{introOpen ? L("소개 접기", "Less") : L("소개 더 보기", "More")}</button>}</div>}
       </header>
       {!stay && <AiStatus id={id} lang={lang} />}
@@ -376,7 +376,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
         <section className="panel pp4-before" aria-labelledby="pp4-before-h">
           <h2 id="pp4-before-h" className="h3 pp4-h"><Picto name="tip" size={24} />{L("방문 전 확인", "Before you go")}</h2>
           <div className="pp4-before-in">
-            <ul>{before.length ? before.map(([ic, t]) => <li key={t}>{ic === "wheel" ? <AccIcon k="지체장애" size={20} /> : <Icon name={ic} />}<span>{t}</span></li>)
+            <ul>{before.length ? before.map(([ic, t]) => <li key={t}>{ic === "wheel" ? <AccIcon k="지체장애" size={20} /> : <Icon name={ic} />}{ic === "ticket" ? <span className="pp4-fee-lines">{t.split(/\s+·\s+/).map((x, i) => <span key={i}>{x}</span>)}</span> : <span>{t}</span>}</li>)
               : <li><Icon name="phone" /><span>{L("운영시간은 바뀔 수 있어요. 출발 전에 한 번 더 확인해 주세요.", "Hours can change. Please check before you go.")}</span></li>}</ul>
             {p.phone && <a className="pp4-call" href={`tel:${p.phone}`}><Icon name="phone" />{L("전화 문의", "Call")}</a>}
           </div>
@@ -667,6 +667,13 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
     return out.sort((a, b) => a.dm - b.dm);   // 늘 가까운 순 (내 위치, 없으면 동해역에서)
   }, [d0, med, on, me, lang, bar, barOn]);
   const pins = items.map((x) => ({ lat: x.lat, lon: x.lon, label: x.name, grade: null, color: x.layer.color, icon: dot(lang, x.layer.icon), picto: x.layer.k, sub: x.desc, addr: x.road }));
+  // 목록은 20개씩 페이지로 (팀장 요청 2026-11-21). 층·위치가 바뀌면 1쪽으로, 지도에서 고른 곳은 그 쪽으로.
+  const PER = 20;
+  const [pg, setPg] = useState(1);
+  const pages = Math.max(1, Math.ceil(items.length / PER));
+  useEffect(() => { setPg(1); }, [on, me, barOn]);
+  useEffect(() => { if (!sel) return; const k = items.findIndex((x) => x.id === sel); if (k >= 0) setPg(Math.floor(k / PER) + 1); }, [sel]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const cur = Math.min(pg, pages);
   const unmapped = (d?.toilets || []).filter((t: any) => !t.lat);
   function locate() {
     if (!navigator.geolocation) { setLocMsg(L("이 기기에서는 위치를 쓸 수 없어 동해역에서 가까운 순으로 보여 드려요.", "Location isn't available; sorted from Donghae Station.")); return; }
@@ -695,16 +702,17 @@ export function MapPage({ lang, initialLayer }: { lang: Lang; initialLayer?: str
         <KakaoMap pins={pins} dots cluster zoomOnPick focus={focus} start={{ lat: STN[0], lon: STN[1], level: 9 }} center={go?.c || null} centerLevel={go?.l ?? 5} centerKey={go?.k || 0} me={me}
           onPick={(i) => { setSel(items[i].id); setFocus(null); }}
           label={L("편의시설 지도. 아래 목록과 같은 내용입니다.", "Facilities map; same as the list below.")} />
-        <ul className="fac-list">
-          {items.map((x, i) => (
+        <ul className="fac-list" id="fac-list">
+          {items.slice((cur - 1) * PER, cur * PER).map((x, j) => { const i = (cur - 1) * PER + j; return (
             <li key={x.id} id={`f-${i}`} className={sel === x.id ? "sel" : ""}>
               <button className="fac-item" onClick={() => { setSel(x.id); setFocus(i); document.querySelector(".sec .map")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
                 aria-label={L(`${x.name} 지도에서 보기`, `Show ${x.name} on the map`)}>
                 <MapPicto k={x.layer.k} color={x.layer.color} size={30} />
                 <div><b>{x.name}</b>{x.dm != null && <span className="muted"> · {dist(x.dm)}</span>}<br /><small className="muted">{x.desc}{x.road ? ` · ${x.road}` : ""}</small></div>
               </button>
-            </li>))}
+            </li>); })}
         </ul>
+        <Pager cur={cur} pages={pages} lang={lang} onGo={(n) => { setPg(n); document.getElementById("fac-list")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
         {on.toilets && unmapped.length > 0 && (
           <details className="panel">
             <summary>{L(`지도 위치를 아직 못 정한 장애인 화장실 ${unmapped.length}곳 (주소로 보기)`, `${unmapped.length} accessible toilets without map position`)}</summary>
@@ -1032,3 +1040,20 @@ export function SourcesPage({ lang }: { lang: Lang }) {
 }
 
 export { AdminPage } from "@/components/Admin";
+
+// 1 2 3 … 페이지 넘김 (앞뒤 화살표 + 지금 쪽 주변 번호, 처음·끝은 늘 보임)
+export function Pager({ cur, pages, onGo, lang }: { cur: number; pages: number; onGo: (n: number) => void; lang: string }) {
+  if (pages <= 1) return null;
+  const ko = lang === "ko";
+  const nums: (number | "…")[] = [];
+  for (let n = 1; n <= pages; n++) {
+    if (n === 1 || n === pages || Math.abs(n - cur) <= 2) nums.push(n);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  }
+  return <nav className="pager" aria-label={ko ? "목록 쪽 넘기기" : "Pages"}>
+    <button type="button" disabled={cur <= 1} onClick={() => onGo(cur - 1)} aria-label={ko ? "앞 쪽" : "Previous"}>‹</button>
+    {nums.map((n, i) => n === "…" ? <span key={`e${i}`} className="pager-gap" aria-hidden="true">…</span>
+      : <button type="button" key={n} aria-current={n === cur ? "page" : undefined} onClick={() => onGo(n)}>{n}</button>)}
+    <button type="button" disabled={cur >= pages} onClick={() => onGo(cur + 1)} aria-label={ko ? "뒤 쪽" : "Next"}>›</button>
+  </nav>;
+}

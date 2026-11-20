@@ -2768,3 +2768,53 @@ button.course-pin { padding: 0; border: 0; background: transparent; cursor: poin
 /* 관광지 상세 (2026-11-21): 방문 전 확인 한 칸만, 입장료는 '·' 대신 줄을 나눠서 */
 .pp4-row.one { grid-template-columns: minmax(0, 1fr); }
 .pp4-info dd.pp4-fee { display: grid; gap: 2px; -webkit-line-clamp: unset; overflow: visible; }
+/* 관광지 상세 '다녀온 사람들 이야기' 버튼 3개: 같은 모양·굵기·아이콘 크기 */
+.cm-acts .chip { font-weight: 600; gap: 6px; text-decoration: none; color: var(--sea-deep); }
+.cm-acts .chip .ic { width: 18px; height: 18px; flex: none; }
+.pp4-intro-k { color: var(--sea-deep); font-weight: 700; }
+/* 편의시설 목록: 20개씩 쪽으로 나눠 목록 안 스크롤 없앰, 넓은 화면은 두 줄 */
+.fac-list { max-height: none; overflow: visible; }
+@media (min-width: 900px) { .fac-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin: 12px 0 4px; }
+.pager button { min-width: 44px; min-height: 44px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--sea-deep); font: inherit; font-weight: 700; cursor: pointer; }
+.pager button[aria-current="page"] { background: var(--sea-deep); border-color: var(--sea-deep); color: #fff; }
+.pager button:disabled { opacity: .4; cursor: default; }
+.pager-gap { color: var(--muted); padding: 0 2px; }
+
+/* ===== 반응형 다듬기 (2026-11-21) ===== */
+/* 코스 짜기 전 대화 칸: 높이를 고정하지 않아 답 칸이 잘리지 않음. 스크롤은 페이지 하나 + 대화 기록만 */
+.grid:not(.has-course) > .panel.chat,
+.planner-shell > .grid:not(.has-course):has(> #timeline) > .panel.chat { position: static; height: auto !important; max-height: none !important; overflow: visible; }
+.w-short { display: none; }
+.wseg button { white-space: nowrap; }
+@media (max-width: 520px) {
+  .grid:not(.has-course) > .panel.chat .chat-log { max-height: 220px; }
+  .wseg .w-long { display: none; }
+  .wseg .w-short { display: inline; }
+  .trow2 { gap: 6px; }
+  .trow2 .when-sub { flex-basis: 100%; }
+  .trow2 .tpill { padding: 0 14px; }
+}
+.stop-identity .so-n { color: #fff; }
+.pp4-fee-lines { display: grid; gap: 2px; }
+@media (max-width: 600px) {
+  .pp4-route { display: grid; gap: 10px; }
+  .pp4-route ol { flex-direction: column; }
+  .pp4-route .pp4-more { width: 100%; justify-content: center; }
+  .pp4-tips { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 16px; }
+  .pp4-tips ul { flex-direction: column; gap: 6px; }
+  .pp4-info > div:has(.pp4-fee) { grid-column: 1 / -1; }
+  .pp4-btn { white-space: nowrap; padding: 0 14px; }
+}
+/* 관리자 장소 정보: 넓은 구간 표 때문에 폼이 화면 밖으로 밀리지 않게, 휴대폰에서는 두 버튼을 반씩 */
+.pe-pane > * { min-width: 0; }
+@media (max-width: 600px) {
+  .pe-mode { width: 100%; }
+  .pe-mode-btn { flex: 1 1 0; min-width: 0; padding: 6px 10px; }
+  .pe-mode-btn small { display: none; }
+}
+/* 첫 화면 검색 칸: 휴대폰에서는 돋보기·AI 표시를 숨겨 입력 글이 잘리지 않게 */
+@media (max-width: 520px) {
+  .ask .ask-ai, .ask .ask-ic { display: none; }
+  .ask input { text-overflow: ellipsis; padding-left: 14px; }
+}

@@ -107,7 +107,7 @@ export function LoginPage({ lang }: { lang: Lang }) {
   );
 }
 
-const MOVES: [string, string, string][] = [["휠체어", "휠체어", "Wheelchair"], ["유모차", "유모차", "Stroller"], ["오래 걷기 어려움", "어르신·무릎", "Limited walking"]];
+const MOVES: [string, string, string][] = [["휠체어", "휠체어", "Wheelchair"], ["유모차", "유모차", "Stroller"], ["오래 걷기 어려움", "어르신", "Limited walking"]];
 const STYLES: [string, string][] = [["바다 보기", "Sea views"], ["자연·산책", "Nature walks"], ["산·등산", "Mountains"], ["카페", "Cafés"], ["맛집", "Food"], ["역사·문화", "History & culture"]];
 
 export function ProfilePage({ lang, wish, places, onRemoveWish }: { lang: Lang; wish: string[]; places: Record<string, any>; onRemoveWish: (id: string) => void }) {

@@ -12,7 +12,7 @@ import { SyncAdmin } from "@/components/SyncAdmin";
 type Lang = "ko" | "en";
 // [탭, 이름, 필요한 권한(null = 누구나)]
 // 위에 늘 보이는 탭 = 운영할 때 매일 쓰는 것. 가끔 쓰는 것은 [더 보기] 안에 (기능은 그대로)
-const TABS = [["home", "한눈에", null], ["place", "장소 정보", "place"], ["notice", "공지·알림", "notice"], ["reports", "받은 글 (문의·제보)", "reports"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
+const TABS = [["home", "홈", null], ["place", "장소 정보", "place"], ["notice", "공지·알림", "notice"], ["reports", "받은 글 (문의·제보)", "reports"], ["aiprops", "AI 제안", "reports"], ["visits", "현장 확인 기록", "visits"], ["sync", "자동 갱신", "place"],
   ["history", "변경 이력·백업", "history"], ["accounts", "계정 관리", "accounts"], ["sources", "출처·판정 기준", null], ["me", "내 계정", null]] as const;
 const MAIN_TABS = new Set(["home", "place", "notice", "reports", "aiprops", "visits"]);
 type TabKey = (typeof TABS)[number][0];

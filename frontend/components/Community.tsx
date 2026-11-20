@@ -16,7 +16,7 @@ import { loadPlans } from "@/components/MyTrips";
 type Lang = "ko" | "en";
 const pick = (lang: Lang) => (ko: string, en: string) => (lang === "ko" ? ko : en);
 const ZONE: Record<string, [string, string]> = { mukho: ["묵호", "Mukho"], mangsang: ["망상", "Mangsang"], chuam: ["추암", "Chuam"], mureung: ["무릉", "Mureung"], cheongok: ["천곡", "Cheongok"] };
-const MOVE: [string, string, string][] = [["휠체어", "휠체어", "Wheelchair"], ["유모차", "유모차", "Stroller"], ["오래 걷기 어려움", "어르신·무릎", "Limited walking"]];
+const MOVE: [string, string, string][] = [["휠체어", "휠체어", "Wheelchair"], ["유모차", "유모차", "Stroller"], ["오래 걷기 어려움", "어르신", "Limited walking"]];
 const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
 
 function usePlaces() {
@@ -418,9 +418,9 @@ export function PlaceTalk({ id, lang }: { id: string; lang: Lang }) {
         : <p className="muted">{L("아직 이야기가 없어요. 다녀오셨다면 첫 후기를 남겨 주세요.", "No notes yet. Leave the first one.")}</p>}
       {posts.length > 0 && <p className="chips">{posts.slice(0, 2).map((p) => <a key={p.id} className="chip sm" href={`#/community/${p.id}`}>{p.title.length > 22 ? p.title.slice(0, 22) + "…" : p.title}</a>)}</p>}
       <div className="chips cm-acts">
-        <button className="chip" aria-expanded={writing} onClick={() => setWriting(!writing)}>{L("후기 남기기", "Leave a note")}</button>
-        <a className="chip" href={`#/report/${id}`}><Icon name="flag" />&nbsp;{L("시에 불편 알리기", "Report to the city")}</a>
-        <a className="link-btn" href="#/community">{L("커뮤니티에서 더 보기", "More in Community")}</a>
+        <button className="chip" aria-expanded={writing} onClick={() => setWriting(!writing)}><Icon name="edit" />{L("후기 남기기", "Leave a note")}</button>
+        <a className="chip" href={`#/report/${id}`}><Icon name="flag" />{L("시에 불편 알리기", "Report to the city")}</a>
+        <a className="chip" href="#/community"><Icon name="story" />{L("커뮤니티에서 더 보기", "More in Community")}</a>
       </div>
       {writing && <div className="cm-form inline">
         <input aria-label={L("닉네임", "Nickname")} placeholder={L("닉네임", "Nickname")} value={nick} maxLength={20} onChange={(e) => setNick(e.target.value)} />

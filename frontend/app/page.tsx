@@ -673,8 +673,8 @@ export default function Page() {
         <div className="wrow2" role="group" aria-label={lang === "ko" ? "날씨에 맞추기" : "Weather"}>
           {!wxOf(d0) && <span className="wline">{!wx.length ? (lang === "ko" ? "예보를 불러오지 못함" : "Forecast unavailable") : (lang === "ko" ? "16일 이후 날짜 — 예보 전" : "More than 16 days ahead")}</span>}
           <span className="wseg">
-            {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor"]] as const).map(([v, l]) =>
-              <button key={v} type="button" aria-pressed={(cond.weather_pref || "") === v} onClick={() => setCond({ ...cond, weather_pref: v })}>{v === "" && <Icon name="sun" />}{l}</button>)}
+            {([["", lang === "ko" ? "날씨 보고 알아서" : "Auto", lang === "ko" ? "날씨대로" : "Auto"], ["실내", lang === "ko" ? "실내 위주" : "Indoor", lang === "ko" ? "실내" : "Indoor"], ["실외", lang === "ko" ? "실외 위주" : "Outdoor", lang === "ko" ? "실외" : "Outdoor"]] as const).map(([v, l, sh]) =>
+              <button key={v} type="button" aria-pressed={(cond.weather_pref || "") === v} aria-label={l} onClick={() => setCond({ ...cond, weather_pref: v })}>{v === "" && <Icon name="sun" />}<span className="w-long">{l}</span><span className="w-short" aria-hidden="true">{sh}</span></button>)}
           </span>
         </div>
         <button className="chip go" disabled={busy} onClick={onDone}>
