@@ -162,7 +162,7 @@ function TripDetail({ p, lang }: { p: SavedPlan; lang: Lang }) {
   useEffect(() => {
     const c = decodePlan(p.hash);
     if (!c) { setErr(true); return; }
-    api.course({ ...c, lang } as any).then(setR).catch(() => setErr(true));
+    (c?.order?.length ? api.reorder({ ...c, lang } as any, c.order) : api.course({ ...c, lang } as any)).then(setR).catch(() => setErr(true));   // 끌어서 바꾼 순서로 저장했으면 그 순서 그대로
     api.places().then((l) => setNames(Object.fromEntries(l.map((x: any) => [x.id, x])))).catch(() => {});
     getJSON("/api/weather").then((w: any) => { const ds = w.days || []; setWx(ds.length ? ds.find((d: any) => d.date === p.date) || null : "fail"); }).catch(() => setWx("fail"));
   }, [p.hash, p.date, lang]);
@@ -203,7 +203,6 @@ function TripDetail({ p, lang }: { p: SavedPlan; lang: Lang }) {
         })}
       </ol>
       {course.skipped?.length > 0 && <p className="muted small">{L("그날 쉬는 곳은 뺐어요: ", "Closed that day, left out: ")}{course.skipped.map((x: any) => (lang === "ko" ? x.name : nm(x.id))).join(", ")}</p>}
-      <p className="muted small">{L("영업시간·판정은 오늘 기준으로 다시 확인한 값이에요. 저장할 때와 달라졌으면 순서도 바뀔 수 있어요.", "Hours and grades are re-checked today, so details may differ from when you saved.")}</p>
     </div>
   );
 }
