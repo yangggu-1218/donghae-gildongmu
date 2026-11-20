@@ -17,7 +17,7 @@
    "장애인 주차",
    "휠체어 대여"
   ],
-  "tip_ko": "방문자센터까지는 평지예요. 호수 전망 데크는 완만한 경사가 있어요.",
+  "tip_ko": "방문자센터까지 평지. 호수 전망 데크: 완만한 경사.",
   "tip_en": "Flat to the visitor center; the lake deck has a gentle slope.",
   "segments": [
    {
@@ -62,7 +62,7 @@
   "facilities": [
    "장애인 화장실"
   ],
-  "tip_ko": "휠체어 대여 정보가 기관마다 달라 방문 전 확인이 필요해요.",
+  "tip_ko": "휠체어 대여 정보가 기관마다 다름 — 방문 전 확인 권장.",
   "tip_en": "Wheelchair rental info differs by source; call ahead.",
   "segments": [
    {
@@ -96,7 +96,7 @@
   "facilities": [
    "장애인 주차"
   ],
-  "tip_ko": "입구 쪽 무릉반석까지만 추천해요.",
+  "tip_ko": "입구 쪽 무릉반석까지만 추천.",
   "tip_en": "Stay near the flat rocks at the entrance.",
   "segments": [
    {
@@ -128,7 +128,7 @@
   "styles": [
    "자연·산책"
   ],
-  "tip_ko": "계곡 안쪽 산길이에요.",
+  "tip_ko": "계곡 안쪽 산길.",
   "tip_en": "A mountain trail deep in the valley.",
   "segments": [
    {
@@ -160,7 +160,7 @@
    "장애인 화장실",
    "엘리베이터"
   ],
-  "tip_ko": "엘리베이터로 전망 시설까지 갈 수 있어요.",
+  "tip_ko": "엘리베이터로 전망 시설까지 이동 가능.",
   "tip_en": "Elevator to the viewing deck.",
   "segments": [
    {
@@ -192,7 +192,7 @@
   "styles": [
    "바다 보기"
   ],
-  "tip_ko": "가는 길에 경사가 있어요.",
+  "tip_ko": "가는 길에 경사 구간.",
   "tip_en": "Sloped path.",
   "segments": [
    {
@@ -219,7 +219,7 @@
    "역사·문화",
    "자연·산책"
   ],
-  "tip_ko": "계단과 급경사 골목이에요.",
+  "tip_ko": "계단과 급경사 골목.",
   "tip_en": "Steep stairs and alleys.",
   "segments": [
    {
@@ -250,7 +250,7 @@
   "facilities": [
    "경사로"
   ],
-  "tip_ko": "장애인 화장실 위치는 답사로 확인할 예정이에요.",
+  "tip_ko": "장애인 화장실 위치: 현장 답사 예정.",
   "tip_en": "Accessible restroom to be checked on site.",
   "segments": [
    {
@@ -284,7 +284,7 @@
    "역사·문화",
    "체험"
   ],
-  "tip_ko": "비 오는 날 실내 후보예요. 내부 이동은 확인이 필요해요.",
+  "tip_ko": "비 오는 날 실내 후보. 내부 이동: 판단 불가(자료 없음).",
   "tip_en": "Rainy-day indoor option; inside access to be checked.",
   "segments": [
    {
@@ -314,7 +314,7 @@
    "장애인 주차",
    "공중화장실"
   ],
-  "tip_ko": "모래사장 대신 해변 데크 전망 지점까지 추천해요.",
+  "tip_ko": "모래사장 대신 해변 데크 전망 지점까지 추천.",
   "tip_en": "Stay on the boardwalk viewpoint, not the sand.",
   "segments": [
    {
@@ -350,7 +350,7 @@
    "장애인 주차",
    "공중화장실"
   ],
-  "tip_ko": "전망 지점은 계단이라 해변 산책로에서 보는 걸 추천해요.",
+  "tip_ko": "전망 지점은 계단 — 해변 산책로에서 조망 추천.",
   "tip_en": "Viewpoint has steps; enjoy it from the beach path.",
   "segments": [
    {
@@ -384,7 +384,7 @@
    "체험",
    "역사·문화"
   ],
-  "tip_ko": "동굴 안 계단과 좁은 통로가 있어요.",
+  "tip_ko": "동굴 안 계단·좁은 통로.",
   "tip_en": "Steps and narrow passages inside.",
   "segments": [
    {

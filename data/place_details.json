@@ -15,10 +15,10 @@
    "entrance_step": false,
    "table": null,
    "benches": true,
-   "carer_tip": "방문자센터 앞에 휠체어 대여와 그늘 벤치가 있어요. 호수 데크는 완만한 오르막이라 갈 때 천천히 밀어 주세요.",
+   "carer_tip": "방문자센터 앞: 휠체어 대여·그늘 벤치. 호수 데크: 완만한 오르막 구간 — 휠체어는 천천히 이동.",
    "access_source": "예시",
    "stay_min": 90,
-   "intro_ko": "약 50년 동안 석회석을 캐던 광산 자리를 바꿔 만든 체험형 관광지예요. 에메랄드빛 호수 두 곳과 높은 석회석 절벽, 라벤더 정원이 펼쳐져요.",
+   "intro_ko": "약 50년간 석회석을 캐던 광산 자리를 바꾼 체험형 관광지. 에메랄드빛 호수 2곳·높은 석회석 절벽·라벤더 정원.",
    "intro_en": "A former limestone mine of about 50 years, turned into an activity park with two emerald lakes, tall limestone cliffs and lavender gardens.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -29,11 +29,11 @@
      ],
      "i": [
       [
-       "1968년 문을 연 쌍용양회(현 쌍용C&E)의 석회석 광산이었고, 약 50년 동안 채광했어요.",
+       "1968년 문을 연 쌍용양회(현 쌍용C&E)의 석회석 광산. 약 50년간 채광.",
        "A limestone mine opened in 1968 by Ssangyong (now Ssangyong C&E), worked for about 50 years."
       ],
       [
-       "채광이 끝난 뒤 동해시가 관광지로 바꿔 열었어요.",
+       "채광 종료 뒤 동해시가 관광지로 바꿔 개장.",
        "After mining ended, Donghae City reopened it as a tourist site."
       ]
      ]
@@ -45,19 +45,19 @@
      ],
      "i": [
       [
-       "청옥호와 금곡호, 두 개의 에메랄드빛 호수가 있어요.",
+       "청옥호·금곡호: 에메랄드빛 호수 2곳.",
        "Two emerald lakes, Cheongok and Geumgok."
       ],
       [
-       "두미르 전망대에 오르면 석회석 절벽과 호수가 한눈에 보여요.",
+       "두미르 전망대: 석회석 절벽과 호수를 한눈에 조망.",
        "Dumir Observatory looks over the cliffs and lakes."
       ],
       [
-       "스카이글라이더, 알파인코스터, 오프로드 루지, 집라인 같은 체험시설은 따로 요금을 내요.",
+       "체험시설(스카이글라이더·알파인코스터·오프로드 루지·집라인): 별도 요금.",
        "Rides such as the sky glider, alpine coaster, off-road luge and zipline cost extra."
       ],
       [
-       "6월에는 라벤더 정원에서 라벤더축제가 열려요. 정원 사이로 무릉별열차가 다녀요.",
+       "6월: 라벤더 정원에서 라벤더축제. 정원 사이로 무릉별열차 운행.",
        "The lavender festival is held in June; a park train runs through the gardens."
       ]
      ]
@@ -69,15 +69,15 @@
      ],
      "i": [
       [
-       "매주 월요일은 쉬어요. 월요일이 공휴일이면 다음 날 쉬어요.",
+       "매주 월요일 휴무(월요일이 공휴일이면 다음 날 휴무).",
        "Closed Mondays (the next day if Monday is a holiday)."
       ],
       [
-       "입장료는 계절에 따라 달라요. 장애인·경로·국가유공자는 할인돼요.",
+       "입장료: 계절별로 다름. 장애인·경로·국가유공자 할인.",
        "Admission varies by season, with discounts for disabled visitors, seniors and veterans."
       ],
       [
-       "동해시가 이동약자 체험시설을 만드는 공사를 하고 있어요. 2027년 완료 예정이에요.",
+       "동해시 이동약자 체험시설 공사 중 (2027년 완료 예정).",
        "The city is building barrier-free facilities here, due in 2027."
       ]
      ]
@@ -110,7 +110,7 @@
    "entrance_step": false,
    "table": null,
    "benches": true,
-   "carer_tip": "걷기 힘든 분은 무릉반석에서 쉬거나 삼화사까지만 천천히 다녀오세요. 여름엔 반석이 미끄러우니 바닥이 단단한 신발을 신으세요.",
+   "carer_tip": "걷기 힘든 경우: 무릉반석에서 휴식하거나 삼화사까지만 천천히 왕복. 여름철 반석 미끄러움 — 바닥이 단단한 신발 권장.",
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "stay_min": 60,
    "facilities": [
@@ -121,14 +121,14 @@
     {
      "name": "주차장 → 매표소",
      "grade": "G",
-     "note": "무릉계곡 주차장에 장애인 주차구역과 장애인 화장실이 있어요",
+     "note": "무릉계곡 주차장: 장애인 주차구역·장애인 화장실",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     },
     {
      "name": "매표소 → 무릉반석",
      "grade": "Y",
-     "note": "넓고 평평한 바위지만 여름엔 이끼로 미끄러울 수 있어요",
+     "note": "넓고 평평한 바위. 여름철 이끼로 미끄러울 수 있음",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     },
@@ -169,7 +169,7 @@
    "carer_tip": "돌길·가파른 계단 구간: 운동화·마실 물 준비. 비 온 뒤 미끄러움.",
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "stay_min": 120,
-   "intro_ko": "무릉계곡 가장 안쪽에 있는 폭포예요. 청옥산에서 내려온 물이 항아리 모양 웅덩이 세 개를 차례로 채우며 떨어지고, 조금 아래에는 두 물줄기가 만나는 쌍폭포가 있어요.",
+   "intro_ko": "무릉계곡 가장 안쪽의 폭포. 청옥산에서 내려온 물이 항아리 모양 웅덩이 3개를 차례로 채우며 떨어지고, 조금 아래에 두 물줄기가 만나는 쌍폭포.",
    "intro_en": "The waterfall at the far end of Mureung Valley, falling through three jar-shaped pools; the twin falls lie just below.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -180,11 +180,11 @@
      ],
      "i": [
       [
-       "삼화사에서 서쪽으로 약 2.5km 올라가면 나와요.",
+       "삼화사에서 서쪽 계곡 위쪽으로 약 2.5km.",
        "About 2.5 km up the valley from Samhwasa."
       ],
       [
-       "용추폭포 약 70m 아래에서 두 물줄기가 만나 쌍폭포가 돼요.",
+       "용추폭포 약 70m 아래: 두 물줄기가 만나는 쌍폭포.",
        "About 70 m below, two streams meet to form the twin falls."
       ]
      ]
@@ -196,15 +196,15 @@
      ],
      "i": [
       [
-       "관리사무소에서 쌍폭포·용추폭포까지 왕복 3.1km, 1시간 30분쯤 걸려요.",
+       "관리사무소~쌍폭포·용추폭포: 왕복 3.1km, 약 1시간 30분.",
        "3.1 km round trip from the office, about 1.5 hours."
       ],
       [
-       "돌길과 계단이 이어져 휠체어·유모차로는 갈 수 없어요. 비가 온 뒤엔 미끄러워요.",
+       "돌길·계단 연속 — 휠체어·유모차 통행 불가. 비 온 뒤 미끄러움.",
        "Rocky paths and steps; not passable by wheelchair or stroller, slippery after rain."
       ],
       [
-       "봄(3월 1일~5월 15일)과 가을(11월 1일~12월 15일)에는 산불 예방으로 일부 등산로가 통제될 수 있어요.",
+       "봄(3월 1일~5월 15일)·가을(11월 1일~12월 15일): 산불 예방으로 일부 등산로 통제 가능.",
        "Some trails may close in spring and autumn for fire prevention."
       ]
      ]
@@ -218,7 +218,21 @@
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
-   ]
+   ],
+   "fee_detail": {
+    "어른": "4,000원",
+    "청소년·군인": "1,500원",
+    "어린이": "700원",
+    "6세 이하 어린이": "무료",
+    "65세 이상": "1,500원",
+    "주차": "승용차 2,000원 · 대형버스 5,000원"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=90",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "무릉계곡 입장료와 같음. 쌍폭포 페이지(tourNo=89)는 평시 09~18, 7~8월 06~20, 11~2월 08~17로 운영시간이 다름"
+   }
   },
   "dokkaebi": {
    "open": "10:00",
@@ -234,10 +248,10 @@
    "entrance_step": false,
    "table": null,
    "benches": true,
-   "carer_tip": "매표소에서 엘리베이터로 전망 시설까지 올라가요. 스카이워크 바닥이 투명해 어지러울 수 있어요.",
+   "carer_tip": "매표소에서 엘리베이터로 전망 시설까지 이동. 스카이워크: 투명 바닥이라 어지러울 수 있음.",
    "access_source": "예시",
    "stay_min": 60,
-   "intro_ko": "묵호등대 아래 골짜기에 만든 하늘 산책 시설이에요. 해발 59m 스카이워크에서 바다를 내려다보고, 스카이사이클과 자이언트 슬라이드도 탈 수 있어요.",
+   "intro_ko": "묵호등대 아래 골짜기의 하늘 산책 시설. 해발 59m 스카이워크에서 바다 조망, 스카이사이클·자이언트 슬라이드 이용 가능.",
    "intro_en": "A sky park in the valley below Mukho Lighthouse: a skywalk 59 m above sea level, plus a sky cycle and a giant slide.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -248,11 +262,11 @@
      ],
      "i": [
       [
-       "'도째비'는 도깨비를 뜻하는 묵호 사투리예요.",
+       "'도째비': 도깨비를 뜻하는 묵호 사투리.",
        "'Dojjaebi' is local dialect for 'goblin'."
       ],
       [
-       "비 오는 밤 골짜기에서 보이던 푸른 불빛이 도깨비불 같았다는 이야기가 전해져요.",
+       "비 오는 밤 골짜기의 푸른 불빛이 도깨비불 같았다는 이야기가 전해짐.",
        "Locals say blue lights in the valley on rainy nights looked like goblin fire."
       ]
      ]
@@ -264,19 +278,19 @@
      ],
      "i": [
       [
-       "2021년 5월에 문을 열었어요.",
+       "2021년 5월 개장.",
        "Opened in May 2021."
       ],
       [
-       "스카이워크는 해발 약 59m 높이에 있어요.",
+       "스카이워크: 해발 약 59m.",
        "The skywalk sits about 59 m above sea level."
       ],
       [
-       "스카이사이클은 키 140cm 이상, 몸무게 100kg 미만만 탈 수 있어요.",
+       "스카이사이클: 키 140cm 이상, 몸무게 100kg 미만만 이용 가능.",
        "Sky cycle: 140 cm or taller and under 100 kg."
       ],
       [
-       "약 30m를 내려가는 자이언트 슬라이드는 키 130cm 이상만 탈 수 있어요.",
+       "자이언트 슬라이드(약 30m 하강): 키 130cm 이상만 이용 가능.",
        "The giant slide drops about 30 m; 130 cm or taller."
       ]
      ]
@@ -288,15 +302,15 @@
      ],
      "i": [
       [
-       "매주 월요일은 쉬어요. 바람이 세거나 비가 오면 체험시설이 멈출 수 있어요.",
+       "매주 월요일 휴무. 강풍·비에는 체험시설이 멈출 수 있음.",
        "Closed Mondays; rides may stop in bad weather."
       ],
       [
-       "장애인·경로자는 입장료가 할인돼요. 주차는 무료예요.",
+       "입장료: 장애인·경로자 할인. 주차: 무료.",
        "Discounts for disabled visitors and seniors; parking is free."
       ],
       [
-       "동해시가 엘리베이터, 연결다리, 데크길을 새로 놓는 공사를 하고 있어요. 2027년 완료 예정이에요.",
+       "동해시 엘리베이터·연결다리·데크길 신설 공사 중 (2027년 완료 예정).",
        "The city is adding a lift, a connecting bridge and deck paths, due in 2027."
       ]
      ]
@@ -325,10 +339,10 @@
    "entrance_step": false,
    "table": null,
    "benches": true,
-   "carer_tip": "스카이밸리에서 내려가는 길에 경사가 있어요. 중간 쉼터 벤치에서 쉬어 가세요.",
+   "carer_tip": "스카이밸리에서 내려가는 길: 경사 구간. 중간 쉼터에 벤치.",
    "access_source": "예시",
    "stay_min": 30,
-   "intro_ko": "도째비골 아래 바다 위로 85m를 뻗어 나간 다리 모양 전망대예요. 바닥이 뚫려 있어 발아래로 파도가 부서지는 모습이 보여요.",
+   "intro_ko": "도째비골 아래 바다 위로 85m 뻗은 다리 모양 전망대. 바닥이 뚫려 있어 발아래 파도가 보임.",
    "intro_en": "An 85 m walkway stretching out over the sea below Dokkaebigol, with an open floor so you can watch the waves below.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -339,15 +353,15 @@
      ],
      "i": [
       [
-       "2021년에 문을 열었어요.",
+       "2021년 개장.",
        "Opened in 2021."
       ],
       [
-       "위에서 보면 도깨비 방망이 모양이에요.",
+       "위에서 보면 도깨비 방망이 모양.",
        "From above it is shaped like a goblin's club."
       ],
       [
-       "바닥 일부가 유리와 격자로 되어 있어 바다가 그대로 보여요.",
+       "바닥 일부: 유리·격자 — 바다가 그대로 보임.",
        "Parts of the floor are glass or open grating."
       ]
      ]
@@ -359,15 +373,15 @@
      ],
      "i": [
       [
-       "오전 10시부터 밤 9시까지 열어요. 밤에는 조명이 켜져요.",
+       "운영: 오전 10시~밤 9시. 밤에는 조명 점등.",
        "Open 10:00–21:00, lit up at night."
       ],
       [
-       "격자 바닥은 휠체어나 유모차 바퀴가 덜컹거릴 수 있어요.",
+       "격자 바닥: 휠체어·유모차 바퀴가 덜컹거릴 수 있음.",
        "Wheelchair and stroller wheels may judder on the grating."
       ],
       [
-       "바람이 세거나 파도가 높으면 출입이 막힐 수 있어요.",
+       "강풍·높은 파도 때는 출입이 막힐 수 있음.",
        "It may close in strong wind or high waves."
       ]
      ]
@@ -395,10 +409,10 @@
    "entrance_step": true,
    "table": null,
    "benches": false,
-   "carer_tip": "휠체어·유모차는 골목 대신 등대로 바로 이어지는 도로를 이용하세요. 걸어서 오르면 등대까지 10분쯤이에요.",
+   "carer_tip": "휠체어·유모차: 골목 대신 등대로 바로 이어지는 도로 이용. 걸어서 오르면 등대까지 약 10분.",
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "stay_min": 40,
-   "intro_ko": "묵호항 언덕 마을의 골목을 따라 그려진 벽화길이에요. 뱃사람과 덕장 일꾼이 살던 마을의 이야기가 담겨 있고, 꼭대기에서 묵호등대와 바다가 보여요.",
+   "intro_ko": "묵호항 언덕 마을 골목을 따라 그린 벽화길. 뱃사람과 덕장 일꾼이 살던 마을 이야기, 꼭대기에서 묵호등대와 바다 조망.",
    "intro_en": "Mural alleys on the hill above Mukho Port, telling the story of the fishermen and fish-drying workers who lived here, with the lighthouse and sea at the top.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -409,7 +423,7 @@
      ],
      "i": [
       [
-       "명태 덕장으로 생선을 나르던 일꾼들의 물기 때문에 흙길이 논처럼 질척해서 '논골'이라 불렀어요.",
+       "명태 덕장으로 생선을 나르던 일꾼들의 물기로 흙길이 논처럼 질척해 '논골'이라 부름.",
        "Called 'Nongol' (paddy alley) because water from the fish loads turned the dirt paths muddy."
       ]
      ]
@@ -421,15 +435,15 @@
      ],
      "i": [
       [
-       "1970년대까지 무연탄과 수산물을 실어 나르던 묵호항이 크게 번성했어요.",
+       "1970년대까지 무연탄·수산물을 실어 나르던 묵호항이 크게 번성.",
        "Mukho Port boomed until the 1970s shipping coal and seafood."
       ],
       [
-       "아랫마을엔 뱃사람, 윗마을엔 명태 덕장 일꾼이 주로 살았어요.",
+       "아랫마을엔 뱃사람, 윗마을엔 명태 덕장 일꾼이 주로 거주.",
        "Fishermen lived lower down, fish-drying workers higher up."
       ],
       [
-       "2010년에 마을 사람들의 삶을 담은 벽화가 골목에 그려졌어요.",
+       "2010년 마을 사람들의 삶을 담은 벽화를 골목에 그림.",
        "Murals about village life were painted in 2010."
       ]
      ]
@@ -441,11 +455,11 @@
      ],
      "i": [
       [
-       "논골 1·2·3길과 등대오름길, 네 갈래 길이 있어요. 등대오름길이 바다 전망이 가장 좋아요.",
+       "논골 1·2·3길과 등대오름길, 4갈래. 바다 전망은 등대오름길이 가장 좋음.",
        "Four routes: Nongol 1, 2, 3 and Deungdae-oreum-gil, which has the best sea views."
       ],
       [
-       "경사가 가파르고 계단이 많아요. 천천히 쉬면서 올라가세요.",
+       "가파른 경사와 많은 계단 — 쉬면서 천천히 이동 권장.",
        "Steep with many steps; take it slowly."
       ]
      ]
@@ -455,14 +469,14 @@
     {
      "name": "벽화 골목길",
      "grade": "R",
-     "note": "좁은 골목에 계단과 급경사가 있어요 (등대까지 걸어서 10분쯤)",
+     "note": "좁은 골목: 계단·급경사 (등대까지 걸어서 약 10분)",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     },
     {
      "name": "등대로 바로 가는 도로",
      "grade": "Y",
-     "note": "휠체어·유모차는 골목 대신 이 길로 가면 마을 전경을 볼 수 있어요",
+     "note": "휠체어·유모차: 골목 대신 이 길로 마을 전경 조망 가능",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
@@ -496,7 +510,7 @@
    "entrance_step": true,
    "table": "혼합",
    "benches": true,
-   "carer_tip": "수산시장 바닥이 젖어 미끄러워요. 2층 식당은 엘리베이터 위치를 먼저 물어보세요.",
+   "carer_tip": "수산시장 바닥: 젖어 미끄러움. 2층 식당: 엘리베이터 위치 사전 문의 권장.",
    "access_source": "예시",
    "stay_min": 70,
    "soft_menu": true,
@@ -517,10 +531,10 @@
    "entrance_step": null,
    "table": null,
    "benches": null,
-   "carer_tip": "실내라 비 오는 날 좋아요. 층간 이동 방법은 방문 전에 전화로 확인하세요.",
+   "carer_tip": "실내 — 비 오는 날 후보. 층간 이동 방법: 방문 전 전화 확인 권장.",
    "access_source": "예시",
    "stay_min": 50,
-   "intro_ko": "전 세계 100여 개 나라에서 모은 연필 3,000여 종을 전시하는 박물관이에요. 연필의 역사부터 캐릭터·예술 연필까지 볼 수 있어요.",
+   "intro_ko": "전 세계 100여 개국에서 모은 연필 3,000여 종을 전시하는 박물관. 연필의 역사부터 캐릭터·예술 연필까지.",
    "intro_en": "A museum of about 3,000 pencils from over 100 countries, from pencil history to character and art pencils.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -531,15 +545,15 @@
      ],
      "i": [
       [
-       "연필이 만들어진 역사, 예술 연필, 캐릭터 연필을 주제별로 전시해요.",
+       "주제별 전시: 연필의 역사, 예술 연필, 캐릭터 연필.",
        "Themed displays on pencil history, art pencils and character pencils."
       ],
       [
-       "디즈니 캐릭터 연필, 세계 유명 미술관 연필, 유명인이 쓰던 연필도 있어요.",
+       "디즈니 캐릭터 연필, 세계 유명 미술관 연필, 유명인이 쓰던 연필 전시.",
        "Disney pencils, museum pencils and pencils used by famous people."
       ],
       [
-       "연필을 직접 써 보는 체험 공간이 있고, 4층에 기념품 가게와 카페가 있어요.",
+       "연필 쓰기 체험 공간. 4층: 기념품 가게·카페.",
        "A try-it-yourself corner, and a shop and café on the 4th floor."
       ]
      ]
@@ -551,11 +565,11 @@
      ],
      "i": [
       [
-       "매주 화요일과 수요일은 쉬어요. 입장 마감은 오후 5시 30분이에요.",
+       "매주 화·수요일 휴무. 입장 마감 오후 5시 30분.",
        "Closed Tuesdays and Wednesdays; last entry 17:30."
       ],
       [
-       "엘리베이터 여부는 방문 전에 전화로 확인하세요.",
+       "엘리베이터 여부: 방문 전 전화 확인 권장.",
        "Call ahead to check whether there is a lift."
       ]
      ]
@@ -574,7 +588,7 @@
    "entrance_step": false,
    "table": null,
    "benches": true,
-   "carer_tip": "모래사장 대신 주차장에서 이어지는 700m 나무 데크 산책로로 바다를 따라 걸어 보세요. 관광안내소에 열린관광지 안내 책자가 있어요.",
+   "carer_tip": "모래사장 대신 주차장에서 이어지는 700m 나무 데크 산책로로 해안 이동 가능. 관광안내소: 열린관광지 안내 책자 비치.",
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "stay_min": 40,
    "facilities": [
@@ -589,7 +603,7 @@
     {
      "name": "주차장 → 해변",
      "grade": "G",
-     "note": "장애인 주차구역이 넓어졌고 휠체어 안전 통로가 표시돼 있어요",
+     "note": "장애인 주차구역 확대, 휠체어 안전 통로 표시",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     },
@@ -631,7 +645,7 @@
    "entrance_step": false,
    "table": null,
    "benches": true,
-   "carer_tip": "촛대바위 전망 지점은 가파른 계단이에요. 휠체어·유모차는 완만한 경사로로 이어진 출렁다리에서 바다와 촛대바위를 함께 보세요.",
+   "carer_tip": "촛대바위 전망 지점: 가파른 계단. 휠체어·유모차는 완만한 경사로로 이어진 출렁다리에서 바다·촛대바위 조망.",
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "stay_min": 50,
    "segments": [
@@ -657,7 +671,16 @@
      "checked_at": "2023-09-22",
      "optional": true
     }
-   ]
+   ],
+   "fee_detail": {
+    "입장료": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=70",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "주차: 상세 페이지(70·66) '무료', 요금 종합 페이지(key=1195) 추암해변 소형 3,000원 — 표시 보류. 촛대바위 tourNo=66"
+   }
   },
   "cave": {
    "open": "08:30",
@@ -671,10 +694,10 @@
    "entrance_step": true,
    "table": null,
    "benches": false,
-   "carer_tip": "안쪽 이승굴 구간은 가파른 계단이라 되돌아 나오는 길로 다니세요. 매표소에서 신분증을 맡기면 음성 안내기를 무료로 빌려줘요. 안은 한여름에도 10~15도라 겉옷이 있으면 좋아요.",
+   "carer_tip": "안쪽 이승굴 구간: 가파른 계단 — 되돌아 나오는 길 이용. 매표소에 신분증을 맡기면 음성 안내기 무료 대여. 내부는 한여름에도 10~15도 — 겉옷 권장.",
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "stay_min": 40,
-   "intro_ko": "동해 시내 한가운데에서 발견된 석회암 동굴이에요. 천연기념물 황금박쥐가 살고, 큰 종유석과 석순을 가까이서 볼 수 있어요.",
+   "intro_ko": "동해 시내 한가운데에서 발견된 석회암 동굴. 천연기념물 황금박쥐 서식, 큰 종유석·석순을 가까이서 관람.",
    "intro_en": "A limestone cave found right in the city centre, home to the rare golden bat, with large stalactites and stalagmites.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -685,11 +708,11 @@
      ],
      "i": [
       [
-       "1991년 아파트 공사 중에 발견됐고, 1996년부터 관람할 수 있게 됐어요.",
+       "1991년 아파트 공사 중 발견, 1996년부터 관람 가능.",
        "Found during apartment construction in 1991; open to visitors since 1996."
       ],
       [
-       "전체 길이 1,510m 중 810m를 둘러볼 수 있어요.",
+       "전체 길이 1,510m 중 810m 관람 가능.",
        "810 m of its 1,510 m length is open."
       ]
      ]
@@ -701,11 +724,11 @@
      ],
      "i": [
       [
-       "멸종위기종 황금박쥐가 사는 동굴이에요.",
+       "멸종위기종 황금박쥐 서식 동굴.",
        "Home to the endangered golden bat."
       ],
       [
-       "천장이 물에 녹아 생긴 구멍(천장 용식구)이 국내에서 가장 큰 규모예요.",
+       "천장이 물에 녹아 생긴 구멍(천장 용식구): 국내 최대 규모.",
        "Has the largest ceiling solution pocket in Korea."
       ]
      ]
@@ -717,11 +740,11 @@
      ],
      "i": [
       [
-       "동굴 안에는 계단과 좁고 낮은 구간이 있어 휠체어·유모차는 들어가기 어려워요.",
+       "동굴 안: 계단과 좁고 낮은 구간 — 휠체어·유모차 진입 어려움.",
        "Steps and low, narrow passages make it hard for wheelchairs and strollers."
       ],
       [
-       "연중 쉬는 날 없이 열어요.",
+       "연중 쉬는 날 없이 운영.",
        "Open every day of the year."
       ]
      ]
@@ -742,7 +765,7 @@
     {
      "name": "이승굴 구간",
      "grade": "R",
-     "note": "좁고 가파른 계단이라 노약자는 피하라는 안내가 있어요. 조금 되돌아 나오면 관람로가 이어져요",
+     "note": "좁고 가파른 계단 — 노약자는 피하라는 안내 있음. 조금 되돌아 나오면 관람로가 이어짐",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
@@ -774,7 +797,7 @@
    }
   },
   "mukho_lighthouse": {
-   "intro_ko": "1963년부터 묵호항 앞바다를 비춰 온 등대예요. 해발 93m 언덕 위에 있어 동해 바다와 묵호항, 두타산 능선까지 한눈에 보여요.",
+   "intro_ko": "1963년부터 묵호항 앞바다를 비춰 온 등대. 해발 93m 언덕 위 — 동해 바다·묵호항·두타산 능선 조망.",
    "intro_en": "A lighthouse that has lit the sea off Mukho Port since 1963. From its hill 93 m above the sea you can take in the East Sea, the port and the Dutasan ridge.",
    "intro_source": "팀 작성 (강원관광, 한국관광공사 등 공개 자료 참고)",
    "about": [
@@ -785,15 +808,15 @@
      ],
      "i": [
       [
-       "1963년 6월 8일에 처음 불을 밝혔어요.",
+       "1963년 6월 8일 첫 점등.",
        "First lit on 8 June 1963."
       ],
       [
-       "1941년에 문을 연 묵호항이 커지면서, 오징어잡이 배와 무연탄 운반선이 안전하게 다니도록 세웠어요.",
+       "1941년 문을 연 묵호항이 커지면서 오징어잡이 배·무연탄 운반선의 안전 항해를 위해 건립.",
        "Built as Mukho Port (opened 1941) grew, to guide squid boats and coal carriers safely."
       ],
       [
-       "등탑 높이는 25.9m이고, 등대가 선 언덕은 해발 약 93m예요.",
+       "등탑 높이 25.9m, 등대가 선 언덕 해발 약 93m.",
        "The tower is 25.9 m tall and stands on a hill about 93 m above sea level."
       ]
      ]
@@ -805,15 +828,15 @@
      ],
      "i": [
       [
-       "전망대에 오르면 묵호항과 동해 바다, 두타산·청옥산 능선이 사방으로 보여요.",
+       "전망대: 묵호항·동해 바다·두타산·청옥산 능선을 사방으로 조망.",
        "From the observation deck you can see the port, the East Sea and the Dutasan and Cheongoksan ridges."
       ],
       [
-       "밤에는 LED 조명이 여러 색으로 등대를 비춰요.",
+       "밤: LED 조명이 여러 색으로 등대를 비춤.",
        "At night LED lights colour the tower."
       ],
       [
-       "2003년에 설치한 회전식 대형 등명기의 불빛은 맑은 날 40km 넘게 떨어진 바다에서도 보여요.",
+       "2003년 설치한 회전식 대형 등명기: 맑은 날 40km 넘게 떨어진 바다에서도 보임.",
        "The rotating lamp installed in 2003 can be seen from more than 40 km away on a clear day."
       ]
      ]
@@ -825,11 +848,11 @@
      ],
      "i": [
       [
-       "논골담길: 등대로 올라가는 골목길이에요. 뱃사람과 광부의 삶을 담은 벽화와 시가 이어져요.",
+       "논골담길: 등대로 올라가는 골목길. 뱃사람·광부의 삶을 담은 벽화와 시.",
        "Nongoldam-gil: the alley up to the lighthouse, lined with murals and poems about sailors and miners."
       ],
       [
-       "도째비골 스카이밸리·해랑전망대: 등대 바로 아래에 있는 스카이워크와 바다 위 산책로예요.",
+       "도째비골 스카이밸리·해랑전망대: 등대 바로 아래의 스카이워크와 바다 위 산책로.",
        "Dokkaebigol Sky Valley and Haerang Observatory: a skywalk and sea walkway just below the lighthouse."
       ]
      ]
@@ -841,7 +864,7 @@
      ],
      "i": [
       [
-       "영화 〈미워도 다시 한번〉, 드라마 〈찬란한 유산〉과 〈상속자들〉을 여기서 찍었어요.",
+       "촬영지: 영화 〈미워도 다시 한번〉, 드라마 〈찬란한 유산〉·〈상속자들〉.",
        "Filming location for the film Love Me Once Again and the dramas Brilliant Legacy and The Heirs."
       ]
      ]
@@ -859,12 +882,12 @@
     {
      "name": "등대로 가는 도로",
      "grade": "Y",
-     "note": "논골담길 골목 대신 등대까지 바로 이어지는 도로가 있어요",
+     "note": "논골담길 골목 대신 등대까지 바로 이어지는 도로 있음",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
    ],
-   "carer_tip": "논골담길 계단 골목 대신 등대로 바로 가는 도로를 이용하세요. 장애인 화장실은 아래 묵호항 수변공원에 있어요.",
+   "carer_tip": "논골담길 계단 골목 대신 등대로 바로 가는 도로 이용. 장애인 화장실: 아래 묵호항 수변공원.",
    "fee_detail": {
     "입장료": "무료",
     "주차": "무료"
@@ -877,7 +900,7 @@
    }
   },
   "samhwasa": {
-   "intro_ko": "두타산과 청옥산에 둘러싸인 무릉계곡 안의 절이에요. 신라 때 처음 세워졌다고 전해지고, 무릉반석에서 조금만 걸으면 닿아요.",
+   "intro_ko": "두타산·청옥산에 둘러싸인 무릉계곡 안의 절. 신라 때 처음 세웠다고 전해지며, 무릉반석에서 가까움.",
    "intro_en": "A temple in Mureung Valley, ringed by Dutasan and Cheongoksan, said to date from the Silla era; a short walk from Mureung Rock.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -888,15 +911,15 @@
      ],
      "i": [
       [
-       "642년에 '흑련대'라는 이름으로 세워졌다고 전해져요.",
+       "642년 '흑련대'라는 이름으로 세웠다고 전해짐.",
        "Said to have been founded in 642 as Heungnyeondae."
       ],
       [
-       "고려 태조 왕건이 이곳에서 삼국 통일을 빌었다는 이야기가 있어요.",
+       "고려 태조 왕건이 이곳에서 삼국 통일을 빌었다는 이야기가 전해짐.",
        "Legend says Wang Geon prayed here to unify the Three Kingdoms."
       ],
       [
-       "세 나라가 화합하길 바란다는 뜻에서 '삼화사'라는 이름이 붙었어요.",
+       "세 나라의 화합을 바란다는 뜻에서 '삼화사'라는 이름이 붙음.",
        "'Samhwa' means harmony of the three kingdoms."
       ]
      ]
@@ -908,19 +931,25 @@
      ],
      "i": [
       [
-       "무릉계곡 입장료를 내고 들어가요.",
+       "입장료: 무릉계곡 입장료로 출입.",
        "Reached through the Mureung Valley entrance (fee)."
       ],
       [
-       "절 마당까지 오르막과 돌계단이 있어요.",
+       "절 마당까지: 오르막·돌계단.",
        "There are slopes and stone steps up to the courtyard."
       ]
      ]
     }
-   ]
+   ],
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=38",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "공식 페이지끼리 다름: 삼화사(88) 입장료 무료·주차 무료, 두타산 삼화사(38) 성인 2,000·청소년·군인 1,500·어린이 700원, 주차 소형 2,000·대형 5,000원 — fee_detail 비움, 확인 필요"
+   }
   },
   "haeamjeong": {
-   "intro_ko": "추암 촛대바위 바로 옆, 바위 언덕에 기대어 선 오래된 정자예요. 고려 때 처음 지어졌고 지금 모습은 조선 시대에 다시 지은 거예요.",
+   "intro_ko": "추암 촛대바위 바로 옆, 바위 언덕에 기대어 선 오래된 정자. 고려 때 처음 짓고 지금 모습은 조선 시대에 다시 지음.",
    "intro_en": "An old pavilion against the rocks right beside Chuam's Candlestick Rock, first built in the Goryeo era.",
    "intro_source": "팀 작성 (한국관광공사 TourAPI 기반 여행정보, 한국민족문화대백과, 언론 기사, 동해시 답변 참고)",
    "about": [
@@ -931,15 +960,15 @@
      ],
      "i": [
       [
-       "1361년 삼척 심씨의 시조 심동로가 벼슬을 그만두고 내려와 지었어요.",
+       "1361년 삼척 심씨의 시조 심동로가 벼슬을 그만두고 내려와 지음.",
        "Built in 1361 by Sim Dong-ro after he retired from office."
       ],
       [
-       "불탄 뒤 1530년에 다시 지었고, 1794년에 고쳐 지었어요.",
+       "불탄 뒤 1530년 재건, 1794년 보수.",
        "Rebuilt in 1530 after a fire and repaired in 1794."
       ],
       [
-       "1979년 강원도 유형문화유산으로 지정됐어요.",
+       "1979년 강원도 유형문화유산 지정.",
        "Designated a Gangwon tangible cultural heritage in 1979."
       ]
      ]
@@ -951,7 +980,7 @@
      ],
      "i": [
       [
-       "우암 송시열이 귀양 가던 길에 이곳에 들러 글을 남겼다고 전해져요.",
+       "우암 송시열이 귀양 가던 길에 들러 글을 남겼다고 전해짐.",
        "Song Si-yeol is said to have stopped here on his way into exile and left a verse."
       ]
      ]
@@ -963,12 +992,29 @@
      ],
      "i": [
       [
-       "추암해변에서 촛대바위·출렁다리로 가는 길 중간에 있어요.",
+       "추암해변에서 촛대바위·출렁다리로 가는 길 중간에 위치.",
        "On the way from Chuam Beach to the Candlestick Rock and suspension bridge."
       ]
      ]
     }
-   ]
+   ],
+   "fee_detail": {
+    "입장료": "해당 없음"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=23",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "공식 표기는 '입장료 없음'"
+   },
+   "wheelchair": "일부",
+   "access_scope": {
+    "wheel": {
+     "level": "일부 시설",
+     "note": "문화재(정자) 내부 휠체어 입장 불가",
+     "source": "동해시 관광(동해시 관광 누리집)"
+    }
+   }
   },
   "central_market": {
    "open": "08:00",
@@ -993,12 +1039,12 @@
     {
      "name": "주차장 → 출렁다리",
      "grade": "G",
-     "note": "완만한 경사로로 이어져 휠체어·유모차도 갈 수 있어요",
+     "note": "완만한 경사로로 연결 — 휠체어·유모차 이동 가능",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
    ],
-   "carer_tip": "출렁다리까지는 완만한 경사로예요. 다리가 흔들리니 바람이 센 날은 천천히 건너세요.",
+   "carer_tip": "출렁다리까지: 완만한 경사로. 다리가 흔들림 — 바람이 센 날은 천천히 이동.",
    "fee_detail": {
     "입장료": "무료"
    },
@@ -1025,12 +1071,12 @@
     {
      "name": "주차장 → 본관",
      "grade": "G",
-     "note": "출입구마다 경사로, 엘리베이터 있어요",
+     "note": "출입구마다 경사로·엘리베이터",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
    ],
-   "carer_tip": "휠체어를 빌릴 수 있어요. 한방 샴푸 만들기 같은 체험은 예약제라 하루 전까지 문의하세요."
+   "carer_tip": "휠체어 대여 가능. 한방 샴푸 만들기 등 체험: 예약제(하루 전까지 문의)."
   },
   "mangsang_camp": {
    "wheelchair": "일부",
@@ -1045,7 +1091,7 @@
     {
      "name": "주출입구",
      "grade": "G",
-     "note": "경사로가 있어요",
+     "note": "경사로 있음",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
@@ -1070,7 +1116,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "촛대바위에서 200m쯤 떨어진 바다 위 72m 출렁다리예요. 건너면 추암조각공원으로 이어지고, 다리 위에서 촛대바위 쪽 해안 절벽이 한눈에 들어와요.",
+   "intro_ko": "촛대바위에서 약 200m 떨어진 바다 위 72m 출렁다리. 건너면 추암조각공원으로 이어지고, 다리 위에서 촛대바위 쪽 해안 절벽 조망.",
    "intro_en": "A 72 m suspension bridge over the sea about 200 m from Candlestick Rock, leading on to Chuam Sculpture Park.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 추암동 (촛대바위길 일대)",
@@ -1081,7 +1127,7 @@
    "coord_source": "카카오 장소 검색",
    "hours": "11~2월 09:00~17:00 · 3~10월 09:00~18:00 (입장 마감 1시간 전)",
    "fee": "무료",
-   "tip_ko": "다리가 흔들려요. 바람이 센 날은 천천히 건너세요.",
+   "tip_ko": "다리가 흔들림 — 바람이 센 날은 천천히 이동.",
    "tip_en": "The bridge sways; take it slowly on windy days.",
    "walk_load": "확인 전",
    "wheelchair": "확인 전",
@@ -1107,7 +1153,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "추암 출렁다리 끝에서 이어지는 바닷가 언덕 공원이에요. 조각 작품 사이를 걸으며 추암 바다와 촛대바위 일대를 내려다볼 수 있어요.",
+   "intro_ko": "추암 출렁다리 끝에서 이어지는 바닷가 언덕 공원. 조각 작품 사이를 걸으며 추암 바다와 촛대바위 일대 조망.",
    "intro_en": "A seaside hilltop park reached from the end of the Chuam suspension bridge, with sculptures and views over Chuam.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 북평동 (추암 촛대바위 옆)",
@@ -1121,8 +1167,24 @@
    "tip_ko": "",
    "tip_en": "",
    "walk_load": "확인 전",
-   "wheelchair": "확인 전",
-   "hours_source": ""
+   "wheelchair": "불가",
+   "hours_source": "",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=67",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   },
+   "access_scope": {
+    "wheel": {
+     "level": "관람 불가",
+     "note": "동해시 관광: 휠체어 이용 불가",
+     "source": "동해시 관광(동해시 관광 누리집)"
+    }
+   }
   },
   {
    "id": "nature_park",
@@ -1140,7 +1202,7 @@
    "facilities": [
     "주차장"
    ],
-   "intro_ko": "천곡동굴 옆, 땅이 꺼져 생긴 돌리네(함몰 지형)를 나무 데크길로 둘러보는 자연학습 공원이에요. 데크 탐방로가 534m이고 야생화 100여 종을 심어 두었어요.",
+   "intro_ko": "천곡동굴 옆, 땅이 꺼져 생긴 돌리네(함몰 지형)를 나무 데크길로 둘러보는 자연학습 공원. 데크 탐방로 534m, 야생화 100여 종.",
    "intro_en": "Next to Cheongok Cave: a 534 m wooden boardwalk around a doline (sinkhole) with a wildflower garden of about 100 species.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 동굴로 50",
@@ -1150,12 +1212,29 @@
    "segments": [],
    "coord_source": "카카오 장소 검색",
    "hours": "",
-   "fee": "무료 (주차 소형 1,000원)",
-   "tip_ko": "황금박쥐동굴과 한 번에 들르기 좋아요.",
+   "fee": "",
+   "tip_ko": "황금박쥐동굴과 함께 들르기 편리.",
    "tip_en": "Easy to combine with Cheongok Golden Bat Cave.",
    "walk_load": "확인 전",
-   "wheelchair": "확인 전",
-   "hours_source": ""
+   "wheelchair": "불가",
+   "hours_source": "",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=95",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "지금 앱 fee '주차 소형 1,000원'과 다름(공식 상세는 무료주차)"
+   },
+   "access_scope": {
+    "wheel": {
+     "level": "관람 불가",
+     "note": "동해시 관광: 휠체어 이용 불가",
+     "source": "동해시 관광(동해시 관광 누리집)"
+    }
+   }
   },
   {
    "id": "hanseom",
@@ -1174,7 +1253,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "한섬해변에서 고불개, 가세마을까지 이어지는 2.2km 해안 산책길이에요. 한쪽은 솔숲, 한쪽은 바다이고 일부 구간은 데크길이에요.",
+   "intro_ko": "한섬해변에서 고불개·가세마을까지 이어지는 2.2km 해안 산책길. 한쪽은 솔숲, 한쪽은 바다, 일부 구간 데크길.",
    "intro_en": "A 2.2 km coastal walk from Hanseom Beach to Gobulgae and Gase village, pine forest on one side and the sea on the other, partly on decks.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 한섬해안길 9",
@@ -1191,7 +1270,16 @@
    "wheelchair": "확인 전",
    "hours_source": "공개 안내",
    "open": "00:00",
-   "close": "24:00"
+   "close": "24:00",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=72",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "id": "gamchu",
@@ -1206,7 +1294,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "감추사 아래 바다와 맞닿은 아주 작은 해변이에요. 철길 위 육교를 건너 솔숲 계단을 내려가면 고운 모래사장이 나와요.",
+   "intro_ko": "감추사 아래 바다와 맞닿은 아주 작은 해변. 철길 위 육교를 건너 솔숲 계단을 내려가면 고운 모래사장.",
    "intro_en": "A tiny sandy cove below Gamchusa temple, reached by a footbridge over the railway and steps down through pines.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 용정동",
@@ -1217,13 +1305,22 @@
    "coord_source": "카카오 장소 검색",
    "hours": "상시 개방",
    "fee": "무료",
-   "tip_ko": "계단으로만 내려가요. 휠체어·유모차는 어려워요.",
+   "tip_ko": "계단으로만 진입 — 휠체어·유모차 어려움.",
    "tip_en": "Only reachable by steps.",
    "walk_load": "급경사",
    "wheelchair": "불가",
    "hours_source": "공개 안내",
    "open": "00:00",
-   "close": "24:00"
+   "close": "24:00",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=46",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "id": "gamchusa",
@@ -1241,7 +1338,7 @@
    "facilities": [
     "주차장"
    ],
-   "intro_ko": "바닷가 절벽 바위틈에 법당과 용왕각이 붙어 있는 작은 절이에요. 신라 선화공주가 이곳 동굴에서 기도해 병을 고쳤다는 이야기가 전해져요.",
+   "intro_ko": "바닷가 절벽 바위틈에 법당과 용왕각이 붙은 작은 절. 신라 선화공주가 이곳 동굴에서 기도해 병을 고쳤다는 이야기가 전해짐.",
    "intro_en": "A small temple wedged into seaside cliffs; legend says Princess Seonhwa of Silla was cured after praying in a cave here.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 해안로 120",
@@ -1252,13 +1349,22 @@
    "coord_source": "카카오 장소 검색",
    "hours": "상시 개방",
    "fee": "무료",
-   "tip_ko": "철길 위 46m 육교를 건너 계단을 내려가요.",
+   "tip_ko": "철길 위 46m 육교를 건너 계단으로 내려감.",
    "tip_en": "Cross a 46 m footbridge over the railway, then go down steps.",
    "walk_load": "급경사",
    "wheelchair": "불가",
    "hours_source": "공개 안내",
    "open": "00:00",
-   "close": "24:00"
+   "close": "24:00",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=39",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "id": "gobulgae",
@@ -1275,7 +1381,7 @@
    "facilities": [
     "주차장"
    ],
-   "intro_ko": "작은 어촌 마을 앞 해변으로, 맑은 물과 갯바위, 기암괴석이 어우러져요. 한섬감성바닷길이 지나가요.",
+   "intro_ko": "작은 어촌 마을 앞 해변. 맑은 물·갯바위·기암괴석. 한섬감성바닷길이 지나감.",
    "intro_en": "A small fishing-village beach with clear water and rocky outcrops, on the Hanseom sea trail.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 한섬해안길 104",
@@ -1289,10 +1395,26 @@
    "tip_ko": "",
    "tip_en": "",
    "walk_load": "확인 전",
-   "wheelchair": "확인 전",
+   "wheelchair": "불가",
    "hours_source": "공개 안내",
    "open": "00:00",
-   "close": "24:00"
+   "close": "24:00",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=47",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   },
+   "access_scope": {
+    "wheel": {
+     "level": "관람 불가",
+     "note": "동해시 관광: 휠체어 이용 불가",
+     "source": "동해시 관광(동해시 관광 누리집)"
+    }
+   }
   },
   {
    "id": "daejin",
@@ -1311,7 +1433,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "망상과 어달 사이의 한적한 해변이에요. 물이 얕고 파도가 규칙적이라 서핑을 처음 배우는 사람이 많이 찾아요.",
+   "intro_ko": "망상과 어달 사이의 한적한 해변. 물이 얕고 파도가 규칙적이라 서핑 입문자가 많이 찾음.",
    "intro_en": "A quiet beach between Mangsang and Eodal; shallow water and regular waves make it popular with beginner surfers.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 대진동",
@@ -1325,10 +1447,19 @@
    "tip_ko": "",
    "tip_en": "",
    "walk_load": "확인 전",
-   "wheelchair": "확인 전",
+   "wheelchair": "가능",
    "hours_source": "공개 안내",
    "open": "00:00",
-   "close": "24:00"
+   "close": "24:00",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=52",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "id": "eodal",
@@ -1346,7 +1477,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "묵호에서 북쪽으로 가까운 작은 해변이에요. 백사장이 300m쯤이고 수심이 얕아 가족끼리 쉬기 좋아요.",
+   "intro_ko": "묵호에서 북쪽으로 가까운 작은 해변. 백사장 약 300m, 수심이 얕아 가족 휴식에 적합.",
    "intro_en": "A small beach just north of Mukho, about 300 m of sand with shallow water, good for families.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 일출로 284",
@@ -1363,7 +1494,16 @@
    "wheelchair": "확인 전",
    "hours_source": "공개 안내",
    "open": "00:00",
-   "close": "24:00"
+   "close": "24:00",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=63",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "id": "bookvillage",
@@ -1379,7 +1519,7 @@
     "카페"
    ],
    "facilities": [],
-   "intro_ko": "도시재생으로 만든 책 마을이에요. 만화를 기분에 따라 여섯 가지로 나눈 서가, 벙커 같은 독서 공간, 네 컷 만화 그리기·필사 체험이 있어요.",
+   "intro_ko": "도시재생으로 만든 책 마을. 만화를 기분에 따라 6가지로 나눈 서가, 벙커 같은 독서 공간, 네 컷 만화 그리기·필사 체험.",
    "intro_en": "A book village from an urban regeneration project, with comics shelved by mood, a bunker-style reading room and comic-drawing activities.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 동호동 일대 (지리2길)",
@@ -1390,7 +1530,7 @@
    "coord_source": "카카오 장소 검색",
    "hours": "",
    "fee": "",
-   "tip_ko": "운영 시간은 방문 전에 확인해 주세요.",
+   "tip_ko": "운영 시간: 방문 전 확인 권장.",
    "tip_en": "Check opening hours before you go.",
    "walk_load": "확인 전",
    "wheelchair": "확인 전",
@@ -1413,7 +1553,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "1796년부터 이어진 동해의 큰 오일장이에요. 날짜 끝자리가 3, 8인 날에 800여 개 점포가 서고, 동해항이 가까워 제철 해산물과 메밀 음식, 손칼국수가 많아요.",
+   "intro_ko": "1796년부터 이어진 동해의 큰 오일장. 날짜 끝자리 3·8인 날에 800여 개 점포, 동해항이 가까워 제철 해산물·메밀 음식·손칼국수가 많음.",
    "intro_en": "A traditional market since 1796, held on dates ending in 3 and 8 with about 800 stalls; fresh seafood from nearby Donghae Port.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 오일장길 32",
@@ -1424,7 +1564,7 @@
    "coord_source": "카카오 장소 검색",
    "hours": "장날(3·8일)에만 열려요 · 점포마다 시간 다름",
    "fee": "",
-   "tip_ko": "장날이 아닌 날은 비어 있어요. 코스에는 장날에만 넣어요.",
+   "tip_ko": "장날이 아닌 날은 비어 있음 — 코스에는 장날에만 포함.",
    "tip_en": "Only on market days (dates ending in 3 or 8).",
    "walk_load": "확인 전",
    "wheelchair": "확인 전",
@@ -1452,7 +1592,7 @@
     "주차장",
     "화장실"
    ],
-   "intro_ko": "무릉계곡 입구에서 시작해 베틀바위와 두타산성을 지나는 산길이에요. 기암절벽이 장관이지만 오르막과 계단이 많은 등산 코스예요.",
+   "intro_ko": "무릉계곡 입구에서 시작해 베틀바위·두타산성을 지나는 산길. 기암절벽이 장관이며 오르막·계단이 많은 등산 코스.",
    "intro_en": "A mountain trail from the Mureung Valley entrance past Betel Rock and Dutasan Fortress; spectacular cliffs but steep with many steps.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 소개, 동해시 문의처, 언론 기사 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 삼화로 538 (무릉계곡 매표소에서 출발)",
@@ -1462,12 +1602,26 @@
    "segments": [],
    "coord_source": "카카오 장소 검색",
    "hours": "",
-   "fee": "무릉계곡 입장료 (어른 2,000원~, 방문 전 확인)",
-   "tip_ko": "산불조심 기간에는 출입이 통제돼요. 등산화와 물을 챙기세요.",
+   "fee": "",
+   "tip_ko": "산불조심 기간 출입 통제. 등산화·물 필수.",
    "tip_en": "Closed during wildfire-prevention periods. Hiking shoes and water needed.",
    "walk_load": "급경사",
    "wheelchair": "불가",
-   "hours_source": ""
+   "hours_source": "",
+   "fee_detail": {
+    "어른": "4,000원",
+    "청소년·군인": "1,500원",
+    "어린이": "700원",
+    "6세 이하 어린이": "무료",
+    "65세 이상": "1,500원",
+    "주차": "승용차 2,000원 · 대형버스 5,000원"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=85",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "무릉계곡 입장료와 같음. 지금 앱 fee '어른 2,000원~'은 공식(4,000원)과 다름"
+   }
   },
   {
    "id": "food_yeongbin",
@@ -1483,7 +1637,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "천곡 한섬로의 횟집이에요.",
+   "intro_ko": "천곡 한섬로의 횟집.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 한섬로 135-3",
@@ -1503,7 +1657,7 @@
    "table": "입식",
    "parking_easy": null,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "출입구까지 경사로가 있고 의자식 테이블이 있어요.",
+   "tip_ko": "출입구까지 경사로, 의자식 테이블.",
    "tip_en": "Ramp to the entrance and chair-height tables.",
    "wheelchair": "가능",
    "walk_load": "평지"
@@ -1521,7 +1675,7 @@
     "맛집"
    ],
    "facilities": [],
-   "intro_ko": "묵호 논골담길 입구 근처의 중식당이에요.",
+   "intro_ko": "묵호 논골담길 입구 근처의 중식당.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 일출로 83",
@@ -1541,7 +1695,7 @@
    "table": "입식",
    "parking_easy": null,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "입구까지 평지이고 턱이 없어요. 의자식 테이블이 있어요.",
+   "tip_ko": "입구까지 평지, 턱 없음. 의자식 테이블.",
    "tip_en": "Level, step-free entrance and chair tables.",
    "wheelchair": "가능",
    "walk_load": "평지"
@@ -1560,7 +1714,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "추암해변 앞 대게 식당이에요.",
+   "intro_ko": "추암해변 앞 대게 식당.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 추암택지길 2",
@@ -1580,7 +1734,7 @@
    "table": null,
    "parking_easy": true,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "출입구까지 단차 없이 경사로로 갈 수 있고 장애인 화장실이 있어요. 지상 주차장 7대.",
+   "tip_ko": "출입구까지 단차 없는 경사로, 장애인 화장실. 지상 주차장 7대.",
    "tip_en": "Step-free ramp entrance, accessible toilet, 7 parking spaces.",
    "wheelchair": "가능",
    "walk_load": "평지"
@@ -1599,7 +1753,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "묵호항 앞 횟집이에요.",
+   "intro_ko": "묵호항 앞 횟집.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 일출로 93",
@@ -1619,7 +1773,7 @@
    "table": "입식",
    "parking_easy": true,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "장애인 주차 2대, 입구 턱이 없고 의자식 테이블이 있어요.",
+   "tip_ko": "장애인 주차 2대, 입구 턱 없음, 의자식 테이블.",
    "tip_en": "2 accessible parking spaces, step-free entrance, chair tables.",
    "wheelchair": "가능",
    "walk_load": "평지"
@@ -1637,7 +1791,7 @@
     "맛집"
    ],
    "facilities": [],
-   "intro_ko": "한우 고깃집이에요.",
+   "intro_ko": "한우 고깃집.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 평원1길 120",
@@ -1657,7 +1811,7 @@
    "table": "입식",
    "parking_easy": null,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "출입구까지 경사로가 있고 입식 테이블이 있어요.",
+   "tip_ko": "출입구까지 경사로, 입식 테이블.",
    "tip_en": "Ramp to the entrance; chair-height tables.",
    "wheelchair": "가능",
    "walk_load": "평지"
@@ -1675,7 +1829,7 @@
     "카페"
    ],
    "facilities": [],
-   "intro_ko": "천곡의 베이커리예요.",
+   "intro_ko": "천곡의 베이커리.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 한섬로 126-1",
@@ -1687,7 +1841,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "휠체어 출입 정보는 아직 없어요.",
+   "tip_ko": "휠체어 출입: 판단 불가(자료 없음).",
    "tip_en": "Assistance dogs welcome; wheelchair access not yet recorded.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -1706,7 +1860,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "망상해변 근처 베이커리 카페예요.",
+   "intro_ko": "망상해변 근처 베이커리 카페.",
    "intro_en": "",
    "intro_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
    "address": "강원특별자치도 동해시 동해대로 6270-37",
@@ -1726,7 +1880,7 @@
    "table": "입식",
    "parking_easy": null,
    "access_source": "한국관광공사 이동약자 여행정보 (KorWithService2, 2026-11 조회)",
-   "tip_ko": "출입통로가 넓고 경사로가 있어요. 의자식 테이블, 유아용 의자가 있어요.",
+   "tip_ko": "넓은 출입통로·경사로. 의자식 테이블, 유아용 의자.",
    "tip_en": "Wide entrance with a ramp, chair tables, high chairs for babies.",
    "wheelchair": "가능",
    "walk_load": "평지"
@@ -1744,7 +1898,7 @@
     "카페"
    ],
    "facilities": [],
-   "intro_ko": "묵호의 옛 여관을 고친 카페로 콘수수 커피가 대표 메뉴예요.",
+   "intro_ko": "묵호의 옛 여관을 고친 카페. 대표 메뉴: 콘수수 커피.",
    "intro_en": "",
    "intro_source": "카카오 장소 검색 (이름·주소·전화)",
    "address": "강원특별자치도 동해시 발한로 219-11",
@@ -1756,7 +1910,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "옛 여관을 고친 호텔 1층·지하 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "옛 여관을 고친 호텔 1층·지하 카페. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Cafe in a renovated old inn; accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -1774,7 +1928,7 @@
     "맛집"
    ],
    "facilities": [],
-   "intro_ko": "돌판 짜장과 가리비짬뽕으로 알려진 어달해변 근처 중식당이에요.",
+   "intro_ko": "돌판 짜장·가리비짬뽕으로 알려진 어달해변 근처 중식당.",
    "intro_en": "",
    "intro_source": "카카오 장소 검색 (이름·주소·전화)",
    "address": "강원특별자치도 동해시 일출로 303",
@@ -1786,7 +1940,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "접근성은 아직 확인 전이에요.",
+   "tip_ko": "접근성: 판단 불가(자료 없음).",
    "tip_en": "Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -1806,7 +1960,7 @@
    "facilities": [
     "주차장"
    ],
-   "intro_ko": "망상해변 아래의 아담한 해변이에요. 백사장 350m, 모래가 곱고 물이 얕아 가족끼리 조용히 쉬기 좋아요.",
+   "intro_ko": "망상해변 아래의 아담한 해변. 백사장 350m, 고운 모래와 얕은 물 — 가족 휴식에 적합.",
    "intro_en": "A small beach just south of Mangsang: 350 m of fine sand and shallow water, quiet and family-friendly.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 안내 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 망상동",
@@ -1821,7 +1975,17 @@
    "close": "24:00",
    "hours_source": "공개 안내",
    "tip_ko": "",
-   "tip_en": ""
+   "tip_en": "",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=49",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "시설사용요금 10,000원 표기(무슨 시설인지 미기재) — 표시 보류"
+   }
   },
   {
    "id": "hapyeong",
@@ -1838,7 +2002,7 @@
    "facilities": [
     "주차장"
    ],
-   "intro_ko": "해송 숲에 둘러싸인 200m 길이의 둥근 해변이에요. 갯바위가 파도를 막아 주고, 바위에서 게와 따개비를 볼 수 있어요.",
+   "intro_ko": "해송 숲에 둘러싸인 200m 길이의 둥근 해변. 갯바위가 파도를 막고, 바위에서 게·따개비 관찰 가능.",
    "intro_en": "A round 200 m beach backed by pines; rocks break the waves and you can spot crabs and barnacles.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 기반 안내 참고) · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 평릉동 40-1",
@@ -1853,7 +2017,16 @@
    "close": "24:00",
    "hours_source": "공개 안내",
    "tip_ko": "",
-   "tip_en": ""
+   "tip_en": "",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=71",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "type": "관광지",
@@ -1867,7 +2040,7 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "동해시 관광명소 현황(2025-11-11)",
-   "tip_ko": "접근성은 아직 확인 전이에요. 정자·산길이라 계단이 있을 수 있어요.",
+   "tip_ko": "접근성: 판단 불가(자료 없음). 정자·산길이라 계단 가능성 있음.",
    "tip_en": "Accessibility not yet checked; may have steps.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전",
@@ -1883,10 +2056,18 @@
     "역사·문화",
     "바다 보기"
    ],
-   "intro_ko": "1613년 김훈이 세운 정자예요. 동쪽으로 바다, 서쪽으로 두타산과 전천이 한눈에 보여요. 주차장은 없어요.",
+   "intro_ko": "1613년 김훈이 세운 정자. 동쪽으로 바다, 서쪽으로 두타산과 전천 조망. 주차장 없음.",
    "intro_en": "A pavilion first built in 1613, overlooking the sea to the east and Dutasan and the Jeoncheon river to the west. No parking.",
    "intro_source": "팀 작성 (한국관광공사 여행정보 참고) · 좌표·전화: 동해시 관광명소 현황(2025-11-11)",
-   "address": "강원특별자치도 동해시 구미동 산53"
+   "address": "강원특별자치도 동해시 구미동 산53",
+   "fee_detail": {
+    "입장료": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=43",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "type": "관광지",
@@ -1900,7 +2081,7 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "동해시 관광명소 현황(2025-11-11)",
-   "tip_ko": "접근성은 아직 확인 전이에요. 정자·산길이라 계단이 있을 수 있어요.",
+   "tip_ko": "접근성: 판단 불가(자료 없음). 정자·산길이라 계단 가능성 있음.",
    "tip_en": "Accessibility not yet checked; may have steps.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전",
@@ -1916,10 +2097,19 @@
     "바다 보기",
     "역사·문화"
    ],
-   "intro_ko": "구미동 바닷가 언덕의 정자와 할미바위예요. 동해시가 공식 관광명소로 꼽은 곳이에요.",
+   "intro_ko": "구미동 바닷가 언덕의 정자와 할미바위. 동해시 공식 관광명소.",
    "intro_en": "A seaside hilltop pavilion and Halmi Rock, listed as an official Donghae attraction.",
    "intro_source": "동해시 관광명소 현황(2025-11-11)",
-   "address": "강원특별자치도 동해시 구미동 산1"
+   "address": "강원특별자치도 동해시 구미동 산1",
+   "fee_detail": {
+    "입장료": "해당 없음"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=75",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "할미바위(tourNo=93): 입장료 없음, 주차시설 없음"
+   }
   },
   {
    "type": "관광지",
@@ -1933,7 +2123,7 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "동해시 관광명소 현황(2025-11-11)",
-   "tip_ko": "등산로라 걷기 편한 분께만 추천해요. 기슭 문화공원까지만 가도 좋아요.",
+   "tip_ko": "등산로 — 걷기 편한 사람에게만 추천. 기슭 문화공원까지만 방문하는 방법도 있음.",
    "tip_en": "Hiking trail; the park at the foot is an easier option.",
    "wheelchair": "확인 전",
    "walk_load": "급경사",
@@ -1949,10 +2139,20 @@
     "자연·산책",
     "산·등산"
    ],
-   "intro_ko": "천곡동 뒤편 산이에요. 기슭에 초록봉문화공원이 있고, 등산로를 따라 오르면 시내와 바다가 내려다보여요.",
+   "intro_ko": "천곡동 뒤편 산. 기슭에 초록봉문화공원, 등산로를 따라 오르면 시내와 바다 조망.",
    "intro_en": "The hill behind Cheongok, with Chorokbong Culture Park at its foot; trails lead up to views over town and sea.",
    "intro_source": "팀 작성 · 공원: 동해시 도시공원 현황 · 좌표·전화: 동해시 관광명소 현황(2025-11-11)",
-   "address": "강원특별자치도 동해시 천곡동 산342-24"
+   "address": "강원특별자치도 동해시 천곡동 산342-24",
+   "fee_detail": {
+    "입장료": "해당 없음",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=92",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "공식 표기는 '입장료 없음'"
+   }
   },
   {
    "type": "관광지",
@@ -1966,9 +2166,9 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "공개 안내",
-   "tip_ko": "길가에서 바로 볼 수 있어 오래 걷지 않아도 돼요.",
+   "tip_ko": "길가에서 바로 조망 — 걷는 거리 짧음.",
    "tip_en": "Visible right from the roadside.",
-   "wheelchair": "확인 전",
+   "wheelchair": "가능",
    "walk_load": "평지",
    "phone": "033-530-2317",
    "id": "kkamak",
@@ -1981,10 +2181,19 @@
    "styles": [
     "바다 보기"
    ],
-   "intro_ko": "묵호 앞바다의 검은 바위예요. 바닷가 길에서 바로 보이고, 큰 문어 조형물이 있어 사진 찍기 좋아요.",
+   "intro_ko": "묵호 앞바다의 검은 바위. 바닷가 길에서 바로 보이며, 큰 문어 조형물이 있는 사진 명소.",
    "intro_en": "A dark sea rock off Mukho, right by the coastal road, with a giant octopus sculpture for photos.",
    "intro_source": "팀 작성 · 좌표·전화: 카카오 장소 검색",
-   "address": "강원특별자치도 동해시 묵호진동"
+   "address": "강원특별자치도 동해시 묵호진동",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=48",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   }
   },
   {
    "type": "관광지",
@@ -2000,7 +2209,7 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "공개 안내",
-   "tip_ko": "평지라 휠체어·유모차로 둘러보기 좋은 편이에요. 실제 길 상태는 확인 전이에요.",
+   "tip_ko": "평지 — 휠체어·유모차로 둘러보기 비교적 수월. 실제 길 상태: 현장 미확인.",
    "tip_en": "Flat ground; path condition not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "평지",
@@ -2016,7 +2225,7 @@
     "바다 보기",
     "자연·산책"
    ],
-   "intro_ko": "묵호항 바로 옆 평지 공원이에요. 배가 드나드는 항구를 보며 천천히 걷기 좋고, 공원 주차장이 붙어 있어요.",
+   "intro_ko": "묵호항 바로 옆 평지 공원. 항구를 보며 천천히 걷기 적합, 공원 주차장 인접.",
    "intro_en": "A flat park beside Mukho Port with its own parking; an easy stroll watching the boats.",
    "intro_source": "팀 작성 · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 묵호진동 13-64"
@@ -2033,7 +2242,7 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "공개 안내",
-   "tip_ko": "언덕 위라 오르막과 계단이 있어요. 걷기 편한 분께 추천해요.",
+   "tip_ko": "언덕 위 — 오르막·계단. 걷기 편한 사람에게 추천.",
    "tip_en": "Uphill with steps.",
    "wheelchair": "확인 전",
    "walk_load": "급경사",
@@ -2048,7 +2257,7 @@
    "styles": [
     "바다 보기"
    ],
-   "intro_ko": "논골담길 위쪽 언덕의 전망대예요. 묵호항과 동해 바다가 한눈에 내려다보여요.",
+   "intro_ko": "논골담길 위쪽 언덕의 전망대. 묵호항과 동해 바다 조망.",
    "intro_en": "A hilltop lookout above Nongol-damgil with views over Mukho Port and the sea.",
    "intro_source": "팀 작성 · 좌표: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 묵호진동 94-2"
@@ -2067,7 +2276,7 @@
    "hours_source": "공개 안내",
    "tip_ko": "",
    "tip_en": "",
-   "wheelchair": "확인 전",
+   "wheelchair": "불가",
    "walk_load": "확인 전",
    "phone": "",
    "id": "cheongok_port",
@@ -2080,10 +2289,26 @@
    "styles": [
     "바다 보기"
    ],
-   "intro_ko": "한섬해변 옆 작은 항구예요. 방파제와 등대가 있어 조용히 바다를 보기 좋아요.",
+   "intro_ko": "한섬해변 옆 작은 항구. 방파제·등대가 있는 조용한 바다 조망 장소.",
    "intro_en": "A small harbour next to Hanseom Beach with a breakwater and lighthouse; a quiet sea view.",
    "intro_source": "팀 작성 · 좌표: 카카오 장소 검색",
-   "address": "강원특별자치도 동해시 천곡동"
+   "address": "강원특별자치도 동해시 천곡동",
+   "fee_detail": {
+    "입장료": "무료",
+    "주차": "무료"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=65",
+    "checked": "2026-11-20",
+    "confidence": "공식"
+   },
+   "access_scope": {
+    "wheel": {
+     "level": "관람 불가",
+     "note": "동해시 관광: 휠체어 이용 불가",
+     "source": "동해시 관광(동해시 관광 누리집)"
+    }
+   }
   },
   {
    "type": "관광지",
@@ -2100,7 +2325,7 @@
    "open": "00:00",
    "close": "24:00",
    "hours_source": "공개 안내",
-   "tip_ko": "고속도로 삼척 방향으로 갈 때만 들를 수 있어요. 휴게소라 화장실·주차가 편해요.",
+   "tip_ko": "고속도로 삼척 방향에서만 진입 가능. 휴게소라 화장실·주차 편리.",
    "tip_en": "Only reachable when driving southbound.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전",
@@ -2115,7 +2340,7 @@
    "styles": [
     "바다 보기"
    ],
-   "intro_ko": "동해고속도로 삼척 방향 휴게소예요. 언덕 위에서 망상 바다가 넓게 보여 일부러 들르는 사람도 많아요.",
+   "intro_ko": "동해고속도로 삼척 방향 휴게소. 언덕 위에서 망상 바다가 넓게 보여 일부러 들르는 사람도 많음.",
    "intro_en": "A highway rest area (southbound) on a hill with a wide view over Mangsang's sea.",
    "intro_source": "팀 작성 · 좌표·전화: 카카오 장소 검색",
    "address": "강원특별자치도 동해시 동해대로 6437"
@@ -2132,7 +2357,7 @@
    "open": "06:00",
    "close": "17:00",
    "hours_source": "공개 안내",
-   "tip_ko": "왕복 반나절 산행이에요. 등산화 필수, 교통약자에게는 추천하지 않아요.",
+   "tip_ko": "왕복 반나절 산행. 등산화 필수, 교통약자에게 비추천.",
    "tip_en": "Half-day hike; not suitable for limited mobility.",
    "wheelchair": "확인 전",
    "walk_load": "급경사",
@@ -2148,10 +2373,24 @@
     "자연·산책",
     "산·등산"
    ],
-   "intro_ko": "무릉계곡에서 베틀바위를 지나 오르는 두타산 협곡 전망 구간이에요. 깎아지른 절벽이 고층 빌딩처럼 늘어서 있어요.",
+   "intro_ko": "무릉계곡에서 베틀바위를 지나 오르는 두타산 협곡 전망 구간. 고층 빌딩처럼 늘어선 깎아지른 절벽.",
    "intro_en": "A Dutasan gorge viewpoint beyond Betel Rock from Mureung Valley, with skyscraper-like cliffs.",
    "intro_source": "팀 작성 · 좌표: 카카오 장소 검색",
-   "address": "강원특별자치도 동해시 삼화동 산267"
+   "address": "강원특별자치도 동해시 삼화동 산267",
+   "fee_detail": {
+    "어른": "4,000원",
+    "청소년·군인": "1,500원",
+    "어린이": "700원",
+    "6세 이하 어린이": "무료",
+    "65세 이상": "1,500원",
+    "주차": "2,000~5,000원"
+   },
+   "verify": {
+    "url": "https://www.dh.go.kr/tour/selectTourCntntsWebView.do?key=1622&ctgryNo=6&tourNo=79",
+    "checked": "2026-11-20",
+    "confidence": "공식",
+    "note": "무릉계곡 입장료와 같음"
+   }
   },
   {
    "id": "food_boribat",
@@ -2167,7 +2406,7 @@
     "자연·산책"
    ],
    "facilities": [],
-   "intro_ko": "무릉계곡 입구 상가의 산채비빔밥·백숙 식당이에요.",
+   "intro_ko": "무릉계곡 입구 상가의 산채비빔밥·백숙 식당.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 삼화로 527-7 (무릉계곡 안)",
@@ -2179,7 +2418,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "산채비빔밥이 대표 메뉴예요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "대표 메뉴: 산채비빔밥. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Known for mountain-herb bibimbap. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전",
@@ -2198,7 +2437,7 @@
     "맛집"
    ],
    "facilities": [],
-   "intro_ko": "무릉계곡 상가의 순두부 식당이에요.",
+   "intro_ko": "무릉계곡 상가의 순두부 식당.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 삼화로 518-6 (무릉계곡 상가)",
@@ -2210,7 +2449,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "부드러운 순두부라 어르신 식사로 좋아요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "부드러운 순두부 — 어르신 식사로 적합. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Soft tofu, easy to eat. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전",
@@ -2242,7 +2481,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "무릉별유천지 안에 있어 관람과 함께 들르기 좋아요. 운영시간은 무릉별유천지에 확인해 주세요.",
+   "tip_ko": "무릉별유천지 안 — 관람과 함께 들르기 편리. 운영시간: 무릉별유천지에 문의.",
    "tip_en": "Inside Mureung Byeolyucheonji; check hours with the park.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -2260,7 +2499,7 @@
     "맛집"
    ],
    "facilities": [],
-   "intro_ko": "망상해변 앞 막국수 식당이에요.",
+   "intro_ko": "망상해변 앞 막국수 식당.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 동해대로 6167, 1층",
@@ -2272,7 +2511,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "1층 식당이에요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "1층 식당. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Ground-floor noodle restaurant. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -2291,7 +2530,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "망상해변 상가의 카페예요.",
+   "intro_ko": "망상해변 상가의 카페.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 동해대로 6270-16, 1층 101호",
@@ -2303,7 +2542,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "1층 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "1층 카페. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Ground-floor cafe by Mangsang Beach. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -2321,7 +2560,7 @@
     "맛집"
    ],
    "facilities": [],
-   "intro_ko": "추암해변 앞 한식당이에요.",
+   "intro_ko": "추암해변 앞 한식당.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 촛대바위길 20, 1층",
@@ -2333,7 +2572,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "추암해변 주차장 쪽 1층이에요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "추암해변 주차장 쪽 1층. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Ground floor near the Chuam Beach car park. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -2352,7 +2591,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "묵호항 쪽 일출로의 카페예요.",
+   "intro_ko": "묵호항 쪽 일출로의 카페.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 일출로 34, 1층",
@@ -2364,7 +2603,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "1층 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "1층 카페. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Ground-floor cafe near Mukho Port. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -2382,7 +2621,7 @@
     "카페"
    ],
    "facilities": [],
-   "intro_ko": "천곡 시내 한섬로의 카페예요.",
+   "intro_ko": "천곡 시내 한섬로의 카페.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준)",
    "address": "강원특별자치도 동해시 한섬로 70-1, 1층",
@@ -2394,7 +2633,7 @@
    "table": null,
    "parking_easy": null,
    "access_source": "",
-   "tip_ko": "1층 카페예요. 접근성은 아직 확인 전이에요.",
+   "tip_ko": "1층 카페. 접근성: 판단 불가(자료 없음).",
    "tip_en": "Ground-floor cafe in Cheongok. Accessibility not yet checked.",
    "wheelchair": "확인 전",
    "walk_load": "확인 전"
@@ -2413,7 +2652,7 @@
     "자연·산책"
    ],
    "facilities": [],
-   "intro_ko": "무릉계곡 입구의 산채비빔밥 식당이에요.",
+   "intro_ko": "무릉계곡 입구의 산채비빔밥 식당.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준) · 메뉴·접근성: 한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "address": "강원특별자치도 동해시 삼화로 518-6, A동 1층 1호 (삼화동)",
@@ -2424,7 +2663,7 @@
     {
      "name": "식당 이용",
      "grade": "Y",
-     "note": "좌식·입식 테이블이 같이 있어요. 장애인 주차·화장실은 무릉계곡 것을 이용",
+     "note": "좌식·입식 테이블 함께 있음. 장애인 주차·화장실: 무릉계곡 시설 이용",
      "source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
      "checked_at": "2023-09-22"
     }
@@ -2434,7 +2673,7 @@
    "parking_easy": true,
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "soft_menu": true,
-   "tip_ko": "산채비빔밥이 대표 메뉴예요. 입식 자리도 있어요. 장애인 주차구역·화장실은 무릉계곡 주차장 것을 쓰면 돼요.",
+   "tip_ko": "대표 메뉴: 산채비빔밥. 입식 자리 있음. 장애인 주차구역·화장실: 무릉계곡 주차장 시설 이용.",
    "tip_en": "Known for mountain-herb bibimbap; has table seating. Use the Mureung Valley accessible parking and toilets.",
    "wheelchair": "일부",
    "walk_load": "평지"
@@ -2453,7 +2692,7 @@
     "자연·산책"
    ],
    "facilities": [],
-   "intro_ko": "무릉계곡 입구의 카페예요.",
+   "intro_ko": "무릉계곡 입구의 카페.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준) · 접근성: 한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "address": "강원특별자치도 동해시 삼화로 529, 1층 (삼화동)",
@@ -2473,7 +2712,7 @@
    "table": "입식",
    "parking_easy": true,
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
-   "tip_ko": "의자 자리(입식)라 쉬어 가기 편해요. 장애인 주차구역·화장실은 무릉계곡 주차장 것을 쓰면 돼요.",
+   "tip_ko": "의자 자리(입식) — 휴식에 편리. 장애인 주차구역·화장실: 무릉계곡 주차장 시설 이용.",
    "tip_en": "Table seating; use the Mureung Valley accessible parking and toilets.",
    "wheelchair": "일부",
    "walk_load": "평지"
@@ -2492,7 +2731,7 @@
     "바다 보기"
    ],
    "facilities": [],
-   "intro_ko": "묵호항 앞의 냄비물회 식당이에요.",
+   "intro_ko": "묵호항 앞의 냄비물회 식당.",
    "intro_en": "",
    "intro_source": "동해시 일반음식점 인허가 현황 (공공데이터포털, 2026-03-24 기준) · 메뉴·접근성: 한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
    "address": "강원특별자치도 동해시 일출로 151, 삼양비취타워 1,2층 10호 (묵호진동)",
@@ -2512,7 +2751,7 @@
    "table": "좌식",
    "parking_easy": true,
    "access_source": "한국관광공사 열린관광 모두의 여행 '떠나자, 감성 뿜뿜 동해로!' (2019년 작성·2023년 수정)",
-   "tip_ko": "냄비물회가 대표 메뉴예요. 좌식 자리이고 장애인 화장실이 없어요. 주차 공간은 넉넉한 편이에요.",
+   "tip_ko": "대표 메뉴: 냄비물회. 좌식 자리, 장애인 화장실 없음. 주차 공간 넉넉한 편.",
    "tip_en": "Known for pot mulhoe (cold raw-fish soup). Floor seating, no accessible toilet; parking is roomy.",
    "wheelchair": "일부",
    "walk_load": "평지"

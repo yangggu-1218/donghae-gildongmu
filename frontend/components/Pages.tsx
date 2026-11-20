@@ -183,7 +183,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
   const name = lang === "ko" ? p.name_ko : p.name_en || p.name_ko;
   const zone = ZONES.find((z) => z.k === p.zone);
   const today = { open: L("지금 운영 중", "Open now"), always: L("상시 개방", "Always open"), closed: L("오늘 쉬는 날", "Closed today"),
-    closed_now: L("지금은 운영시간이 아니에요", "Closed right now"), unknown: L("운영시간 확인 필요", "Check hours") }[p.today as string];
+    closed_now: L("지금은 운영시간 외", "Closed right now"), unknown: L("운영시간 확인 필요", "Check hours") }[p.today as string];
   const n = p.nearby || {};
   const segs: any[] = p.segments || [];
   const MODES = [["wheel", "휠체어", "Wheelchair", "wheel"], ["stroller", "유모차", "Stroller", "stroller"], ["walk", "오래 걷기 어려움", "Limited walking", "walk"]] as const;
@@ -193,7 +193,7 @@ export function PlacePage({ id, lang, onAdd, wished }: { id: string; lang: Lang;
 
   // '알고 가면'을 나눠서: 중요한 소식은 맨 위로, 휴무·입장료는 이용 정보 띠로, 나머지만 접힌 칸에
   const lines = (p.about || []).flatMap((a: any) => a.i.map((x: string[]) => ({ t: a.t, x })));
-  const news = lines.filter((l: any) => NEWS_RE.test(l.x[0]));
+  const news = lines.filter((l: any) => NEWS_RE.test(l.x[0]) && !/역사|이야기|이름/.test(l.t[0]));   // '1991년 아파트 공사 중 발견' 같은 역사 문장은 소식이 아님
   const closedMore = lines.filter((l: any) => !NEWS_RE.test(l.x[0]) && CLOSED_RE.test(l.x[0])).map((l: any) => L(l.x[0], l.x[1]));
   const feeRows: [string, string][] = Object.entries(p.fee_detail || {}) as [string, string][];   // 공식 확인 요금만
   const moved = new Set([...news, ...lines.filter((l: any) => CLOSED_RE.test(l.x[0]) || (feeRows.length > 0 && FEE_RE.test(l.x[0])))].map((l: any) => l.x[0]));
